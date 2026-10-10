@@ -9,6 +9,7 @@ MVP de registro auxiliar de compras y simulación de la malla de Nutrición, con
 - [Guía de trabajo del MVP](Docs/Guía%20de%20trabajo%20para%20el%20MVP%20de%20Cenit.pdf)
 - [Proxy y despliegue en la VM compartida](deploy/README.md)
 - [CI/CD, ramas y activación de GitHub Actions](deploy/CI-CD.md)
+- [Instalar el ejecutor de CD en la VM y contrato de la futura imagen](deploy/CD-VM.md)
 
 ## Estructura del repositorio
 
@@ -28,4 +29,4 @@ Se utiliza organización mixta: separación técnica y módulos de negocio dentr
 
 La estructura completa y las reglas para ubicar código están en la sección 4 del SDD. Las carpetas vacías contienen `.gitkeep`; retirarlo al incorporar el primer archivo real. Los datos de PostgreSQL se conservan en un volumen fuera del repositorio.
 
-Este checkout contiene documentación, estructura inicial, bootstrap de la VM y un workflow CI preparado para `main` y `produccion`. En ausencia de la aplicación, CI verifica infraestructura en `main` y bloquea la promoción a `produccion`; no se ha ejecutado aún en GitHub. Los scripts npm, build de aplicación y CD automático siguen pendientes de implementación.
+Este checkout contiene documentación, estructura inicial, bootstrap de la VM y un workflow CI publicado para `main` y `produccion`. La [primera ejecución en `main`](https://github.com/Menderin/Cenit/actions/runs/38071046810) pasó el 10 de octubre de 2026, incluida la validación Nginx. En ausencia de la aplicación, su job queda omitido en `main` y CI bloquea la promoción a `produccion`. Los scripts npm, build de aplicación y CD automático siguen pendientes de implementación.

@@ -1,0 +1,12 @@
+# Managed by Cenit automatic deployment
+[Unit]
+Description=Cenit verified release deployment
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/.local/share/cenit/bin/deploy-approved-release.py
+Environment=PYTHONDONTWRITEBYTECODE=1
+TimeoutStartSec=40min
+UMask=0077
+MemoryMax=512M
+CPUQuota=100%
