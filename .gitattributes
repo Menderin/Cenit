@@ -1,0 +1,7 @@
+*.sh text eol=lf
+*.conf text eol=lf
+*.container.in text eol=lf
+*.network text eol=lf
+*.volume text eol=lf
+*.yml text eol=lf
+*.py text eol=lf
