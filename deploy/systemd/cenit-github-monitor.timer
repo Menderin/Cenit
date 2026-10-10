@@ -1,0 +1,12 @@
+# Managed by Cenit install-github-monitor.sh
+[Unit]
+Description=Check Cenit GitHub access and releases every minute
+
+[Timer]
+OnBootSec=60s
+OnUnitInactiveSec=60s
+AccuracySec=5s
+Unit=cenit-github-monitor.service
+
+[Install]
+WantedBy=timers.target

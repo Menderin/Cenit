@@ -1,0 +1,14 @@
+# Managed by Cenit install-github-monitor.sh
+[Unit]
+Description=Cenit GitHub read-only preparation monitor
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/.local/share/cenit/bin/check-github-releases.py
+Environment=PYTHONDONTWRITEBYTECODE=1
+TimeoutStartSec=100
+UMask=0077
+NoNewPrivileges=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryMax=96M
+CPUQuota=25%
