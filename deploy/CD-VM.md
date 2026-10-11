@@ -28,7 +28,7 @@ No hace falta crear una cuenta Jenkins, configurar SSH desde GitHub ni instalar 
 
 ## Contrato obligatorio de la futura imagen y workflow
 
-Todavía no existen aplicación, Containerfile ni `.github/workflows/release.yml`. Instalar el ejecutor no acredita un despliegue real. El equipo debe implementar estos requisitos para que el consumidor preparado pueda funcionar:
+El Containerfile, `deploy/migrate.cjs` y `.github/workflows/release.yml` están preparados en el repositorio. Todavía no existe aplicación compilable ni migraciones de negocio. La publicación requiere CI real y la variable `CENIT_RELEASE_ENABLED=true`; mantenerla deshabilitada hasta preparar el primer ensayo. Instalar el ejecutor o validar estos archivos no acredita un despliegue real. El equipo debe completar y comprobar estos requisitos para que el consumidor preparado pueda funcionar:
 
 - Imagen `ghcr.io/menderin/cenit@sha256:<digest>`, `linux/amd64`, runtime UID/GID `1000:1000`, Node disponible como `node`, frontend compilado y API en el mismo servidor, puerto 3000.
 - Etiquetas OCI `org.opencontainers.image.source=https://github.com/Menderin/Cenit` y `org.opencontainers.image.revision=<SHA completo>`.

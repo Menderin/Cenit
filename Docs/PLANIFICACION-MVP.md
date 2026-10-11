@@ -62,6 +62,8 @@ El alcance completo aún no está estimado. Login y captura automática son requ
 
 ## Épicas del proyecto
 
+Se añade al sprint 3 `S3-HT15 — Levantar infraestructura base de Cenit con Podman`, bajo EP04. Ficha y criterios en `Docs/HISTORIAS-USUARIO-INVEST.md`. Incluye definición local y revisión de bootstrap existente en VM; no equivale al despliegue de aplicación ni repite la preparación ya acreditada. Estimación, responsable y fecha individual pendientes.
+
 | ID | Épica | Resultado observable | Responsable de coordinación |
 | --- | --- | --- | --- |
 | EP01 | Identidad y acceso | Usuarios autenticados acceden a funciones autorizadas por rol | Víctor, con frontend de Gael |

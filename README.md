@@ -11,6 +11,7 @@ MVP de registro auxiliar de compras con datos ficticios, login local y visualiza
 - [Fichas vigentes INVEST: descripción, criterios y tareas por historia y módulo](Docs/HISTORIAS-USUARIO-INVEST.md)
 - [Guía de trabajo del MVP](Docs/Guía%20de%20trabajo%20para%20el%20MVP%20de%20Cenit.pdf)
 - [Proxy y despliegue en la VM compartida](deploy/README.md)
+- [Preparar contenedores locales con Podman](deploy/LOCAL.md)
 - [CI/CD, ramas y activación de GitHub Actions](deploy/CI-CD.md)
 - [Instalar el ejecutor de CD en la VM y contrato de la futura imagen](deploy/CD-VM.md)
 
@@ -32,4 +33,16 @@ Se utiliza organización mixta: separación técnica y módulos de negocio dentr
 
 La estructura completa y las reglas para ubicar código están en la sección 4 del SDD. Las carpetas vacías contienen `.gitkeep`; retirarlo al incorporar el primer archivo real. Los datos de PostgreSQL se conservan en un volumen fuera del repositorio.
 
-Este checkout contiene documentación, estructura inicial, bootstrap de la VM y un workflow CI publicado para `main` y `produccion`. La [primera ejecución en `main`](https://github.com/Menderin/Cenit/actions/runs/38071046810) pasó el 10 de octubre de 2026, incluida la validación Nginx. En ausencia de la aplicación, su job queda omitido en `main` y CI bloquea la promoción a `produccion`. Los scripts npm, build de aplicación y CD automático siguen pendientes de implementación.
+Este checkout contiene documentación, estructura inicial, bootstrap de la VM, Compose local, Containerfile, migrador y workflows CI/release. La [primera ejecución en `main`](https://github.com/Menderin/Cenit/actions/runs/38071046810) pasó el 10 de octubre de 2026 con la versión anterior del CI. Los nuevos pasos y el workflow de publicación todavía deben ejecutarse en Actions. En ausencia de la aplicación, su job queda omitido en `main` y CI bloquea la promoción a `produccion`. Faltan los manifiestos npm, aplicación, migraciones de negocio y ensayo real de entrega/recuperación; no hay una imagen del MVP construida.
+
+## Arranque local de infraestructura
+
+Con Python, Podman y su proveedor Compose disponibles, ejecutar desde la raíz:
+
+```powershell
+python deploy/scripts/setup-local.py
+podman compose up -d db proxy
+Invoke-RestMethod 'http://127.0.0.1:8081/health/proxy'
+```
+
+Se espera `status: ok`, `mode: bootstrap`. PostgreSQL persiste en un volumen propio; `podman compose down` conserva los datos. Los secretos generados en `.local` y la configuración `.env` no se versionan. Consultar [la guía local](deploy/LOCAL.md) para preparar la máquina Podman, resolver puertos y activar posteriormente la aplicación.

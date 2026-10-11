@@ -6,6 +6,7 @@ on:
   push:
     branches: [main, produccion]
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -44,17 +45,36 @@ jobs:
           set -euo pipefail
           while IFS= read -r -d '' script; do
             bash -n "$script"
-          done < <(find deploy/scripts -name '*.sh' -print0)
+          done < <(find deploy -name '*.sh' -print0)
       - name: Compile Python utilities
         run: python3 -m compileall -q deploy/scripts
       - name: Test application CI gate
         run: python3 -m unittest discover -s tests/infrastructure -v
+      - name: Validate local Compose configuration
+        run: |
+          python3 deploy/scripts/setup-local.py
+          docker compose --profile application config --quiet
       - name: Validate bootstrap Nginx
         run: |
           docker run --rm --network none \
             -v "$PWD/deploy/nginx/bootstrap.conf:/etc/nginx/conf.d/default.conf:ro" \
             -v "$PWD/deploy/bootstrap:/usr/share/nginx/html:ro" \
-            docker.io/library/nginx:1.30.5-alpine nginx -t
+            docker.io/library/nginx:1.30.5-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94 nginx -t
+      - name: Start local infrastructure and verify limited roles
+        run: |
+          set -euo pipefail
+          docker compose up --detach --wait --wait-timeout 120 db proxy
+          curl --fail --silent http://127.0.0.1:8081/health/proxy \
+            | python3 -c 'import json,sys; assert json.load(sys.stdin) == {"status":"ok","mode":"bootstrap"}'
+          result=$(docker compose exec -T db psql -U cenit_admin -d cenit_demo -Atc \
+            "SELECT count(*) FROM pg_roles WHERE rolname IN ('cenit_app','cenit_migrator') AND NOT rolsuper AND NOT rolcreatedb AND NOT rolcreaterole")
+          [[ "$result" == 2 ]]
+          result=$(docker compose exec -T db psql -U cenit_admin -d cenit_demo -Atc \
+            "SELECT has_schema_privilege('cenit_app','cenit','USAGE') AND NOT has_schema_privilege('cenit_app','cenit','CREATE')")
+          [[ "$result" == t ]]
+      - name: Stop CI infrastructure
+        if: always()
+        run: docker compose down
 
   application:
     name: Application
@@ -64,7 +84,7 @@ jobs:
     timeout-minutes: 25
     services:
       postgres:
-        image: postgres:17.11-alpine3.24
+        image: postgres:17.11-alpine3.24@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
         env:
           POSTGRES_USER: cenit_test
           POSTGRES_PASSWORD: ci-only-not-a-deployment-secret
@@ -85,7 +105,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '24'
+          node-version-file: '.node-version'
       - name: Install pinned npm
         run: |
           npm_version=$(node -p "require('./package.json').packageManager.slice(4)")

@@ -323,6 +323,51 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 
 Estas fichas son tareas bajo la épica, no nuevas historias de negocio. Fechas, responsables, revisores, estimación y estado permanecen por definir. Los trabajos ya preparados se revisan/reutilizan: no se contabilizan como implementados por redactar la ficha. A continuación se separan CI, publicación y ensayo de operación.
 
+### S3-HT15 — Levantar infraestructura base de Cenit con Podman
+
+**Sprint:** sprint 3. **Estado de planificación:** añadida al backlog; ejecución pendiente de revisar/evidenciar por entorno. Responsable, revisor, prioridad, esfuerzo y fechas por definir.
+
+**Descripción:** Preparar un entorno reproducible de contenedores para Cenit con red propia, PostgreSQL 17 persistente, proxy Nginx y configuración privada. Usar Podman como base de ejecución; en la VM, Podman rootless con Quadlet/systemd ya preparados. Reutilizar la infraestructura bootstrap existente y completar la definición local; el contenedor de aplicación se incorpora cuando exista la imagen verificable de HT05.
+
+**Elección técnica de trabajo:** Podman mantiene continuidad con el SDD y la preparación de la VM. Docker de Zableke/Jenkins permanece independiente; no se migra ni se reutilizan sus recursos. No exigir instalar ambos motores para desarrollar. El procedimiento local, incluida Podman Machine si se usa Windows, requiere verificación antes de declararlo reproducible.
+
+**Criterios de aceptación:**
+
+1. Archivos/scripts de infraestructura y configuración de ejemplo están en el repositorio; otro integrante reproduce el entorno siguiendo documentación, sin contraseñas reales en Git.
+2. Red, volúmenes y contenedores de Cenit tienen nombres propios y no entran en conflicto con Zableke/Jenkins ni sus puertos.
+3. PostgreSQL es accesible desde el entorno autorizado de desarrollo/aplicación; no se expone públicamente para facilitar la conexión. Conserva datos ficticios después de recrear su contenedor.
+4. Nginx/DB arrancan y se verifican en modo preparación; el proxy de VM usa la configuración existente de 8081. `/health/proxy` bootstrap no se presenta como aplicación lista.
+5. Secretos, datos de volumen y estado operativo permanecen fuera de Git; imágenes de ejecución fijadas según contrato existente.
+6. En VM, verificar servicios de usuario y continuidad al cerrar SSH mediante el mecanismo ya preparado; documentar evidencia, no exigir reinicio de la VM para acreditar esta tarea.
+7. Documentar arranque, parada, verificación y conservación de volúmenes; declarar por separado qué se comprobó localmente y qué en la VM.
+
+**Subtareas propuestas:**
+
+| Subtarea | Descripción | Criterio de aceptación |
+| --- | --- | --- |
+| HT15-T01 — Revisar entorno y archivos existentes | Inventariar Podman, recursos Cenit, puertos, red y scripts bootstrap sin modificar servicios ajenos | Evidencia de configuración preparada y faltantes; no se vuelve a crear como trabajo nuevo lo ya verificado |
+| HT15-T02 — Definir entorno local de contenedores | Preparar procedimiento y archivos para PostgreSQL/red/configuración; verificar runtime local del equipo | Arranque reproducible, conexión y persistencia probados; requisitos locales y limitaciones documentados |
+| HT15-T03 — Verificar base de la VM | Comprobar Quadlet, DB, proxy, secretos e independencia de otros proyectos usando scripts preparados | Servicios/evidencias identificados; proxy en modo bootstrap distinguido de disponibilidad de app |
+| HT15-T04 — Documentar y revisar infraestructura | Incorporar pasos de uso y evidencias en README/deploy, con revisión por otro integrante | Instrucciones repetibles, nombres/puertos explícitos, sin secretos ni pérdida involuntaria de datos |
+
+**Archivos del repositorio que debe entregar o revisar la tarea:**
+
+| Archivo | Trabajo requerido | Relación con otras tareas |
+| --- | --- | --- |
+| `compose.yaml` — nombre propuesto para entorno local | Crear definición de PostgreSQL, red y volumen; incorporar aplicación cuando exista imagen. Verificar proveedor Compose disponible para Podman y documentar comando exacto de arranque | HT15; no basta entregar YAML sin probarlo |
+| `.env.example` — nombre propuesto | Documentar variables locales con valores ficticios/sin credenciales reales; asegurar exclusión del archivo de configuración privada | HT15; configuración de app coordinada con HT02 |
+| `deploy/quadlet/*` | Revisar/reutilizar unidades existentes de DB, Nginx, red, volumen y plantilla de aplicación para VM | HT15; no reemplazar Quadlet por Compose en VM sólo por usar YAML local |
+| `Containerfile` — por crear | Definir build de producción de frontend/API y migrador, compatible con contrato de CD | HT05; es dependencia de imagen/app, no trabajo duplicado de HT15 |
+| `.github/workflows/ci.yml` — existente | Completar y verificar jobs de aplicación usando scripts/pruebas reales | HT14; infraestructura ya tiene workflow, no recrearlo como faltante |
+| `.github/workflows/release.yml` — por crear | Publicar imagen y manifiesto tras gates correctos sobre `produccion`, para ejecutor de VM | HT06; requiere aplicación, imagen y CI real |
+| `README.md` y `deploy/README.md` | Registrar uso local, requisitos, comandos y diferencias con operación VM | HT15/HT11; documentación ejecutable verificada |
+
+Los nombres propuestos de Compose/configuración local se concretan al implementar; no se afirma que esos archivos ya existan. Workflows de Actions viven en `.github/workflows`, contenedores locales en Compose y servicios de VM en Quadlet: tienen funciones diferentes. Un workflow YAML por sí solo no levanta contenedores ni acredita CD.
+
+**Situación conocida:** el usuario ya acreditó bootstrap de Nginx/PostgreSQL y preparación del ejecutor CD en la VM. Eso es avance previo, no una aplicación desplegada. Esta tarea cubre revisar esa base y preparar el entorno local restante; no reinstalar por rutina ni duplicar HT05/HT07.
+
+**Dependencias y límites:** leer `deploy/README.md` antes de operar. No depende de captura Oracle para preparar DB/red. HT02 inicializa aplicación/scripts; HT15 prepara infraestructura; HT05 construye imagen; HT06/HT07 despliegan y ensayan. La ejecución local requiere runtime disponible, sin instalar herramientas por la mera creación de esta ficha.
+
 ### S3-HT02 — Preparar la base ejecutable compartida
 
 **Descripción:** Inicializar workspaces, lockfile y scripts reales; conectar frontend/API y PostgreSQL con configuración reproducible. Las migraciones y contratos específicos se implementan en sus tareas de historia, no dos veces.
@@ -358,7 +403,7 @@ Estas fichas son tareas bajo la épica, no nuevas historias de negocio. Fechas, 
 2. Usa secretos por archivo, usuario/roles limitados y esquema PostgreSQL `cenit`; migración no utiliza credenciales runtime administrativas.
 3. Respeta plataforma objetivo y contrato `deploy/CD-VM.md`; no añade semillas/reset automáticos de una base de ejecución.
 
-**Dependencias:** HT02, historias integradas y migraciones verificadas.
+**Dependencias:** HT02, entorno HT15, historias integradas y migraciones verificadas.
 
 ### S3-HT06 — Implementar publicación y despliegue automático
 

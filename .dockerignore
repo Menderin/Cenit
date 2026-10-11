@@ -1,0 +1,16 @@
+.git
+.local
+.env
+.env.*
+node_modules
+**/node_modules
+**/dist
+coverage
+playwright-report
+test-results
+tmp
+Docs
+**/__pycache__
+*.log
+*.pem
+*.key
