@@ -1,8 +1,7 @@
 import type { StudentSearch } from '@cenit/contracts/academic';
 import type { AcademicRepository } from '../repositories/academic.js';
-export class AcademicError extends Error {
-  constructor(public readonly status: number, public readonly code: string, message: string) { super(message); }
-}
+import { ApiError } from '../../../infrastructure/errors.js';
+export class AcademicError extends ApiError {}
 export type AcademicReadRepository = Pick<AcademicRepository, 'plans' | 'plan' | 'students' | 'ownStudentId' | 'progress'>;
 export class AcademicService {
   constructor(private readonly repository: AcademicReadRepository) {}

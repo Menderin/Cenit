@@ -4,7 +4,7 @@
     "strict": true, "esModuleInterop": true, "skipLibCheck": true,
     "noUncheckedIndexedAccess": true, "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true, "types": ["node"],
-    "paths": { "@cenit/contracts": ["./packages/contracts/src/index.ts"], "@cenit/contracts/academic": ["./packages/contracts/src/academic/index.ts"] }
+    "paths": { "@cenit/contracts": ["./packages/contracts/src/index.ts"], "@cenit/contracts/academic": ["./packages/contracts/src/academic/index.ts"], "@cenit/contracts/auth": ["./packages/contracts/src/auth/index.ts"] }
   },
   "include": ["apps/api/src/**/*.ts", "packages/contracts/src/**/*.ts", "db/**/*.ts", "tests/integration/**/*.ts", "vitest*.ts", "drizzle.config.ts"]
 }

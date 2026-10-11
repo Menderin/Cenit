@@ -1,13 +1,17 @@
 import { buildAcademicApp } from './app.js';
 import { createPool } from './infrastructure/database/connection.js';
 import { AcademicRepository } from './modules/academic/repositories/academic.js';
+import { AuthRepository } from './modules/auth/repositories/auth.js';
+import { AuthService } from './modules/auth/services/auth.js';
+import { readAuthConfig } from './modules/auth/routes/index.js';
 
 async function main() {
+  const config = readAuthConfig();
   const pool = createPool();
-  const app = buildAcademicApp({ repository: new AcademicRepository(pool) });
+  const app = buildAcademicApp({ repository: new AcademicRepository(pool), auth: { service: new AuthService(new AuthRepository(pool)), config } });
   app.addHook('onClose', async () => { await pool.end(); });
   app.get('/health/live', () => ({ status: 'live' }));
-  // This academic foundation is not yet the full monolith: login/frontend remain dependencies.
+  // Backend login exists; frontend and the full monolith remain dependencies.
   app.get('/health/ready', (_request, reply) => reply.status(503).send({ status: 'unavailable' }));
   const port = Number(process.env.PORT ?? '3000');
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Puerto inválido.');

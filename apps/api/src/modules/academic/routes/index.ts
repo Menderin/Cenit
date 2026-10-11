@@ -1,11 +1,12 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Static } from '@sinclair/typebox';
+import type { AccountRole } from '@cenit/contracts/auth';
 import { ErrorResponseSchema } from '@cenit/contracts';
 import { PlanParamsSchema, PlanResponseSchema, PlansResponseSchema, StudentParamsSchema, StudentSearchSchema, StudentsResponseSchema, ProgressResponseSchema } from '@cenit/contracts/academic';
 import { AcademicError, AcademicService } from '../services/academic.js';
 
 // Server-side adapter supplied by the login task. Never construct this from headers/body/role query parameters.
-export type AcademicPrincipal = { accountId: string; role: 'docente' | 'estudiante' | 'administrativo' };
+export type AcademicPrincipal = { accountId: string; role: AccountRole };
 export type AuthenticateAcademic = (request: FastifyRequest) => Promise<AcademicPrincipal | null>;
 export async function academicRoutes(app: FastifyInstance, options: { service: AcademicService; authenticate: AuthenticateAcademic }) {
   const errors = { 400: ErrorResponseSchema, 401: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 500: ErrorResponseSchema, 503: ErrorResponseSchema };

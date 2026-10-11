@@ -91,7 +91,7 @@ npm run catalog:load
 
 Las URL generadas por Compose contienen el hostname `db`, válido dentro de sus contenedores. Para ejecutar estos comandos desde Windows, preparar un archivo privado con el host `127.0.0.1` y puerto local (55432 por defecto), conservando credencial/base; no imprimirlo ni versionarlo. Las migraciones no cargan catálogo, cuentas ni historiales. `catalog:load` comprueba hashes de fuentes y no crea estudiantes. `db/seeds/academic-demo.ts` está preparado para una carga explícita posterior con cuentas existentes; no tiene CLI mientras la FK siga pendiente.
 
-`npm run dev --workspace @cenit/api` arranca la base de API con credencial runtime. Por ahora todas las rutas académicas responden 401 sin login y `/health/ready` devuelve 503: no acredita un monolito desplegable. No activar el proxy definitivo ni releases.
+Actualización del 11 de octubre: `npm run dev --workspace @cenit/api` conecta la sesión local real de [AUTENTICACION.md](AUTENTICACION.md), con credencial runtime. Docente/estudiante autenticados pueden leer el catálogo; sin sesión, 401; administrativo, 403. `/health/ready` permanece en 503 porque falta frontend/build completo. No activar el proxy definitivo ni releases. `cenit.accounts.id` ya define identidad UUID; la migración académica de perfiles/historial sigue fuera del journal para su revisión/integración separada.
 
 ## Verificación y seguimiento
 

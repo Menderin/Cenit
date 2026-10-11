@@ -42,7 +42,7 @@ Invoke-RestMethod 'http://127.0.0.1:8081/health/proxy'
 
 La respuesta esperada es `status: ok`, `mode: bootstrap`. Acredita el proxy temporal, no una aplicación disponible. Esperar que `db` y `proxy` estén saludables; consultar `podman compose logs db proxy` si fallan. Los puertos locales por defecto son `127.0.0.1:8081` para HTTP y `127.0.0.1:55432` para PostgreSQL; se pueden cambiar en `.env` para evitar conflictos.
 
-El preparador crea `.env` si falta y credenciales aleatorias en `.local/secrets`. Conserva contraseñas existentes al repetirse y rechaza formatos inesperados. `.env` y `.local` están excluidos de Git y del contexto de build. No copiar esos secretos a la VM ni subirlos a GitHub.
+El preparador crea `.env` si falta y credenciales aleatorias en `.local/secrets`. Conserva contraseñas existentes al repetirse y rechaza formatos inesperados. Además de `app-url`/`migrator-url` para contenedores, genera `app-local-url`/`migrator-local-url` para Windows/host con puerto CENIT_DB_PORT. `.env` y `.local` están excluidos de Git y del contexto de build. No copiar esos secretos a la VM ni subirlos a GitHub.
 
 La base `cenit_demo` usa un volumen persistente propio del proyecto `cenit-local`. Su primer inicio crea `cenit_admin`, `cenit_migrator` y `cenit_app`, con permisos separados y esquema `cenit`. El runtime no puede crear bases, roles ni objetos del esquema. El inicializador sólo corre en un volumen nuevo: cambiar un archivo de contraseña no actualiza una base existente.
 
@@ -56,7 +56,7 @@ No añadir `--volumes` para un apagado habitual. No reutilizar volúmenes de otr
 
 ## Contrato para incorporar la aplicación
 
-Hay manifiestos API/contratos y migraciones del catálogo académico; faltan frontend/login y build completo. El [backend académico](../Docs/ACADEMICO.md) se verifica con `build:academic`; no activar el perfil `application` todavía. El perfil y el `Containerfile` requieren:
+Hay manifiestos API/contratos, migraciones del catálogo y login local de backend; faltan frontend y build completo. El [backend académico](../Docs/ACADEMICO.md) y [autenticación](../Docs/AUTENTICACION.md) se verifican con `build:academic`; no activar el perfil `application` todavía. Para iniciar/probar login en Windows, seguir AUTENTICACION.md, preparando cuentas explícitamente y usando conexión runtime/Origin/excepción HTTP de demo. El perfil y el `Containerfile` requieren:
 
 - Un solo `package-lock.json` y workspaces `apps/api`, `apps/web`, `packages/contracts`; npm 11.19.0 y scripts reales exigidos por CI.
 - `npm run build` genera `apps/api/dist/server.js`, `apps/web/dist/index.html` y `packages/contracts/dist`. Los exports de contratos deben apuntar a su código compilado.

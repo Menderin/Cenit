@@ -31,7 +31,7 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 3. Durante el envío se muestra el estado de la operación; un fallo de red permite reintentar sin afirmar acceso exitoso.
 4. El formulario tiene etiquetas y puede completarse con teclado; las credenciales no se exponen en respuestas, logs ni repositorio.
 
-**Decisión confirmada:** login local y cuentas preparadas por el equipo para representar roles. **Detalle por concretar:** credencial identificadora y preparación técnica de cuentas. No se requiere registro público ni se presupone envío de correos.
+**Decisión confirmada:** login local con correo/contraseña, un rol por cuenta y sesión de dos horas sin renovación automática; cuentas ficticias preparadas por el equipo, sin registro público ni envío de correos. Implementación de HU01-T03/T04 y API de HU03 en [AUTENTICACION.md](AUTENTICACION.md), pendiente de revisión/PR y pantallas para aceptación de la historia completa.
 
 **Revisión INVEST:** resultado valioso y comprobable; independiente de compras y catálogo académico. Tamaño/estimación pendientes de cerrar contrato local. Diseño de entrada negociable.
 
@@ -83,7 +83,7 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 3. Con una sesión vencida se informa la necesidad de autenticar y no se confirma ni realiza un guardado automático.
 4. La conducta de borradores al expirar se acuerda antes de implementar; no pueden quedar expuestos a otra cuenta.
 
-**Pendientes:** duración de sesión, mecanismo de expiración y recuperación o descarte de borradores. No se asignan valores por defecto en esta historia.
+**Decisión del 11 de octubre:** duración fija de dos horas, comprobación en servidor y logout revocable; API implementada con reloj controlado en pruebas. **Pendientes:** recuperación/descarte de borradores, pantallas y limpieza de caché. No asumir política de borrador por implementar el backend.
 
 **Revisión INVEST:** resultado verificable; contrato de sesión compartido con HU01. Si expiración/borradores impiden una entrega pequeña, dividir logout y recuperación de sesión en refinamiento, sin declararlos terminados juntos.
 
@@ -521,8 +521,8 @@ S3-HT03 queda desglosado en HU04-T01; S3-HT04 en HU10-T01. Diseño global S3-HT0
 
 | ID | Pendiente | Estado / historias afectadas |
 | --- | --- | --- |
-| Q01 | Identificador y preparación técnica de cuentas locales | Login local y cuentas preparadas por el equipo confirmados; sin registro público; HU01 |
-| Q02 | Duración de sesión y conducta de borradores al expirar | No respondido: la aclaración recibida explica el flujo, no una política de borrador; HU03 |
+| Q01 | Identificador y preparación técnica de cuentas locales | Resuelto el 11 de octubre: correo/contraseña, un rol, comando de demo privado; sin registro público; HU01 |
+| Q02 | Duración de sesión y conducta de borradores al expirar | Dos horas fijas confirmadas; conducta de borradores/interfaz pendiente; HU03 |
 | Q03 | API Oracle o imagen, muestras, campos y criterio de extracción suficiente | Investigación/contacto TI pendientes; HU04 |
 | Q04 | Fuente oficial de prerrequisitos y versión del plan | Prerrequisitos obligatorios confirmados; Registro Curricular pendiente; HU10 |
 | Q05 | Esquema del catálogo académico | PostgreSQL confirmado; concretar tablas/relaciones/migraciones de HU09/HU10 |

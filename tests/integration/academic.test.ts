@@ -4,6 +4,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { readFileSync, mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { Value } from '@sinclair/typebox/value';
 import { PlanResponseSchema, ProgressResponseSchema, StudentsResponseSchema } from '../../packages/contracts/src/academic/index.js';
 import { AcademicRepository } from '../../apps/api/src/modules/academic/repositories/academic.js';
@@ -14,6 +15,7 @@ import { seedAcademicDemo } from '../../db/seeds/academic-demo.js';
 
 // Never drop/use a configured application DB. Create fresh, uniquely named DBs and roles.
 const suffix = randomBytes(6).toString('hex');
+const migrationCount = readMigrationFiles({ migrationsFolder: 'db/migrations' }).length;
 const databases = [`cenit_academic_test_${suffix}_empty`, `cenit_academic_test_${suffix}_existing`];
 const migratorRole = `academic_migrator_${suffix}`;
 const runtimeRole = `academic_runtime_${suffix}`;
@@ -108,7 +110,7 @@ describe('migraciones reales PostgreSQL 17', () => {
   it('prueba versión, repetición, esquema previo y ausencia de semillas automáticas', async () => {
     expect((await admin.query<{ server_version: string }>('SHOW server_version')).rows[0]!.server_version).toMatch(/^17\./);
     expect((await runtimePools[1]!.query('SELECT * FROM cenit.academic_plans')).rows).toHaveLength(0);
-    expect((await migrationPools[1]!.query('SELECT count(*)::integer AS n FROM cenit.__drizzle_migrations')).rows[0].n).toBe(2);
+    expect((await migrationPools[1]!.query('SELECT count(*)::integer AS n FROM cenit.__drizzle_migrations')).rows[0].n).toBe(migrationCount);
     const u = new URL(adminUrl); u.pathname = `/${databases[1]}`;
     const p = new pg.Pool({ connectionString: u.toString() });
     try { expect((await p.query('SELECT id FROM cenit.existing_probe')).rows[0].id).toBe(42); }
@@ -128,7 +130,7 @@ describe('migraciones reales PostgreSQL 17', () => {
     await pool.query('UPDATE cenit.__drizzle_migrations SET hash=$1 WHERE id=$2', ['0'.repeat(64), row.id]);
     try {
       expect(() => runMigrator(urls[1]!)).toThrow(/migration failed/i);
-      expect((await pool.query('SELECT count(*)::integer AS n FROM cenit.__drizzle_migrations')).rows[0].n).toBe(2);
+      expect((await pool.query('SELECT count(*)::integer AS n FROM cenit.__drizzle_migrations')).rows[0].n).toBe(migrationCount);
       expect((await pool.query('SELECT count(*)::integer AS n FROM cenit.academic_plans')).rows[0].n).toBe(0);
     } finally { await pool.query('UPDATE cenit.__drizzle_migrations SET hash=$1 WHERE id=$2', [row.hash, row.id]); }
   });
