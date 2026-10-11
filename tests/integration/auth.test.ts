@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import pg from 'pg';
+import { createTestPool, closeTestPool } from './support/postgres.js';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -30,7 +31,7 @@ const connection = (database: string, role?: string, password?: string) => {
   const url = new URL(adminUrl); url.pathname = `/${database}`;
   if (role) { url.username = role; url.password = password!; } return url.toString();
 };
-const admin = new pg.Pool({ connectionString: adminUrl });
+const admin = createTestPool({ connectionString: adminUrl });
 const migrations: pg.Pool[] = [], runtimes: pg.Pool[] = [];
 const credentials = createDemoCredentials(), plan = readCatalog('catalogs/academic/nutricion-2027-r1.json');
 const origin = 'http://127.0.0.1:3000';
@@ -58,10 +59,10 @@ beforeAll(async () => {
   await admin.query(`CREATE ROLE ${runtimeRole} LOGIN PASSWORD '${runtimePassword}' NOSUPERUSER NOCREATEDB NOCREATEROLE`);
   for (const [index, database] of databases.entries()) {
     await admin.query(`CREATE DATABASE ${database}`);
-    const provisioner = new pg.Pool({ connectionString: connection(database) });
+    const provisioner = createTestPool({ connectionString: connection(database) });
     try { await provisioner.query(`REVOKE CREATE ON SCHEMA public FROM PUBLIC; GRANT CONNECT ON DATABASE ${database} TO ${migrationRole},${runtimeRole}; CREATE SCHEMA cenit AUTHORIZATION ${migrationRole}; GRANT USAGE ON SCHEMA cenit TO ${runtimeRole}`); }
-    finally { await provisioner.end(); }
-    const url = connection(database, migrationRole, migrationPassword), migration = new pg.Pool({ connectionString: url }); migrations.push(migration);
+    finally { await closeTestPool(provisioner); }
+    const url = connection(database, migrationRole, migrationPassword), migration = createTestPool({ connectionString: url }); migrations.push(migration);
     await migration.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA cenit GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${runtimeRole}`);
     if (index === 1) {
       // Simulate a database with the previous, already applied catalog migrations and rows.
@@ -73,17 +74,17 @@ beforeAll(async () => {
       await loadCatalog(migration, plan, true);
     }
     runMigrator(url); runMigrator(url);
-    runtimes.push(new pg.Pool({ connectionString: connection(database, runtimeRole, runtimePassword) }));
+    runtimes.push(createTestPool({ connectionString: connection(database, runtimeRole, runtimePassword) }));
   }
   await loadCatalog(migrations[0]!, plan, true);
   app = build(); await app.ready();
 });
 afterAll(async () => {
   if (app) await app.close();
-  await Promise.all([...migrations, ...runtimes].map(p => p.end()));
-  for (const database of databases) await admin.query(`DROP DATABASE IF EXISTS ${database} WITH (FORCE)`);
+  await Promise.all([...migrations, ...runtimes].map(p => closeTestPool(p)));
+  for (const database of databases) await admin.query(`DROP DATABASE IF EXISTS ${database}`);
   for (const role of [runtimeRole, migrationRole]) await admin.query(`DROP ROLE IF EXISTS ${role}`);
-  await admin.end();
+  await closeTestPool(admin);
 });
 
 describe('migraciones y preparación de cuentas', () => {

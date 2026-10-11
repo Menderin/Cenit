@@ -45,6 +45,8 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 | HU01-T06 — Interfaz de acceso académico | Construir el acceso académico e integrar cuentas docente/estudiante | Ambas cuentas acceden al destino académico; estados accesibles; no se duplica la lógica de autenticación del servidor |
 | HU01-T07 — Verificación de login por módulo | Probar las entradas administrativa/académica con credenciales ficticias y fallos | Evidencia de éxito para los tres roles, credenciales incorrectas y error de red; criterios de historia comprobados sobre build |
 
+**Seguimiento HU01-T04 (11 de octubre):** autenticación implementada; corrección de CI preparada, pendiente de publicación/revisión independiente/merge. [PR #7](https://github.com/Menderin/Cenit/pull/7) cerrado sin merge por solicitud del líder, quien creará el próximo PR. El [CI por push](https://github.com/Menderin/Cenit/actions/runs/38184387908) del commit `66e8bd7245f5989a868b99fc74e0adc602cc203d` pasó, pero [CI del PR](https://github.com/Menderin/Cenit/actions/runs/38184816686) falló por cierre forzado de una conexión durante la limpieza de tests, aunque sus 55 pruebas pasaron. Corrección y evidencia en [AUTENTICACION.md](AUTENTICACION.md); falta CI remoto de la corrección. Application omitido por frontend/build completo pendiente. No marcar HU01 completa mientras falten interfaces/recorrido sobre build.
+
 ### S3-HU02 — Acceder únicamente a funciones autorizadas
 
 **Alcance:** MVP.

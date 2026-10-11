@@ -52,6 +52,7 @@ Seguir [CONTRIBUTING.md](CONTRIBUTING.md) para coordinar tareas e integración. 
 4. No introducir dependencias sin justificar qué necesidad concreta resuelven. Preferir las herramientas existentes.
 5. Verificar las reglas y recorridos afectados. No declarar pruebas exitosas si no se ejecutaron; informar bloqueos y limitaciones.
 6. Actualizar documentación cuando cambien decisiones o instrucciones ejecutables. Informar qué cambió, cómo se verificó y qué queda pendiente.
+7. El líder crea los pull requests. Los agentes preparan cambios y evidencia local; no crean PR ni hacen merge salvo instrucción explícita del líder.
 
 ## Datos, interfaz y calidad
 

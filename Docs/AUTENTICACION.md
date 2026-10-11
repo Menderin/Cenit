@@ -76,7 +76,26 @@ El catálogo debe estar cargado por su comando explícito para obtener el plan; 
 
 ## Verificación y coordinación
 
-Pasaron 38 pruebas unitarias, 55 de integración PostgreSQL/API y 39 de infraestructura, typecheck, comprobación de catálogo y build API/contratos. Cubren PostgreSQL 17 vacío y actualizado desde catálogo previo; roles limitados, FK, correo/rol/hash y tiempos; preparación repetida sin rotación; login de los tres roles, errores genéricos, cookie, expiración exacta con reloj controlado, logout, cambio de cuenta/rol, Origin y límite/IP; fallo de BD saneado. Las bases de test son descartables y propias; no restablecen cenit_demo. También se aplicó la migración nueva en cenit_demo, se prepararon/reutilizaron sus cuentas y se probó HTTP real: docente/estudiante 200 con 52 asignaturas, administrativo 403, logout 204 y sesión posterior 401. No se modificó la VM ni se publicaron cambios; ejecución nueva en Actions y revisión del equipo pendientes.
+### Seguimiento de HU01-T04 — 11 de octubre de 2026
+
+Estado: **implementada; corrección de CI preparada, pendiente de publicación, revisión independiente y merge**. Implementación en [73af3f0](https://github.com/Menderin/Cenit/commit/73af3f01c962eb8d4ccdc0c58acd2808d1bdbfa6); commit publicado [66e8bd7](https://github.com/Menderin/Cenit/commit/66e8bd7245f5989a868b99fc74e0adc602cc203d), que añade CI por push y conserva la implementación y sus pruebas. El [PR #7](https://github.com/Menderin/Cenit/pull/7) quedó **cerrado sin merge por solicitud del líder**; los agentes no crearán nuevos PR salvo instrucción explícita.
+
+El [CI por push 38184387908](https://github.com/Menderin/Cenit/actions/runs/38184387908) pasó para ese SHA: Prerequisites, Infrastructure, Academic foundation y CI required. Sin embargo, el [CI del PR 38184816686](https://github.com/Menderin/Cenit/actions/runs/38184816686) falló en Academic foundation y CI required: las 55 pruebas de integración pasaron, pero Vitest detectó un error no controlado PostgreSQL `57P01` al limpiar las bases descartables.
+
+Causa: `pg-pool.end()` puede resolver antes del cierre físico de conexiones retiradas; `DROP DATABASE ... WITH (FORCE)` terminaba una conexión aún desconectándose. Las suites académica y de autenticación ahora registran los eventos `end` de sus conexiones y esperan su cierre antes de eliminar las bases, sin FORCE. Una regresión comprueba tres conexiones y su ausencia en pg_stat_activity después del cierre. No se ignoran errores de Vitest, no se cambian los gates ni los endpoints/migraciones. La corrección aún debe publicarse y superar Actions en su nuevo SHA.
+
+Verificación local de la corrección: `npm run typecheck` exitoso y dos ejecuciones consecutivas de `npm run test:integration`, cada una con **56 pruebas exitosas** sobre PostgreSQL 17, sin errores no controlados. Se repitió integración por el carácter intermitente del fallo; los resultados siguientes de unitarias/build corresponden a la implementación previa, cuyo código no cambió.
+
+| Criterio HU01-T04 | Evidencia implementada |
+| --- | --- |
+| Credenciales válidas/inválidas | Integración de los tres roles, contraseña incorrecta, correo inexistente, cuenta inactiva, solicitudes/JSON inválidos |
+| Contraseña protegida | scrypt con salt aleatorio, comparación constante, hashes en BD y preparación privada fuera de Git |
+| Rol desde el servidor | Consulta a accounts en PostgreSQL, rechazo de role en login y prueba de cambio de rol en servidor |
+| Errores sin trazas internas | Contrato común validado; fallo de BD sin SQL, credenciales ni stack en respuesta |
+
+Revisor independiente y aprobación: pendientes, sin asignar disponibilidad ni aprobar en nombre del autor. No se realizó merge. Registrar aprobación/SHA y merge cuando realmente ocurran. No dar por terminada HU01 completa ni HU03 de interfaz; pantallas y política de borradores siguen pendientes.
+
+Pasaron 38 pruebas unitarias, 55 de integración PostgreSQL/API y 39 de infraestructura, typecheck, comprobación de catálogo y build API/contratos. Cubren PostgreSQL 17 vacío y actualizado desde catálogo previo; roles limitados, FK, correo/rol/hash y tiempos; preparación repetida sin rotación; login de los tres roles, errores genéricos, cookie, expiración exacta con reloj controlado, logout, cambio de cuenta/rol, Origin y límite/IP; fallo de BD saneado. Las bases de test son descartables y propias; no restablecen cenit_demo. También se aplicó la migración nueva en cenit_demo, se prepararon/reutilizaron sus cuentas y se probó HTTP real: docente/estudiante 200 con 52 asignaturas, administrativo 403, logout 204 y sesión posterior 401. No se modificó la VM. La publicación y el CI por push ya se confirmaron en el seguimiento anterior; la corrección del CI del PR, revisión independiente e integración siguen pendientes.
 
 Gael debe consumir estos contratos para las interfaces administrativa/académica, consultar session al iniciar, limpiar datos/caché al salir o cambiar cuenta y tratar 401 sin mostrar datos previos. Las pantallas y política de borradores siguen pendientes; la API no implementa ni declara esa política. Kevin revisará evidencia del flujo completo cuando existan las pantallas. La API implementada no completa HU01/HU03 de extremo a extremo.
 
