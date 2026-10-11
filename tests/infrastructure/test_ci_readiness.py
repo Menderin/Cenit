@@ -72,6 +72,37 @@ class ReadinessTests(unittest.TestCase):
             with self.subTest(branch=branch):
                 self.assertTrue(READINESS.check(self.root, branch))
 
+    def academic_foundation(self):
+        self.write_package(cenitStage="academic-foundation", workspaces=["apps/api", "packages/contracts"], scripts={name: "test-command" for name in READINESS.ACADEMIC_SCRIPTS})
+        for filename in (
+            "package-lock.json", "apps/api/package.json", "packages/contracts/package.json",
+            "apps/api/src/app.ts", "packages/contracts/src/academic/index.ts",
+            "db/migrations/meta/_journal.json", "tests/integration/academic.test.ts",
+        ):
+            path = self.root / filename
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}", encoding="utf-8")
+
+    def test_explicit_academic_stage_never_authorizes_application_release(self):
+        self.academic_foundation()
+        self.assertFalse(READINESS.check(self.root, "develop"))
+        for branch in ("main", "produccion", "feature/unknown"):
+            with self.subTest(branch=branch):
+                with self.assertRaisesRegex(ValueError, "incomplete"):
+                    READINESS.check(self.root, branch)
+
+    def test_academic_stage_requires_all_checks_and_migration(self):
+        self.academic_foundation()
+        (self.root / "db/migrations/meta/_journal.json").unlink()
+        with self.assertRaisesRegex(ValueError, "Missing academic"):
+            READINESS.check(self.root, "develop")
+
+    def test_unknown_stage_cannot_skip_checks(self):
+        self.complete_workspace()
+        self.write_package(cenitStage="anything")
+        with self.assertRaisesRegex(ValueError, "Unknown"):
+            READINESS.check(self.root, "develop")
+
 
 if __name__ == "__main__":
     unittest.main()

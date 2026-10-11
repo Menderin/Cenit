@@ -8,6 +8,7 @@ MVP de registro auxiliar de compras con datos ficticios, login local y visualiza
 - [Guía de colaboración del equipo](CONTRIBUTING.md)
 - [Diseño técnico, contratos y pendientes para el equipo](AGENTS/SDD.md)
 - [Mapa de carpetas y distribución del código](AGENTS/ESTRUCTURA.md)
+- [Catálogo, contratos, progreso académico y comandos de verificación](Docs/ACADEMICO.md)
 - [Borrador de planificación, épicas, historias y tareas del MVP](Docs/PLANIFICACION-MVP.md)
 - [Historias, criterios de aceptación y habilitadores del sprint 3](Docs/BACKLOG-SPRINT-3.md)
 - [Fichas vigentes INVEST: descripción, criterios y tareas por historia y módulo](Docs/HISTORIAS-USUARIO-INVEST.md)
@@ -35,7 +36,22 @@ Se utiliza organización mixta: separación técnica y módulos de negocio dentr
 
 La estructura completa y las reglas para ubicar código están en la sección 4 del SDD. Las carpetas vacías contienen `.gitkeep`; retirarlo al incorporar el primer archivo real. Los datos de PostgreSQL se conservan en un volumen fuera del repositorio.
 
-Este checkout contiene documentación, estructura inicial, bootstrap de la VM, Compose local, Containerfile, migrador y workflows CI/release. La [primera ejecución en `main`](https://github.com/Menderin/Cenit/actions/runs/38071046810) pasó el 10 de octubre de 2026 con la versión anterior del CI. Los nuevos pasos y el workflow de publicación todavía deben ejecutarse en Actions. En ausencia de la aplicación, su job queda omitido en `develop` y CI bloquea la promoción a `main`. Faltan los manifiestos npm, aplicación, migraciones de negocio y ensayo real de entrega/recuperación; no hay una imagen del MVP construida.
+Este checkout contiene infraestructura y una base académica implementada: API/contratos npm, catálogo versionado, migraciones de catálogo y pruebas PostgreSQL. El frontend y login siguen pendientes; el historial tiene un esquema propuesto cuya FK debe coordinarse con cuentas. CI verifica esta base en `develop` y bloquea promoverla como aplicación completa a `main`. La [primera ejecución histórica](https://github.com/Menderin/Cenit/actions/runs/38071046810) no acredita estos nuevos checks. No hay imagen del MVP ni ensayo de entrega/recuperación completado.
+
+## Verificar el backend académico
+
+Con Node 24.21.0, npm 11.19.0 y PostgreSQL 17 local preparado:
+
+```powershell
+npm ci
+npm run typecheck
+npm run catalog:check
+npm run test:unit
+npm run test:integration
+npm run build:academic
+```
+
+Las pruebas de integración crean bases/roles propios y descartables; conservan `cenit_demo`. El catálogo no se carga automáticamente al migrar. Comandos de carga explícita, contrato de sesión pendiente y adaptación del frontend en [la guía académica](Docs/ACADEMICO.md). `build:academic` compila API/contratos, no constituye el build del MVP.
 
 ## Arranque local de infraestructura
 

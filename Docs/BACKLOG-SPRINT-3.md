@@ -2,6 +2,10 @@
 
 Fecha: 10 de octubre de 2026. Estado: propuesta para estimar y revisar con el equipo. Sprint: 10–26 de octubre; demostración: jueves 15; cierre del build: miércoles 14. Ningún ítem se considera implementado o comprometido sólo por aparecer aquí.
 
+Actualización autorizada del 11 de octubre: además de HU09-T03 (catálogo/migración/contrato), se incorpora un entregable de perfiles e historial de intentos para consultar progreso propio y búsqueda docente por nombre/RUT. Persistencia de progreso ficticio, sin simulación ni edición pública. [Modelo, API y evidencia](ACADEMICO.md). La migración del catálogo y sus lecturas están verificadas localmente; revisión e integración pendientes. El vínculo real de cuentas/historial depende de HU01-T03 y no se despliega con el journal actual.
+
+Tareas de la ampliación: revisar FK y clave de cuenta con login; integrar perfil/adscripción/intentos en una nueva migración; preparar datos ficticios con cuentas existentes; conectar sesión real a lecturas propias/docentes; adaptar pantallas y ensayar el recorrido. La propuesta y pruebas de BD/API están preparadas; conexión de autenticación, consumidor frontend y migración de historial no deben marcarse terminados por esa evidencia.
+
 **Revisión vigente:** `Docs/HISTORIAS-USUARIO-INVEST.md` sustituye las fichas siguientes con descripción, criterios y tareas específicas. Última decisión del líder: login local confirmado; malla y prerrequisitos oficiales obligatorios; simulación fuera del MVP. HU11/HU12 son futuras. El contenido anterior conservado debajo es referencia histórica y no debe usarse para ampliar el compromiso ni duplicar tareas.
 
 ## Organización y alcance

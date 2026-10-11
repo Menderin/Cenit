@@ -10,6 +10,28 @@ ROOT = Path(__file__).resolve().parents[2]
 REQUIRED_SCRIPTS = (
     "typecheck", "lint", "test:unit", "test:integration", "build", "test:e2e"
 )
+ACADEMIC_SCRIPTS = ("typecheck", "test:unit", "test:integration", "build:academic", "catalog:check")
+
+
+def check_academic_foundation(root, package, branch):
+    """An explicit backend delivery can integrate in develop, never authorize a release."""
+    if branch != "develop":
+        raise ValueError("Academic foundation is incomplete: delivery requires login, frontend and full application tests.")
+    if package.get("workspaces") != ["apps/api", "packages/contracts"]:
+        raise ValueError("Academic foundation must declare only the two initialized workspaces.")
+    for name in ACADEMIC_SCRIPTS:
+        value = package.get("scripts", {}).get(name)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"Missing academic check: {name}")
+    for filename in (
+        "package-lock.json", "apps/api/package.json", "packages/contracts/package.json",
+        "apps/api/src/app.ts", "packages/contracts/src/academic/index.ts",
+        "db/migrations/meta/_journal.json", "tests/integration/academic.test.ts",
+    ):
+        if not (root / filename).is_file():
+            raise ValueError(f"Missing academic foundation file: {filename}")
+    print("Academic foundation: run mandatory academic CI. Full application/release remains blocked.")
+    return False
 
 
 def check(root, branch):
@@ -23,6 +45,11 @@ def check(root, branch):
     package = json.loads(manifest.read_text(encoding="utf-8"))
     if not re.fullmatch(r"npm@\d+\.\d+\.\d+", package.get("packageManager", "")):
         raise ValueError("packageManager must pin npm as npm@X.Y.Z.")
+    stage = package.get("cenitStage")
+    if stage == "academic-foundation":
+        return check_academic_foundation(root, package, branch)
+    if stage is not None:
+        raise ValueError("Unknown explicit application stage.")
     for script in REQUIRED_SCRIPTS:
         value = package.get("scripts", {}).get(script)
         if not isinstance(value, str) or not value.strip():
@@ -43,6 +70,9 @@ def main():
         if output:
             with open(output, "a", encoding="utf-8") as stream:
                 stream.write(f"app_ready={str(ready).lower()}\n")
+                manifest = ROOT / "package.json"
+                academic = manifest.is_file() and json.loads(manifest.read_text(encoding="utf-8")).get("cenitStage") == "academic-foundation"
+                stream.write(f"academic_ready={str(academic).lower()}\n")
         return 0
     except (ValueError, OSError) as error:
         print(f"CI prerequisite error: {error}", file=sys.stderr)
