@@ -1,6 +1,6 @@
 {
   "name": "@cenit/contracts", "version": "0.1.0", "private": true, "type": "module",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }, "./academic": { "types": "./dist/academic/index.d.ts", "import": "./dist/academic/index.js" }, "./academic/examples": { "types": "./dist/academic/examples.d.ts", "import": "./dist/academic/examples.js" } },
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }, "./academic": { "types": "./dist/academic/index.d.ts", "import": "./dist/academic/index.js" }, "./academic/examples": { "types": "./dist/academic/examples.d.ts", "import": "./dist/academic/examples.js" }, "./auth": { "types": "./dist/auth/index.d.ts", "import": "./dist/auth/index.js" }, "./auth/examples": { "types": "./dist/auth/examples.d.ts", "import": "./dist/auth/examples.js" } },
   "scripts": { "build": "tsc -p tsconfig.build.json" },
   "dependencies": { "@sinclair/typebox": "0.34.52" }
 }

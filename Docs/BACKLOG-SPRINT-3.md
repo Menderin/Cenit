@@ -14,7 +14,7 @@ Tareas de la ampliación: revisar FK y clave de cuenta con login; integrar perfi
 
 HU describe un resultado para un usuario. HT es un habilitador técnico, de diseño, investigación o documentación: se registra como tarea bajo su épica, no se disfraza de historia de negocio. Ambos requieren evidencia y estimación. El mockup, el endpoint y la migración son trabajo necesario para completar historias; por sí solos no prueban que el recorrido funcione.
 
-Se mantiene el monolito y el stack del SDD. Roles académicos: docente/estudiante; compras: administrativo. Login local con correo/contraseña es la propuesta de trabajo, con cuentas ficticias precargadas y Google posterior. No se añade registro público, recuperación de contraseña por correo, pagos, aprobación institucional, eliminación de compras ni los dos módulos administrativos futuros.
+Se mantiene el monolito y el stack del SDD. Roles académicos: docente/estudiante; compras: administrativo. Login local con correo/contraseña, un rol por cuenta y sesión fija de dos horas confirmados el 11 de octubre; preparación explícita de cuentas ficticias y Google posterior. HU01-T03/T04 y API de HU03 implementadas según [AUTENTICACION.md](AUTENTICACION.md), pendientes de revisión/PR; pantallas aún pendientes. No se añade registro público, recuperación de contraseña por correo, pagos, aprobación institucional, eliminación de compras ni los dos módulos administrativos futuros.
 
 Todos los HU siguientes pertenecen al alcance solicitado de la demo. La captura automática tiene vía pendiente y la simulación depende de reglas académicas aún no recibidas. No se convierte esa incertidumbre en promesa ni en reducción silenciosa del alcance. Estimar y contrastar capacidad antes de seleccionar el compromiso del sprint.
 

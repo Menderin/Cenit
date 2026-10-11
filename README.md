@@ -36,7 +36,7 @@ Se utiliza organización mixta: separación técnica y módulos de negocio dentr
 
 La estructura completa y las reglas para ubicar código están en la sección 4 del SDD. Las carpetas vacías contienen `.gitkeep`; retirarlo al incorporar el primer archivo real. Los datos de PostgreSQL se conservan en un volumen fuera del repositorio.
 
-Este checkout contiene infraestructura y una base académica implementada: API/contratos npm, catálogo versionado, migraciones de catálogo y pruebas PostgreSQL. El frontend y login siguen pendientes; el historial tiene un esquema propuesto cuya FK debe coordinarse con cuentas. CI verifica esta base en `develop` y bloquea promoverla como aplicación completa a `main`. La [primera ejecución histórica](https://github.com/Menderin/Cenit/actions/runs/38071046810) no acredita estos nuevos checks. No hay imagen del MVP ni ensayo de entrega/recuperación completado.
+Este checkout contiene infraestructura, catálogo académico y API de autenticación local: contratos npm, migraciones y pruebas PostgreSQL. Login usa correo/contraseña, roles de servidor y sesión fija de dos horas. El frontend sigue pendiente; el historial continúa como propuesta separada, con identidad UUID de cuentas ya definida. CI verifica esta base en `develop` y bloquea promoverla como aplicación completa a `main`. La [primera ejecución histórica](https://github.com/Menderin/Cenit/actions/runs/38071046810) no acredita estos nuevos checks. No hay imagen del MVP ni ensayo de entrega/recuperación completado.
 
 ## Verificar el backend académico
 
@@ -51,7 +51,7 @@ npm run test:integration
 npm run build:academic
 ```
 
-Las pruebas de integración crean bases/roles propios y descartables; conservan `cenit_demo`. El catálogo no se carga automáticamente al migrar. Comandos de carga explícita, contrato de sesión pendiente y adaptación del frontend en [la guía académica](Docs/ACADEMICO.md). `build:academic` compila API/contratos, no constituye el build del MVP.
+Las pruebas de integración crean bases/roles propios y descartables; conservan `cenit_demo`. El catálogo y las cuentas no se cargan automáticamente al migrar. Comandos de carga y adaptación del frontend en [la guía académica](Docs/ACADEMICO.md); arranque, preparación privada de cuentas y prueba de login en [AUTENTICACION.md](Docs/AUTENTICACION.md). `build:academic` compila toda la API/contratos, incluida autenticación, no constituye el build del MVP.
 
 ## Arranque local de infraestructura
 
@@ -66,5 +66,7 @@ Invoke-RestMethod 'http://127.0.0.1:8081/health/proxy'
 Se espera `status: ok`, `mode: bootstrap`. PostgreSQL persiste en un volumen propio; `podman compose down` conserva los datos. Los secretos generados en `.local` y la configuración `.env` no se versionan. Consultar [la guía local](deploy/LOCAL.md) para preparar la máquina Podman, resolver puertos y activar posteriormente la aplicación.
 
 ## Flujo vigente de ramas
+
+CI se ejecuta al hacer **push** en `feat/**`, `fix/**`, `test/**`, `docs/**`, `codex/**`, `develop` y `main`, además de PR hacia `develop`/`main`. Un commit local necesita `Push origin` para llegar a Actions; no hace falta abrir PR para probar la rama. Consultar la ejecución por rama/commit en la pestaña Actions.
 
 `rama de tarea → develop → main`, mediante PR, revisión y CI. `develop` integra funcionalidades; `main` autoriza entregas verificadas. El publicador sigue deshabilitado hasta completar aplicación/tests y actualizar el ejecutor instalado en la VM para aceptar `main`. La rama antigua `produccion` no es destino del nuevo flujo; retirarla tras comprobar la transición según [CI/CD](deploy/CI-CD.md).

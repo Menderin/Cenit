@@ -2,7 +2,7 @@
 
 Mapa revisado el 11 de octubre de 2026. Esta guía concreta la organización de la sección 4 del [SDD](SDD.md); no cambia stack, contratos ni alcance. Leer también [las instrucciones para agentes](../AGENTS.md) y [la guía de colaboración](../CONTRIBUTING.md). Si cambian responsabilidades o rutas, actualizar este mapa en el mismo PR.
 
-El repositorio contiene infraestructura y una base implementada de API/contratos académicos; el frontend conserva `.gitkeep`. Consultar [el estado académico](../Docs/ACADEMICO.md): perfiles/progreso dependen todavía de la FK de login. Las ubicaciones usadas como ejemplos no acreditan otras implementaciones. Las carpetas se completan cuando una tarea necesita código real; no crear funciones vacías ni funcionalidades fuera del MVP para ocuparlas.
+El repositorio contiene infraestructura, API/contratos académicos y [autenticación local](../Docs/AUTENTICACION.md); el frontend conserva `.gitkeep`. Consultar [el estado académico](../Docs/ACADEMICO.md): la identidad UUID está definida, pero migrar perfiles/progreso sigue siendo un entregable separado. Las ubicaciones usadas como ejemplos no acreditan otras implementaciones. Las carpetas se completan cuando una tarea necesita código real; no crear funciones vacías ni funcionalidades fuera del MVP para ocuparlas.
 
 ## 1. Mapa de carpetas existentes
 
@@ -18,9 +18,10 @@ Cenit/
 │   └── api/src/
 │       ├── modules/
 │       │   ├── purchases/{routes,services,repositories}/
+│       │   ├── auth/{routes,services,repositories}/
 │       │   └── academic/{routes,services,repositories}/
 │       └── infrastructure/{config,database,plugins}/
-├── packages/contracts/src/{common,purchases,academic}/
+├── packages/contracts/src/{common,purchases,academic,auth}/
 ├── db/{schema,migrations,seeds,pending}/
 ├── catalogs/academic/
 ├── tests/{integration,e2e,infrastructure}/
@@ -83,11 +84,11 @@ Si se elige recuperación mediante API/OCR, los adaptadores propios de compras p
 
 El build debe producir `apps/api/dist/server.js`, como exige el Containerfile. Configuración TypeScript/manifiesto del workspace viven en `apps/api`; `dist` es generado y no se versiona.
 
-## 4. Identidad y acceso: ubicación por concretar
+## 4. Identidad y acceso: módulo auth
 
-El login local sí forma parte del MVP, pero su contrato de cuenta/sesión sigue pendiente. La estructura inicial no tiene un módulo de identidad. Al resolver ese contrato, coordinar nombres y añadir una funcionalidad propia en `apps/web/src/features` y un módulo propio en `apps/api/src/modules`, con contratos en `packages/contracts/src`. No colocar login en compras sólo porque el primer usuario sea administrativo ni duplicarlo en académico.
+El contrato de cuenta/sesión está en [AUTENTICACION.md](../Docs/AUTENTICACION.md). El backend utiliza `apps/api/src/modules/auth/{routes,services,repositories}` y contratos públicos en `packages/contracts/src/auth`; cuentas/sesiones Drizzle en `db/schema/auth.ts` y preparación ficticia explícita en `db/seeds/auth-demo.ts`. La interfaz sigue pendiente: coordinar su funcionalidad propia con Gael dentro de `apps/web/src/features`. No colocar login en compras sólo porque el primer usuario sea administrativo ni duplicarlo en académico.
 
-Las reglas de cuenta/sesión pertenecen a ese módulo; un plugin técnico puede verificar la sesión y exponer la identidad al request. Cada módulo aplica sus permisos en servidor. Persistencia de cuentas, si el diseño la requiere, se define en `db/schema` y migraciones, sin guardar contraseñas reales en semillas. Esta guía no elige mecanismo de sesión, campos ni endpoints pendientes.
+Las reglas de cuenta/sesión pertenecen a auth; la composición de app conecta su servicio de sesión con el adaptador académico. Cada módulo aplica sus permisos en servidor. El error HTTP común reutilizado por ambos módulos vive en infraestructura, no en un dominio. Cookies/rate-limit son plugins técnicos; los contratos no importan Fastify ni persistencia. No guardar contraseñas en semillas versionadas ni mezclar preparación de demo con migraciones/CD.
 
 ## 5. Contratos: `packages/contracts`
 
@@ -96,6 +97,7 @@ Las reglas de cuenta/sesión pertenecen a ese módulo; un plugin técnico puede 
 | `src/common` | Formatos y errores públicos usados por más de un módulo, sin reglas privadas |
 | `src/purchases` | Schemas TypeBox/JSON Schema, tipos, entradas y respuestas públicas de compras |
 | `src/academic` | Schemas/tipos públicos de planes, versiones, asignaturas y prerrequisitos |
+| `src/auth` | Login, sesión pública, rol y ejemplos sin credenciales; no incluye hashes ni cookie en JSON |
 
 Frontend y API consumen estos contratos. No importar tablas Drizzle, repositorios, React ni configuración privada del servidor. Compartir un helper puro cuando forme parte del formato público y haga falta a ambos consumidores; no trasladar toda regla de negocio al paquete para evitar diseñar su ubicación.
 

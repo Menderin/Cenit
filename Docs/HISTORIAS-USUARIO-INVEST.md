@@ -31,7 +31,7 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 3. Durante el envío se muestra el estado de la operación; un fallo de red permite reintentar sin afirmar acceso exitoso.
 4. El formulario tiene etiquetas y puede completarse con teclado; las credenciales no se exponen en respuestas, logs ni repositorio.
 
-**Decisión confirmada:** login local y cuentas preparadas por el equipo para representar roles. **Detalle por concretar:** credencial identificadora y preparación técnica de cuentas. No se requiere registro público ni se presupone envío de correos.
+**Decisión confirmada:** login local con correo/contraseña, un rol por cuenta y sesión de dos horas sin renovación automática; cuentas ficticias preparadas por el equipo, sin registro público ni envío de correos. Implementación de HU01-T03/T04 y API de HU03 en [AUTENTICACION.md](AUTENTICACION.md), pendiente de revisión/PR y pantallas para aceptación de la historia completa.
 
 **Revisión INVEST:** resultado valioso y comprobable; independiente de compras y catálogo académico. Tamaño/estimación pendientes de cerrar contrato local. Diseño de entrada negociable.
 
@@ -44,6 +44,8 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 | HU01-T05 — Interfaz de acceso administrativo | Construir el acceso administrativo con el diseño revisado e integrarlo con API | Estados reales de envío/fallo/éxito; acceso de cuenta administrativa probado; no usa éxito simulado |
 | HU01-T06 — Interfaz de acceso académico | Construir el acceso académico e integrar cuentas docente/estudiante | Ambas cuentas acceden al destino académico; estados accesibles; no se duplica la lógica de autenticación del servidor |
 | HU01-T07 — Verificación de login por módulo | Probar las entradas administrativa/académica con credenciales ficticias y fallos | Evidencia de éxito para los tres roles, credenciales incorrectas y error de red; criterios de historia comprobados sobre build |
+
+**Seguimiento HU01-T04 (11 de octubre):** autenticación implementada; corrección de CI preparada, pendiente de publicación/revisión independiente/merge. [PR #7](https://github.com/Menderin/Cenit/pull/7) cerrado sin merge por solicitud del líder, quien creará el próximo PR. El [CI por push](https://github.com/Menderin/Cenit/actions/runs/38184387908) del commit `66e8bd7245f5989a868b99fc74e0adc602cc203d` pasó, pero [CI del PR](https://github.com/Menderin/Cenit/actions/runs/38184816686) falló por cierre forzado de una conexión durante la limpieza de tests, aunque sus 55 pruebas pasaron. Corrección y evidencia en [AUTENTICACION.md](AUTENTICACION.md); falta CI remoto de la corrección. Application omitido por frontend/build completo pendiente. No marcar HU01 completa mientras falten interfaces/recorrido sobre build.
 
 ### S3-HU02 — Acceder únicamente a funciones autorizadas
 
@@ -83,7 +85,7 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 3. Con una sesión vencida se informa la necesidad de autenticar y no se confirma ni realiza un guardado automático.
 4. La conducta de borradores al expirar se acuerda antes de implementar; no pueden quedar expuestos a otra cuenta.
 
-**Pendientes:** duración de sesión, mecanismo de expiración y recuperación o descarte de borradores. No se asignan valores por defecto en esta historia.
+**Decisión del 11 de octubre:** duración fija de dos horas, comprobación en servidor y logout revocable; API implementada con reloj controlado en pruebas. **Pendientes:** recuperación/descarte de borradores, pantallas y limpieza de caché. No asumir política de borrador por implementar el backend.
 
 **Revisión INVEST:** resultado verificable; contrato de sesión compartido con HU01. Si expiración/borradores impiden una entrega pequeña, dividir logout y recuperación de sesión en refinamiento, sin declararlos terminados juntos.
 
@@ -521,8 +523,8 @@ S3-HT03 queda desglosado en HU04-T01; S3-HT04 en HU10-T01. Diseño global S3-HT0
 
 | ID | Pendiente | Estado / historias afectadas |
 | --- | --- | --- |
-| Q01 | Identificador y preparación técnica de cuentas locales | Login local y cuentas preparadas por el equipo confirmados; sin registro público; HU01 |
-| Q02 | Duración de sesión y conducta de borradores al expirar | No respondido: la aclaración recibida explica el flujo, no una política de borrador; HU03 |
+| Q01 | Identificador y preparación técnica de cuentas locales | Resuelto el 11 de octubre: correo/contraseña, un rol, comando de demo privado; sin registro público; HU01 |
+| Q02 | Duración de sesión y conducta de borradores al expirar | Dos horas fijas confirmadas; conducta de borradores/interfaz pendiente; HU03 |
 | Q03 | API Oracle o imagen, muestras, campos y criterio de extracción suficiente | Investigación/contacto TI pendientes; HU04 |
 | Q04 | Fuente oficial de prerrequisitos y versión del plan | Prerrequisitos obligatorios confirmados; Registro Curricular pendiente; HU10 |
 | Q05 | Esquema del catálogo académico | PostgreSQL confirmado; concretar tablas/relaciones/migraciones de HU09/HU10 |

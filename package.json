@@ -11,7 +11,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node deploy/migrate.cjs",
     "catalog:check": "tsx db/seeds/load-academic.ts --check",
-    "catalog:load": "tsx db/seeds/load-academic.ts --publish"
+    "catalog:load": "tsx db/seeds/load-academic.ts --publish",
+    "auth:prepare-demo": "tsx db/seeds/auth-demo.ts"
   },
   "devDependencies": {
     "@types/node": "24.19.2", "@types/pg": "8.23.1",

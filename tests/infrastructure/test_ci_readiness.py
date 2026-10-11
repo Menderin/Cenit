@@ -39,6 +39,11 @@ class ReadinessTests(unittest.TestCase):
     def test_scaffold_checks_only_infrastructure_on_develop(self):
         self.assertFalse(READINESS.check(self.root, "develop"))
 
+    def test_task_pushes_can_check_scaffold_without_authorizing_application(self):
+        for prefix in ("feat", "fix", "test", "docs", "codex"):
+            with self.subTest(prefix=prefix):
+                self.assertFalse(READINESS.check(self.root, f"{prefix}/login"))
+
     def test_scaffold_cannot_pass_production_checks(self):
         for branch in ("main", "produccion", "feature/unknown"):
             with self.subTest(branch=branch):
@@ -90,6 +95,15 @@ class ReadinessTests(unittest.TestCase):
             with self.subTest(branch=branch):
                 with self.assertRaisesRegex(ValueError, "incomplete"):
                     READINESS.check(self.root, branch)
+
+    def test_task_pushes_require_academic_checks_without_authorizing_release(self):
+        self.academic_foundation()
+        for prefix in ("feat", "fix", "test", "docs", "codex"):
+            with self.subTest(prefix=prefix):
+                self.assertFalse(READINESS.check(self.root, f"{prefix}/login"))
+        (self.root / "tests/integration/academic.test.ts").unlink()
+        with self.assertRaisesRegex(ValueError, "Missing academic"):
+            READINESS.check(self.root, "feat/login")
 
     def test_academic_stage_requires_all_checks_and_migration(self):
         self.academic_foundation()

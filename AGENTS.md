@@ -10,6 +10,7 @@ Estas instrucciones aplican a todo el repositorio. Antes de iniciar una tarea, l
 - [AGENTS/ESTRUCTURA.md](AGENTS/ESTRUCTURA.md): mapa de carpetas, responsabilidad de cada ubicación, límites de dependencia y criterios para colocar código/pruebas. Consultarlo antes de crear o mover archivos; actualizarlo si cambia la organización. No completar carpetas con código innecesario ni ampliar alcance para retirar `.gitkeep`.
 - `README.md`: instrucciones ejecutables; actualizarlo cuando cambie el arranque, configuración o verificación.
 - [Docs/ACADEMICO.md](Docs/ACADEMICO.md): esquema/contratos académicos implementados, trazabilidad y dependencias de login. Leerlo antes de modificar catálogo o progreso.
+- [Docs/AUTENTICACION.md](Docs/AUTENTICACION.md): contrato/modelo de cuentas, sesiones de dos horas, API y preparación privada de demo. Leer antes de modificar acceso o conectar interfaces.
 
 Ante una contradicción que afecte alcance, contratos o reglas de negocio, explicarla y solicitar una decisión. No inventar procesos institucionales ni afirmar que una funcionalidad existe sin verificarla.
 
@@ -27,7 +28,7 @@ No incorporar Banner, autenticación institucional, pagos, aprobaciones oficiale
 
 Ampliación autorizada del 11 de octubre: estudiantes consultan su progreso persistido y docentes buscan a todos los estudiantes ficticios de Nutrición por nombre/RUT. Historial de intentos y notas, sin simulación ni edición pública. Imagen `Docs/Foto prerequisitos Nutricion.jpeg` prioritaria para nombres/SCT; plan 2027 confirmado por el equipo. Semántica de flechas y ausencia de requisitos sigue pendiente: mantener `pending`, nunca inferir AND/OR o `none`. Perfiles/historial preparados como propuesta fuera del journal hasta revisar la FK con HU01-T03; no crear usuarios ni credenciales duplicadas para desbloquearlos.
 
-La base npm inicializa API/contratos sin alterar frontend. El marcador `cenitStage: academic-foundation` permite integración únicamente en `develop` con pruebas académicas obligatorias; no permite entrega en `main`. Retirarlo al completar los tres workspaces y checks reales. Mantener el publicador deshabilitado. El servidor académico sin adaptador de login deniega acceso; no introducir identidades por headers ni fingir readiness.
+La base npm inicializa API/contratos sin alterar frontend. El marcador `cenitStage: academic-foundation` permite CI en ramas de tarea `feat/`, `fix/`, `test/`, `docs/`, `codex/` e integración en `develop`, con pruebas académicas/auth obligatorias; no permite entrega en `main`. CI se dispara con push, no con un commit exclusivamente local, y se repite en PR hacia develop/main. Retirarlo al completar los tres workspaces y checks reales. Mantener el publicador deshabilitado. El servidor conecta sesión real de cuentas UUID a académico; sin sesión deniega acceso. No introducir identidades por headers ni fingir readiness. Login local con correo/contraseña, un rol por cuenta y sesión fija de dos horas fueron confirmados el 11 de octubre. Cuentas de demo exclusivamente mediante preparación explícita privada; nunca semillas en migraciones/CD. Pantallas y política de borradores pendientes.
 
 - Conservar React, Vite, TypeScript, React Router, TanStack Query, Tailwind CSS y componentes seleccionados de shadcn/ui. No sustituir el stack del frontend por iniciativa del agente.
 - Usar como base técnica de trabajo Node.js 24 LTS con TypeScript, Fastify 5, API REST JSON, PostgreSQL 17, Drizzle y contratos TypeBox/JSON Schema. Este stack proviene de la guía; REST y las versiones son concreciones técnicas documentadas en el SDD. La ratificación del equipo sigue pendiente; no presentarla como realizada.
@@ -51,6 +52,7 @@ Seguir [CONTRIBUTING.md](CONTRIBUTING.md) para coordinar tareas e integración. 
 4. No introducir dependencias sin justificar qué necesidad concreta resuelven. Preferir las herramientas existentes.
 5. Verificar las reglas y recorridos afectados. No declarar pruebas exitosas si no se ejecutaron; informar bloqueos y limitaciones.
 6. Actualizar documentación cuando cambien decisiones o instrucciones ejecutables. Informar qué cambió, cómo se verificó y qué queda pendiente.
+7. El líder crea los pull requests. Los agentes preparan cambios y evidencia local; no crean PR ni hacen merge salvo instrucción explícita del líder.
 
 ## Datos, interfaz y calidad
 

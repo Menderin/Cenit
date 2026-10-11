@@ -1,9 +1,11 @@
 import { beforeAll, afterAll, describe, expect, it } from 'vitest';
 import pg from 'pg';
+import { createTestPool, closeTestPool } from './support/postgres.js';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { readFileSync, mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { Value } from '@sinclair/typebox/value';
 import { PlanResponseSchema, ProgressResponseSchema, StudentsResponseSchema } from '../../packages/contracts/src/academic/index.js';
 import { AcademicRepository } from '../../apps/api/src/modules/academic/repositories/academic.js';
@@ -14,6 +16,7 @@ import { seedAcademicDemo } from '../../db/seeds/academic-demo.js';
 
 // Never drop/use a configured application DB. Create fresh, uniquely named DBs and roles.
 const suffix = randomBytes(6).toString('hex');
+const migrationCount = readMigrationFiles({ migrationsFolder: 'db/migrations' }).length;
 const databases = [`cenit_academic_test_${suffix}_empty`, `cenit_academic_test_${suffix}_existing`];
 const migratorRole = `academic_migrator_${suffix}`;
 const runtimeRole = `academic_runtime_${suffix}`;
@@ -28,7 +31,7 @@ const adminUrl = (() => {
 const urlFor = (database: string, user: string, password: string) => {
   const url = new URL(adminUrl); url.pathname = `/${database}`; url.username = user; url.password = password; return url.toString();
 };
-const admin = new pg.Pool({ connectionString: adminUrl });
+const admin = createTestPool({ connectionString: adminUrl });
 const migrationPools: pg.Pool[] = [];
 const runtimePools: pg.Pool[] = [];
 const urls: string[] = [];
@@ -63,19 +66,19 @@ beforeAll(async () => {
   await admin.query(`CREATE ROLE ${runtimeRole} LOGIN PASSWORD '${runtimePassword}' NOSUPERUSER NOCREATEDB NOCREATEROLE`);
   for (const [index, database] of databases.entries()) {
     await admin.query(`CREATE DATABASE ${database}`);
-    const databaseAdmin = new pg.Pool({ connectionString: (() => { const u = new URL(adminUrl); u.pathname = `/${database}`; return u.toString(); })() });
+    const databaseAdmin = createTestPool({ connectionString: (() => { const u = new URL(adminUrl); u.pathname = `/${database}`; return u.toString(); })() });
     try {
       await databaseAdmin.query(`REVOKE CREATE ON SCHEMA public FROM PUBLIC; GRANT CONNECT ON DATABASE ${database} TO ${migratorRole}; GRANT CONNECT ON DATABASE ${database} TO ${runtimeRole}; CREATE SCHEMA cenit AUTHORIZATION ${migratorRole}`);
       if (index === 1) {
         await databaseAdmin.query('CREATE TABLE cenit.existing_probe(id integer PRIMARY KEY); INSERT INTO cenit.existing_probe VALUES(42)');
       }
-    } finally { await databaseAdmin.end(); }
+    } finally { await closeTestPool(databaseAdmin); }
     const migrationUrl = urlFor(database, migratorRole, migratorPassword); urls.push(migrationUrl);
-    const migrationPool = new pg.Pool({ connectionString: migrationUrl }); migrationPools.push(migrationPool);
+    const migrationPool = createTestPool({ connectionString: migrationUrl }); migrationPools.push(migrationPool);
     await migrationPool.query(`ALTER DEFAULT PRIVILEGES GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${runtimeRole}`);
     runMigrator(migrationUrl); runMigrator(migrationUrl);
     await migrationPool.query(`GRANT USAGE ON SCHEMA cenit TO ${runtimeRole}`);
-    runtimePools.push(new pg.Pool({ connectionString: urlFor(database, runtimeRole, runtimePassword) }));
+    runtimePools.push(createTestPool({ connectionString: urlFor(database, runtimeRole, runtimePassword) }));
   }
   await loadCatalog(migrationPools[0]!, plan, true);
   versionId = (await migrationPools[0]!.query<{ id: string }>('SELECT id FROM cenit.academic_versions')).rows[0]!.id;
@@ -94,25 +97,37 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   if (app) await app.close();
-  await Promise.all([...migrationPools, ...runtimePools].map(pool => pool.end()));
+  await Promise.all([...migrationPools, ...runtimePools].map(pool => closeTestPool(pool)));
   for (const db of databases) {
     // Generated identifiers contain only a fixed prefix and hex; never use user-provided paths/names here.
-    await admin.query(`DROP DATABASE IF EXISTS ${db} WITH (FORCE)`);
+    await admin.query(`DROP DATABASE IF EXISTS ${db}`);
   }
   await admin.query(`DROP ROLE IF EXISTS ${migratorRole}`);
   await admin.query(`DROP ROLE IF EXISTS ${runtimeRole}`);
-  await admin.end();
+  await closeTestPool(admin);
 });
 
 describe('migraciones reales PostgreSQL 17', () => {
+  it('espera el cierre físico de todas las conexiones antes de limpiar la BD', async () => {
+    const applicationName = `cleanup_${suffix}`;
+    const pool = createTestPool({ connectionString: urls[0], application_name: applicationName, max: 3 });
+    let disconnected = 0;
+    pool.on('connect', client => client.once('end', () => { disconnected++; }));
+    try {
+      await Promise.all(Array.from({ length: 3 }, () => pool.query('SELECT pg_sleep(0.02)')));
+      expect(pool.totalCount).toBe(3);
+    } finally { await closeTestPool(pool); }
+    expect(disconnected).toBe(3);
+    expect((await admin.query('SELECT count(*)::int AS n FROM pg_stat_activity WHERE application_name=$1', [applicationName])).rows[0].n).toBe(0);
+  });
   it('prueba versión, repetición, esquema previo y ausencia de semillas automáticas', async () => {
     expect((await admin.query<{ server_version: string }>('SHOW server_version')).rows[0]!.server_version).toMatch(/^17\./);
     expect((await runtimePools[1]!.query('SELECT * FROM cenit.academic_plans')).rows).toHaveLength(0);
-    expect((await migrationPools[1]!.query('SELECT count(*)::integer AS n FROM cenit.__drizzle_migrations')).rows[0].n).toBe(2);
+    expect((await migrationPools[1]!.query('SELECT count(*)::integer AS n FROM cenit.__drizzle_migrations')).rows[0].n).toBe(migrationCount);
     const u = new URL(adminUrl); u.pathname = `/${databases[1]}`;
-    const p = new pg.Pool({ connectionString: u.toString() });
+    const p = createTestPool({ connectionString: u.toString() });
     try { expect((await p.query('SELECT id FROM cenit.existing_probe')).rows[0].id).toBe(42); }
-    finally { await p.end(); }
+    finally { await closeTestPool(p); }
     expect((await migrationPools[1]!.query("SELECT to_regclass('cenit.academic_students') AS t")).rows[0].t).toBeNull();
   });
   it('runtime no tiene permisos de creación', async () => {
@@ -128,7 +143,7 @@ describe('migraciones reales PostgreSQL 17', () => {
     await pool.query('UPDATE cenit.__drizzle_migrations SET hash=$1 WHERE id=$2', ['0'.repeat(64), row.id]);
     try {
       expect(() => runMigrator(urls[1]!)).toThrow(/migration failed/i);
-      expect((await pool.query('SELECT count(*)::integer AS n FROM cenit.__drizzle_migrations')).rows[0].n).toBe(2);
+      expect((await pool.query('SELECT count(*)::integer AS n FROM cenit.__drizzle_migrations')).rows[0].n).toBe(migrationCount);
       expect((await pool.query('SELECT count(*)::integer AS n FROM cenit.academic_plans')).rows[0].n).toBe(0);
     } finally { await pool.query('UPDATE cenit.__drizzle_migrations SET hash=$1 WHERE id=$2', [row.hash, row.id]); }
   });

@@ -24,6 +24,8 @@ develop → PR + revisión + CI → main → release verificada → VM
 
 Crear una rama por cambio coherente, vinculada al ticket real del tablero. Una tarea grande puede requerir varios PR pequeños. Para trabajo humano usar `feat/<ticket>-descripcion`, `fix/`, `test/` o `docs/`; los agentes usan `codex/<ticket>-descripcion` salvo indicación explícita. No inventar tickets ni agrupar cambios ajenos a la tarea.
 
+Después de hacer commit, usar **Push origin** para ejecutar CI en la rama de tarea, incluso antes de abrir el PR. GitHub Actions no ve commits que sólo existen localmente. CI se ejecuta en ramas `feat/`, `fix/`, `test/`, `docs/`, `codex/`, en `develop`/`main` y en PR hacia estas últimas. Revisar el resultado por commit en Actions; un check verde en una rama de tarea no sustituye revisión e integración del PR ni autoriza despliegue.
+
 Antes de comenzar, con el trabajo anterior guardado:
 
 ```bash
