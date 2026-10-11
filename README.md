@@ -67,4 +67,6 @@ Se espera `status: ok`, `mode: bootstrap`. PostgreSQL persiste en un volumen pro
 
 ## Flujo vigente de ramas
 
+CI se ejecuta al hacer **push** en `feat/**`, `fix/**`, `test/**`, `docs/**`, `codex/**`, `develop` y `main`, además de PR hacia `develop`/`main`. Un commit local necesita `Push origin` para llegar a Actions; no hace falta abrir PR para probar la rama. Consultar la ejecución por rama/commit en la pestaña Actions.
+
 `rama de tarea → develop → main`, mediante PR, revisión y CI. `develop` integra funcionalidades; `main` autoriza entregas verificadas. El publicador sigue deshabilitado hasta completar aplicación/tests y actualizar el ejecutor instalado en la VM para aceptar `main`. La rama antigua `produccion` no es destino del nuevo flujo; retirarla tras comprobar la transición según [CI/CD](deploy/CI-CD.md).

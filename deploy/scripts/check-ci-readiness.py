@@ -13,9 +13,14 @@ REQUIRED_SCRIPTS = (
 ACADEMIC_SCRIPTS = ("typecheck", "test:unit", "test:integration", "build:academic", "catalog:check")
 
 
+def permits_incomplete_application(branch):
+    """Task pushes can test work in progress, without opening the main delivery gate."""
+    return branch == "develop" or re.fullmatch(r"(?:feat|fix|test|docs|codex)/\S+", branch) is not None
+
+
 def check_academic_foundation(root, package, branch):
-    """An explicit backend delivery can integrate in develop, never authorize a release."""
-    if branch != "develop":
+    """An explicit backend can be tested on task/develop branches, never released."""
+    if not permits_incomplete_application(branch):
         raise ValueError("Academic foundation is incomplete: delivery requires login, frontend and full application tests.")
     if package.get("workspaces") != ["apps/api", "packages/contracts"]:
         raise ValueError("Academic foundation must declare only the two initialized workspaces.")
@@ -37,8 +42,8 @@ def check_academic_foundation(root, package, branch):
 def check(root, branch):
     manifest = root / "package.json"
     if not manifest.is_file():
-        if branch != "develop":
-            raise ValueError("Only develop permits a scaffold; delivery requires an initialized application and real tests.")
+        if not permits_incomplete_application(branch):
+            raise ValueError("Only develop and task branches permit a scaffold; delivery requires an initialized application and real tests.")
         print("Scaffold only: infrastructure CI applies; application tests are not available.")
         return False
 
