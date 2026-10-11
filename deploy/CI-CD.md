@@ -17,7 +17,10 @@ No hace falta crear `develop` además de `main`. Promover mediante PR; no copiar
 
 `.github/workflows/ci.yml` ejecuta CI en PRs y pushes a ambas ramas. No recibe secretos de la VM ni tiene permisos para escribir en GitHub. Las acciones se fijan por SHA.
 
+También se puede invocar desde `release.yml` como workflow reutilizable. La nueva configuración del repositorio incluye Compose local, Containerfile, migrador y publicación compatible con el consumidor de la VM; todavía faltan aplicación, sus manifiestos y un ensayo real. Instrucciones locales y versiones exactas en [LOCAL.md](LOCAL.md).
+
 - Infraestructura: sintaxis Bash, compilación de utilidades Python, pruebas del bloqueo de CI para una aplicación ausente/incompleta y validación del Nginx temporal en un contenedor.
+- La actualización añade validación Compose, arranque de PostgreSQL/proxy y comprobación de roles limitados. Estas nuevas comprobaciones de contenedores deben acreditarse en una ejecución posterior en Actions.
 - Aplicación: instalación npm reproducible, typecheck, lint, pruebas unitarias, integración con PostgreSQL, build y Playwright sobre el build servido.
 - Check estable para exigir en reglas de rama: **CI required**. Confirmar su nombre exacto en la interfaz tras la primera ejecución.
 
@@ -134,23 +137,23 @@ Se añadieron `install-cd.sh`, el verificador de artifacts, el ejecutor rootless
 
 GitHub Actions y despliegue iniciado desde la VM están elegidos por el usuario. No instalar otro Jenkins ni un runner general de PRs en la VM compartida.
 
-El CD se implementará con un workflow de release disparado por `push` a `produccion`, dependiente de CI exitoso del mismo commit. Construirá la imagen del monolito, comprobará el artefacto ejecutable y publicará digest y manifiesto de entrega verificable. Las actualizaciones de `main` y los PRs no publicarán releases desplegables. No habrá aprobación manual adicional tras la promoción mediante PR.
+El workflow `release.yml` se dispara por `push` a `produccion` y depende de CI reutilizable exitoso del mismo commit. Construye la imagen del monolito, comprueba el artefacto ejecutable y publica digest y manifiesto verificable. La publicación requiere la variable de repositorio `CENIT_RELEASE_ENABLED=true`: mantenerla deshabilitada hasta completar aplicación/tests y preparar el primer ensayo supervisado en la VM. Las actualizaciones de `main` y los PRs no publican releases desplegables. Después de habilitarlo, no habrá aprobación manual adicional tras cada promoción mediante PR.
 
 El servicio/timer del ejecutor preparado consulta las releases aprobadas cada dos minutos después de terminar la operación anterior; el polling significa que el despliegue empieza en la siguiente consulta, no inmediatamente al hacer merge. Verifica repositorio, workflow, rama `produccion`, evento `push`, commit, gates y digest, serializa operaciones y actualiza sólo Cenit. Un tag `latest` o un archivo del checkout por sí solos no son autorización.
 
 Para completar y ensayar CD faltan:
 
-- Aplicación ejecutable, Containerfile, prueba de la imagen y migraciones compatibles.
+- Aplicación ejecutable, manifiestos npm y migraciones compatibles. Containerfile, migrador y verificador de imagen están implementados, pendientes de ejecutarse contra la aplicación real.
 - Ensayar la primera entrega real con el servicio CD y timer ya instalados y verificados. La plantilla de aplicación se activa sólo con una entrega aprobada.
 - Permisos de publicación GHCR para el workflow. Las credenciales de lectura GHCR y Actions/Contents ya fueron guardadas y verificadas en la VM; mantenerlas vigentes sin copiarlas al workflow ni al chat.
-- Implementar el productor del manifiesto/artifact/release conforme a `CD-VM.md` y ensayar el verificador, ejecutor, backup/migraciones y recuperación preparados contra una imagen real.
+- Ensayar el productor del manifiesto/artifact/release implementado conforme a `CD-VM.md`, y el verificador, ejecutor, backup/migraciones y recuperación contra una imagen real.
 - Validar pull de la imagen privada desde la VM y configurar aviso de fallos para el equipo. El acceso a las APIs principales ya se confirmó; no equivale a probar la descarga completa de capas.
 
-No hay workflow de release. La instalación del ejecutor en la VM y su estado inicial `waiting-for-release` están confirmados; falta confirmar la próxima ejecución de su timer y ensayar el circuito completo. El ejecutor conserva el bootstrap hasta una entrega aprobada y lista; no activa Nginx final antes de readiness. El procedimiento no ejecuta builds en la VM ni necesita SSH para cada actualización. Una imagen anterior sólo permite recuperación si sigue siendo compatible con la base; no revierte migraciones. No declarar CD operativo hasta ensayar el circuito completo.
+El workflow de release existe en este checkout, todavía sin una ejecución acreditada. La instalación del ejecutor en la VM y su programación están confirmadas por la evidencia posterior; falta ensayar el circuito completo. El ejecutor conserva el bootstrap hasta una entrega aprobada y lista; no activa Nginx final antes de readiness. El procedimiento no ejecuta builds en la VM ni necesita SSH para cada actualización. Una imagen anterior sólo permite recuperación si sigue siendo compatible con la base; no revierte migraciones. No declarar CD operativo hasta ensayar el circuito completo.
 
 Referencias: [eventos de Actions](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow), [protección de ramas y disponibilidad por plan](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches), [seguridad de workflows](https://docs.github.com/en/actions/reference/security/secure-use).
 
-Actualización de verificación del 10 de octubre: la salida posterior del usuario confirmó `Result=success`, `ExecMainStatus=0`, servicio `inactive/dead`, timer `active/waiting` y próxima ejecución a las 14:13:41 EDT. Sustituye el pendiente de confirmar la siguiente consulta señalado arriba. El ejecutor y su programación quedan verificados; aplicación, workflow publicador y circuito real de entrega siguen pendientes.
+Actualización de verificación del 10 de octubre: la salida posterior del usuario confirmó `Result=success`, `ExecMainStatus=0`, servicio `inactive/dead`, timer `active/waiting` y próxima ejecución a las 14:13:41 EDT. Sustituye el pendiente de confirmar la siguiente consulta señalado arriba. El ejecutor y su programación quedan verificados; aplicación, ejecución del workflow publicador y circuito real de entrega siguen pendientes.
 
 ### Prueba del flujo de ramas antes de tener aplicación
 
@@ -162,3 +165,5 @@ El usuario confirmó la regla permanente `public` para `8081/tcp` mediante respu
 4. Cerrar el PR de prueba sin fusionarlo, o dejarlo abierto hasta incorporar una aplicación e imagen verificadas. No retirar los gates ni añadir tests ficticios para permitir el merge.
 
 Esta prueba acredita disparadores y bloqueo de entrega, no construcción/publicación ni despliegue automático. La prueba completa requiere implementar la aplicación, imagen y `release.yml` con el contrato de `CD-VM.md`, y ensayar una entrega real exitosa y otra fallida.
+
+El usuario compartió el resultado del PR #2, ejecución titulada `Test CI CD #4`: `Infrastructure` pasó, `Prerequisites` falló con `Produccion requires an initialized application and real tests.`, `Application` se omitió y `CI required` falló. Esto confirma el gate negativo esperado para una entrega incompleta a `produccion`; no acredita un despliegue en la VM.

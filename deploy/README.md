@@ -1,5 +1,7 @@
 # Infraestructura de Cenit en la VM compartida
 
+Para preparar PostgreSQL/proxy en el equipo de desarrollo, usar [LOCAL.md](LOCAL.md) y `compose.yaml`. La VM mantiene Quadlet rootless; el Compose local no se instala allí. El repositorio incorpora Containerfile, migrador y workflow de release, pero la aplicación y el ensayo real de despliegue siguen pendientes.
+
 Estado: el usuario ejecutó el instalador en la VM y compartió una salida exitosa el 10 de octubre de 2026: validación Nginx correcta, comprobaciones de PostgreSQL completadas y `/health/proxy` con `status: ok`, `mode: bootstrap`. También compartió la misma respuesta HTTP desde Windows, confirmando acceso efectivo a 8081 desde su equipo. No se recibió la salida de consulta de la regla permanente ni se comprobó continuidad tras cerrar SSH o reiniciar. No hay una versión de la aplicación desplegada.
 
 ## Preparar el entorno ahora, sin aplicación estable

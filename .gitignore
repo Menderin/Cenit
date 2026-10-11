@@ -4,6 +4,7 @@
 !.env.example
 *.pem
 *.key
+.local/
 
 # Dependencies and generated output
 node_modules/

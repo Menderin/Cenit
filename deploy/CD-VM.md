@@ -28,7 +28,7 @@ No hace falta crear una cuenta Jenkins, configurar SSH desde GitHub ni instalar 
 
 ## Contrato obligatorio de la futura imagen y workflow
 
-Todavía no existen aplicación, Containerfile ni `.github/workflows/release.yml`. Instalar el ejecutor no acredita un despliegue real. El equipo debe implementar estos requisitos para que el consumidor preparado pueda funcionar:
+El Containerfile, `deploy/migrate.cjs` y `.github/workflows/release.yml` están preparados en el repositorio. Todavía no existe aplicación compilable ni migraciones de negocio. La publicación requiere CI real y la variable `CENIT_RELEASE_ENABLED=true`; mantenerla deshabilitada hasta preparar el primer ensayo. Instalar el ejecutor o validar estos archivos no acredita un despliegue real. El equipo debe completar y comprobar estos requisitos para que el consumidor preparado pueda funcionar:
 
 - Imagen `ghcr.io/menderin/cenit@sha256:<digest>`, `linux/amd64`, runtime UID/GID `1000:1000`, Node disponible como `node`, frontend compilado y API en el mismo servidor, puerto 3000.
 - Etiquetas OCI `org.opencontainers.image.source=https://github.com/Menderin/Cenit` y `org.opencontainers.image.revision=<SHA completo>`.
@@ -84,6 +84,14 @@ systemctl --user disable --now cenit-cd.timer
 Una operación ya iniciada continúa. Para renovar tokens usar los configuradores existentes. El usuario confirmó el 10 de octubre que `sudo firewall-cmd --zone=public --permanent --query-port=8081/tcp` devolvió `yes`: la regla permanente de entrada 8081 está presente. El acceso HTTP actual ya se verificó. Mantener esa regla y las credenciales vigentes; no hace falta cambiar ni recargar el firewall para esta preparación. La continuidad tras un reinicio no se ha ensayado.
 
 ## Verificación disponible
+
+### Preparación para trabajar fuera de la red institucional
+
+El usuario indicó que desde casa no tiene acceso a la VM y que podrá volver el martes, antes de la entrega del jueves 15 de octubre. El instalador exitoso ya comprobó linger y systemd de usuario; el ejecutor usa copias instaladas en el estado privado, no necesita una sesión SSH ni un `git pull` por versión. GitHub Actions y publicación pueden prepararse desde casa, pero aún faltan aplicación, imagen y workflow publicador. Un fallo del primer despliegue puede requerir diagnóstico en la VM; no hay observabilidad remota de ese estado configurada.
+
+Antes de retirarse, comprobar respuesta del proxy desde PowerShell después de cerrar SSH y revisar en GitHub que los dos tokens guardados en la VM expiren después de la entrega. No compartir sus valores. La permanencia tras logout todavía no está acreditada mediante esa prueba; no hace falta reiniciar la VM ni reinstalar servicios para comprobarla. Si la institución ofrece acceso remoto autorizado, conviene obtenerlo para diagnóstico; no modificar el Tailscale del otro proyecto ni publicar SSH como parte de esta preparación.
+
+Reservar el martes para ensayar la primera entrega de aplicación, pull privado, migraciones, readiness, proxy y recuperación de una entrega fallida. La preparación actual no garantiza ese circuito todavía. Llevar también un build local ensayado para la presentación, como exige el SDD.
 
 La comprobación posterior del usuario el 10 de octubre confirmó `Result=success`, `ExecMainStatus=0`, servicio `inactive/dead`, timer `active/waiting` y siguiente ejecución programada a las 14:13:41 EDT. Queda resuelto el pendiente de confirmar el timer mencionado en la evidencia inicial siguiente. No hay aplicación ni workflow publicador todavía; falta ensayar una entrega real.
 

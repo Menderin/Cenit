@@ -1,14 +1,22 @@
 # Cenit — Software Design Document (SDD)
 
-Versión: 0.5 · Fecha: 2026-10-10 · Estado: base técnica interna de trabajo; ratificación del equipo y validaciones institucionales pendientes.
+Versión: 0.7 · Fecha: 2026-10-10 · Estado: base técnica interna de trabajo; ratificación del equipo y validaciones institucionales pendientes.
 
 Este documento define el diseño del MVP, no acredita implementación ni aprobación del cliente. El frontend se conserva por elección de su encargado. La solicitud del 10 de octubre autoriza concretar los detalles técnicos y dejar identificados los asuntos que requieren al equipo; no equivale a ratificación colectiva. Las secciones 10 a 16 fijan contratos y valores de trabajo para la demo. La sección 9 contiene únicamente asuntos que no se pueden cerrar con la información disponible. La referencia de alcance es `../Docs/Guía de trabajo para el MVP de Cenit.pdf`.
 
 ## 1. Objetivo y límites
 
+Aclaración funcional más reciente: Cenit recupera registros de Oracle y sustituye la transcripción de pantallazos a Excel descrita por el líder, sin realizar compras ni escribir en origen. Registros conservados y tabla consultable en Cenit son el mínimo confirmado; Google Sheets es opcional sin compromiso. Actualización: recuperar/reintentar datos y revisar cambios pertinentes antes de aplicarlos a la copia; disparador manual o automático sigue por confirmar. Edición manual libre no está confirmada: los contratos PUT previos son referencia técnica que debe adaptarse al flujo acordado, no una obligación de crear un formulario de edición libre. Campos/imputaciones se cotejan con muestras reales autorizadas o ficticias representativas. Catálogo académico en PostgreSQL confirmado; definir esquema/migraciones sin persistencia de simulación. Login local y cuentas preparadas por el equipo confirmados; sin registro público.
+
 Demostrar el 15 de octubre de 2026 un registro auxiliar de compras FAMED y una malla interactiva de Nutrición, con datos ficticios. Compras tiene prioridad. El proceso oficial y sus aprobaciones permanecen en el sistema institucional. La simulación académica no modifica historiales reales.
 
-Incluye alta, listado filtrado, detalle y edición de compras; catálogo académico versionado y simulación manual. Excluye integraciones institucionales, OCR, IA funcional, cuentas institucionales, pagos, importación masiva y otros módulos. La exportación se evalúa después de estabilizar el núcleo.
+Incluye alta, listado filtrado, detalle y edición de compras; visualización del catálogo académico versionado y prerrequisitos oficiales. El líder excluyó simulación y persistencia de simulaciones del MVP: se conservan como referencia futura, no como compromiso de entrega. La aclaración del 10 de octubre añade login y recuperación automática de datos de compras. Nutrición quedó confirmada y se recibió `Docs/malla-nutricion-y-dietetica-2027.pdf`: permite transcribir asignaturas y semestres, pero no especifica prerrequisitos, que siguen siendo obligatorios. Login local confirmado; Google se posterga. Detalles de cuentas/credenciales y sesión por definir. Roles `docente` y `estudiante` para malla/prerrequisitos; `administrativo` para compras sin acceso académico por defecto. Separación funcional dentro del monolito; los dos módulos administrativos futuros quedan fuera del sprint actual.
+
+La captura se investiga por dos vías: datos estructurados mediante API del sistema Oracle, o extracción desde imágenes mediante OCR/visión con revisión humana. Aún no se contactó a los encargados ni se eligió mecanismo, herramienta o proveedor. La ampliación autoriza investigar, no acredita disponibilidad de integración real ni acuerdos institucionales. La transcripción manual no satisface por sí sola la recuperación automática requerida. Plan y capacidad están en `../Docs/PLANIFICACION-MVP.md`; historias y habilitadores vigentes en `../Docs/BACKLOG-SPRINT-3.md`. Las secciones 10–16 siguen siendo la base del guardado, no un contrato de extracción o autenticación ya definido.
+
+Se planifica coordinar con Registro Curricular la obtención de catálogo, prerrequisitos y versión, mediante exportación mínima o dump autorizado si corresponde. Esto no autoriza importación masiva, acceso a historiales ni versionar dumps institucionales. Fichas vigentes: `../Docs/HISTORIAS-USUARIO-INVEST.md`; reemplazan las historias iniciales de `BACKLOG-SPRINT-3.md`. La política de persistencia de simulación con login queda pendiente para otra iteración. Estos pendientes no se consideran resueltos por redactar historias.
+
+Excluye cuentas institucionales, pagos, aprobaciones oficiales, importación masiva y otros módulos. La exportación se evalúa después de estabilizar el núcleo.
 
 ## 2. Stack y procedencia
 
@@ -150,6 +158,8 @@ Modelo conceptual: compra con ID interno, fecha documental, tipo, referencia tex
 
 ## 7. Malla y simulación
 
+Actualización de alcance: sólo visualización y prerrequisitos oficiales se entregan en el MVP. Las reglas de marcado, disponibilidad simulada y persistencia descritas aquí se conservan para una iteración futura; no implementarlas para el jueves.
+
 Catálogo inmutable por plan y versión, con fuente, códigos únicos, nombres, semestres y créditos cuando existan. Representar prerrequisitos mediante expresiones explícitas `allOf` y `anyOf`; no confundir AND con OR. Reglas no soportadas quedan identificadas como no evaluables.
 
 Validar duplicados, referencias inexistentes, autorreferencias y ciclos antes de publicar el catálogo. Si no se recibe la malla real, usar un ejemplo claramente rotulado y no afirmar que representa el plan oficial.
@@ -174,10 +184,10 @@ Comprobar SO, arquitectura, recursos, puertos, red, proxy y modalidad Podman de 
 | P02 | Obtener manifiestos/versiones del frontend y acordar los contratos con su encargado | Contratos de secciones 10 a 15 como referencia única; fijar parches y lockfile al inicializar | No certificar compatibilidad o integración hasta comprobarlas |
 | P03 | Validar significado y obligatoriedad de campos reales: `bi`, `ITEM`, unidades, documentos, proveedores y cuentas vigentes | Usar sólo el formato ficticio definido; no incluir campos ambiguos | No bloquea demo; bloquea afirmar fidelidad al proceso real |
 | P04 | Definir reglas institucionales de duplicados, límites reales y pago declarado | Advertencias, límites de demo y estados separados | No imponer unicidad real ni presentar pago como verificado |
-| P05 | Recibir plan de Nutrición con fuente, versión, ramos y reglas | Catálogo ficticio rotulado como ejemplo | Bloquea demostrar la malla real, no el mecanismo |
+| P05 | Fuente recibida: `Docs/malla-nutricion-y-dietetica-2027.pdf`; transcribir/cotejar semestres y asignaturas, confirmar versión y conseguir prerrequisitos oficiales obligatorios | Visualizar contenido recibido; no inferir reglas por orden ni presentar reglas ficticias como oficiales | No bloquea vista por semestres; bloquea completar consulta de prerrequisitos del MVP |
 | P06 | Rocky Linux 10.1, Podman 5.6.0, Docker de Zableke y zona firewalld `public` en `ens18` confirmados; ejecutar y comprobar bootstrap, recursos, reglas vigentes y persistencia | Nginx temporal y PostgreSQL con Quadlet rootless, entrada 8081; no requiere build; conservar ejecución local ensayada | No bloquea preparar infraestructura; falta ejecutar y acreditar su funcionamiento |
 | P07 | Nombrar responsables y revisores de compras, malla, contratos, integración y presentación | Asignar por resultado y dependencias en Jira | Falta coordinación y revisión acreditada |
-| P08 | Aprobar alcance de demo sin login, quién accederá y cómo se acota el entorno | Sólo datos ficticios, localhost/red controlada; sin publicación pública por defecto | No publicar ni usar datos reales sin resolver acceso |
+| P08 | Concretar contrato de login/sesión y cuentas ficticias; implementar matriz docente/estudiante para malla y administrativo para compras | Login obligatorio, Google posterior; correo/contraseña local como propuesta de trabajo | Bloquea afirmar protección implementada; roles y separación funcional ya definidos |
 
 Al resolver un pendiente, registrar decisión, fecha, responsable y evidencia. Los agentes no pueden convertir una propuesta interna en validación del equipo o institucional. No se necesita validar un límite ficticio con el cliente para probar la demo, pero sí identificarlo como tal.
 
@@ -336,6 +346,8 @@ Frontend: lecturas con hasta dos reintentos sólo para fallos de red o 503, con 
 
 ## 14. Contrato académico y almacenamiento local
 
+Actualización de alcance: contrato de catálogo/consulta de prerrequisitos vigente; simulación y almacenamiento local son referencia futura excluida del MVP. Su política por usuario necesita refinamiento antes de una futura implementación.
+
 Lista de planes: `{ data: [{ planId, name, versions: [{ version, isExample }] }] }`. `planId` y `version` son slugs de 1 a 64 caracteres ASCII alfanuméricos, guion y guion bajo. Son identificadores del catálogo, no fechas ni versiones numéricas inferidas.
 
 Detalle: `{ data: { planId, version, name, isExample, source, courses } }`. `source` es `{ title, reference, validationStatus }`: título de 1 a 200, referencia textual de 1 a 500 o `null`, y estado `example`, `teamReviewed` o `clientValidated`. No declarar revisión que no se realizó.
@@ -379,6 +391,8 @@ Progreso: cantidad marcada/total del plan, con porcentaje por asignaturas si se 
 - CI objetivo: `npm ci`, typecheck, lint, pruebas unitarias/integración con PostgreSQL y build; verificar los dos recorridos Playwright sobre build servido antes de etiquetar release. No declarar ese pipeline existente antes de implementarlo.
 
 ## 16. Criterios concretos de aceptación del contrato
+
+Los criterios de simulación/reset se conservan para una iteración futura; no forman parte de la aceptación de este MVP. La visualización y consulta de prerrequisitos oficiales sí son obligatorias.
 
 1. Compra de 100000 con imputaciones 70000 y 30000: alta exitosa, detalle y recarga conservan campos y montos.
 2. Total 100000 e imputaciones 70000 y 40000: 400, sin compra ni imputaciones parciales.
@@ -498,3 +512,17 @@ Para integrar la futura aplicación: imagen `ghcr.io/menderin/cenit` por digest,
 El productor pendiente `.github/workflows/release.yml` debe ejecutar CI real sobre push a `produccion`, verificar/publicar imagen y crear artifact inmutable `cenit-release-<run_attempt>` con el manifiesto documentado. Gates requeridos: `CI / CI required`, `CI / Application`, `Publish image`. Release tag `cenit-<SHA completo>` y cuerpo JSON con ID/intento de ejecución. El consumidor contrasta procedencia y digest con la API Actions; una release creada manualmente sin esas evidencias no autoriza despliegue. No cambiar unilateralmente estos nombres/formatos en el workflow: actualizar y ensayar ambos extremos.
 
 El ejecutor serializa operaciones, guarda backup antes de migrar, evita repetir intentos fallidos y comprueba readiness antes de cambiar el proxy. Recupera aplicación/proxy anteriores ante errores manejados; no restaura datos ni garantiza recuperación automática ante un corte de proceso/VM. No ejecuta semillas. Backups/imágenes se conservan con gates de espacio; retención, alertas, restauración ensayada, permanencia del firewall, continuidad tras reinicio y el primer circuito real exitoso/fallido quedan pendientes. No hace falta instalar Jenkins adicional ni reiniciar la VM para esta preparación.
+
+### 18.2. Configuración del repositorio y estado de HT15
+
+Actualización del 10 de octubre de 2026: se incorporan `compose.yaml`, `.env.example`, preparador de secretos locales, inicializador de roles/esquema PostgreSQL, `Containerfile`, `deploy/migrate.cjs`, verificador de imagen, productor de manifiesto y `.github/workflows/release.yml`. Esto sustituye las referencias anteriores a Containerfile/productor todavía inexistentes; no acredita aplicación ni entrega operativa. La guía ejecutable es `deploy/LOCAL.md`.
+
+Versiones de infraestructura verificadas y fijadas: Node 24.21.0 LTS, npm 11.19.0, PostgreSQL 17.11 y Nginx 1.30.5 estable. Las imágenes se fijan por digest en `deploy/images.lock.json` y sus consumidores. `.node-version` fija Node y el futuro manifiesto raíz debe declarar `packageManager: "npm@11.19.0"`. Las versiones del frontend siguen coordinadas con su encargado; no se inicializan ni actualizan en este cambio.
+
+El Compose local inicia DB/proxy bootstrap por defecto, publica sólo en loopback 55432/8081 y conserva un volumen propio. El perfil `application` incorpora migrador y monolito cuando exista código compilable. API, frontend y contratos deben generar `apps/api/dist/server.js`, `apps/web/dist` y `packages/contracts/dist`; el servidor sirve frontend/API por 3000. El runtime lee `DATABASE_URL_FILE`; las migraciones e historial Drizzle usan esquema `cenit`. No se añaden semillas ni tablas de negocio ficticias para eludir CI.
+
+CI se reutiliza desde release manteniendo gates `CI / CI required`, `CI / Application`, `Publish image`. El publicador verifica Linux/amd64, UID/GID 1000, etiquetas OCI, migrador ejecutable dos veces, rutas HTML y readiness dependiente de PostgreSQL antes de publicar. El artifact ZIP contiene sólo `cenit-release.json`, se solicita retención de 90 días y la release contiene el puntero al run/intento. El límite real de retención permitido por GitHub debe comprobarse al publicar. `CENIT_RELEASE_ENABLED` permanece deshabilitada hasta completar aplicación/tests y preparar el primer ensayo supervisado; no se modificó configuración remota.
+
+Evidencia local: 34 pruebas de infraestructura correctas, validación Compose, actionlint de ambos workflows y sintaxis del migrador/inicializador. No hubo motor de contenedores disponible en este equipo ni aplicación que construir. Los nuevos pasos CI arrancan PostgreSQL/proxy y comprueban roles limitados; aún deben ejecutarse en Actions. HT15 queda con configuración implementada y ensayo de contenedores/revisión pendientes, no terminada. HT05/HT06/HT07 requieren aplicación, imagen real y entrega/recuperación ensayadas en la VM. No se altera su instalación actual ni los servicios ajenos.
+
+Evidencia posterior del mismo día: Podman 6.0.2 instalado, máquina WSL 2 rootless creada/iniciada y Compose 5.3.1 conectado a Podman. DB y proxy alcanzaron estado saludable; HTTP local 8081 devolvió bootstrap correcto. Se comprobaron roles limitados y permisos USAGE sin CREATE para runtime. Recrear el contenedor DB conservó esquema/propietario en el volumen nombrado. Se corrigieron opciones tmpfs incompatibles con Podman conservando Nginx sin privilegios y raíz de sólo lectura. Queda resuelto el pendiente de arranque local de HT15; revisión del equipo, nueva ejecución CI y ensayo de aplicación/CD continúan pendientes. Instrucciones y proveedor comprobado en `deploy/LOCAL.md`.
