@@ -2,10 +2,12 @@
 
 ## Aplicación y referencias
 
-Estas instrucciones aplican a todo el repositorio. Antes de modificar código, leer `AGENTS/SDD.md` y las instrucciones adicionales de la carpeta afectada.
+Estas instrucciones aplican a todo el repositorio. Antes de iniciar una tarea, leer [CONTRIBUTING.md](CONTRIBUTING.md). Antes de modificar código, leer además [AGENTS/SDD.md](AGENTS/SDD.md), [la guía de estructura](AGENTS/ESTRUCTURA.md) y las instrucciones adicionales de la carpeta afectada.
 
 - `Docs/Guía de trabajo para el MVP de Cenit.pdf`: contexto y alcance de la demostración del 15 de octubre de 2026.
 - `AGENTS/SDD.md`: base técnica interna, contratos y pendientes del MVP. Distinguir decisiones de trabajo, supuestos de demo y validaciones del equipo o cliente.
+- [CONTRIBUTING.md](CONTRIBUTING.md): flujo de colaboración, ramas, PR, revisiones, coordinación de archivos compartidos y criterios de terminado. Aplicar estas reglas también al trabajo de agentes; no inventar tickets ni saltar revisión/CI.
+- [AGENTS/ESTRUCTURA.md](AGENTS/ESTRUCTURA.md): mapa de carpetas, responsabilidad de cada ubicación, límites de dependencia y criterios para colocar código/pruebas. Consultarlo antes de crear o mover archivos; actualizarlo si cambia la organización. No completar carpetas con código innecesario ni ampliar alcance para retirar `.gitkeep`.
 - `README.md`: instrucciones ejecutables; actualizarlo cuando cambie el arranque, configuración o verificación.
 
 Ante una contradicción que afecte alcance, contratos o reglas de negocio, explicarla y solicitar una decisión. No inventar procesos institucionales ni afirmar que una funcionalidad existe sin verificarla.
@@ -35,6 +37,8 @@ No incorporar Banner, autenticación institucional, pagos, aprobaciones oficiale
 - Los contratos son la fuente única para solicitudes y respuestas. Una modificación afecta API, frontend y verificaciones; actualizar esos consumidores en el mismo cambio o coordinar explícitamente la integración.
 
 ## Trabajo del equipo
+
+Seguir [CONTRIBUTING.md](CONTRIBUTING.md) para coordinar tareas e integración. Leer también [historias vigentes](Docs/HISTORIAS-USUARIO-INVEST.md) y [planificación](Docs/PLANIFICACION-MVP.md) cuando la tarea dependa del alcance o de criterios del sprint. Para contenedores/despliegue, consultar [entorno local](deploy/LOCAL.md), [operación VM](deploy/README.md), [CI/CD](deploy/CI-CD.md) y [contrato de entrega](deploy/CD-VM.md) antes de modificar esos componentes. No duplicar decisiones técnicas en la guía de colaboración ni interpretar propuestas de calendario/capacidad como compromisos colectivos confirmados.
 
 1. Identificar el resultado observable, archivos afectados, dependencias y criterios de aceptación antes de editar.
 2. Hacer cambios pequeños y coherentes. Revisar el estado de Git y preservar trabajo ajeno; no revertir ni eliminar cambios de otros agentes.

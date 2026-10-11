@@ -5,7 +5,9 @@ MVP de registro auxiliar de compras con datos ficticios, login local y visualiza
 ## Documentación de trabajo
 
 - [Instrucciones para agentes](AGENTS.md)
+- [Guía de colaboración del equipo](CONTRIBUTING.md)
 - [Diseño técnico, contratos y pendientes para el equipo](AGENTS/SDD.md)
+- [Mapa de carpetas y distribución del código](AGENTS/ESTRUCTURA.md)
 - [Borrador de planificación, épicas, historias y tareas del MVP](Docs/PLANIFICACION-MVP.md)
 - [Historias, criterios de aceptación y habilitadores del sprint 3](Docs/BACKLOG-SPRINT-3.md)
 - [Fichas vigentes INVEST: descripción, criterios y tareas por historia y módulo](Docs/HISTORIAS-USUARIO-INVEST.md)

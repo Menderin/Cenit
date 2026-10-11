@@ -66,6 +66,8 @@ Referencias oficiales consultadas:
 
 ## 4. Arquitectura y estructura del repositorio
 
+La distribución detallada de código, pruebas, contratos, datos y operación está en [ESTRUCTURA.md](ESTRUCTURA.md). Esa guía concreta esta organización y debe consultarse antes de crear o mover archivos; no autoriza funcionalidades futuras ni sustituye los contratos del SDD.
+
 Monolito modular con un frontend y una API, desplegados en una imagen, más PostgreSQL. El navegador accede a `/api/v1`; nunca directamente a la base. Servir frontend y API bajo el mismo origen. En desarrollo, configurar el proxy de Vite.
 
 Organización elegida: mixta, por responsabilidad técnica y funcionalidad. `apps/web` es el frontend, `apps/api` es el backend y `db` contiene definiciones de esquema, migraciones y semillas. PostgreSQL se ejecuta como servicio con volumen: sus datos no se guardan en Git. No crear carpetas alternativas `front`, `back` o `bd` que dupliquen estas responsabilidades.
@@ -83,7 +85,7 @@ apps/
         pages/
         components/
         api/              # lectura del catálogo
-        model/            # simulación y persistencia local
+        model/            # transformaciones de presentación; simulación sólo futura
     shared/
       components/         # elementos realmente reutilizables
       lib/                # utilidades transversales
@@ -120,7 +122,7 @@ La estructura de carpetas está creada con `.gitkeep` en cada carpeta vacía fin
 
 Las rutas traducen HTTP a servicios de casos de uso; los servicios aplican reglas; los repositorios encapsulan persistencia. Cada dominio evita acceder a estructuras internas del otro. No crear repositorios universales ni motores de formularios. Los plugins de cada módulo pueden usar la encapsulación de Fastify para mantener sus límites: https://fastify.dev/docs/latest/Reference/Encapsulation/.
 
-Mantener componentes, queries y lógica específicos dentro de su funcionalidad, no en carpetas globales por tipo. Por ejemplo, el formulario de compra pertenece a `features/purchases/components`, y la evaluación local de prerrequisitos a `features/academic/model`. Extraer a `shared` sólo elementos realmente compartidos. Crear subcarpetas adicionales, como `hooks`, cuando exista código que lo justifique. Las pruebas unitarias viven junto al código (`*.test.ts` o `*.test.tsx`); integración y E2E usan las carpetas indicadas.
+Mantener componentes, queries y lógica específicos dentro de su funcionalidad, no en carpetas globales por tipo. Por ejemplo, la tabla de registros recuperados pertenece a `features/purchases/components`, y las transformaciones para agrupar asignaturas por semestre a `features/academic/model` si se necesitan. La evaluación de una simulación de avance corresponde a una iteración futura. Extraer a `shared` sólo elementos realmente compartidos. Crear subcarpetas adicionales, como `hooks`, cuando exista código que lo justifique. Las pruebas unitarias viven junto al código (`*.test.ts` o `*.test.tsx`); integración y E2E usan las carpetas indicadas.
 
 ## 5. Contratos HTTP propuestos
 
