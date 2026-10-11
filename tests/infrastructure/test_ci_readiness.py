@@ -36,17 +36,19 @@ class ReadinessTests(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text("{}", encoding="utf-8")
 
-    def test_scaffold_checks_only_infrastructure_on_main(self):
-        self.assertFalse(READINESS.check(self.root, "main"))
+    def test_scaffold_checks_only_infrastructure_on_develop(self):
+        self.assertFalse(READINESS.check(self.root, "develop"))
 
     def test_scaffold_cannot_pass_production_checks(self):
-        with self.assertRaisesRegex(ValueError, "initialized application"):
-            READINESS.check(self.root, "produccion")
+        for branch in ("main", "produccion", "feature/unknown"):
+            with self.subTest(branch=branch):
+                with self.assertRaisesRegex(ValueError, "initialized application"):
+                    READINESS.check(self.root, branch)
 
     def test_partial_application_cannot_be_silently_skipped(self):
         self.write_package()
         with self.assertRaisesRegex(ValueError, "Missing npm workspace file"):
-            READINESS.check(self.root, "main")
+            READINESS.check(self.root, "develop")
 
     def test_all_test_scripts_are_required(self):
         self.complete_workspace()
@@ -56,17 +58,19 @@ class ReadinessTests(unittest.TestCase):
                 del scripts[missing]
                 self.write_package(scripts=scripts)
                 with self.assertRaisesRegex(ValueError, missing):
-                    READINESS.check(self.root, "produccion")
+                    READINESS.check(self.root, "main")
 
     def test_npm_must_be_pinned(self):
         self.complete_workspace()
         self.write_package(packageManager="npm@latest")
         with self.assertRaisesRegex(ValueError, "must pin npm"):
-            READINESS.check(self.root, "produccion")
+            READINESS.check(self.root, "main")
 
     def test_complete_contract_enables_application_checks(self):
         self.complete_workspace()
-        self.assertTrue(READINESS.check(self.root, "produccion"))
+        for branch in ("develop", "main"):
+            with self.subTest(branch=branch):
+                self.assertTrue(READINESS.check(self.root, branch))
 
 
 if __name__ == "__main__":

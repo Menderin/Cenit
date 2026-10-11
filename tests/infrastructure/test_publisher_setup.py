@@ -29,7 +29,7 @@ local = load('local_setup', 'setup-local.py')
 class PublisherTests(unittest.TestCase):
     def setUp(self):
         self.env = {
-            'GITHUB_REPOSITORY': 'Menderin/Cenit', 'GITHUB_REF_NAME': 'produccion',
+            'GITHUB_REPOSITORY': 'Menderin/Cenit', 'GITHUB_REF_NAME': 'main',
             'GITHUB_SHA': 'a' * 40, 'GITHUB_RUN_ID': '42', 'GITHUB_RUN_ATTEMPT': '2',
             'GITHUB_RUN_NUMBER': '7', 'GITHUB_EVENT_NAME': 'push',
         }
@@ -47,7 +47,8 @@ class PublisherTests(unittest.TestCase):
 
     def test_wrong_event_branch_or_repository_cannot_publish(self):
         for key, value in [('GITHUB_EVENT_NAME', 'pull_request'),
-                           ('GITHUB_REF_NAME', 'main'), ('GITHUB_REPOSITORY', 'someone/Cenit')]:
+                           ('GITHUB_REF_NAME', 'develop'), ('GITHUB_REF_NAME', 'produccion'),
+                           ('GITHUB_REPOSITORY', 'someone/Cenit')]:
             with self.subTest(key=key):
                 env = {**self.env, key: value}
                 with self.assertRaises((ValueError, GitHubReadError)):

@@ -15,8 +15,8 @@ REQUIRED_SCRIPTS = (
 def check(root, branch):
     manifest = root / "package.json"
     if not manifest.is_file():
-        if branch == "produccion":
-            raise ValueError("Produccion requires an initialized application and real tests.")
+        if branch != "develop":
+            raise ValueError("Only develop permits a scaffold; delivery requires an initialized application and real tests.")
         print("Scaffold only: infrastructure CI applies; application tests are not available.")
         return False
 

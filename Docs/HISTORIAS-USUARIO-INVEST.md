@@ -359,7 +359,7 @@ Estas fichas son tareas bajo la épica, no nuevas historias de negocio. Fechas, 
 | `deploy/quadlet/*` | Revisar/reutilizar unidades existentes de DB, Nginx, red, volumen y plantilla de aplicación para VM | HT15; no reemplazar Quadlet por Compose en VM sólo por usar YAML local |
 | `Containerfile` — por crear | Definir build de producción de frontend/API y migrador, compatible con contrato de CD | HT05; es dependencia de imagen/app, no trabajo duplicado de HT15 |
 | `.github/workflows/ci.yml` — existente | Completar y verificar jobs de aplicación usando scripts/pruebas reales | HT14; infraestructura ya tiene workflow, no recrearlo como faltante |
-| `.github/workflows/release.yml` — por crear | Publicar imagen y manifiesto tras gates correctos sobre `produccion`, para ejecutor de VM | HT06; requiere aplicación, imagen y CI real |
+| `.github/workflows/release.yml` — preparado, ensayo pendiente | Publicar imagen y manifiesto tras gates correctos sobre `main`, para ejecutor de VM | HT06; requiere aplicación, imagen y CI real |
 | `README.md` y `deploy/README.md` | Registrar uso local, requisitos, comandos y diferencias con operación VM | HT15/HT11; documentación ejecutable verificada |
 
 Los nombres propuestos de Compose/configuración local se concretan al implementar; no se afirma que esos archivos ya existan. Workflows de Actions viven en `.github/workflows`, contenedores locales en Compose y servicios de VM en Quadlet: tienen funciones diferentes. Un workflow YAML por sí solo no levanta contenedores ni acredita CD.
@@ -388,7 +388,7 @@ Los nombres propuestos de Compose/configuración local se concretan al implement
 
 1. Ejecuta instalación reproducible, typecheck, lint, unitarias, integración contra PostgreSQL, build y E2E sobre build.
 2. El check `CI required` refleja las verificaciones aplicables; un fallo de aplicación impide autorizar entrega.
-3. Se acredita una ejecución correcta y una fallida controlada; no se admite omitir aplicación/pruebas para acreditar una entrega a `produccion`.
+3. Se acredita una ejecución correcta y una fallida controlada; no se admite omitir aplicación/pruebas para acreditar una entrega a `main`.
 4. Permisos y configuración del workflow son acotados, sin secretos expuestos ni credenciales de la VM en pruebas.
 
 **Dependencias:** HT02, HT08 y pruebas de historias. Implementar scripts/pruebas pertenece a HT08 y autores; conectarlos al runner pertenece aquí. No volver a crear desde cero el CI ya preparado sin necesidad.
@@ -407,13 +407,13 @@ Los nombres propuestos de Compose/configuración local se concretan al implement
 
 ### S3-HT06 — Implementar publicación y despliegue automático
 
-**Descripción:** Completar workflow de release para publicar imagen/manifiesto después de CI y promoción a `produccion`; conectar el productor con el ejecutor preparado en la VM.
+**Descripción:** Completar workflow de release para publicar imagen/manifiesto después de CI y promoción a `main`; conectar el productor con el ejecutor preparado en la VM.
 
 **Criterios de aceptación:**
 
 1. Publicación exige gates de aplicación correctos; nombres de jobs, artefacto y manifiesto respetan `deploy/CD-VM.md`.
 2. Imagen fijada por digest y procedencia verificable; el consumidor rechaza releases inválidas o sin validación requerida.
-3. El flujo PR a `main`, promoción por PR a `produccion`, CI/publicación y consulta de release en VM está documentado y ensayado.
+3. El flujo PR a `develop`, promoción por PR a `main`, CI/publicación y consulta de release en VM está documentado y ensayado.
 4. Una release válida produce un despliegue identificado sin builds o `git pull` manuales habituales en la VM; un fallo no se declara éxito.
 
 **Dependencias:** HT14, HT05 y acceso a VM; evidencia operativa compartida con HT07 sin contar el ensayo dos veces.

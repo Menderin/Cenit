@@ -174,7 +174,7 @@ Los endpoints de compras/catálogos ya tienen base en el SDD; concretar los de a
 | ID | Habilitador | Criterios de aceptación |
 | --- | --- | --- |
 | S3-HT05 | Construir y verificar el artefacto | Imagen de producción sirve frontend/API; migrador separado, secretos por archivo, roles limitados y esquema `cenit`; cumple `deploy/CD-VM.md`. Health readiness acredita aplicación y BD, no sólo Nginx |
-| S3-HT06 | Publicar y desplegar automáticamente | CI con pruebas reales; promoción por PR a `produccion`, workflow/gates/manifiesto/digest según contrato. La VM sólo aplica releases verificadas; ensayo efectivo, sin `git pull` o builds manuales habituales |
+| S3-HT06 | Publicar y desplegar automáticamente | CI con pruebas reales; promoción por PR a `main`, workflow/gates/manifiesto/digest según contrato. La VM sólo aplica releases verificadas; ensayo efectivo, sin `git pull` o builds manuales habituales |
 | S3-HT07 | Ensayar recuperación y alternativa local | Evidencia de respaldo previo a migración, persistencia, fallo de entrega y recuperación de aplicación/proxy sin rollback automático de datos. Misma versión identificada disponible localmente; servicios Zableke/Jenkins intactos |
 
 Responsable Víctor, verificación Kevin. Dependen de S3-HT02 e historias integradas; primer ensayo VM martes 13. La infraestructura de preparación no acredita estas entregas.
