@@ -4,6 +4,8 @@ El monitor de GitHub instalado anteriormente sólo observa. Este procedimiento i
 
 ## Instalación o actualización del ejecutor
 
+El backend académico del 11 de octubre adapta `deploy/migrate.cjs` para operar sobre `cenit` preaprovisionado, sin CREATE de base: lector/journal de Drizzle, ledger compatible, transacción, lock y hashes verificados. Probado localmente con ese límite de permisos. El historial académico sigue fuera del journal hasta integrar la FK de login; no autorizar una release por el build académico parcial. La imagen futura debe incluir este migrador junto con sus migraciones.
+
 Transición del 11 de octubre: este checkout valida `main`; la copia instalada anteriormente valida `produccion` hasta repetir el instalador. Mantener publicación deshabilitada y seguir [la transición CI/CD](CI-CD.md) el martes 13. No basta con subir el workflow.
 
 Desde PowerShell, copiar los archivos actuales. No copiar secretos ni el directorio de estado de la VM:

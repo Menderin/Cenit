@@ -9,6 +9,7 @@ Estas instrucciones aplican a todo el repositorio. Antes de iniciar una tarea, l
 - [CONTRIBUTING.md](CONTRIBUTING.md): flujo de colaboración, ramas, PR, revisiones, coordinación de archivos compartidos y criterios de terminado. Aplicar estas reglas también al trabajo de agentes; no inventar tickets ni saltar revisión/CI.
 - [AGENTS/ESTRUCTURA.md](AGENTS/ESTRUCTURA.md): mapa de carpetas, responsabilidad de cada ubicación, límites de dependencia y criterios para colocar código/pruebas. Consultarlo antes de crear o mover archivos; actualizarlo si cambia la organización. No completar carpetas con código innecesario ni ampliar alcance para retirar `.gitkeep`.
 - `README.md`: instrucciones ejecutables; actualizarlo cuando cambie el arranque, configuración o verificación.
+- [Docs/ACADEMICO.md](Docs/ACADEMICO.md): esquema/contratos académicos implementados, trazabilidad y dependencias de login. Leerlo antes de modificar catálogo o progreso.
 
 Ante una contradicción que afecte alcance, contratos o reglas de negocio, explicarla y solicitar una decisión. No inventar procesos institucionales ni afirmar que una funcionalidad existe sin verificarla.
 
@@ -23,6 +24,10 @@ La aclaración del líder del 10 de octubre añade login y recuperación automá
 No incorporar Banner, autenticación institucional, pagos, aprobaciones oficiales, importación masiva ni otros procesos administrativos sin una ampliación explícita del alcance. Investigar Oracle no acredita autorización o acceso a sistemas reales. Revisión en Cenit, pago declarado y aprobación institucional son conceptos distintos.
 
 ## Convenciones técnicas
+
+Ampliación autorizada del 11 de octubre: estudiantes consultan su progreso persistido y docentes buscan a todos los estudiantes ficticios de Nutrición por nombre/RUT. Historial de intentos y notas, sin simulación ni edición pública. Imagen `Docs/Foto prerequisitos Nutricion.jpeg` prioritaria para nombres/SCT; plan 2027 confirmado por el equipo. Semántica de flechas y ausencia de requisitos sigue pendiente: mantener `pending`, nunca inferir AND/OR o `none`. Perfiles/historial preparados como propuesta fuera del journal hasta revisar la FK con HU01-T03; no crear usuarios ni credenciales duplicadas para desbloquearlos.
+
+La base npm inicializa API/contratos sin alterar frontend. El marcador `cenitStage: academic-foundation` permite integración únicamente en `develop` con pruebas académicas obligatorias; no permite entrega en `main`. Retirarlo al completar los tres workspaces y checks reales. Mantener el publicador deshabilitado. El servidor académico sin adaptador de login deniega acceso; no introducir identidades por headers ni fingir readiness.
 
 - Conservar React, Vite, TypeScript, React Router, TanStack Query, Tailwind CSS y componentes seleccionados de shadcn/ui. No sustituir el stack del frontend por iniciativa del agente.
 - Usar como base técnica de trabajo Node.js 24 LTS con TypeScript, Fastify 5, API REST JSON, PostgreSQL 17, Drizzle y contratos TypeBox/JSON Schema. Este stack proviene de la guía; REST y las versiones son concreciones técnicas documentadas en el SDD. La ratificación del equipo sigue pendiente; no presentarla como realizada.

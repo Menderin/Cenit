@@ -1,0 +1,22 @@
+{
+  "name": "cenit", "version": "0.1.0", "private": true,
+  "type": "module", "packageManager": "npm@11.19.0", "cenitStage": "academic-foundation",
+  "engines": { "node": "24.21.0", "npm": "11.19.0" },
+  "workspaces": ["apps/api", "packages/contracts"],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "build:academic": "npm run build --workspace @cenit/contracts && npm run build --workspace @cenit/api",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node deploy/migrate.cjs",
+    "catalog:check": "tsx db/seeds/load-academic.ts --check",
+    "catalog:load": "tsx db/seeds/load-academic.ts --publish"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2", "@types/pg": "8.23.1",
+    "drizzle-kit": "0.31.11", "tsx": "4.23.15",
+    "typescript": "5.9.3", "vitest": "4.1.11"
+  },
+  "overrides": { "esbuild": "0.28.2" }
+}

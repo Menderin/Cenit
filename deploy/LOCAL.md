@@ -56,12 +56,13 @@ No añadir `--volumes` para un apagado habitual. No reutilizar volúmenes de otr
 
 ## Contrato para incorporar la aplicación
 
-Todavía faltan los manifiestos npm, código de aplicación y migraciones de negocio. El perfil `application` y el `Containerfile` quedan preparados para estos requisitos:
+Hay manifiestos API/contratos y migraciones del catálogo académico; faltan frontend/login y build completo. El [backend académico](../Docs/ACADEMICO.md) se verifica con `build:academic`; no activar el perfil `application` todavía. El perfil y el `Containerfile` requieren:
 
 - Un solo `package-lock.json` y workspaces `apps/api`, `apps/web`, `packages/contracts`; npm 11.19.0 y scripts reales exigidos por CI.
 - `npm run build` genera `apps/api/dist/server.js`, `apps/web/dist/index.html` y `packages/contracts/dist`. Los exports de contratos deben apuntar a su código compilado.
 - API y frontend se sirven juntos por el puerto 3000; `/`, `/compras` y `/academico` devuelven HTML. El API acepta `DATABASE_URL_FILE` sin imprimir credenciales.
 - `pg` y `drizzle-orm` son dependencias de producción de `apps/api`. Migraciones Drizzle en `db/migrations`, incluido `meta/_journal.json`. `deploy/migrate.cjs` aplica migraciones como `cenit_migrator`, con historial en `cenit.__drizzle_migrations`; no ejecuta semillas ni `db push`.
+- El esquema `cenit` lo prepara infraestructura. El migrador utiliza el lector de Drizzle, transacción y lock con ledger compatible; no exige CREATE de base al rol. Rechaza cambios en migraciones ya aplicadas. Catálogo y estudiantes se cargan mediante operaciones de demo explícitas; perfiles/historial esperan la FK de login.
 - `/health/ready` devuelve exactamente `{"status":"ready"}` con HTTP 200 cuando la base/esquema permiten operar; devuelve 503 si no están disponibles. El runtime usa `cenit_app`.
 
 Cuando esos requisitos estén implementados y probados:

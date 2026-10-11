@@ -2,7 +2,7 @@
 
 Mapa revisado el 11 de octubre de 2026. Esta guía concreta la organización de la sección 4 del [SDD](SDD.md); no cambia stack, contratos ni alcance. Leer también [las instrucciones para agentes](../AGENTS.md) y [la guía de colaboración](../CONTRIBUTING.md). Si cambian responsabilidades o rutas, actualizar este mapa en el mismo PR.
 
-El repositorio contiene estructura de aplicación con `.gitkeep` y código de infraestructura. Las ubicaciones y nombres de archivos usados como ejemplos no acreditan implementación. Las carpetas se completan cuando una tarea necesita código real; no crear funciones vacías, abstracciones o funcionalidades fuera del MVP para ocuparlas.
+El repositorio contiene infraestructura y una base implementada de API/contratos académicos; el frontend conserva `.gitkeep`. Consultar [el estado académico](../Docs/ACADEMICO.md): perfiles/progreso dependen todavía de la FK de login. Las ubicaciones usadas como ejemplos no acreditan otras implementaciones. Las carpetas se completan cuando una tarea necesita código real; no crear funciones vacías ni funcionalidades fuera del MVP para ocuparlas.
 
 ## 1. Mapa de carpetas existentes
 
@@ -18,10 +18,10 @@ Cenit/
 │   └── api/src/
 │       ├── modules/
 │       │   ├── purchases/{routes,services,repositories}/
-│       │   └── academic/{routes,services}/
+│       │   └── academic/{routes,services,repositories}/
 │       └── infrastructure/{config,database,plugins}/
 ├── packages/contracts/src/{common,purchases,academic}/
-├── db/{schema,migrations,seeds}/
+├── db/{schema,migrations,seeds,pending}/
 ├── catalogs/academic/
 ├── tests/{integration,e2e,infrastructure}/
 ├── deploy/
@@ -37,6 +37,8 @@ Cenit/
 ```
 
 Las llaves agrupan subcarpetas, no son nombres literales. No duplicar estas raíces con `front`, `back`, `bd`, `database` o `docs`; respetar `db` y `Docs`, también en Linux.
+
+`db/pending` contiene propuestas SQL con dependencias sin resolver; no se ejecutan desde el migrador ni se añaden automáticamente al journal. La propuesta académica depende de la tabla de cuentas revisada. Su uso en una base descartable de integración no acredita una migración de producción. TypeBox público vive en contratos; los schemas Drizzle y migraciones permanecen en `db`.
 
 ## 2. Frontend: `apps/web`
 

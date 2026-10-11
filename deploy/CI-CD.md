@@ -15,12 +15,14 @@ No usar `produccion` para cambios nuevos ni crear otra rama de entrega. Una corr
 
 ## Lo que está preparado
 
+Entrega parcial académica del 11 de octubre: `cenitStage: academic-foundation` identifica sólo API/contratos. El gate permite esta etapa únicamente en `develop` y exige `Academic foundation` (typecheck, catálogo, unitarias, PostgreSQL y build académico) además de infraestructura. No ejecuta ni simula E2E/frontend; `main` y release rechazan esta etapa. Al completar la aplicación, retirar el marcador, incorporar `apps/web` y scripts reales de lint/build/E2E; se vuelve al job completo sin cambiar nombres de gates de entrega.
+
 - `ci.yml`: PR/push a `develop` y `main`, más invocación reutilizable desde release. Acciones fijadas por SHA; sin secretos de la VM.
 - Infraestructura: sintaxis, pruebas Python, validación Compose/Nginx y arranque PostgreSQL/proxy con comprobación de roles limitados.
 - Aplicación: npm reproducible, typecheck, lint, unitarias, integración PostgreSQL, build y Playwright. Check obligatorio estable: **CI required**.
 - `release.yml`: sólo push a `main`; CI exitoso del mismo SHA, imagen Linux/amd64 verificada, publicación GHCR por digest y artifact/release según [CD-VM.md](CD-VM.md).
 
-Todavía faltan manifiestos y aplicación. Sólo `develop` permite omitir explícitamente aplicación mientras sea scaffold. Un PR/push a `main` falla sin aplicación y pruebas reales; se rechaza scaffold en ramas desconocidas al invocar el gate. Una aplicación parcialmente inicializada falla en ambas ramas. Infraestructura verde no equivale a pruebas del MVP.
+Existen manifiestos de API/contratos, pero falta la aplicación completa. Sólo `develop` permite omitirla cuando sea scaffold sin manifiesto o la etapa académica explícita con sus checks obligatorios. Un PR/push a `main` falla sin aplicación y pruebas reales; se rechaza scaffold en ramas desconocidas. Otra inicialización parcial o etapa desconocida falla también en `develop`. Infraestructura/backend verdes no equivalen a pruebas del MVP.
 
 Al inicializar el monorepo, usar lockfile único, tres workspaces y npm exacto según [LOCAL.md](LOCAL.md). Scripts raíz obligatorios: `typecheck`, `lint`, `test:unit`, `test:integration`, `build`, `test:e2e`; deben comprobar comportamiento real y fallar ante errores/ausencia de pruebas. Integración y E2E usan base de pruebas del runner y build, nunca la VM/base compartida.
 

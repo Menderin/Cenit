@@ -224,6 +224,8 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 
 ### S3-HU09 — Visualizar la malla por semestre
 
+Ampliación autorizada el 11 de octubre: consultar progreso persistido por estudiante y permitir búsqueda docente de estudiantes ficticios de Nutrición. No es una simulación. Separar HU09-T03 (catálogo) del entregable de perfiles/historial, dependiente de HU01-T03 para su FK real. Esquema, contratos, pruebas y pendientes en [ACADEMICO.md](ACADEMICO.md); no considerar la pantalla ni autenticación terminadas por disponer del backend probado con identidad de test.
+
 **Alcance:** MVP.
 
 **Descripción:** Como docente o estudiante, quiero visualizar las asignaturas por semestre para comprender la estructura de Nutrición y Dietética.
