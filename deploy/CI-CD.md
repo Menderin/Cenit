@@ -162,3 +162,5 @@ El usuario confirmó la regla permanente `public` para `8081/tcp` mediante respu
 4. Cerrar el PR de prueba sin fusionarlo, o dejarlo abierto hasta incorporar una aplicación e imagen verificadas. No retirar los gates ni añadir tests ficticios para permitir el merge.
 
 Esta prueba acredita disparadores y bloqueo de entrega, no construcción/publicación ni despliegue automático. La prueba completa requiere implementar la aplicación, imagen y `release.yml` con el contrato de `CD-VM.md`, y ensayar una entrega real exitosa y otra fallida.
+
+El usuario compartió el resultado del PR #2, ejecución titulada `Test CI CD #4`: `Infrastructure` pasó, `Prerequisites` falló con `Produccion requires an initialized application and real tests.`, `Application` se omitió y `CI required` falló. Esto confirma el gate negativo esperado para una entrega incompleta a `produccion`; no acredita un despliegue en la VM.

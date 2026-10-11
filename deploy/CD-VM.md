@@ -85,6 +85,14 @@ Una operación ya iniciada continúa. Para renovar tokens usar los configuradore
 
 ## Verificación disponible
 
+### Preparación para trabajar fuera de la red institucional
+
+El usuario indicó que desde casa no tiene acceso a la VM y que podrá volver el martes, antes de la entrega del jueves 15 de octubre. El instalador exitoso ya comprobó linger y systemd de usuario; el ejecutor usa copias instaladas en el estado privado, no necesita una sesión SSH ni un `git pull` por versión. GitHub Actions y publicación pueden prepararse desde casa, pero aún faltan aplicación, imagen y workflow publicador. Un fallo del primer despliegue puede requerir diagnóstico en la VM; no hay observabilidad remota de ese estado configurada.
+
+Antes de retirarse, comprobar respuesta del proxy desde PowerShell después de cerrar SSH y revisar en GitHub que los dos tokens guardados en la VM expiren después de la entrega. No compartir sus valores. La permanencia tras logout todavía no está acreditada mediante esa prueba; no hace falta reiniciar la VM ni reinstalar servicios para comprobarla. Si la institución ofrece acceso remoto autorizado, conviene obtenerlo para diagnóstico; no modificar el Tailscale del otro proyecto ni publicar SSH como parte de esta preparación.
+
+Reservar el martes para ensayar la primera entrega de aplicación, pull privado, migraciones, readiness, proxy y recuperación de una entrega fallida. La preparación actual no garantiza ese circuito todavía. Llevar también un build local ensayado para la presentación, como exige el SDD.
+
 La comprobación posterior del usuario el 10 de octubre confirmó `Result=success`, `ExecMainStatus=0`, servicio `inactive/dead`, timer `active/waiting` y siguiente ejecución programada a las 14:13:41 EDT. Queda resuelto el pendiente de confirmar el timer mencionado en la evidencia inicial siguiente. No hay aplicación ni workflow publicador todavía; falta ensayar una entrega real.
 
 Pasaron 29 pruebas locales de infraestructura y sintaxis Bash/Python, incluidas procedencia inválida, CI omitido, digest alterado, no repetición de migraciones fallidas y recuperación de bootstrap mediante operaciones simuladas. El 10 de octubre el usuario ejecutó el instalador en la VM y compartió éxito: acceso GitHub con cero releases, Quadlet validado sin iniciar la aplicación, roles/secrets preparados, timer CD habilitado y timer de observación deshabilitado. `status.json` registró `waiting-for-release` a las 18:11:40 UTC. Esto acredita instalación y una consulta inicial correcta, no un despliegue real.
