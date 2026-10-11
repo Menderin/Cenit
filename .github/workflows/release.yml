@@ -1,0 +1,91 @@
+name: Cenit Release
+
+on:
+  push:
+    branches: [produccion]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cenit-release-produccion
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  publish:
+    name: Publish image
+    needs: ci
+    # Keep publishing disabled until real application tests and first VM rehearsal are ready.
+    # Repository variable, not a secret. Missing variable means no release.
+    if: vars.CENIT_RELEASE_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      packages: write
+    env:
+      IMAGE_REPOSITORY: ghcr.io/menderin/cenit
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Isolate registry credentials
+        run: echo "DOCKER_CONFIG=$RUNNER_TEMP/cenit-registry" >> "$GITHUB_ENV"
+      - name: Require complete application contract
+        env:
+          TARGET_BRANCH: produccion
+        run: python3 deploy/scripts/check-ci-readiness.py
+      - name: Build the exact commit for the VM
+        run: |
+          set -euo pipefail
+          docker build --platform linux/amd64 --file Containerfile \
+            --build-arg "VCS_REF=$GITHUB_SHA" --tag cenit-candidate:verified .
+      - name: Verify image before publishing
+        run: python3 deploy/scripts/verify-image.py --image cenit-candidate:verified --revision "$GITHUB_SHA"
+      - name: Publish immutable image and create manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REPOSITORY" == Menderin/Cenit && "$GITHUB_REF_NAME" == produccion ]]
+          # Reject a rerun for a commit already released before changing the registry.
+          if gh release view "cenit-$GITHUB_SHA" >/dev/null 2>&1; then
+            echo 'This commit already has a release; promote a new commit instead.'
+            exit 1
+          fi
+          mkdir -p "$DOCKER_CONFIG"
+          chmod 700 "$DOCKER_CONFIG"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          tag="$IMAGE_REPOSITORY:sha-$GITHUB_SHA-$GITHUB_RUN_ATTEMPT"
+          docker tag cenit-candidate:verified "$tag"
+          docker push "$tag"
+          image=$(docker image inspect --format '{{index .RepoDigests 0}}' "$tag")
+          python3 deploy/scripts/make-release-manifest.py --image "$image" --output "$RUNNER_TEMP/cenit-manifest"
+      - name: Upload the manifest artifact
+        id: manifest
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cenit-release-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cenit-manifest/cenit-release.json
+          if-no-files-found: error
+          overwrite: false
+          archive: true
+          retention-days: 90
+      - name: Verify artifact digest and publish release pointer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_DIGEST: ${{ steps.manifest.outputs.artifact-digest }}
+        run: |
+          set -euo pipefail
+          [[ "$ARTIFACT_DIGEST" =~ ^(sha256:)?[0-9a-f]{64}$ ]]
+          gh release create "cenit-$GITHUB_SHA" --target "$GITHUB_SHA" \
+            --title "Cenit $GITHUB_SHA" --notes-file "$RUNNER_TEMP/release-pointer.json"
+      - name: Remove registry session
+        if: always()
+        run: docker logout ghcr.io || true

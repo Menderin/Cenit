@@ -1,0 +1,5 @@
+# Managed by Cenit bootstrap-vm.sh
+[Network]
+NetworkName=cenit-net
+Driver=bridge
+Label=io.cenit.environment=demo

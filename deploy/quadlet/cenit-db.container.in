@@ -1,0 +1,28 @@
+# Managed by Cenit bootstrap-vm.sh
+[Unit]
+Description=Cenit demo PostgreSQL
+
+[Container]
+Image=@POSTGRES_IMAGE@
+ContainerName=cenit-db
+Network=cenit.network
+Volume=cenit-postgres.volume:/var/lib/postgresql/data
+Secret=cenit-postgres-password,type=mount,target=postgres-password
+Environment=POSTGRES_DB=cenit_demo
+Environment=POSTGRES_USER=cenit_admin
+Environment=POSTGRES_PASSWORD_FILE=/run/secrets/postgres-password
+HealthCmd=pg_isready -U cenit_admin -d cenit_demo
+HealthInterval=10s
+HealthTimeout=5s
+HealthRetries=6
+HealthStartPeriod=30s
+HealthOnFailure=kill
+PodmanArgs=--memory=512m --cpus=1
+
+[Service]
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=180
+
+[Install]
+WantedBy=default.target

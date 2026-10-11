@@ -1,0 +1,4 @@
+# Managed by Cenit bootstrap-vm.sh
+[Volume]
+VolumeName=cenit-postgres-data
+Label=io.cenit.environment=demo

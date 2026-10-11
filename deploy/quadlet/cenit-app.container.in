@@ -1,0 +1,34 @@
+# Managed by Cenit automatic deployment
+[Unit]
+Description=Cenit monolith
+Requires=cenit-db.service
+After=cenit-db.service
+
+[Container]
+Image=@APP_IMAGE@
+ContainerName=cenit-app
+Network=cenit.network
+User=1000:1000
+Environment=NODE_ENV=production
+Environment=APP_ENV=demo
+Environment=HOST=0.0.0.0
+Environment=PORT=3000
+Environment=DATABASE_URL_FILE=/run/secrets/database-url
+Secret=cenit-app-database-url,type=mount,target=database-url,uid=1000,gid=1000,mode=0400
+NoNewPrivileges=true
+DropCapability=all
+HealthCmd=node -e "fetch('http://127.0.0.1:3000/health/ready',{signal:AbortSignal.timeout(4000)}).then(async r=>process.exit(r.ok&&(await r.json()).status==='ready'?0:1)).catch(()=>process.exit(1))"
+HealthInterval=10s
+HealthTimeout=5s
+HealthRetries=6
+HealthStartPeriod=30s
+HealthOnFailure=kill
+PodmanArgs=--authfile=@STATE_DIR@/registry/auth.json --memory=512m --cpus=1
+
+[Service]
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=180
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,21 @@
+# Managed by Cenit bootstrap-vm.sh
+[Unit]
+Description=Cenit demo Nginx entry point
+
+[Container]
+Image=@NGINX_IMAGE@
+ContainerName=cenit-nginx
+Network=cenit.network
+Environment=NGINX_ENTRYPOINT_WORKER_PROCESSES_AUTOTUNE=1
+PublishPort=172.16.13.103:8081:8080
+Volume=@STATE_DIR@/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro,Z
+Volume=@STATE_DIR@/html:/usr/share/nginx/html:ro,Z
+PodmanArgs=--memory=128m --cpus=0.5
+
+[Service]
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=180
+
+[Install]
+WantedBy=default.target
