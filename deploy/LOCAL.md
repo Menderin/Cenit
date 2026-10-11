@@ -81,9 +81,9 @@ Si la aplicación no está disponible, conservar `bootstrap.conf`. No activar el
 
 ## CI y publicación
 
-CI comprueba scripts, tests de infraestructura, Compose y arranque del bootstrap con PostgreSQL/Nginx. Para una aplicación inicializada ejecuta typecheck, lint, unitarias, integración PostgreSQL, build y Playwright. La ausencia de aplicación bloquea `produccion`.
+CI comprueba scripts, tests de infraestructura, Compose y arranque del bootstrap con PostgreSQL/Nginx. Para una aplicación inicializada ejecuta typecheck, lint, unitarias, integración PostgreSQL, build y Playwright. La ausencia de aplicación bloquea `main`.
 
-`release.yml` reutiliza CI sobre el mismo commit de `produccion`, construye Linux/amd64 y verifica el artefacto con PostgreSQL, roles limitados, migrador repetible, rutas HTML y readiness ante caída de la BD. Sólo después publica en GHCR por digest y crea el manifiesto/release compatible con el ejecutor de la VM.
+`release.yml` reutiliza CI sobre el mismo commit de `main`, construye Linux/amd64 y verifica el artefacto con PostgreSQL, roles limitados, migrador repetible, rutas HTML y readiness ante caída de la BD. Sólo después publica en GHCR por digest y crea el manifiesto/release compatible con el ejecutor de la VM.
 
 La variable de repositorio `CENIT_RELEASE_ENABLED` debe permanecer ausente o distinta de `true` hasta completar aplicación, tests y preparar el primer ensayo supervisado en la VM. Para ese ensayo se habilita y se promueve un nuevo commit mediante PR; todavía deben acreditarse entrega exitosa y recuperación ante fallo antes de declarar CD operativo. No se configuró esa variable desde este checkout. El artifact ZIP se conserva 90 días, sujeto al límite de retención permitido por el repositorio; conserva exactamente `cenit-release.json`.
 

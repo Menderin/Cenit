@@ -2,7 +2,9 @@
 
 El monitor de GitHub instalado anteriormente sólo observa. Este procedimiento instala el ejecutor `cenit-cd`, crea roles/secrets de aplicación y migración, y conserva el bootstrap hasta encontrar una release aprobada. No requiere reiniciar la VM, instalar Jenkins, abrir otro puerto ni cambiar servicios de Zableke.
 
-## Instalación única
+## Instalación o actualización del ejecutor
+
+Transición del 11 de octubre: este checkout valida `main`; la copia instalada anteriormente valida `produccion` hasta repetir el instalador. Mantener publicación deshabilitada y seguir [la transición CI/CD](CI-CD.md) el martes 13. No basta con subir el workflow.
 
 Desde PowerShell, copiar los archivos actuales. No copiar secretos ni el directorio de estado de la VM:
 
@@ -36,7 +38,7 @@ El Containerfile, `deploy/migrate.cjs` y `.github/workflows/release.yml` están 
 - Objetos de negocio en esquema PostgreSQL `cenit`. El migrador debe configurar explícitamente su registro de migraciones en ese esquema y no intentar crear el esquema predeterminado `drizzle`. No usar `public` para tablas del negocio. Revisar el permiso sobre el registro de migraciones antes de habilitar un entorno institucional.
 - Script `/app/deploy/migrate.cjs`, ejecutable como `node /app/deploy/migrate.cjs`, mismo `DATABASE_URL_FILE`, termina con código distinto de cero si falla. Sólo migraciones versionadas compatibles con la imagen anterior; no semillas, reset o `db push`. Mantener compatibilidad con la versión anterior durante la migración y permitir transacciones según la operación.
 - `/health/ready` devuelve exactamente `{"status":"ready"}` con HTTP 200 cuando base y esquema están disponibles. `/`, `/compras` y `/academico` devuelven HTML con HTTP 200. No sustituir pruebas de recorridos reales por estos smoke checks.
-- Workflow `.github/workflows/release.yml`, evento `push` a `produccion`, CI real sobre el mismo SHA, imagen verificada antes de publicarla. Jobs exitosos con nombres exactos `CI / CI required`, `CI / Application`, `Publish image`; CI omitido no autoriza entrega. El workflow futuro debe reutilizar/adaptar CI y respetar esos nombres.
+- Workflow `.github/workflows/release.yml`, evento `push` a `main`, CI real sobre el mismo SHA, imagen verificada antes de publicarla. Jobs exitosos con nombres exactos `CI / CI required`, `CI / Application`, `Publish image`; CI omitido no autoriza entrega. El workflow futuro debe reutilizar/adaptar CI y respetar esos nombres.
 - Artifact de Actions `cenit-release-<run_attempt>`, ZIP con un único archivo `cenit-release.json` y digest de artifact proporcionado por GitHub. Subirlo con una versión fijada de `upload-artifact` que exponga digest; no reemplazar el artifact de un mismo intento. Acordar retención antes de publicar: un artifact expirado no autoriza nuevas instalaciones.
 - Release publicada, no draft ni prerelease, tag `cenit-<SHA completo>`. El cuerpo es únicamente JSON `{"workflowRunId":123,"workflowRunAttempt":1}` apuntando a esa ejecución. Crear la release al finalizar la publicación. El consumidor espera a que toda la ejecución figure completada y exitosa.
 
@@ -46,7 +48,7 @@ Manifiesto (todos los campos son obligatorios; los identificadores son enteros p
 {
   "schemaVersion": 1,
   "repository": "Menderin/Cenit",
-  "branch": "produccion",
+  "branch": "main",
   "commit": "<SHA hexadecimal de 40 caracteres>",
   "image": "ghcr.io/menderin/cenit@sha256:<digest hexadecimal de 64 caracteres>",
   "workflowRunId": 123,
@@ -60,7 +62,7 @@ El permiso de la VM permanece sólo lectura para Actions/Contents y GHCR. El wor
 
 ## Ejecución y recuperación
 
-El consumidor verifica repositorio/workflow, evento, rama, SHA, intento, jobs, pertenencia del commit a la historia de `produccion`, origen del artifact y digest del ZIP. Descarga la URL firmada del artifact sin reenviar el token GitHub. Sólo acepta el repositorio de imagen fijado por digest, nunca un `latest` ni comandos de una release. Una consulta inválida deja los servicios actuales intactos y registra el fallo.
+El consumidor verifica repositorio/workflow, evento, rama, SHA, intento, jobs, pertenencia del commit a la historia de `main`, origen del artifact y digest del ZIP. Descarga la URL firmada del artifact sin reenviar el token GitHub. Sólo acepta el repositorio de imagen fijado por digest, nunca un `latest` ni comandos de una release. Una consulta inválida deja los servicios actuales intactos y registra el fallo.
 
 Serializa operaciones mediante un lock. Ignora versiones ya instaladas o anteriores y exige que una nueva versión avance desde el commit instalado. Antes de migrar descarga/verifica la imagen, comprueba espacio, registra el intento y crea un `pg_dump` privado. Una migración fallida conserva la aplicación anterior y exige un nuevo intento validado tras revisar el estado de la base. No reintenta a ciegas una operación fallida o interrumpida.
 

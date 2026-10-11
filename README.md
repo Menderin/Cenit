@@ -5,7 +5,9 @@ MVP de registro auxiliar de compras con datos ficticios, login local y visualiza
 ## Documentación de trabajo
 
 - [Instrucciones para agentes](AGENTS.md)
+- [Guía de colaboración del equipo](CONTRIBUTING.md)
 - [Diseño técnico, contratos y pendientes para el equipo](AGENTS/SDD.md)
+- [Mapa de carpetas y distribución del código](AGENTS/ESTRUCTURA.md)
 - [Borrador de planificación, épicas, historias y tareas del MVP](Docs/PLANIFICACION-MVP.md)
 - [Historias, criterios de aceptación y habilitadores del sprint 3](Docs/BACKLOG-SPRINT-3.md)
 - [Fichas vigentes INVEST: descripción, criterios y tareas por historia y módulo](Docs/HISTORIAS-USUARIO-INVEST.md)
@@ -33,7 +35,7 @@ Se utiliza organización mixta: separación técnica y módulos de negocio dentr
 
 La estructura completa y las reglas para ubicar código están en la sección 4 del SDD. Las carpetas vacías contienen `.gitkeep`; retirarlo al incorporar el primer archivo real. Los datos de PostgreSQL se conservan en un volumen fuera del repositorio.
 
-Este checkout contiene documentación, estructura inicial, bootstrap de la VM, Compose local, Containerfile, migrador y workflows CI/release. La [primera ejecución en `main`](https://github.com/Menderin/Cenit/actions/runs/38071046810) pasó el 10 de octubre de 2026 con la versión anterior del CI. Los nuevos pasos y el workflow de publicación todavía deben ejecutarse en Actions. En ausencia de la aplicación, su job queda omitido en `main` y CI bloquea la promoción a `produccion`. Faltan los manifiestos npm, aplicación, migraciones de negocio y ensayo real de entrega/recuperación; no hay una imagen del MVP construida.
+Este checkout contiene documentación, estructura inicial, bootstrap de la VM, Compose local, Containerfile, migrador y workflows CI/release. La [primera ejecución en `main`](https://github.com/Menderin/Cenit/actions/runs/38071046810) pasó el 10 de octubre de 2026 con la versión anterior del CI. Los nuevos pasos y el workflow de publicación todavía deben ejecutarse en Actions. En ausencia de la aplicación, su job queda omitido en `develop` y CI bloquea la promoción a `main`. Faltan los manifiestos npm, aplicación, migraciones de negocio y ensayo real de entrega/recuperación; no hay una imagen del MVP construida.
 
 ## Arranque local de infraestructura
 
@@ -46,3 +48,7 @@ Invoke-RestMethod 'http://127.0.0.1:8081/health/proxy'
 ```
 
 Se espera `status: ok`, `mode: bootstrap`. PostgreSQL persiste en un volumen propio; `podman compose down` conserva los datos. Los secretos generados en `.local` y la configuración `.env` no se versionan. Consultar [la guía local](deploy/LOCAL.md) para preparar la máquina Podman, resolver puertos y activar posteriormente la aplicación.
+
+## Flujo vigente de ramas
+
+`rama de tarea → develop → main`, mediante PR, revisión y CI. `develop` integra funcionalidades; `main` autoriza entregas verificadas. El publicador sigue deshabilitado hasta completar aplicación/tests y actualizar el ejecutor instalado en la VM para aceptar `main`. La rama antigua `produccion` no es destino del nuevo flujo; retirarla tras comprobar la transición según [CI/CD](deploy/CI-CD.md).

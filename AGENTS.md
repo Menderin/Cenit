@@ -2,10 +2,12 @@
 
 ## Aplicación y referencias
 
-Estas instrucciones aplican a todo el repositorio. Antes de modificar código, leer `AGENTS/SDD.md` y las instrucciones adicionales de la carpeta afectada.
+Estas instrucciones aplican a todo el repositorio. Antes de iniciar una tarea, leer [CONTRIBUTING.md](CONTRIBUTING.md). Antes de modificar código, leer además [AGENTS/SDD.md](AGENTS/SDD.md), [la guía de estructura](AGENTS/ESTRUCTURA.md) y las instrucciones adicionales de la carpeta afectada.
 
 - `Docs/Guía de trabajo para el MVP de Cenit.pdf`: contexto y alcance de la demostración del 15 de octubre de 2026.
 - `AGENTS/SDD.md`: base técnica interna, contratos y pendientes del MVP. Distinguir decisiones de trabajo, supuestos de demo y validaciones del equipo o cliente.
+- [CONTRIBUTING.md](CONTRIBUTING.md): flujo de colaboración, ramas, PR, revisiones, coordinación de archivos compartidos y criterios de terminado. Aplicar estas reglas también al trabajo de agentes; no inventar tickets ni saltar revisión/CI.
+- [AGENTS/ESTRUCTURA.md](AGENTS/ESTRUCTURA.md): mapa de carpetas, responsabilidad de cada ubicación, límites de dependencia y criterios para colocar código/pruebas. Consultarlo antes de crear o mover archivos; actualizarlo si cambia la organización. No completar carpetas con código innecesario ni ampliar alcance para retirar `.gitkeep`.
 - `README.md`: instrucciones ejecutables; actualizarlo cuando cambie el arranque, configuración o verificación.
 
 Ante una contradicción que afecte alcance, contratos o reglas de negocio, explicarla y solicitar una decisión. No inventar procesos institucionales ni afirmar que una funcionalidad existe sin verificarla.
@@ -36,6 +38,8 @@ No incorporar Banner, autenticación institucional, pagos, aprobaciones oficiale
 
 ## Trabajo del equipo
 
+Seguir [CONTRIBUTING.md](CONTRIBUTING.md) para coordinar tareas e integración. Leer también [historias vigentes](Docs/HISTORIAS-USUARIO-INVEST.md) y [planificación](Docs/PLANIFICACION-MVP.md) cuando la tarea dependa del alcance o de criterios del sprint. Para contenedores/despliegue, consultar [entorno local](deploy/LOCAL.md), [operación VM](deploy/README.md), [CI/CD](deploy/CI-CD.md) y [contrato de entrega](deploy/CD-VM.md) antes de modificar esos componentes. No duplicar decisiones técnicas en la guía de colaboración ni interpretar propuestas de calendario/capacidad como compromisos colectivos confirmados.
+
 1. Identificar el resultado observable, archivos afectados, dependencias y criterios de aceptación antes de editar.
 2. Hacer cambios pequeños y coherentes. Revisar el estado de Git y preservar trabajo ajeno; no revertir ni eliminar cambios de otros agentes.
 3. Si hay trabajo paralelo autorizado, acordar propiedad de archivos y contratos antes de editar. Evitar modificaciones simultáneas del mismo archivo.
@@ -61,6 +65,8 @@ La infraestructura puede prepararse antes del build usando `deploy/scripts/boots
 
 El usuario requiere despliegue automático después de superar CI e integrar cambios en la rama de entrega. No diseñar actualizaciones habituales mediante SSH, `git pull` o builds manuales en la VM. La propuesta de CI/CD, sus garantías y los pendientes están en la sección 18 del SDD; no afirmar que existe un pipeline hasta implementarlo y verificarlo.
 
-Usar `main` como integración y `produccion` como rama de entrega; cambios mediante PR y CI. GitHub Actions ejecuta builds/pruebas fuera de la VM y ésta consultará releases aprobadas para desplegar. Leer `deploy/CI-CD.md`. No sustituir tests por scripts que siempre pasan ni habilitar releases mientras falte aplicación, validación del artefacto y conexión de CD.
+Usar `develop` como integración y `main` como rama de entrega; cambios mediante PR y CI. GitHub Actions ejecuta builds/pruebas fuera de la VM y ésta consultará releases aprobadas para desplegar. Leer `deploy/CI-CD.md`. No sustituir tests por scripts que siempre pasan ni habilitar releases mientras falte aplicación, validación del artefacto y conexión de CD.
 
 El contrato del ejecutor preparado está en `deploy/CD-VM.md`. Al implementar imagen/workflow respetar digest, procedencia verificable, nombres de gates/artefacto, `DATABASE_URL_FILE`, migrador separado y esquema `cenit`. No introducir credenciales administrativas en el runtime, semillas automáticas, rollback de datos ni prune global. La instalación local de archivos o un estado de espera no acreditan un despliegue real: ensayar entrega y recuperación en la VM antes de declararlo operativo.
+
+Transición de ramas del 11 de octubre: la antigua `produccion` deja de ser destino de CI/publicación. Mantener publicación deshabilitada hasta actualizar el ejecutor instalado en la VM para validar `main`; el cambio local de scripts no actualiza esa copia. Procedimiento y condiciones para retirar la rama antigua en `deploy/CI-CD.md`.

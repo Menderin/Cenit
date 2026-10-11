@@ -2,51 +2,63 @@
 
 ## Ramas y autorización de entrega
 
-`main` es la rama de integración. `produccion` es la rama que autoriza una entrega a la VM. Los nombres no cambian Git: los eventos del workflow y las reglas de ramas definen el comportamiento.
+Decisión del 11 de octubre de 2026: `develop` integra funcionalidades; `main` autoriza entregas. Sustituye el flujo anterior `main → produccion`. El usuario confirmó que creó `develop`, pero su protección aún no está configurada. No se modificaron ramas, reglas ni variables remotas desde este ajuste del repo.
 
 ```text
-feature/* -- PR + CI + revisión --> main
-main -- PR + CI + revisión --> produccion
-produccion -- CI del commit integrado --> imagen verificada en GHCR
+rama de tarea -- PR + CI + revisión --> develop
+develop -- PR + CI + revisión --> main
+main -- CI del commit integrado --> imagen verificada en GHCR
 release aprobada <-- consulta saliente de la VM --> despliegue + comprobación
 ```
 
-No hace falta crear `develop` además de `main`. Promover mediante PR; no copiar archivos ni hacer force-push a `produccion`. Una corrección urgente integrada en `produccion` debe volver a `main` mediante PR para que las ramas no diverjan. Inicialmente la VM sirve una demo con datos ficticios: el nombre de la rama no habilita operación institucional.
+No usar `produccion` para cambios nuevos ni crear otra rama de entrega. Una corrección urgente integrada en `main` debe volver a `develop` mediante PR para evitar divergencia. No hacer force-push ni actualizaciones habituales mediante SSH/git pull. El destino sigue siendo una demostración con datos ficticios.
 
 ## Lo que está preparado
 
-`.github/workflows/ci.yml` ejecuta CI en PRs y pushes a ambas ramas. No recibe secretos de la VM ni tiene permisos para escribir en GitHub. Las acciones se fijan por SHA.
+- `ci.yml`: PR/push a `develop` y `main`, más invocación reutilizable desde release. Acciones fijadas por SHA; sin secretos de la VM.
+- Infraestructura: sintaxis, pruebas Python, validación Compose/Nginx y arranque PostgreSQL/proxy con comprobación de roles limitados.
+- Aplicación: npm reproducible, typecheck, lint, unitarias, integración PostgreSQL, build y Playwright. Check obligatorio estable: **CI required**.
+- `release.yml`: sólo push a `main`; CI exitoso del mismo SHA, imagen Linux/amd64 verificada, publicación GHCR por digest y artifact/release según [CD-VM.md](CD-VM.md).
 
-También se puede invocar desde `release.yml` como workflow reutilizable. La nueva configuración del repositorio incluye Compose local, Containerfile, migrador y publicación compatible con el consumidor de la VM; todavía faltan aplicación, sus manifiestos y un ensayo real. Instrucciones locales y versiones exactas en [LOCAL.md](LOCAL.md).
+Todavía faltan manifiestos y aplicación. Sólo `develop` permite omitir explícitamente aplicación mientras sea scaffold. Un PR/push a `main` falla sin aplicación y pruebas reales; se rechaza scaffold en ramas desconocidas al invocar el gate. Una aplicación parcialmente inicializada falla en ambas ramas. Infraestructura verde no equivale a pruebas del MVP.
 
-- Infraestructura: sintaxis Bash, compilación de utilidades Python, pruebas del bloqueo de CI para una aplicación ausente/incompleta y validación del Nginx temporal en un contenedor.
-- La actualización añade validación Compose, arranque de PostgreSQL/proxy y comprobación de roles limitados. Estas nuevas comprobaciones de contenedores deben acreditarse en una ejecución posterior en Actions.
-- Aplicación: instalación npm reproducible, typecheck, lint, pruebas unitarias, integración con PostgreSQL, build y Playwright sobre el build servido.
-- Check estable para exigir en reglas de rama: **CI required**. Confirmar su nombre exacto en la interfaz tras la primera ejecución.
+Al inicializar el monorepo, usar lockfile único, tres workspaces y npm exacto según [LOCAL.md](LOCAL.md). Scripts raíz obligatorios: `typecheck`, `lint`, `test:unit`, `test:integration`, `build`, `test:e2e`; deben comprobar comportamiento real y fallar ante errores/ausencia de pruebas. Integración y E2E usan base de pruebas del runner y build, nunca la VM/base compartida.
 
-Hoy no existen manifiestos ni aplicación. En `main`, el CI verifica infraestructura y deja explícitamente omitido el job de aplicación. Un PR o push a `produccion` falla mientras no exista la aplicación y su contrato CI. No interpretar un check de infraestructura verde como tests del MVP ni como autorización de release.
+## Configuración de GitHub pendiente
 
-Al inicializar el monorepo, crear un lockfile único, manifiestos de los tres workspaces y `packageManager: npm@X.Y.Z` con versión exacta. Scripts raíz obligatorios: `typecheck`, `lint`, `test:unit`, `test:integration`, `build`, `test:e2e`. Deben ejecutar verificaciones reales, fallar ante errores y no aceptar ausencia de pruebas. Integración usa `DATABASE_URL` del CI y prepara su esquema de pruebas. Playwright debe arrancar el build compilado con su configuración `webServer`, verificar compras/malla y detener el servidor al finalizar; no apuntar a la VM ni a una base compartida.
+En Settings configurar protecciones para **`develop` y `main`**: PR obligatorio, una aprobación de otro integrante, check `CI required` obligatorio y force-push/eliminación bloqueados. Exigir estar actualizado con la base antes de fusionar. Revisar bypass de administradores; no usarlo para aprobar entregas incompletas. Si el selector no ofrece el check, ejecutar primero el nuevo CI en `develop` y buscar el nombre exacto generado.
 
-## Activación de GitHub: una vez
+La protección existente de `main` no se copia automáticamente a `develop`. Crear la regla de `develop`; revisar `main` como rama de entrega. Elegir `develop` como base de PR de tareas. Cambiar la rama predeterminada a `develop` es opcional y no altera el disparador de CD. No borrar ni reemplazar reglas de las ramas vigentes para retirar la anterior.
 
-El 10 de octubre de 2026 se confirmó mediante consultas autenticadas de sólo lectura: repositorio privado, cuenta con permiso `admin` y Actions habilitado. El usuario publicó la base en `main` (`479095a`) y creó `produccion`, que apunta al commit anterior (`44b3502`) y aún no contiene el workflow. Después configuró protección clásica en ambas ramas: check `CI required` vinculado a GitHub Actions, una aprobación requerida y force-push/eliminación bloqueados. Las consultas posteriores de protección confirmaron esa configuración. Las reglas permiten bypass de administradores (`enforce_admins: false`) y no exigen estar actualizado con la rama base (`strict: false`); falta ensayar un PR fallido con los permisos habituales del equipo. El agente no publica ni modifica las ramas remotas.
+Mantener `CENIT_RELEASE_ENABLED` ausente o distinta de `true` durante la transición. Habilitarla sólo con aplicación/tests completos y ejecutor de la VM actualizado, para el primer ensayo supervisado. El publicador usa `GITHUB_TOKEN` con `contents: write` y `packages: write`; no importar los PAT de la VM.
 
-1. En `https://github.com/Menderin/Cenit`, abrir **Actions**. Ya está habilitado; no hace falta cambiar sus permisos para este workflow de sólo lectura.
-2. Publicación inicial completada por el usuario. Los cambios siguientes se integran por su flujo Git habitual; incluir workflow, scripts de verificación y pruebas de infraestructura cuando se modifiquen. No incluir cachés Python, credenciales ni archivos de ejecución de la VM.
-3. `produccion` ya existe desde la base anterior a la preparación. Puede permanecer allí hasta la primera entrega desplegable. No sobrescribirla ni hacer force-push para sincronizarla; promover mediante PR cuando la aplicación y su contrato CI estén completos. La creación de la rama no equivale a despliegue.
-4. Protección clásica configurada por el usuario en ambas ramas: PR, check `CI required`, una aprobación y force-push/eliminación bloqueados. La aprobación requiere otro compañero; el autor del PR no puede aprobar su propio cambio. Para que las mismas restricciones apliquen a administradores, activar **Do not allow bypassing the above settings**. No confundir el check obligatorio con una aprobación manual adicional de despliegue.
-5. Verificar una ejecución real en Actions y ensayar un PR con una comprobación fallida: no debe poder promoverse con los privilegios habituales del equipo. Comprobar quién puede eludir las reglas; no declarar protección activa sólo por tener un YAML.
+La [primera ejecución de main del 10 de octubre](https://github.com/Menderin/Cenit/actions/runs/38071046810) pasó infraestructura y omitió aplicación bajo el flujo anterior. No acredita el nuevo CI: ahora sólo `develop` permite esa omisión. La protección confirmada entonces para `main`/`produccion` también es histórica; `develop` requiere su propia configuración/prueba.
 
-La configuración de permisos/reglas se realiza en GitHub. No necesita reiniciar ni alterar la VM. Si no tienes acceso a Settings, el propietario o administrador del repositorio realiza estos pasos.
+## Transición de la VM el martes 13 de octubre
 
-### Primera ejecución esperada
+Este checkout acepta exclusivamente `main` en manifiesto, run, origen del artifact e historial del commit. La copia instalada en `~/.local/share/cenit/bin` mantiene la política anterior hasta reinstalarla; cambiar el repo no actualiza esa copia. No habilitar publicación antes de completar la transición.
 
-La [primera ejecución de `main`](https://github.com/Menderin/Cenit/actions/runs/38071046810) terminó con éxito: `Prerequisites`, `Infrastructure` y `CI required` correctos, con `Application` omitido porque todavía no hay aplicación. La validación Nginx en contenedor pasó en el runner de GitHub; no se ejecutó localmente en Windows. En las siguientes ejecuciones, abrir **Actions → Cenit CI** y revisar el commit correspondiente. Si falla un job, abrir el paso fallido y revisar su salida antes de cambiar reglas.
+Desde PowerShell copiar sólo `deploy` de la versión revisada:
 
-Crear `produccion` desde esta base puede iniciar una ejecución fallida en `Prerequisites`: se está bloqueando una entrega sin aplicación, no indicando un fallo del bootstrap en la VM. Mantener ese bloqueo hasta implementar el monorepo y sus verificaciones reales. No desactivar el check ni añadir scripts que siempre devuelvan éxito para dejar la rama verde.
+```powershell
+$cenitDeployPath = 'C:\Users\vjopi\OneDrive\Documentos\GitHub\Cenit\deploy'
+scp -r "$cenitDeployPath" "adminc@172.16.13.103:~/Cenit/"
+```
 
-La primera ejecución de CI no publica imágenes ni se conecta a la VM. Una vez comprobado `CI required`, seleccionarlo como check obligatorio en las reglas de ambas ramas si el plan lo permite. La creación de la rama y su protección son pasos distintos.
+En SSH bajo `adminc`, sin sudo:
+
+```bash
+bash ~/Cenit/deploy/scripts/install-cd.sh
+python3 -c "import sys; sys.path.insert(0, '/home/adminc/.local/share/cenit/bin'); from cd_release import DELIVERY_BRANCH; assert DELIVERY_BRANCH == 'main'; print('Rama de entrega instalada: main')"
+systemctl --user show cenit-cd.service -p Result -p ExecMainStatus
+systemctl --user show cenit-cd.timer -p ActiveState -p SubState
+systemctl --user list-timers cenit-cd.timer --all --no-pager
+cat ~/.local/share/cenit/cd/status.json
+```
+
+El instalador conserva secretos/roles existentes y detiene el timer antes de sustituir scripts. Si hay una operación en curso, pide esperar/repetir sin interrumpir la migración. Esperar `Result=success`, `ExecMainStatus=0`, timer activo con siguiente consulta y, sin releases, `waiting-for-release`. No reiniciar VM ni cambiar Zableke/Jenkins. Verificar rama instalada y espera no acredita una entrega real.
+
+Retirar `produccion` después de configurar/verificar protecciones, actualizar la VM y comprobar que no contiene commits o PR pendientes de conservar. El nuevo consumidor no autoriza releases antiguas de esa rama. Borrarla no es requisito para empezar con `develop`; puede conservarse temporalmente sin nuevos merges. Si su protección bloquea borrarla, ajustar sólo esa regla antigua al retirarla, conservando las reglas de `develop`/`main`.
 
 ## CD: credenciales, observación y preparación del ejecutor
 
@@ -137,9 +149,9 @@ Se añadieron `install-cd.sh`, el verificador de artifacts, el ejecutor rootless
 
 GitHub Actions y despliegue iniciado desde la VM están elegidos por el usuario. No instalar otro Jenkins ni un runner general de PRs en la VM compartida.
 
-El workflow `release.yml` se dispara por `push` a `produccion` y depende de CI reutilizable exitoso del mismo commit. Construye la imagen del monolito, comprueba el artefacto ejecutable y publica digest y manifiesto verificable. La publicación requiere la variable de repositorio `CENIT_RELEASE_ENABLED=true`: mantenerla deshabilitada hasta completar aplicación/tests y preparar el primer ensayo supervisado en la VM. Las actualizaciones de `main` y los PRs no publican releases desplegables. Después de habilitarlo, no habrá aprobación manual adicional tras cada promoción mediante PR.
+El workflow `release.yml` se dispara por `push` a `main` y depende de CI reutilizable exitoso del mismo commit. Construye la imagen del monolito, comprueba el artefacto ejecutable y publica digest y manifiesto verificable. La publicación requiere la variable de repositorio `CENIT_RELEASE_ENABLED=true`: mantenerla deshabilitada hasta completar aplicación/tests y preparar el primer ensayo supervisado en la VM. Las actualizaciones de `develop` y los PRs no publican releases desplegables. Después de habilitarlo, no habrá aprobación manual adicional tras cada promoción mediante PR.
 
-El servicio/timer del ejecutor preparado consulta las releases aprobadas cada dos minutos después de terminar la operación anterior; el polling significa que el despliegue empieza en la siguiente consulta, no inmediatamente al hacer merge. Verifica repositorio, workflow, rama `produccion`, evento `push`, commit, gates y digest, serializa operaciones y actualiza sólo Cenit. Un tag `latest` o un archivo del checkout por sí solos no son autorización.
+El servicio/timer del ejecutor preparado consulta las releases aprobadas cada dos minutos después de terminar la operación anterior; el polling significa que el despliegue empieza en la siguiente consulta, no inmediatamente al hacer merge. Verifica repositorio, workflow, rama `main`, evento `push`, commit, gates y digest, serializa operaciones y actualiza sólo Cenit. Un tag `latest` o un archivo del checkout por sí solos no son autorización.
 
 Para completar y ensayar CD faltan:
 
@@ -155,15 +167,13 @@ Referencias: [eventos de Actions](https://docs.github.com/en/actions/how-tos/wri
 
 Actualización de verificación del 10 de octubre: la salida posterior del usuario confirmó `Result=success`, `ExecMainStatus=0`, servicio `inactive/dead`, timer `active/waiting` y próxima ejecución a las 14:13:41 EDT. Sustituye el pendiente de confirmar la siguiente consulta señalado arriba. El ejecutor y su programación quedan verificados; aplicación, ejecución del workflow publicador y circuito real de entrega siguen pendientes.
 
-### Prueba del flujo de ramas antes de tener aplicación
+### Prueba del nuevo flujo antes de tener aplicación
 
-El usuario confirmó la regla permanente `public` para `8081/tcp` mediante respuesta `yes` de firewalld. El cambio documental que registra esta evidencia puede usarse para comprobar los disparadores del CI, sin tocar la VM ni publicar una imagen.
+1. Integrar los ajustes mediante PR hacia `develop`: en el scaffold se espera infraestructura correcta, aplicación omitida y `CI required` exitoso.
+2. Abrir PR de `develop` hacia `main`: sin aplicación se espera fallo de `Prerequisites` y `CI required`. Comprueba el bloqueo de entrega, no un error del bootstrap.
+3. No fusionar hasta completar aplicación, pruebas y contrato de imagen. No usar bypass ni tests ficticios.
+4. El ensayo completo requiere imagen verificada y ejecutor de la VM actualizado; crear ramas o pasar sólo infraestructura no acredita despliegue.
 
-1. Integrar los ajustes actuales en `main` siguiendo su protección de rama y esperar la ejecución `Cenit CI` del commit nuevo. En el scaffold se espera infraestructura correcta, aplicación omitida y `CI required` exitoso.
-2. Abrir un **pull request** con base `produccion` y comparación `main`. La rama se llama `produccion`, no `prod`. No se requiere ejecutar `git pull` en la VM.
-3. En ese PR se espera que `Prerequisites` y `CI required` fallen por ausencia de aplicación. Eso comprueba que el flujo se dispara y rechaza una entrega incompleta. Verificar que el merge esté bloqueado y no usar bypass de administrador.
-4. Cerrar el PR de prueba sin fusionarlo, o dejarlo abierto hasta incorporar una aplicación e imagen verificadas. No retirar los gates ni añadir tests ficticios para permitir el merge.
-
-Esta prueba acredita disparadores y bloqueo de entrega, no construcción/publicación ni despliegue automático. La prueba completa requiere implementar la aplicación, imagen y `release.yml` con el contrato de `CD-VM.md`, y ensayar una entrega real exitosa y otra fallida.
+### Evidencia histórica del flujo anterior
 
 El usuario compartió el resultado del PR #2, ejecución titulada `Test CI CD #4`: `Infrastructure` pasó, `Prerequisites` falló con `Produccion requires an initialized application and real tests.`, `Application` se omitió y `CI required` falló. Esto confirma el gate negativo esperado para una entrega incompleta a `produccion`; no acredita un despliegue en la VM.
