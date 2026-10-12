@@ -213,14 +213,15 @@ test('normaliza visualmente espacios exteriores e interiores del correo repetida
   await email.fill('  DOC ENTE @ CENIT . INVALID  ');
   await email.press('Tab');
   await expect(email).toHaveValue('docente@cenit.invalid');
-  const normalizedAppearance = await email.screenshot();
+  // Finish focus transitions so captures compare the final field, not animation timing.
+  const normalizedAppearance = await email.screenshot({ animations: 'disabled' });
   for (const edge of ['Home', 'End', 'Home', 'End']) {
     await email.press(edge);
     await email.pressSequentially('   ');
     await email.press('Tab');
     await expect(email).toHaveValue('docente@cenit.invalid');
     // Native email editing can show whitespace absent from input.value; check what is rendered too.
-    expect(Buffer.compare(normalizedAppearance, await email.screenshot())).toBe(0);
+    expect(Buffer.compare(normalizedAppearance, await email.screenshot({ animations: 'disabled' }))).toBe(0);
   }
   for (const whitespace of ['   ', '\u00a0']) {
     await email.press('Home');
@@ -228,7 +229,7 @@ test('normaliza visualmente espacios exteriores e interiores del correo repetida
     await email.pressSequentially(whitespace);
     await email.press('Tab');
     await expect(email).toHaveValue('docente@cenit.invalid');
-    expect(Buffer.compare(normalizedAppearance, await email.screenshot())).toBe(0);
+    expect(Buffer.compare(normalizedAppearance, await email.screenshot({ animations: 'disabled' }))).toBe(0);
   }
   // Enter submits without blur: the same normalization must also run on submission.
   await email.fill(' DOC ENTE @ CENIT . INVALID ');
