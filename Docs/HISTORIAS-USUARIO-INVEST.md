@@ -87,6 +87,10 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 
 **Decisión del 11 de octubre:** duración fija de dos horas, comprobación en servidor y logout revocable; API implementada con reloj controlado en pruebas. **Pendientes:** recuperación/descarte de borradores, pantallas y limpieza de caché. No asumir política de borrador por implementar el backend.
 
+**Prueba mínima de interfaz del 11 de octubre:** acceso/salida y destinos aislados por rol implementados en frontend; limpieza de identidad/caché y aviso de invalidez comprobables en esas pantallas. Sin compras/malla ni borradores: HU03-T03/T04 y aceptación completa siguen pendientes de integración con módulos reales y política de borradores. Evidencia y comandos en [AUTENTICACION.md](AUTENTICACION.md).
+
+**Aviso previo acordado:** mostrar advertencia cinco minutos antes de vencer, tiempo restante y «Cerrar sesión ahora», sin renovar las dos horas ni guardar automáticamente. Es común a los tres roles; no decide conservación/descarte de borradores.
+
 **Revisión INVEST:** resultado verificable; contrato de sesión compartido con HU01. Si expiración/borradores impiden una entrega pequeña, dividir logout y recuperación de sesión en refinamiento, sin declararlos terminados juntos.
 
 | Tarea | Descripción | Criterios de aceptación de la tarea |

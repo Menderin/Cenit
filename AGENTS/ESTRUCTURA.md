@@ -2,7 +2,7 @@
 
 Mapa revisado el 11 de octubre de 2026. Esta guía concreta la organización de la sección 4 del [SDD](SDD.md); no cambia stack, contratos ni alcance. Leer también [las instrucciones para agentes](../AGENTS.md) y [la guía de colaboración](../CONTRIBUTING.md). Si cambian responsabilidades o rutas, actualizar este mapa en el mismo PR.
 
-El repositorio contiene infraestructura, API/contratos académicos y [autenticación local](../Docs/AUTENTICACION.md); el frontend conserva `.gitkeep`. Consultar [el estado académico](../Docs/ACADEMICO.md): la identidad UUID está definida, pero migrar perfiles/progreso sigue siendo un entregable separado. Las ubicaciones usadas como ejemplos no acreditan otras implementaciones. Las carpetas se completan cuando una tarea necesita código real; no crear funciones vacías ni funcionalidades fuera del MVP para ocuparlas.
+El repositorio contiene infraestructura, API/contratos académicos y [autenticación local](../Docs/AUTENTICACION.md), con login/logout visual integrado y destinos de área en construcción por rol: `/administracion` y `/academico`. `features/auth/components/AccessLayout.tsx` y `features/auth/access.css` contienen el marco de acceso; `app/App.tsx` compone los avisos de construcción. La lógica existente de sesión y los contratos siguen siendo compartidos. Los módulos de compras/malla aún no están implementados en esas pantallas. Consultar [el estado académico](../Docs/ACADEMICO.md): la identidad UUID está definida, pero migrar perfiles/progreso sigue siendo un entregable separado. Las carpetas se completan cuando una tarea necesita código real; no crear funciones vacías para ocuparlas.
 
 ## 1. Mapa de carpetas existentes
 
@@ -12,6 +12,7 @@ Cenit/
 │   ├── web/src/
 │   │   ├── app/
 │   │   ├── features/
+│   │   │   ├── auth/{pages,api,model}/
 │   │   │   ├── purchases/{pages,components,api}/
 │   │   │   └── academic/{pages,components,api,model}/
 │   │   └── shared/{components,lib}/
@@ -46,6 +47,7 @@ Las llaves agrupan subcarpetas, no son nombres literales. No duplicar estas raí
 | Ubicación | Qué colocar | Qué mantener fuera |
 | --- | --- | --- |
 | `src/app` | Composición de la aplicación: router, layout general, proveedores y arranque de React | Pantallas completas de un módulo, consultas específicas o reglas de compras |
+| `src/features/auth/{pages,api,model,components}` | Login común, transporte tipado de login/session/logout, ciclo de sesión y aviso previo reutilizado por ambos módulos; limpieza de caché y guardas por rol | Cuentas/credenciales en código, persistencia de tokens, decisiones de borradores pendientes |
 | `src/features/purchases/pages` | Pantallas del módulo administrativo: coordinar componentes, estado y consultas del recorrido confirmado | SQL, validaciones exclusivas del servidor, clientes Oracle |
 | `src/features/purchases/components` | Tabla, filtros, detalle y componentes específicos para revisar datos recuperados | Componentes académicos y supuestos de edición libre no confirmados |
 | `src/features/purchases/api` | Funciones HTTP, queries y mutaciones TanStack Query de compras, usando contratos públicos | Acceso directo a BD y transformación silenciosa de datos institucionales |
@@ -172,3 +174,5 @@ Antes de añadir un archivo:
 6. Añadir las verificaciones del comportamiento y revisar imports, consumidores y documentación afectados.
 
 Cuando una carpeta se vuelva demasiado amplia, dividir por responsabilidad/caso de uso coherente dentro del mismo módulo. No mover código sólo para obtener carpetas de tamaños similares. La modularidad se evalúa por responsabilidades y dependencias, no por cantidad de carpetas ocupadas.
+
+El lanzador local `deploy/scripts/dev.mjs`, invocado con `npm run dev`, coordina los procesos API/Vite y su cierre. Es tooling de desarrollo: no aloja reglas de negocio ni sustituye Compose/Quadlet o el ejecutor de CD.

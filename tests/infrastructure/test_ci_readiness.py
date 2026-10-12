@@ -117,6 +117,46 @@ class ReadinessTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unknown"):
             READINESS.check(self.root, "develop")
 
+    def minimal_frontend(self):
+        self.academic_foundation()
+        package = json.loads((self.root / "package.json").read_text())
+        package["workspaces"] = ["apps/api", "apps/web", "packages/contracts"]
+        package["scripts"].update({name: "test-command" for name in READINESS.WEB_SCRIPTS})
+        (self.root / "package.json").write_text(json.dumps(package))
+        for filename in ("apps/web/package.json", "apps/web/src/main.tsx", "playwright.auth.config.ts", "tests/e2e/auth.spec.ts"):
+            path = self.root / filename
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}")
+
+    def test_minimal_frontend_checks_do_not_authorize_main(self):
+        self.minimal_frontend()
+        self.assertFalse(READINESS.check(self.root, "feat/login"))
+        with self.assertRaisesRegex(ValueError, "incomplete"):
+            READINESS.check(self.root, "main")
+
+    def test_frontend_requires_browser_checks_and_build(self):
+        self.minimal_frontend()
+        original = json.loads((self.root / "package.json").read_text())
+        for missing in READINESS.WEB_SCRIPTS:
+            package = json.loads(json.dumps(original))
+            del package["scripts"][missing]
+            (self.root / "package.json").write_text(json.dumps(package))
+            with self.assertRaisesRegex(ValueError, missing):
+                READINESS.check(self.root, "develop")
+
+    def test_frontend_cannot_omit_workspace_or_test_file(self):
+        self.minimal_frontend()
+        package = json.loads((self.root / "package.json").read_text())
+        package["workspaces"] = ["apps/api", "packages/contracts"]
+        (self.root / "package.json").write_text(json.dumps(package))
+        with self.assertRaisesRegex(ValueError, "cannot skip"):
+            READINESS.check(self.root, "develop")
+        package["workspaces"] = ["apps/api", "apps/web", "packages/contracts"]
+        (self.root / "package.json").write_text(json.dumps(package))
+        (self.root / "tests/e2e/auth.spec.ts").unlink()
+        with self.assertRaisesRegex(ValueError, "Missing frontend"):
+            READINESS.check(self.root, "develop")
+
 
 if __name__ == "__main__":
     unittest.main()

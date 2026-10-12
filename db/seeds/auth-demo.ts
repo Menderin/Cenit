@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import type pg from 'pg';
 import { Type, type Static } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
-import { AccountEmailSchema, AccountRoleSchema } from '../../packages/contracts/src/auth/index.js';
+import { AccountEmailSchema, AccountRoleSchema, type AccountRole } from '../../packages/contracts/src/auth/index.js';
 import { createPool } from '../../apps/api/src/infrastructure/database/connection.js';
 import { hashPassword, verifyPassword } from '../../apps/api/src/modules/auth/services/password.js';
 
@@ -15,18 +15,27 @@ const DemoCredentialsSchema = Type.Array(Type.Object({
   password: Type.String({ minLength: 12, maxLength: 128 }),
 }, { additionalProperties: false }), { minItems: 3, maxItems: 3 });
 export type DemoCredentials = Static<typeof DemoCredentialsSchema>;
-export function createDemoCredentials(): DemoCredentials {
-  return (['docente', 'estudiante', 'administrativo'] as const).map(role => ({
+export type DemoPasswords = Record<AccountRole, string>;
+export const demoPasswordKeys = { docente: 'CENIT_DEMO_DOCENTE_PASSWORD', estudiante: 'CENIT_DEMO_ESTUDIANTE_PASSWORD', administrativo: 'CENIT_DEMO_ADMINISTRATIVO_PASSWORD' } as const;
+export function demoPasswordsFromEnv(env: NodeJS.ProcessEnv): DemoPasswords | undefined {
+  if (!Object.values(demoPasswordKeys).some(key => Boolean(env[key]))) return undefined;
+  const passwords = Object.fromEntries(Object.entries(demoPasswordKeys).map(([role, key]) => [role, env[key]])) as DemoPasswords;
+  if (Object.values(passwords).some(password => typeof password !== 'string' || password.length < 12 || password.length > 128)) throw new Error('Configura las tres claves de demo (12–128 caracteres) fuera de Git.');
+  return passwords;
+}
+export function createDemoCredentials(passwords?: DemoPasswords): DemoCredentials {
+  const credentials = (['docente', 'estudiante', 'administrativo'] as const).map(role => ({
     id: randomUUID(), email: `${role}@cenit.invalid`, name: `${role[0]!.toUpperCase()}${role.slice(1)} Demo`, role,
-    password: randomBytes(24).toString('base64url'),
+    password: passwords?.[role] ?? randomBytes(24).toString('base64url'),
   }));
+  validate(credentials); return credentials;
 }
 function validate(credentials: DemoCredentials) {
   if (!Value.Check(DemoCredentialsSchema, credentials) || new Set(credentials.map(c => c.role)).size !== 3 ||
     new Set(credentials.map(c => c.id)).size !== 3 || new Set(credentials.map(c => c.email)).size !== 3 ||
     credentials.some(c => c.email !== `${c.role}@cenit.invalid`)) throw new Error('Configuración ficticia inconsistente.');
 }
-export function privateDemoCredentials(root: string): DemoCredentials {
+export function privateDemoCredentials(root: string, passwords?: DemoPasswords): DemoCredentials {
   const dir = resolve(root, '.local/secrets');
   for (const parent of [resolve(root, '.local'), dir]) {
     if (existsSync(parent) && lstatSync(parent).isSymbolicLink()) throw new Error('No usar enlaces para credenciales.');
@@ -35,11 +44,13 @@ export function privateDemoCredentials(root: string): DemoCredentials {
   const file = resolve(dir, 'auth-demo.json');
   if (existsSync(file) && lstatSync(file).isSymbolicLink()) throw new Error('No usar enlaces para credenciales.');
   if (!existsSync(file)) {
-    try { writeFileSync(file, JSON.stringify(createDemoCredentials(), null, 2), { flag: 'wx', mode: 0o600 }); }
+    try { writeFileSync(file, JSON.stringify(createDemoCredentials(passwords), null, 2), { flag: 'wx', mode: 0o600 }); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
   }
   const credentials: DemoCredentials = JSON.parse(readFileSync(file, 'utf8'));
-  validate(credentials); return credentials;
+  validate(credentials);
+  if (passwords && credentials.some(account => account.password !== passwords[account.role])) throw new Error('Las claves configuradas no coinciden con las cuentas privadas existentes. No se rotaron.');
+  return credentials;
 }
 export async function prepareDemoAccounts(pool: pg.Pool, credentials: DemoCredentials): Promise<void> {
   if (!['demo', 'test'].includes(process.env.APP_ENV ?? '')) throw new Error('Preparación limitada a demo/pruebas.');
@@ -67,7 +78,7 @@ async function main() {
   if (process.argv.length > 2 || process.env.APP_ENV !== 'demo') throw new Error('Usa auth:prepare-demo con APP_ENV=demo.');
   // URL conversion preserves Windows drive letters/spaces; don't depend on workspace cwd.
   const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-  const credentials = privateDemoCredentials(repo), pool = createPool();
+  const credentials = privateDemoCredentials(repo, demoPasswordsFromEnv(process.env)), pool = createPool();
   try { await prepareDemoAccounts(pool, credentials); console.log('Tres cuentas ficticias preparadas. Credenciales privadas en .local/secrets/auth-demo.json; no se imprimieron ni rotaron.'); }
   finally { await pool.end(); }
 }

@@ -14,7 +14,7 @@ import { AcademicRepository } from '../../apps/api/src/modules/academic/reposito
 import { AuthRepository } from '../../apps/api/src/modules/auth/repositories/auth.js';
 import { AuthService, sessionHash } from '../../apps/api/src/modules/auth/services/auth.js';
 import { SESSION_COOKIE } from '../../apps/api/src/modules/auth/routes/index.js';
-import { createDemoCredentials, prepareDemoAccounts, privateDemoCredentials } from '../../db/seeds/auth-demo.js';
+import { createDemoCredentials, demoPasswordKeys, demoPasswordsFromEnv, prepareDemoAccounts, privateDemoCredentials, type DemoPasswords } from '../../db/seeds/auth-demo.js';
 import { loadCatalog, readCatalog } from '../../db/seeds/load-academic.js';
 
 const suffix = randomBytes(6).toString('hex');
@@ -116,6 +116,23 @@ describe('migraciones y preparación de cuentas', () => {
     process.env.APP_ENV = 'production';
     try { await expect(prepareDemoAccounts(runtimes[0]!, credentials)).rejects.toThrow(); }
     finally { process.env.APP_ENV = 'test'; }
+  });
+  it('acepta claves compartidas privadas y conserva identidades al repetir la preparación', () => {
+    const passwords = Object.fromEntries(credentials.map(c => [c.role, c.password])) as DemoPasswords;
+    const env = Object.fromEntries(Object.entries(demoPasswordKeys).map(([role, key]) => [key, passwords[role as keyof DemoPasswords]]));
+    expect(demoPasswordsFromEnv(env)).toEqual(passwords);
+    const root = resolve('tmp/auth-tests', suffix, 'shared-private');
+    const first = privateDemoCredentials(root, passwords);
+    expect(first.every(c => c.password === passwords[c.role])).toBe(true);
+    expect(privateDemoCredentials(root, passwords)).toEqual(first);
+    expect(() => privateDemoCredentials(root, { ...passwords, docente: randomBytes(24).toString('hex') })).toThrow();
+    expect(privateDemoCredentials(root, passwords)).toEqual(first);
+  });
+  it('rechaza configuración parcial o corta sin incluir claves en errores', () => {
+    expect(demoPasswordsFromEnv({})).toBeUndefined();
+    expect(() => demoPasswordsFromEnv({ [demoPasswordKeys.docente]: credentials[0]!.password })).toThrow();
+    expect(() => demoPasswordsFromEnv(Object.fromEntries(Object.values(demoPasswordKeys).map(key => [key, 'short'])))).toThrow();
+    expect(() => createDemoCredentials({ docente: 'short', estudiante: 'short', administrativo: 'short' })).toThrow();
   });
   it('BD exige correo normalizado/único, nombre, rol y hash protegido', async () => {
     const base = credentials[0]!, hash = (await runtimes[0]!.query('SELECT password_hash FROM cenit.accounts WHERE id=$1', [base.id])).rows[0].password_hash;
