@@ -11,6 +11,7 @@ REQUIRED_SCRIPTS = (
     "typecheck", "lint", "test:unit", "test:integration", "build", "test:e2e"
 )
 ACADEMIC_SCRIPTS = ("typecheck", "test:unit", "test:integration", "build:academic", "catalog:check")
+WEB_SCRIPTS = ("build:web", "test:e2e:auth")
 
 
 def permits_incomplete_application(branch):
@@ -22,8 +23,19 @@ def check_academic_foundation(root, package, branch):
     """An explicit backend can be tested on task/develop branches, never released."""
     if not permits_incomplete_application(branch):
         raise ValueError("Academic foundation is incomplete: delivery requires login, frontend and full application tests.")
-    if package.get("workspaces") != ["apps/api", "packages/contracts"]:
-        raise ValueError("Academic foundation must declare only the two initialized workspaces.")
+    workspaces = package.get("workspaces")
+    web = workspaces == ["apps/api", "apps/web", "packages/contracts"]
+    if not web and workspaces != ["apps/api", "packages/contracts"]:
+        raise ValueError("Academic foundation must declare the initialized workspaces.")
+    if (root / "apps/web/package.json").exists() and not web:
+        raise ValueError("Frontend workspace cannot skip its checks.")
+    if web:
+        for name in WEB_SCRIPTS:
+            if not isinstance(package.get("scripts", {}).get(name), str) or not package["scripts"][name].strip():
+                raise ValueError(f"Missing frontend check: {name}")
+        for filename in ("apps/web/package.json", "apps/web/src/main.tsx", "playwright.auth.config.ts", "tests/e2e/auth.spec.ts"):
+            if not (root / filename).is_file():
+                raise ValueError(f"Missing frontend file: {filename}")
     for name in ACADEMIC_SCRIPTS:
         value = package.get("scripts", {}).get(name)
         if not isinstance(value, str) or not value.strip():
@@ -78,6 +90,8 @@ def main():
                 manifest = ROOT / "package.json"
                 academic = manifest.is_file() and json.loads(manifest.read_text(encoding="utf-8")).get("cenitStage") == "academic-foundation"
                 stream.write(f"academic_ready={str(academic).lower()}\n")
+                web = manifest.is_file() and "apps/web" in json.loads(manifest.read_text(encoding="utf-8")).get("workspaces", [])
+                stream.write(f"web_ready={str(web).lower()}\n")
         return 0
     except (ValueError, OSError) as error:
         print(f"CI prerequisite error: {error}", file=sys.stderr)
