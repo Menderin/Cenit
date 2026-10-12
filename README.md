@@ -72,7 +72,7 @@ npm run dev
 
 Dejar esa terminal abierta. `npm run dev` comprueba puertos/BD/tablas y arranca API y Vite juntos; lee `.env` y la conexión privada de `cenit_app`. Sólo sus procesos reciben APP_ENV=development, cookie HTTP local, Origin de 5173/3000 y conexión runtime; no heredan la credencial del migrador como conexión efectiva. Antes de iniciar la API prepara/verifica las tres cuentas de demo con las claves de `.env`: crea sólo las ausentes y conserva identidades y hashes existentes. Una discrepancia detiene el arranque sin rotar claves ni borrar datos. No ejecuta Podman, migraciones, catálogo ni builds automáticamente. Esta preparación de cuentas es exclusiva del arranque local; migraciones y CD no cargan cuentas. Si falta preparación o hay un puerto ocupado, informa el paso necesario y no detiene procesos ajenos. `Ctrl+C` cierra API y frontend; PostgreSQL permanece en Podman. Para detener también la BD: `podman compose stop db`.
 
-Abrir **http://127.0.0.1:5173**. Consultar privadamente `.local/secrets/auth-demo.json` para ingresar con una cuenta de cada rol; no compartir ese archivo ni copiar contraseñas al repo. Administrativo llega a `/compras`; docente/estudiante, a `/academico`. Cada destino muestra cuenta/rol y permite salir. Recargar conserva la sesión válida; logout o expiración dejan el contenido protegido oculto. Vite usa `/api` relativo con proxy a 3000 y no publica secretos. El proxy bootstrap de 8081 sigue siendo otra ejecución, no esta interfaz.
+Abrir **http://127.0.0.1:5173**. Consultar privadamente `.local/secrets/auth-demo.json` para ingresar con una cuenta de cada rol; no compartir ese archivo ni copiar contraseñas al repo. Administrativo llega a `/administracion`; docente/estudiante, a `/academico`. El login usa el diseño visual de Cenit y autentica con la API local existente. Ambos destinos muestran su área en construcción; no son pantallas de compras/malla. `/prototipo.html` ya no contiene una simulación independiente: redirige al login o al área de una sesión válida. Cada destino muestra cuenta/rol y permite salir. Recargar conserva la sesión válida; logout o expiración dejan el contenido protegido oculto. Vite usa `/api` relativo con proxy a 3000 y no publica secretos. El proxy bootstrap de 8081 sigue siendo otra ejecución, no esta interfaz.
 
 Para verificar el frontend y los recorridos desde la raíz, con PostgreSQL preparado:
 
@@ -83,7 +83,7 @@ npm exec --no -- playwright install chromium
 npm run test:e2e:auth
 ```
 
-Las pruebas usan puertos 5174/3173, cuentas aleatorias y una base PostgreSQL descartable; no modifican `cenit_demo`. En CI se instala Chromium con `--with-deps`. `build:web` sólo compila este frontend mínimo: no habilita main/releases ni sustituye el futuro build completo.
+Las pruebas sirven el frontend compilado mediante Vite preview en 5174 y una API real de prueba en 3173, con cuentas aleatorias y una base PostgreSQL descartable; no modifican `cenit_demo`. Ejecutar `build:web` antes de probar: no se usa el servidor Vite de desarrollo para acreditar los recorridos. En CI se instala Chromium con `--with-deps`. Este ensayo verifica el build web con la API; no habilita main/releases ni sustituye el futuro build completo o un ensayo de despliegue.
 
 ## Verificar el backend académico
 

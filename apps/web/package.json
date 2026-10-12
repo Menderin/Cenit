@@ -2,7 +2,7 @@
   "name": "@cenit/web", "version": "0.1.0", "private": true, "type": "module",
   "scripts": { "dev": "vite", "build": "tsc --noEmit && vite build", "typecheck": "tsc --noEmit" },
   "dependencies": {
-    "@cenit/contracts": "0.1.0", "@sinclair/typebox": "0.34.52",
+    "@cenit/contracts": "0.1.0", "@phosphor-icons/react": "2.1.10", "@sinclair/typebox": "0.34.52",
     "react": "19.3.0", "react-dom": "19.3.0", "react-router": "8.4.0", "@tanstack/react-query": "5.104.2"
   },
   "devDependencies": {

@@ -11,7 +11,7 @@ type State = { status: Status; session: Session | null; message: string };
 type Auth = State & { login: (input: LoginRequest) => Promise<void>; logout: () => Promise<void>; refresh: () => Promise<void> };
 const Context = createContext<Auth | null>(null);
 const expiredMessage = 'Tu sesión ya no es válida. Vuelve a iniciar sesión.';
-export const destination = (session: Session) => session.account.role === 'administrativo' ? '/compras' : '/academico';
+export const destination = (session: Session) => session.account.role === 'administrativo' ? '/administracion' : '/academico';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const client = useQueryClient();

@@ -49,6 +49,7 @@ async function cleanup() {
 async function main() {
   mkdirSync(root, { recursive: true, mode: 0o700 });
   rmSync(resolve(root, 'stop'), { force: true }); rmSync(resolve(root, 'stopped'), { force: true });
+  if (!existsSync(resolve('apps/web/dist/index.html'))) throw new Error('missing-web-build');
   await admin.query(`CREATE ROLE ${migrator} LOGIN PASSWORD '${migrationPassword}' NOSUPERUSER NOCREATEDB NOCREATEROLE`);
   await admin.query(`CREATE ROLE ${runtime} LOGIN PASSWORD '${runtimePassword}' NOSUPERUSER NOCREATEDB NOCREATEROLE`);
   await admin.query(`CREATE DATABASE ${database}`);
@@ -75,7 +76,8 @@ async function main() {
     if (route.url === '/api/v1/auth/login') route.config = { ...route.config, rateLimit: { max: 100, timeWindow: '1 minute' } };
   });
   await app.listen({ host: '127.0.0.1', port: 3173 });
-  vite = spawn(process.execPath, [resolve('node_modules/vite/bin/vite.js'), '--port', '5174'], {
+  // Exercise the compiled frontend, including its production asset paths.
+  vite = spawn(process.execPath, [resolve('node_modules/vite/bin/vite.js'), 'preview', '--port', '5174', '--strictPort'], {
     cwd: resolve('apps/web'), env: { ...process.env, CENIT_API_PROXY: 'http://127.0.0.1:3173' }, stdio: 'inherit',
   });
   vite.once('exit', () => { if (!closing) void cleanup().finally(() => { process.exitCode = 1; }); });
@@ -86,8 +88,10 @@ async function main() {
     void cleanup().then(() => { process.exitCode = 0; }).catch(() => { console.error('Limpieza de pruebas de navegador fallida.'); process.exitCode = 1; });
   });
 }
-main().catch(async () => {
-  console.error('No se pudo preparar la base descartable/API para pruebas de navegador.');
+main().catch(async error => {
+  console.error(error instanceof Error && error.message === 'missing-web-build'
+    ? 'Falta el build del frontend. Ejecuta npm run build:web antes de test:e2e:auth.'
+    : 'No se pudo preparar la base descartable/API para pruebas de navegador.');
   try { await cleanup(); } catch { console.error('Revisar recursos descartables de esta ejecución.'); }
   process.exitCode = 1;
 });

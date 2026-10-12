@@ -4,6 +4,8 @@ Versión: 0.9 · Fecha: 2026-10-11 · Estado: base técnica interna de trabajo; 
 
 Actualización de CI del 11 de octubre: los pushes a `feat/**`, `fix/**`, `test/**`, `docs/**`, `codex/**`, `develop` y `main` ejecutan CI; PR hacia develop/main conserva sus checks de integración. Un commit exclusivamente local no dispara Actions. Scaffold/etapa académica explícita se admiten para verificar trabajo en tareas/develop, con checks aplicables obligatorios; main/release siguen exigiendo aplicación completa. Esta actualización amplía los disparadores de prueba, sin cambiar la autorización de entrega de la sección 18.
 
+Actualización de interfaz del 12 de octubre: por petición de Gael, el diseño visual de login se conecta al contrato/API de autenticación existente y sustituye la simulación separada. El inicio administrativo es `/administracion`; docente/estudiante conservan `/academico`. Ambos son avisos de área en construcción, no módulos de compras/malla. Compras pertenece al área administrativa; no se añade navegación de módulos futuros ni se cambian permisos/endpoints. Por petición de Gael, el formulario elimina espacios del correo en cualquier posición y lo convierte a minúsculas al salir/enviar; valida el resultado con el schema compartido sin cambiar el contrato de la API. Los antecedentes de pruebas del 11 de octubre que mencionan `/compras` corresponden al destino anterior. Evidencia y límites vigentes en [AUTENTICACION.md](../Docs/AUTENTICACION.md).
+
 ### Decisión de autenticación local del 11 de octubre
 
 Aviso de interfaz acordado posteriormente: cinco minutos antes de vencer, mostrar cuenta regresiva en minutos y «Cerrar sesión ahora». No renovar la sesión fija ni guardar automáticamente; la política de borradores sigue pendiente.

@@ -2,7 +2,7 @@
 
 Mapa revisado el 11 de octubre de 2026. Esta guía concreta la organización de la sección 4 del [SDD](SDD.md); no cambia stack, contratos ni alcance. Leer también [las instrucciones para agentes](../AGENTS.md) y [la guía de colaboración](../CONTRIBUTING.md). Si cambian responsabilidades o rutas, actualizar este mapa en el mismo PR.
 
-El repositorio contiene infraestructura, API/contratos académicos y [autenticación local](../Docs/AUTENTICACION.md), con frontend mínimo de login/logout y destinos de prueba por rol. Los módulos de compras/malla aún no están implementados en esas pantallas. Consultar [el estado académico](../Docs/ACADEMICO.md): la identidad UUID está definida, pero migrar perfiles/progreso sigue siendo un entregable separado. Las carpetas se completan cuando una tarea necesita código real; no crear funciones vacías para ocuparlas.
+El repositorio contiene infraestructura, API/contratos académicos y [autenticación local](../Docs/AUTENTICACION.md), con login/logout visual integrado y destinos de área en construcción por rol: `/administracion` y `/academico`. `features/auth/components/AccessLayout.tsx` y `features/auth/access.css` contienen el marco de acceso; `app/App.tsx` compone los avisos de construcción. La lógica existente de sesión y los contratos siguen siendo compartidos. Los módulos de compras/malla aún no están implementados en esas pantallas. Consultar [el estado académico](../Docs/ACADEMICO.md): la identidad UUID está definida, pero migrar perfiles/progreso sigue siendo un entregable separado. Las carpetas se completan cuando una tarea necesita código real; no crear funciones vacías para ocuparlas.
 
 ## 1. Mapa de carpetas existentes
 

@@ -19,6 +19,6 @@ export function SessionWarning({ expiresAt, logout }: { expiresAt: string; logou
   if (minutes === null) return null;
   return <aside className="mb-6 space-y-3 rounded border border-amber-500 bg-amber-50 p-4" aria-label="Aviso de vencimiento de sesión">
     <p role="status">Tu sesión vencerá en {minutes} {minutes === 1 ? 'minuto' : 'minutos'}. Guarda tu trabajo antes de volver a iniciar sesión.</p>
-    <button onClick={() => { void logout(); }}>Cerrar sesión ahora</button>
+    <button className="cenit-access__primary" onClick={() => { void logout(); }}>Cerrar sesión ahora</button>
   </aside>;
 }
