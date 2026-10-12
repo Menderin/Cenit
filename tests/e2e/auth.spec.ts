@@ -208,6 +208,7 @@ test('redimensionar con errores conserva el login sin cortes horizontales', asyn
 });
 
 test('normaliza visualmente espacios exteriores e interiores del correo repetidamente', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/login');
   const email = page.getByLabel('Correo electrónico', { exact: true });
   await email.fill('  DOC ENTE @ CENIT . INVALID  ');
@@ -221,7 +222,7 @@ test('normaliza visualmente espacios exteriores e interiores del correo repetida
     await email.press('Tab');
     await expect(email).toHaveValue('docente@cenit.invalid');
     // Native email editing can show whitespace absent from input.value; check what is rendered too.
-    expect(Buffer.compare(normalizedAppearance, await email.screenshot({ animations: 'disabled' }))).toBe(0);
+    await expect.poll(async () => Buffer.compare(normalizedAppearance, await email.screenshot({ animations: 'disabled' }))).toBe(0);
   }
   for (const whitespace of ['   ', '\u00a0']) {
     await email.press('Home');
@@ -229,7 +230,7 @@ test('normaliza visualmente espacios exteriores e interiores del correo repetida
     await email.pressSequentially(whitespace);
     await email.press('Tab');
     await expect(email).toHaveValue('docente@cenit.invalid');
-    expect(Buffer.compare(normalizedAppearance, await email.screenshot({ animations: 'disabled' }))).toBe(0);
+    await expect.poll(async () => Buffer.compare(normalizedAppearance, await email.screenshot({ animations: 'disabled' }))).toBe(0);
   }
   // Enter submits without blur: the same normalization must also run on submission.
   await email.fill(' DOC ENTE @ CENIT . INVALID ');
