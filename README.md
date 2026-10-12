@@ -1,6 +1,14 @@
 # Cenit
 
-MVP de registro auxiliar de compras con datos ficticios, login local y visualización de la malla de Nutrición con prerrequisitos oficiales, para la demostración del 15 de octubre de 2026. La simulación académica queda para una iteración posterior. Este alcance no acredita funciones implementadas.
+Cenit es una plataforma en desarrollo para centralizar y digitalizar procesos académicos y administrativos de la Facultad de Medicina de la Universidad Católica del Norte, sede Coquimbo. Su desarrollo se organiza en entregas priorizadas; el primer MVP representa un subconjunto de esa visión.
+
+El levantamiento identifica necesidades de asistencia y justificaciones, proyección estudiantil y gestión administrativa, con antecedentes específicos de compras, personal y bienes. Estas líneas tienen distintos grados de definición y validación; su identificación no implica que todas estén aprobadas, implementadas o comprometidas para la próxima entrega. La visión y el alcance detallados se consolidarán en el Charter del proyecto cuando esté terminado.
+
+## Primer MVP
+
+El primer MVP contempla un registro auxiliar de compras con datos ficticios, login local y visualización de la malla de Nutrición con prerrequisitos oficiales, para la demostración del 15 de octubre de 2026. La simulación académica queda para una iteración posterior. Este alcance no acredita funciones implementadas.
+
+El registro de compras está concebido para conservar y organizar una copia auxiliar de registros institucionales: no realiza compras, modifica Oracle, concede aprobaciones oficiales ni procesa pagos. Otros procesos académicos y administrativos quedan fuera del primer MVP; ello no los excluye de la visión futura del producto.
 
 ## Documentación de trabajo
 
@@ -20,7 +28,7 @@ MVP de registro auxiliar de compras con datos ficticios, login local y visualiza
 
 ## Estructura del repositorio
 
-Se utiliza organización mixta: separación técnica y módulos de negocio dentro de cada aplicación.
+Se utiliza organización mixta: separación técnica y módulos de negocio dentro de cada aplicación. Los módulos indicados corresponden al primer MVP; la estructura permite incorporar otras funcionalidades en entregas posteriores.
 
 | Carpeta | Responsabilidad |
 | --- | --- |
@@ -35,6 +43,8 @@ Se utiliza organización mixta: separación técnica y módulos de negocio dentr
 | `AGENTS` y `Docs` | Instrucciones, diseño y antecedentes del proyecto |
 
 La estructura completa y las reglas para ubicar código están en la sección 4 del SDD. Las carpetas vacías contienen `.gitkeep`; retirarlo al incorporar el primer archivo real. Los datos de PostgreSQL se conservan en un volumen fuera del repositorio.
+
+## Estado de implementación
 
 Este checkout contiene infraestructura, catálogo académico, API de autenticación local y frontend mínimo de acceso/salida. Login usa correo/contraseña, roles de servidor y sesión fija de dos horas. Administración y académico son destinos de prueba, todavía sin compras ni visualización de malla; el historial continúa como propuesta separada. CI verifica esta base en tareas/`develop` y bloquea promoverla como aplicación completa a `main`. La [primera ejecución histórica](https://github.com/Menderin/Cenit/actions/runs/38071046810) no acredita estos nuevos checks. No hay imagen del MVP ni ensayo de entrega/recuperación completado.
 
