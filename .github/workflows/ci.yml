@@ -122,6 +122,9 @@ jobs:
       - name: Test real browser authentication
         if: needs.prerequisites.outputs.web_ready == 'true'
         run: npm run test:e2e:auth
+      - name: Test academic catalog in the browser
+        if: needs.prerequisites.outputs.web_ready == 'true'
+        run: npm run test:e2e:academic
 
   application:
     name: Application

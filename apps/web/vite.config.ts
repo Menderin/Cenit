@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { alias: {
     '@cenit/contracts/auth': fileURLToPath(new URL('../../packages/contracts/src/auth/index.ts', import.meta.url)),
+    '@cenit/contracts/academic': fileURLToPath(new URL('../../packages/contracts/src/academic/index.ts', import.meta.url)),
     '@cenit/contracts': fileURLToPath(new URL('../../packages/contracts/src/index.ts', import.meta.url)),
   } },
   server: { host: '127.0.0.1', port: 5173, strictPort: true,

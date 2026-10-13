@@ -4,7 +4,8 @@
     "moduleResolution": "Bundler", "jsx": "react-jsx", "strict": true, "noEmit": true,
     "skipLibCheck": true, "noUncheckedIndexedAccess": true, "esModuleInterop": true,
     "types": ["vite/client"],
-    "paths": { "@cenit/contracts": ["../../packages/contracts/src/index.ts"], "@cenit/contracts/auth": ["../../packages/contracts/src/auth/index.ts"] }
+    "resolveJsonModule": true,
+    "paths": { "@cenit/contracts": ["../../packages/contracts/src/index.ts"], "@cenit/contracts/auth": ["../../packages/contracts/src/auth/index.ts"], "@cenit/contracts/academic": ["../../packages/contracts/src/academic/index.ts"] }
   },
   "include": ["src", "vite.config.ts"]
 }

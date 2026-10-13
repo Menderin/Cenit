@@ -1,6 +1,6 @@
 # Catálogo y progreso académico
 
-Implementación del 11 de octubre de 2026 para HU09-T03 y la ampliación autorizada de perfiles/progreso. Esta entrega es una base de backend: no implementa login, pantallas, simulación ni importación institucional. Leer junto al [SDD](../AGENTS/SDD.md) y las [fichas del sprint](HISTORIAS-USUARIO-INVEST.md).
+Base de backend del 11 de octubre de 2026 para HU09-T03 y la ampliación autorizada de perfiles/progreso. La sección de frontend registra la primera vista preparada el 12 de octubre en `malla-interactiva`, pendiente de revisión/integración. No se implementan simulación ni importación institucional. Leer junto al [SDD](../AGENTS/SDD.md) y las [fichas del sprint](HISTORIAS-USUARIO-INVEST.md).
 
 ## Fuentes y decisiones
 
@@ -22,7 +22,7 @@ Dos migraciones versionadas: catálogo y guards de publicación. El importador v
 
 El migrador usa el lector de archivos/journal de Drizzle y un ledger compatible en `cenit.__drizzle_migrations`, con transacción, lock y comprobación de hashes/timestamps ya aplicados. El esquema `cenit` debe estar preparado por infraestructura: no ejecuta `CREATE SCHEMA`, que exige CREATE de base incluso con IF NOT EXISTS. Se ensaya sin ese permiso ni superusuario, conforme a la VM; no ampliar el rol para resolverlo. Rechaza historia alterada o una base más adelantada que el artefacto.
 
-Las relaciones propuestas para historial son:
+Las relaciones del historial en la rama `malla-interactiva` son:
 
 ```mermaid
 erDiagram
@@ -30,16 +30,16 @@ erDiagram
     VERSION ||--o{ FUENTE : documentada_por
     VERSION ||--o{ ASIGNATURA : contiene
     ASIGNATURA ||--o{ PRERREQUISITO : origen_destino
-    CUENTA ||--o| ESTUDIANTE : "FK pendiente de login"
+    CUENTA ||--o| ESTUDIANTE : "FK a accounts.id"
     ESTUDIANTE ||--|| ADSCRIPCION : "un plan en la demo"
     VERSION ||--o{ ADSCRIPCION : cursada
     ADSCRIPCION ||--o{ INTENTO : registra
     ASIGNATURA ||--o{ INTENTO : corresponde
 ```
 
-`db/schema/academic-progress.ts` y `db/pending/academic-progress.sql` son una **propuesta no desplegada**, fuera de `drizzle.config.ts` y del journal. Necesitan la tabla/columna de cuentas revisada por HU01-T03. La propuesta usa FK UUID; si login elige otra clave, adaptar antes de integrar. No ejecutar el SQL con marcadores ni registrar un UUID huérfano sin FK. El test sustituye los marcadores por una tabla sin credenciales dentro de una base descartable, exclusivamente para verificar constraints y API.
+Ampliación solicitada por Gael el 12 de octubre: vincular el estudiante existente con RUT y consultar tres historiales ficticios desde docente. En `malla-interactiva`, `db/schema/academic-progress.ts` entra en `drizzle.config.ts` y la nueva migración `0003_academic_progress.sql`/snapshot/journal enlaza `account_id` con `cenit.accounts.id` del login integrado. No se modifican 0000–0002. La plantilla SQL con marcadores fue sustituida por esta migración; las pruebas usan cuentas reales del esquema auth, sin tabla de identidad sustituta. Se aplicó explícitamente en la base local de demo; revisión del equipo e integración de la rama siguen pendientes.
 
-Historial propuesto: cuenta única por estudiante, RUT textual conservado, adscripción única a una versión para la demo, intentos numerados únicos por adscripción/asignatura, una sola inscripción en curso y FK compuestas para impedir mezcla de versiones. No se añaden períodos académicos oficiales, asignaciones docente-estudiante ni tablas de simulación.
+Historial: cuenta única por estudiante, RUT textual conservado, adscripción única a una versión para la demo, intentos numerados únicos por adscripción/asignatura, una sola inscripción en curso y FK compuestas para impedir mezcla de versiones. No se añaden períodos académicos oficiales, asignaciones docente-estudiante ni tablas de simulación.
 
 Estados: `passed`, `failed`, `inProgress`; `notTaken` se deriva de ausencia de filas. Nota `numeric` entre 1 y 7, con CHECK que exige como máximo un decimal significativo: aprobado desde 4, reprobado bajo 4, en curso con `null`, sólo para los datos ficticios acordados. No usar coerción de escala para redondear valores de mayor precisión silenciosamente. La respuesta muestra el estado del último intento, todos los intentos ordenados y la última nota aprobatoria registrada. El conteo incluye el intento en curso. No hay porcentaje ni créditos completados.
 
@@ -57,7 +57,7 @@ Schemas y tipos públicos: `@cenit/contracts/academic`; ejemplos compilables: `@
 
 Listado de estudiantes: nombre parcial (ILIKE con comodines escapados), RUT exacto, combinación AND. `page` predeterminado 1 y `pageSize` 20 (máximo 100). RUT: conservar puntuación/case original y usar únicamente para búsqueda una clave sin puntos y con K mayúscula; no inventar validación institucional del dígito verificador. Consultas parametrizadas y snapshot de lectura para conteos/datos coherentes.
 
-Respuestas: `{data: ...}`; lista de estudiantes añade `page`, `pageSize`, `totalItems`. El catálogo conserva los campos previos y añade `semesterEnd`, `codeKind`, `officialCode`, `displayOrder`, `sources`, hashes/fechas y `prerequisiteEdges`. Nuevo caso `pending` en la unión de reglas. Gael debe adaptar el consumidor y su leyenda antes de integrar la pantalla; no hay consumidor frontend implementado en este checkout.
+Respuestas: `{data: ...}`; lista de estudiantes añade `page`, `pageSize`, `totalItems`. El catálogo conserva los campos previos y añade `semesterEnd`, `codeKind`, `officialCode`, `displayOrder`, `sources`, hashes/fechas y `prerequisiteEdges`. Nuevo caso `pending` en la unión de reglas. Los consumidores de catálogo, búsqueda e historial de `malla-interactiva` validan los contratos existentes; no cambian sus schemas. Su integración permanece pendiente.
 
 Corrección del líder: las notas JSON son **cadenas con coma y un decimal**, omitiéndolo cuando es cero: `"4,1"`, `"6"`, `"6,5"`, o `null` si no existe nota; los SCT siguen siendo números. PostgreSQL usa su representación numérica interna con punto; el repositorio convierte sólo la presentación. `6.0` se muestra como `6`, sin cambiar su valor. Una nota con más de un decimal significativo se rechaza; no se inventa una política de redondeo. La unión de intentos distingue nota aprobatoria, reprobatoria y ausencia de nota en curso. Frontend/login deben consumir este contrato corregido, no la propuesta anterior de dos posiciones.
 
@@ -66,6 +66,22 @@ Errores públicos `{error:{code,message,requestId}}` y header `X-Request-Id`: 40
 El plugin recibe `authenticate(request)` desde login y espera `{accountId,role}` obtenido del servidor. No analiza tokens ni acepta rol/identidad del body, headers o query por sí mismo. Sin adaptador devuelve 401. Los Bearer de prueba sólo existen en el harness de integración; no son cuentas reales ni una implementación de autenticación. Roles administrativos rechazados; docente no usa `/me/progress`, estudiante no lista ni consulta otros estudiantes. Progreso sin migración vinculada produce 503.
 
 ## Comandos
+
+### Vista de catálogo y avance — 12 de octubre
+
+Preparada en `malla-interactiva` para SCRUM-65/68: columnas cronológicas y un único bloque IX–X; nombre/SCT, detalle con código interno/oficial ausente, relaciones observadas y versión. Ventana estrecha reorganiza los semestres en grupos verticales, manteniendo el orden. La navegación, el marco claro y el detalle son una primera propuesta visual revisable, no aprobación del equipo ni cierre de la historia.
+
+Ajuste visual posterior solicitado por Gael: retirar «Fuente del plan»/«Fuente y versión» de docente y estudiante y el bloque UCN/Facultad de Medicina inferior. Se elimina la vista dedicada de documentos/revisión; la procedencia permanece en catálogo/API/documentación, sin alterar datos o validaciones. La barra lateral sigue las referencias claras B/C: marca compacta, grupo desplegable Nutrición → Malla, selección blanca con sombra leve, cuenta al final y contenido blanco con margen interior. Phosphor utiliza `regular` en opciones no seleccionadas y `fill` en la activa, también al seleccionar un estudiante. La consulta de asignaturas conserva estados pendientes y versión.
+
+La pantalla usa los dos GET de catálogo y los tres de búsqueda/progreso con validación TypeBox, QueryClient/sesión/transporte existentes y claves por cuenta/plan/versión/estudiante/filtros. Consulta limitada a 15 segundos; hasta dos reintentos sólo por red/503; cancelación mediante AbortSignal. Sin catálogo publicado, estado vacío; errores o respuesta inválida no se sustituyen por datos locales. Logout/401/expiración ocultan catálogo y detalle. La ampliación posterior aplica la migración de perfiles y preparación explícita de `cenit_demo`; rutas/contratos y lógica de sesión permanecen intactos.
+
+Detalle mediante `<dialog>` nativo: foco, Escape y regreso a la asignatura/acción de origen. `pending` conserva su explicación y `none` sólo se presenta cuando llega explícitamente en el contrato; no se infiere ausencia ni AND/OR de las flechas. Estudiante consulta su RUT/historial por sesión; docente busca nombre/RUT y selecciona un perfil. La búsqueda se recoge al seleccionar, con foco en «Cambiar estudiante», para conservar espacio de malla. Se muestran estados textuales, notas con coma e intentos; ningún perfil/historial ausente se convierte a `notTaken`. Historial de otra versión no se dibuja sobre la versión seleccionada. No hay simulación, disponibilidad, porcentajes, edición ni nuevas reglas oficiales.
+
+Después de `npm run build:web`, ejecutar `npm run test:e2e:auth` y `npm run test:e2e:academic`. La configuración académica reutiliza servidor/API/PostgreSQL descartables; carga el catálogo sólo en esa base y elimina sus recursos al finalizar. Vitest incluye los tests web puros junto a API/contratos. CI conecta ambos recorridos en la etapa parcial; main/entrega permanecen bloqueados. La rama `malla-interactiva`, elegida por el usuario sin prefijo, no dispara CI por push bajo los filtros actuales: el PR hacia develop ejecutará las comprobaciones. No se modifica esa política ni se publica una entrega desde esta implementación local.
+
+Evidencia local del 12 de octubre tras conectar historial: typecheck y build web correctos, 45 unitarias, 59 de integración PostgreSQL y 29 E2E (17 auth, 12 académico) correctas sobre el build/API/PostgreSQL descartable. Incluye FK real, preparación repetida/concurrente y rechazo de sobrescritura, búsqueda/RUT normalizado, notas/intentos, acceso propio y respuestas tardías. Se verificaron los tres roles contra la API local de desarrollo tras preparar los datos, cerrando sólo las sesiones de verificación. Se usó Chrome instalado mediante configuración privada, no el Chromium fijado de CI. Se comprobó reflow entre 320 y 1920 CSS px y detalle/teclado; Safari, zoom/ventanas físicas del usuario, CI remoto y revisión independiente siguen pendientes.
+
+### Base académica y persistencia
 
 Usar Node **24.21.0** y npm **11.19.0**, fijados en `.node-version`/manifiesto. Esta entrega inicializa sólo `apps/api` y `packages/contracts`; Gael conserva la inicialización/versiones de `apps/web`.
 
@@ -80,7 +96,7 @@ npm run build:academic
 
 Integración requiere PostgreSQL 17 accesible con permiso para crear **bases y roles exclusivos de prueba**. Localmente usa la contraseña privada de `.local/secrets/postgres-password` y loopback 55432. Para otro puerto/servidor, guardar una URL administrativa en un archivo privado y configurar `ACADEMIC_TEST_ADMIN_URL_FILE`; en CI usa `DATABASE_URL` del servicio descartable. Nunca usar una credencial administrativa en el runtime. Cada ensayo crea dos bases `cenit_academic_test_<hex>_*`, roles sin privilegios elevados, y elimina únicamente sus recursos generados. No borra ni aplica semillas en `cenit_demo`.
 
-Aplicar sólo las migraciones del catálogo en la base de demo, de forma explícita:
+Aplicar las migraciones versionadas de catálogo, login y perfiles en la base de demo, de forma explícita; cargar catálogo sigue siendo una operación separada:
 
 ```powershell
 $env:DATABASE_URL_FILE = '<ruta privada a la URL de cenit_migrator>'
@@ -89,9 +105,18 @@ $env:APP_ENV = 'demo'
 npm run catalog:load
 ```
 
-Las URL generadas por Compose contienen el hostname `db`, válido dentro de sus contenedores. Para ejecutar estos comandos desde Windows, preparar un archivo privado con el host `127.0.0.1` y puerto local (55432 por defecto), conservando credencial/base; no imprimirlo ni versionarlo. Las migraciones no cargan catálogo, cuentas ni historiales. `catalog:load` comprueba hashes de fuentes y no crea estudiantes. `db/seeds/academic-demo.ts` está preparado para una carga explícita posterior con cuentas existentes; no tiene CLI mientras la FK siga pendiente.
+Las URL generadas por Compose contienen el hostname `db`, válido dentro de sus contenedores. Para ejecutar estos comandos desde Windows, usar el archivo privado `migrator-local-url` con host `127.0.0.1` y puerto local (55432 por defecto), conservando credencial/base; no imprimirlo ni versionarlo. Las migraciones no cargan catálogo, cuentas ni historiales. `catalog:load` comprueba hashes de fuentes y no crea estudiantes. `db/seeds/academic-demo.ts` carga perfiles con cuentas existentes, transacción y bloqueo: repetir contenido conserva identidades/intentos, diferencias se rechazan sin sobrescribir. La preparación adicional está en `db/seeds/prepare-academic-demo.ts` y se ejecuta sólo por petición explícita:
 
-Actualización del 11 de octubre: `npm run dev --workspace @cenit/api` conecta la sesión local real de [AUTENTICACION.md](AUTENTICACION.md), con credencial runtime. Docente/estudiante autenticados pueden leer el catálogo; sin sesión, 401; administrativo, 403. `/health/ready` permanece en 503 porque falta frontend/build completo. No activar el proxy definitivo ni releases. `cenit.accounts.id` ya define identidad UUID; la migración académica de perfiles/historial sigue fuera del journal para su revisión/integración separada.
+```powershell
+$env:DATABASE_URL_FILE = '.local/secrets/migrator-local-url'
+$env:APP_ENV = 'demo'
+npm run db:migrate
+npm run academic:prepare-demo
+```
+
+El CLI exige loopback `127.0.0.1`, rol `cenit_migrator`, base `cenit_demo`, tablas migradas y las cuentas originales privadas ya preparadas. Publica el catálogo usando el importador existente y conserva `estudiante@cenit.invalid` con RUT `00.000.001-k`. Crea sólo dos cuentas estudiantiles adicionales únicas: `estudiante2@cenit.invalid` (Camila Demo, `00.000.002-0`) y `estudiante3@cenit.invalid` (Tomás Demo, `00.000.003-1`), mediante la preparación de auth reutilizada. Sus claves aleatorias quedan en `.local/secrets/academic-demo-accounts.json`, sin imprimirse/versionarse. No rota cuentas/claves originales ni las duplica. Los RUT e historiales son ficticios; no representan personas o validaciones institucionales. `npm run dev`, migraciones y CD no ejecutan esta preparación.
+
+Actualización del 11 de octubre: `npm run dev --workspace @cenit/api` conecta la sesión local real de [AUTENTICACION.md](AUTENTICACION.md), con credencial runtime. Docente/estudiante autenticados pueden leer el catálogo; sin sesión, 401; administrativo, 403. `/health/ready` permanece en 503 porque falta frontend/build completo. No activar el proxy definitivo ni releases. `cenit.accounts.id` define identidad UUID; la nueva migración académica la reutiliza en esta rama, pendiente de revisión/integración. Preparación local y pruebas no acreditan disponibilidad de la VM.
 
 ## Verificación y seguimiento
 

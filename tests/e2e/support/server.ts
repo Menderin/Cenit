@@ -3,11 +3,14 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node
 import { resolve } from 'node:path';
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { createTestPool, closeTestPool } from '../../integration/support/postgres.js';
-import { createDemoCredentials, prepareDemoAccounts } from '../../../db/seeds/auth-demo.js';
+import { createDemoCredentials, prepareDemoAccounts, prepareDemoStudentAccounts } from '../../../db/seeds/auth-demo.js';
 import { buildAcademicApp } from '../../../apps/api/src/app.js';
 import { AcademicRepository } from '../../../apps/api/src/modules/academic/repositories/academic.js';
 import { AuthRepository } from '../../../apps/api/src/modules/auth/repositories/auth.js';
 import { AuthService } from '../../../apps/api/src/modules/auth/services/auth.js';
+import { loadCatalog, readCatalog } from '../../../db/seeds/load-academic.js';
+import { createAcademicDemoAccounts, academicDemoStudents } from '../../../db/seeds/academic-fixtures.js';
+import { seedAcademicDemo } from '../../../db/seeds/academic-demo.js';
 
 process.env.APP_ENV = 'test';
 const suffix = randomBytes(6).toString('hex');
@@ -63,9 +66,16 @@ async function main() {
   writeFileSync(migrationFile, urlFor(migrator, migrationPassword), { mode: 0o600 });
   execFileSync(process.execPath, ['deploy/migrate.cjs'], { env: { ...process.env, DATABASE_URL_FILE: migrationFile }, stdio: 'pipe' });
   rmSync(migrationFile);
+  const catalogPool = createTestPool({ connectionString: urlFor(migrator, migrationPassword) });
+  try { await loadCatalog(catalogPool, readCatalog('catalogs/academic/nutricion-2027-r1.json'), true); }
+  finally { await closeTestPool(catalogPool); }
   pool = createTestPool({ connectionString: urlFor(runtime, runtimePassword) });
   const credentials = createDemoCredentials();
   await prepareDemoAccounts(pool, credentials);
+  const additional = createAcademicDemoAccounts();
+  await prepareDemoStudentAccounts(pool, additional);
+  const plan = readCatalog('catalogs/academic/nutricion-2027-r1.json');
+  await seedAcademicDemo(pool, plan.planId, plan.version, academicDemoStudents([credentials.find(c => c.role === 'estudiante')!, ...additional], plan));
   writeFileSync(credentialsFile, JSON.stringify(credentials), { mode: 0o600 });
   app = buildAcademicApp({ repository: new AcademicRepository(pool), auth: {
     service: new AuthService(new AuthRepository(pool)), config: { cookieSecure: false, allowedOrigins: ['http://127.0.0.1:5174'] },

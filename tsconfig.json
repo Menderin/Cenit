@@ -32,6 +32,6 @@
     "vitest*.ts",
     "drizzle.config.ts",
     "tests/e2e/**/*.ts",
-    "playwright.auth.config.ts"
+    "playwright*.config.ts"
   ]
 }

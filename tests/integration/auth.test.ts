@@ -93,7 +93,8 @@ describe('migraciones y preparación de cuentas', () => {
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.accounts')).rows[0].n).toBe(0);
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.sessions')).rows[0].n).toBe(0);
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.academic_courses')).rows[0].n).toBe(52);
-      expect((await pool.query("SELECT to_regclass('cenit.academic_students') AS relation")).rows[0].relation).toBeNull();
+      expect((await pool.query('SELECT count(*)::int AS n FROM cenit.academic_students')).rows[0].n).toBe(0);
+      expect((await pool.query('SELECT count(*)::int AS n FROM cenit.academic_attempts')).rows[0].n).toBe(0);
       expect((await pool.query("SELECT has_schema_privilege(current_user,'cenit','CREATE') AS can_create")).rows[0].can_create).toBe(false);
     }
   });

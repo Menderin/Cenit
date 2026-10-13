@@ -24,8 +24,10 @@
     "catalog:check": "tsx db/seeds/load-academic.ts --check",
     "catalog:load": "tsx db/seeds/load-academic.ts --publish",
     "auth:prepare-demo": "tsx db/seeds/auth-demo.ts",
+    "academic:prepare-demo": "tsx db/seeds/prepare-academic-demo.ts",
     "build:web": "npm run build --workspace @cenit/web",
     "test:e2e:auth": "playwright test --config playwright.auth.config.ts",
+    "test:e2e:academic": "playwright test --config playwright.academic.config.ts",
     "dev": "node deploy/scripts/dev.mjs"
   },
   "devDependencies": {
