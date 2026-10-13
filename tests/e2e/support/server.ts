@@ -87,7 +87,7 @@ async function main() {
     });
     // The child receives only runtime credentials; migration credentials are no longer needed.
   } else {
-    rmSync(migrationFile);
+    rmSync(migrationFile, { force: true });
     app = buildAcademicApp({ repository: new AcademicRepository(pool), purchases: new PurchaseRepository(pool), auth: {
       service: new AuthService(new AuthRepository(pool)), config: { cookieSecure: false, allowedOrigins: ['http://127.0.0.1:5174'] },
     } });
