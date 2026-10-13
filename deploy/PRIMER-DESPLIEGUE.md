@@ -90,4 +90,6 @@ Verificado localmente: lint, typecheck, catálogo, build, 65 unitarias, 80 prueb
 
 Imagen runtime Linux/amd64 reconstruida y verificada con Podman: roles limitados, migración repetible, HTML/readiness, límites de Nginx y recuperación de salud tras caída de PostgreSQL. La imagen local incluye cambios sin commit; no acredita una release publicada ni procedencia de un futuro SHA de main.
 
+Corrección del verificador tras el primer CI: montar todo el directorio privado `0700` en `/run/secrets` impedía que PostgreSQL leyera los archivos después de cambiar a su propio UID en Linux. Ahora se montan los tres archivos individualmente en modo de sólo lectura, conservando el directorio privado del host. Fallo reproducido y corrección verificada dentro de la máquina Linux de Podman usando archivos temporales nativos, además de las 44 pruebas de infraestructura. El ensayo anterior desde archivos de Windows no detectó esa restricción de permisos. Actions del nuevo commit sigue pendiente del push.
+
 Actions del commit publicado, primer despliegue, cuentas y recorridos en VM, recuperación real y revisión/integración se acreditan después de ejecutarlos. Esta guía y los checks locales no afirman que ya ocurrieron.

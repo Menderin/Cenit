@@ -90,7 +90,12 @@ class ImageCheck:
                          '--network-alias', 'db', '--memory=512m', '--cpus=1',
                          '-e', 'POSTGRES_USER=cenit_admin', '-e', 'POSTGRES_DB=cenit_demo',
                          '-e', 'POSTGRES_PASSWORD_FILE=/run/secrets/postgres-password',
-                         '-v', f'{files}:/run/secrets:ro',
+                         # Keep the host directory private (0700), but mount each
+                         # file separately: PostgreSQL drops to its own UID and
+                         # cannot traverse a host-owned 0700 directory on Linux.
+                         '-v', f'{files / "postgres-password"}:/run/secrets/postgres-password:ro',
+                         '-v', f'{files / "app-password"}:/run/secrets/app-password:ro',
+                         '-v', f'{files / "migrator-password"}:/run/secrets/migrator-password:ro',
                          '-v', f'{ROOT / "deploy/local/init-db.sh"}:/docker-entrypoint-initdb.d/10-cenit.sh:ro',
                          images['postgres'])
                 self.wait_database()
