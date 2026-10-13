@@ -29,7 +29,7 @@ local = load('local_setup', 'setup-local.py')
 class PublisherTests(unittest.TestCase):
     def setUp(self):
         self.env = {
-            'GITHUB_REPOSITORY': 'Menderin/Cenit', 'GITHUB_REF_NAME': 'produccion',
+            'GITHUB_REPOSITORY': 'Menderin/Cenit', 'GITHUB_REF_NAME': 'main',
             'GITHUB_SHA': 'a' * 40, 'GITHUB_RUN_ID': '42', 'GITHUB_RUN_ATTEMPT': '2',
             'GITHUB_RUN_NUMBER': '7', 'GITHUB_EVENT_NAME': 'push',
         }
@@ -47,7 +47,8 @@ class PublisherTests(unittest.TestCase):
 
     def test_wrong_event_branch_or_repository_cannot_publish(self):
         for key, value in [('GITHUB_EVENT_NAME', 'pull_request'),
-                           ('GITHUB_REF_NAME', 'main'), ('GITHUB_REPOSITORY', 'someone/Cenit')]:
+                           ('GITHUB_REF_NAME', 'develop'), ('GITHUB_REF_NAME', 'produccion'),
+                           ('GITHUB_REPOSITORY', 'someone/Cenit')]:
             with self.subTest(key=key):
                 env = {**self.env, key: value}
                 with self.assertRaises((ValueError, GitHubReadError)):
@@ -73,7 +74,12 @@ class LocalSetupTests(unittest.TestCase):
         before = {file.name: file.read_text() for file in directory.iterdir()}
         (self.root / '.env').write_text('CENIT_DB_PORT=55433\n', encoding='utf-8')
         local.prepare(self.root)
-        self.assertEqual(before, {file.name: file.read_text() for file in directory.iterdir()})
+        after = {file.name: file.read_text() for file in directory.iterdir()}
+        self.assertEqual({k: v for k, v in before.items() if not k.endswith('-local-url')},
+                         {k: v for k, v in after.items() if not k.endswith('-local-url')})
+        self.assertIn('@127.0.0.1:55432/', before['app-local-url'])
+        self.assertIn('@127.0.0.1:55433/', after['app-local-url'])
+        self.assertIn('@127.0.0.1:55433/', after['migrator-local-url'])
         self.assertEqual((self.root / '.env').read_text(), 'CENIT_DB_PORT=55433\n')
         self.assertIn('cenit_app:', before['app-url'])
         self.assertIn('cenit_migrator:', before['migrator-url'])

@@ -1,14 +1,24 @@
 # Instrucciones para agentes de Cenit
 
+Actualización del 13 de octubre: el líder autoriza entregar la demo actual por HTTP en la VM, aunque malla y extracción real sigan pendientes. CI completo usa `Application` con lint, catálogo, build, integración, E2E contra producción y verificación de imagen. El marcador parcial fue retirado tras verificar estos checks localmente. La variable de publicación se habilita durante el primer ensayo supervisado, no mediante este cambio local. Procedimiento vigente: [primera entrega automática](deploy/PRIMER-DESPLIEGUE.md). Las menciones anteriores a bloqueo o ausencia de aplicación son antecedentes de preparación, no el estado técnico vigente.
+
+Para build completo/servidor compilado/ensayo de imagen, leer [deploy/ENSAYO-LOCAL.md](deploy/ENSAYO-LOCAL.md). Ese ensayo no retira `academic-foundation`, no habilita releases ni acredita extracción/malla completa. No trasladar su excepción HTTP local a una instalación institucional por defecto.
+
 ## Aplicación y referencias
 
-Estas instrucciones aplican a todo el repositorio. Antes de modificar código, leer `AGENTS/SDD.md` y las instrucciones adicionales de la carpeta afectada.
+Estas instrucciones aplican a todo el repositorio. Antes de iniciar una tarea, leer [CONTRIBUTING.md](CONTRIBUTING.md). Antes de modificar código, leer además [AGENTS/SDD.md](AGENTS/SDD.md), [la guía de estructura](AGENTS/ESTRUCTURA.md) y las instrucciones adicionales de la carpeta afectada.
 
 - `Docs/Guía de trabajo para el MVP de Cenit.pdf`: contexto y alcance de la demostración del 15 de octubre de 2026.
 - `AGENTS/SDD.md`: base técnica interna, contratos y pendientes del MVP. Distinguir decisiones de trabajo, supuestos de demo y validaciones del equipo o cliente.
+- [CONTRIBUTING.md](CONTRIBUTING.md): flujo de colaboración, ramas, PR, revisiones, coordinación de archivos compartidos y criterios de terminado. Aplicar estas reglas también al trabajo de agentes; no inventar tickets ni saltar revisión/CI.
+- [AGENTS/ESTRUCTURA.md](AGENTS/ESTRUCTURA.md): mapa de carpetas, responsabilidad de cada ubicación, límites de dependencia y criterios para colocar código/pruebas. Consultarlo antes de crear o mover archivos; actualizarlo si cambia la organización. No completar carpetas con código innecesario ni ampliar alcance para retirar `.gitkeep`.
 - `README.md`: instrucciones ejecutables; actualizarlo cuando cambie el arranque, configuración o verificación.
+- [Docs/ACADEMICO.md](Docs/ACADEMICO.md): esquema/contratos académicos implementados, trazabilidad y dependencias de login. Leerlo antes de modificar catálogo o progreso.
+- [Docs/AUTENTICACION.md](Docs/AUTENTICACION.md): contrato/modelo de cuentas, sesiones de dos horas, API y preparación privada de demo. Leer antes de modificar acceso o conectar interfaces.
 
 Ante una contradicción que afecte alcance, contratos o reglas de negocio, explicarla y solicitar una decisión. No inventar procesos institucionales ni afirmar que una funcionalidad existe sin verificarla.
+
+- [Docs/EXTRACCION-COMPRAS.md](Docs/EXTRACCION-COMPRAS.md): contrato de candidatos, límites de imagen futuros y laboratorio administrativo. Leer antes de modificar extracción/revisión. No hay OCR ni endpoint de extracción activo; los ejemplos no acreditan extracción real.
 
 ## Alcance
 
@@ -21,6 +31,10 @@ La aclaración del líder del 10 de octubre añade login y recuperación automá
 No incorporar Banner, autenticación institucional, pagos, aprobaciones oficiales, importación masiva ni otros procesos administrativos sin una ampliación explícita del alcance. Investigar Oracle no acredita autorización o acceso a sistemas reales. Revisión en Cenit, pago declarado y aprobación institucional son conceptos distintos.
 
 ## Convenciones técnicas
+
+Ampliación autorizada del 11 de octubre: estudiantes consultan su progreso persistido y docentes buscan a todos los estudiantes ficticios de Nutrición por nombre/RUT. Historial de intentos y notas, sin simulación ni edición pública. Imagen `Docs/Foto prerequisitos Nutricion.jpeg` prioritaria para nombres/SCT; plan 2027 confirmado por el equipo. Semántica de flechas y ausencia de requisitos sigue pendiente: mantener `pending`, nunca inferir AND/OR o `none`. Perfiles/historial preparados como propuesta fuera del journal hasta revisar la FK con HU01-T03; no crear usuarios ni credenciales duplicadas para desbloquearlos.
+
+La base npm inicializa API/contratos sin alterar frontend. El marcador `cenitStage: academic-foundation` permite CI en ramas de tarea `feat/`, `fix/`, `test/`, `docs/`, `codex/` e integración en `develop`, con pruebas académicas/auth obligatorias; no permite entrega en `main`. CI se dispara con push, no con un commit exclusivamente local, y se repite en PR hacia develop/main. Retirarlo al completar los tres workspaces y checks reales. Habilitar el publicador sólo al preparar el ensayo autorizado de demo, según la guía vigente. El servidor conecta sesión real de cuentas UUID a académico; sin sesión deniega acceso. No introducir identidades por headers ni fingir readiness. Login local con correo/contraseña, un rol por cuenta y sesión fija de dos horas fueron confirmados el 11 de octubre. Cuentas de demo exclusivamente mediante preparación explícita privada; nunca semillas en migraciones/CD. Pantallas y política de borradores pendientes.
 
 - Conservar React, Vite, TypeScript, React Router, TanStack Query, Tailwind CSS y componentes seleccionados de shadcn/ui. No sustituir el stack del frontend por iniciativa del agente.
 - Usar como base técnica de trabajo Node.js 24 LTS con TypeScript, Fastify 5, API REST JSON, PostgreSQL 17, Drizzle y contratos TypeBox/JSON Schema. Este stack proviene de la guía; REST y las versiones son concreciones técnicas documentadas en el SDD. La ratificación del equipo sigue pendiente; no presentarla como realizada.
@@ -36,12 +50,15 @@ No incorporar Banner, autenticación institucional, pagos, aprobaciones oficiale
 
 ## Trabajo del equipo
 
+Seguir [CONTRIBUTING.md](CONTRIBUTING.md) para coordinar tareas e integración. Leer también [historias vigentes](Docs/HISTORIAS-USUARIO-INVEST.md) y [planificación](Docs/PLANIFICACION-MVP.md) cuando la tarea dependa del alcance o de criterios del sprint. Para contenedores/despliegue, consultar [entorno local](deploy/LOCAL.md), [operación VM](deploy/README.md), [CI/CD](deploy/CI-CD.md) y [contrato de entrega](deploy/CD-VM.md) antes de modificar esos componentes. No duplicar decisiones técnicas en la guía de colaboración ni interpretar propuestas de calendario/capacidad como compromisos colectivos confirmados.
+
 1. Identificar el resultado observable, archivos afectados, dependencias y criterios de aceptación antes de editar.
 2. Hacer cambios pequeños y coherentes. Revisar el estado de Git y preservar trabajo ajeno; no revertir ni eliminar cambios de otros agentes.
 3. Si hay trabajo paralelo autorizado, acordar propiedad de archivos y contratos antes de editar. Evitar modificaciones simultáneas del mismo archivo.
 4. No introducir dependencias sin justificar qué necesidad concreta resuelven. Preferir las herramientas existentes.
 5. Verificar las reglas y recorridos afectados. No declarar pruebas exitosas si no se ejecutaron; informar bloqueos y limitaciones.
 6. Actualizar documentación cuando cambien decisiones o instrucciones ejecutables. Informar qué cambió, cómo se verificó y qué queda pendiente.
+7. El líder crea los pull requests. Los agentes preparan cambios y evidencia local; no crean PR ni hacen merge salvo instrucción explícita del líder.
 
 ## Datos, interfaz y calidad
 
@@ -61,6 +78,10 @@ La infraestructura puede prepararse antes del build usando `deploy/scripts/boots
 
 El usuario requiere despliegue automático después de superar CI e integrar cambios en la rama de entrega. No diseñar actualizaciones habituales mediante SSH, `git pull` o builds manuales en la VM. La propuesta de CI/CD, sus garantías y los pendientes están en la sección 18 del SDD; no afirmar que existe un pipeline hasta implementarlo y verificarlo.
 
-Usar `main` como integración y `produccion` como rama de entrega; cambios mediante PR y CI. GitHub Actions ejecuta builds/pruebas fuera de la VM y ésta consultará releases aprobadas para desplegar. Leer `deploy/CI-CD.md`. No sustituir tests por scripts que siempre pasan ni habilitar releases mientras falte aplicación, validación del artefacto y conexión de CD.
+Usar `develop` como integración y `main` como rama de entrega; cambios mediante PR y CI. GitHub Actions ejecuta builds/pruebas fuera de la VM y ésta consultará releases aprobadas para desplegar. Leer `deploy/CI-CD.md`. No sustituir tests por scripts que siempre pasan ni habilitar releases mientras falte aplicación, validación del artefacto y conexión de CD.
 
 El contrato del ejecutor preparado está en `deploy/CD-VM.md`. Al implementar imagen/workflow respetar digest, procedencia verificable, nombres de gates/artefacto, `DATABASE_URL_FILE`, migrador separado y esquema `cenit`. No introducir credenciales administrativas en el runtime, semillas automáticas, rollback de datos ni prune global. La instalación local de archivos o un estado de espera no acreditan un despliegue real: ensayar entrega y recuperación en la VM antes de declararlo operativo.
+
+Transición de ramas del 11 de octubre: la antigua `produccion` deja de ser destino de CI/publicación. Mantener publicación deshabilitada hasta actualizar el ejecutor instalado en la VM para validar `main`; el cambio local de scripts no actualiza esa copia. Procedimiento y condiciones para retirar la rama antigua en `deploy/CI-CD.md`.
+
+- [Docs/COMPRAS.md](Docs/COMPRAS.md): persistencia manual, contratos/API, tablas y validación local. Leer antes de modificar guardado/listados/detalle/revisión de compras. Los mínimos y campos opcionales fueron acordados; no confundir validación local con aprobación Oracle. Laboratorio en `/administracion/compras/laboratorio`; Home sólo indicadores/gráfico ilustrativos.

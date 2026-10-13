@@ -1,0 +1,516 @@
+{
+  "id": "9f4ef469-f274-488d-9378-035c383bfac7",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "cenit.academic_courses": {
+      "name": "academic_courses",
+      "schema": "cenit",
+      "columns": {
+        "version_id": {
+          "name": "version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "official_code": {
+          "name": "official_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "semester": {
+          "name": "semester",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "semester_end": {
+          "name": "semester_end",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "credits": {
+          "name": "credits",
+          "type": "numeric(6, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "display_order": {
+          "name": "display_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prerequisites": {
+          "name": "prerequisites",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "academic_courses_version_id_academic_versions_id_fk": {
+          "name": "academic_courses_version_id_academic_versions_id_fk",
+          "tableFrom": "academic_courses",
+          "tableTo": "academic_versions",
+          "schemaTo": "cenit",
+          "columnsFrom": [
+            "version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "academic_courses_version_id_code_pk": {
+          "name": "academic_courses_version_id_code_pk",
+          "columns": [
+            "version_id",
+            "code"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "academic_course_order": {
+          "name": "academic_course_order",
+          "nullsNotDistinct": false,
+          "columns": [
+            "version_id",
+            "display_order"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "course_code": {
+          "name": "course_code",
+          "value": "length(\"cenit\".\"academic_courses\".\"code\") BETWEEN 1 AND 50 AND \"cenit\".\"academic_courses\".\"code\" = btrim(\"cenit\".\"academic_courses\".\"code\")"
+        },
+        "official_course_code": {
+          "name": "official_course_code",
+          "value": "\"cenit\".\"academic_courses\".\"official_code\" IS NULL OR (length(\"cenit\".\"academic_courses\".\"official_code\") BETWEEN 1 AND 50 AND \"cenit\".\"academic_courses\".\"official_code\" = btrim(\"cenit\".\"academic_courses\".\"official_code\"))"
+        },
+        "course_name": {
+          "name": "course_name",
+          "value": "length(\"cenit\".\"academic_courses\".\"name\") BETWEEN 1 AND 200"
+        },
+        "course_semesters": {
+          "name": "course_semesters",
+          "value": "\"cenit\".\"academic_courses\".\"semester\" BETWEEN 1 AND 20 AND \"cenit\".\"academic_courses\".\"semester_end\" BETWEEN \"cenit\".\"academic_courses\".\"semester\" AND 20"
+        },
+        "course_credits": {
+          "name": "course_credits",
+          "value": "\"cenit\".\"academic_courses\".\"credits\" IS NULL OR (\"cenit\".\"academic_courses\".\"credits\" > 0 AND \"cenit\".\"academic_courses\".\"credits\" <= 9999.99)"
+        },
+        "course_order": {
+          "name": "course_order",
+          "value": "\"cenit\".\"academic_courses\".\"display_order\" > 0"
+        },
+        "course_rule": {
+          "name": "course_rule",
+          "value": "jsonb_typeof(\"cenit\".\"academic_courses\".\"prerequisites\") = 'object' AND \"cenit\".\"academic_courses\".\"prerequisites\" ? 'kind' AND \"cenit\".\"academic_courses\".\"prerequisites\"->>'kind' IN ('none','course','allOf','anyOf','unsupported','pending')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "cenit.academic_plans": {
+      "name": "academic_plans",
+      "schema": "cenit",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "plan_slug": {
+          "name": "plan_slug",
+          "value": "\"cenit\".\"academic_plans\".\"id\" ~ '^[A-Za-z0-9_-]{1,64}$'"
+        },
+        "plan_name": {
+          "name": "plan_name",
+          "value": "length(\"cenit\".\"academic_plans\".\"name\") BETWEEN 1 AND 200"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "cenit.academic_prerequisite_edges": {
+      "name": "academic_prerequisite_edges",
+      "schema": "cenit",
+      "columns": {
+        "version_id": {
+          "name": "version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_code": {
+          "name": "from_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "to_code": {
+          "name": "to_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "interpretation": {
+          "name": "interpretation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "academic_prerequisite_edges_version_id_from_code_academic_courses_version_id_code_fk": {
+          "name": "academic_prerequisite_edges_version_id_from_code_academic_courses_version_id_code_fk",
+          "tableFrom": "academic_prerequisite_edges",
+          "tableTo": "academic_courses",
+          "schemaTo": "cenit",
+          "columnsFrom": [
+            "version_id",
+            "from_code"
+          ],
+          "columnsTo": [
+            "version_id",
+            "code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "academic_prerequisite_edges_version_id_to_code_academic_courses_version_id_code_fk": {
+          "name": "academic_prerequisite_edges_version_id_to_code_academic_courses_version_id_code_fk",
+          "tableFrom": "academic_prerequisite_edges",
+          "tableTo": "academic_courses",
+          "schemaTo": "cenit",
+          "columnsFrom": [
+            "version_id",
+            "to_code"
+          ],
+          "columnsTo": [
+            "version_id",
+            "code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "academic_prerequisite_edges_version_id_source_id_academic_sources_version_id_id_fk": {
+          "name": "academic_prerequisite_edges_version_id_source_id_academic_sources_version_id_id_fk",
+          "tableFrom": "academic_prerequisite_edges",
+          "tableTo": "academic_sources",
+          "schemaTo": "cenit",
+          "columnsFrom": [
+            "version_id",
+            "source_id"
+          ],
+          "columnsTo": [
+            "version_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "academic_prerequisite_edges_version_id_from_code_to_code_pk": {
+          "name": "academic_prerequisite_edges_version_id_from_code_to_code_pk",
+          "columns": [
+            "version_id",
+            "from_code",
+            "to_code"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "edge_not_self": {
+          "name": "edge_not_self",
+          "value": "\"cenit\".\"academic_prerequisite_edges\".\"from_code\" <> \"cenit\".\"academic_prerequisite_edges\".\"to_code\""
+        },
+        "edge_interpretation": {
+          "name": "edge_interpretation",
+          "value": "\"cenit\".\"academic_prerequisite_edges\".\"interpretation\" IN ('pending','confirmed')"
+        },
+        "edge_note": {
+          "name": "edge_note",
+          "value": "length(\"cenit\".\"academic_prerequisite_edges\".\"note\") BETWEEN 1 AND 500"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "cenit.academic_sources": {
+      "name": "academic_sources",
+      "schema": "cenit",
+      "columns": {
+        "version_id": {
+          "name": "version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reference": {
+          "name": "reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sha256": {
+          "name": "sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "validation_status": {
+          "name": "validation_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_primary": {
+          "name": "is_primary",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "academic_primary_source": {
+          "name": "academic_primary_source",
+          "columns": [
+            {
+              "expression": "version_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"cenit\".\"academic_sources\".\"is_primary\"",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "academic_sources_version_id_academic_versions_id_fk": {
+          "name": "academic_sources_version_id_academic_versions_id_fk",
+          "tableFrom": "academic_sources",
+          "tableTo": "academic_versions",
+          "schemaTo": "cenit",
+          "columnsFrom": [
+            "version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "academic_sources_version_id_id_pk": {
+          "name": "academic_sources_version_id_id_pk",
+          "columns": [
+            "version_id",
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "source_id": {
+          "name": "source_id",
+          "value": "\"cenit\".\"academic_sources\".\"id\" ~ '^[A-Za-z0-9_-]{1,64}$'"
+        },
+        "source_title": {
+          "name": "source_title",
+          "value": "length(\"cenit\".\"academic_sources\".\"title\") BETWEEN 1 AND 200"
+        },
+        "source_reference": {
+          "name": "source_reference",
+          "value": "\"cenit\".\"academic_sources\".\"reference\" IS NULL OR length(\"cenit\".\"academic_sources\".\"reference\") BETWEEN 1 AND 500"
+        },
+        "source_hash": {
+          "name": "source_hash",
+          "value": "\"cenit\".\"academic_sources\".\"sha256\" ~ '^[0-9a-f]{64}$'"
+        },
+        "source_validation": {
+          "name": "source_validation",
+          "value": "\"cenit\".\"academic_sources\".\"validation_status\" IN ('example','teamReviewed','clientValidated')"
+        },
+        "source_review_date": {
+          "name": "source_review_date",
+          "value": "\"cenit\".\"academic_sources\".\"validation_status\" = 'example' OR \"cenit\".\"academic_sources\".\"reviewed_at\" IS NOT NULL"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "cenit.academic_versions": {
+      "name": "academic_versions",
+      "schema": "cenit",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "plan_id": {
+          "name": "plan_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "is_example": {
+          "name": "is_example",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "academic_versions_plan_id_academic_plans_id_fk": {
+          "name": "academic_versions_plan_id_academic_plans_id_fk",
+          "tableFrom": "academic_versions",
+          "tableTo": "academic_plans",
+          "schemaTo": "cenit",
+          "columnsFrom": [
+            "plan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "academic_plan_version": {
+          "name": "academic_plan_version",
+          "nullsNotDistinct": false,
+          "columns": [
+            "plan_id",
+            "version"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "version_hash": {
+          "name": "version_hash",
+          "value": "\"cenit\".\"academic_versions\".\"content_hash\" ~ '^[0-9a-f]{64}$'"
+        },
+        "version_slug": {
+          "name": "version_slug",
+          "value": "\"cenit\".\"academic_versions\".\"version\" ~ '^[A-Za-z0-9_-]{1,64}$'"
+        },
+        "version_status": {
+          "name": "version_status",
+          "value": "\"cenit\".\"academic_versions\".\"status\" IN ('draft','published')"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "cenit": "cenit"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

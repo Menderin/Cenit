@@ -1,0 +1,20 @@
+{
+  "name": "@cenit/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "@cenit/contracts": "0.1.0",
+    "@fastify/cookie": "11.1.3",
+    "@fastify/rate-limit": "11.2.1",
+    "@fastify/static": "10.1.6",
+    "@sinclair/typebox": "0.34.52",
+    "drizzle-orm": "0.45.4",
+    "fastify": "5.12.5",
+    "pg": "8.23.1"
+  }
+}

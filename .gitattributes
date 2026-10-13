@@ -9,3 +9,5 @@
 *.service text eol=lf
 *.timer text eol=lf
 Containerfile text eol=lf
+# Migration checksums must be identical on Windows and Linux.
+db/migrations/*.sql text eol=lf

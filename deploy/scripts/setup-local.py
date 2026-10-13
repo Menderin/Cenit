@@ -7,6 +7,13 @@ import shutil
 
 
 def prepare(root):
+    env = root / '.env'
+    if not env.exists():
+        shutil.copyfile(root / '.env.example', env)
+    port_match = re.search(r'^CENIT_DB_PORT=(\d+)\s*$', env.read_text(encoding='utf-8'), re.M)
+    port = int(port_match.group(1)) if port_match else 55432
+    if not 1 <= port <= 65535:
+        raise ValueError('Invalid local database port.')
     state = root / '.local'
     secret_dir = state / 'secrets'
     if state.is_symlink() or secret_dir.is_symlink():
@@ -29,15 +36,13 @@ def prepare(root):
             raise ValueError('Unexpected local credential format; no password was changed.')
         values[name] = value
     for name, role in (('app', 'cenit_app'), ('migrator', 'cenit_migrator')):
-        url = f"postgresql://{role}:{values[name + '-password']}@db:5432/cenit_demo"
-        path = secret_dir / (name + '-url')
-        if path.is_symlink():
-            raise ValueError('Refusing a symlink in local secrets.')
-        path.write_text(url, encoding='utf-8')
-        os.chmod(path, 0o644)
-    env = root / '.env'
-    if not env.exists():
-        shutil.copyfile(root / '.env.example', env)
+        for suffix, host in (('-url', 'db:5432'), ('-local-url', f'127.0.0.1:{port}')):
+            url = f"postgresql://{role}:{values[name + '-password']}@{host}/cenit_demo"
+            path = secret_dir / (name + suffix)
+            if path.is_symlink():
+                raise ValueError('Refusing a symlink in local secrets.')
+            path.write_text(url, encoding='utf-8')
+            os.chmod(path, 0o644 if suffix == '-url' else 0o600)
 
 
 if __name__ == '__main__':

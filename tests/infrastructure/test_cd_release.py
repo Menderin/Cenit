@@ -24,7 +24,7 @@ spec.loader.exec_module(worker)
 
 
 def manifest():
-    return {'schemaVersion': 1, 'repository': 'Menderin/Cenit', 'branch': 'produccion',
+    return {'schemaVersion': 1, 'repository': 'Menderin/Cenit', 'branch': 'main',
             'commit': 'a' * 40, 'image': 'ghcr.io/menderin/cenit@sha256:' + 'b' * 64,
             'workflowRunId': 12, 'workflowRunAttempt': 1, 'runNumber': 3,
             'migrationPolicy': 'backward-compatible'}
@@ -47,17 +47,17 @@ class ReleaseTests(unittest.TestCase):
                 'prerelease': False, 'created_at': '2026-10-10T00:00:00Z',
                 'body': json.dumps({'workflowRunId': 12, 'workflowRunAttempt': 1})}],
             '/actions/workflows/release.yml': {'id': 7, 'path': release.WORKFLOW_PATH},
-            '/actions/runs/12': {'workflow_id': 7, 'event': 'push', 'head_branch': 'produccion',
+            '/actions/runs/12': {'workflow_id': 7, 'event': 'push', 'head_branch': 'main',
                 'head_sha': data['commit'], 'run_attempt': 1, 'run_number': 3,
                 'head_repository': {'full_name': 'Menderin/Cenit'},
                 'status': 'completed', 'conclusion': 'success'},
-            '/compare/' + data['commit'] + '...produccion': {'status': 'identical',
+            '/compare/' + data['commit'] + '...main': {'status': 'identical',
                 'merge_base_commit': {'sha': data['commit']}},
             '/actions/runs/12/attempts/1/jobs?per_page=100': {'total_count': 3,
                 'jobs': [{'name': n, 'conclusion': 'success'} for n in release.REQUIRED_JOBS]},
             '/actions/runs/12/artifacts?per_page=100': {'total_count': 1, 'artifacts': [{
                 'name': 'cenit-release-1', 'expired': False, 'id': 9, 'digest': digest,
-                'workflow_run': {'id': 12, 'head_sha': data['commit'], 'head_branch': 'produccion'}}]},
+                'workflow_run': {'id': 12, 'head_sha': data['commit'], 'head_branch': 'main'}}]},
         }
         client = Mock()
         client.get.side_effect = lambda path: responses[path]
@@ -73,8 +73,24 @@ class ReleaseTests(unittest.TestCase):
         client.get.return_value = []
         self.assertIsNone(release.approved_release(client))
 
-    def test_main_pr_wrong_workflow_or_failed_run_cannot_deploy(self):
-        for field, value in [('head_branch', 'main'), ('event', 'pull_request'),
+    def test_manifest_from_integration_or_old_delivery_branch_is_rejected(self):
+        for branch in ('develop', 'produccion'):
+            with self.subTest(branch=branch):
+                with self.assertRaises(GitHubReadError):
+                    release.validate_manifest({**manifest(), 'branch': branch})
+
+    def test_artifact_from_another_branch_is_rejected_before_download(self):
+        for branch in ('develop', 'produccion'):
+            with self.subTest(branch=branch):
+                client, responses, raw = self.fixture()
+                responses['/actions/runs/12/artifacts?per_page=100']['artifacts'][0]['workflow_run']['head_branch'] = branch
+                with patch.object(release, 'download_artifact', return_value=raw) as download:
+                    with self.assertRaises(GitHubReadError):
+                        release.approved_release(client)
+                    download.assert_not_called()
+
+    def test_wrong_branch_pr_workflow_or_failed_run_cannot_deploy(self):
+        for field, value in [('head_branch', 'develop'), ('head_branch', 'produccion'), ('event', 'pull_request'),
                              ('workflow_id', 8), ('conclusion', 'failure'), ('run_attempt', 2),
                              ('head_repository', {'full_name': 'Other/Cenit'})]:
             with self.subTest(field=field):
@@ -96,7 +112,7 @@ class ReleaseTests(unittest.TestCase):
 
     def test_commit_outside_branch_history_is_rejected(self):
         client, responses, raw = self.fixture()
-        responses['/compare/' + manifest()['commit'] + '...produccion']['status'] = 'diverged'
+        responses['/compare/' + manifest()['commit'] + '...main']['status'] = 'diverged'
         with patch.object(release, 'download_artifact', return_value=raw):
             with self.assertRaises(GitHubReadError):
                 release.approved_release(client)
