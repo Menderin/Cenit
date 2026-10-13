@@ -13,6 +13,16 @@ async function login(page: Page, role = 'docente') {
   await expect(page.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible();
   return account;
 }
+async function logout(page: Page) {
+  const response = page.waitForResponse(response =>
+    new URL(response.url()).pathname === '/api/v1/auth/logout' && response.request().method() === 'POST');
+  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  expect((await response).status()).toBe(204);
+  // A click only dispatches the asynchronous logout. Do not navigate/reload until
+  // the server confirms it and the interface has completed the session transition.
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByLabel('Correo electrónico', { exact: true })).toBeVisible();
+}
 for (const role of ['administrativo', 'docente', 'estudiante']) {
   test(`login, recarga y aislamiento de rutas: ${role}`, async ({ page }) => {
     const account = await login(page, role), path = role === 'administrativo' ? '/administracion' : '/academico';
@@ -184,7 +194,7 @@ test('normaliza sólo el correo y permite teclado y carga antes del éxito real'
   release!();
   await expect(page).toHaveURL(/\/academico$/);
   await expect(page.getByRole('heading', { name: 'Área académica', exact: true })).toBeFocused();
-  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  await logout(page);
   await expect(page).toHaveURL(/\/login$/);
   await expect(password).toHaveValue('');
 });
@@ -307,14 +317,20 @@ test('contrato de compras: revisar ejemplos, corregir sin alterar original y res
 });
 
 test('compras: logout y cambio de cuenta limpian el borrador', async ({ page }) => {
+  // Exercise the transition with network latency, so an immediate navigation
+  // cannot accidentally abort logout and retain the previous session cookie.
+  await page.route('**/api/v1/auth/logout', async route => {
+    await new Promise(resolve => setTimeout(resolve, 250));
+    await route.continue();
+  });
   await openPurchases(page);
   await page.getByLabel('Nº Documento / solicitud', { exact: true }).fill('private-draft');
-  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  await logout(page);
   await login(page, 'docente');
   await page.goto('/administracion'); await expect(page).toHaveURL(/\/academico$/);
   await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  await logout(page);
   await openPurchases(page);
   await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveValue('000125');
   await expect(page.getByText('private-draft')).toHaveCount(0);
@@ -387,7 +403,7 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await page.getByRole('link', { name: 'Abrir laboratorio de ejemplos de extracción' }).click();
   await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveValue('000125');
   await page.reload(); await expect(page.getByRole('heading', { name: 'Sistema de compra', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  await logout(page);
   await login(page, 'estudiante');
   for (const path of ['compras', 'personal', 'bienes']) {
     await page.goto(`/administracion/${path}`); await expect(page).toHaveURL(/\/academico$/);
@@ -463,12 +479,12 @@ test('formulario manual: errores conservan datos, foco válido y navegación con
 test('formulario manual: logout y expiración descartan datos sin guardar', async ({ page }) => {
   await manualForm(page, 'PRIVATE-UNSAVED');
   page.once('dialog', dialog => dialog.accept());
-  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  await logout(page);
   await expect(page).toHaveURL(/\/login$/);
   await login(page, 'estudiante');
   await page.goto('/administracion/compras/nueva'); await expect(page).toHaveURL(/\/academico$/);
   await expect(page.getByText('PRIVATE-UNSAVED')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  await logout(page);
   await page.clock.install(); await manualForm(page, 'EXPIRED-UNSAVED');
   await page.clock.fastForward(7201000);
   await expect(page).toHaveURL(/\/login$/);
@@ -536,11 +552,11 @@ test('laboratorio: formato inválido bloquea transferencia, original intacto y b
   await page.getByRole('button', { name: 'Continuar al formulario de guardado' }).click();
   await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveValue('PRIVATE-TRANSFER');
   page.once('dialog', dialog => dialog.accept());
-  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  await logout(page);
   await expect(page).toHaveURL(/\/login$/);
   await login(page, 'docente'); await page.goto('/administracion/compras/nueva');
   await expect(page).toHaveURL(/\/academico$/); await expect(page.getByText('PRIVATE-TRANSFER')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  await logout(page);
   await login(page, 'administrativo'); await page.goto('/administracion/compras/nueva');
   await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveValue('');
   await page.goto('/administracion/compras/laboratorio');
@@ -647,9 +663,9 @@ test('listado: validación, error/reintento, carga y filtros descartados al camb
   await page.getByRole('button', { name: 'Limpiar filtros', exact: true }).click();
   await expect(pending.getByRole('table')).toBeVisible();
   await search.fill('PRIVATE-FILTER'); await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
-  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click(); await expect(page).toHaveURL(/\/login$/);
+  await logout(page); await expect(page).toHaveURL(/\/login$/);
   await login(page, 'docente'); await page.goto('/administracion/compras'); await expect(page).toHaveURL(/\/academico$/);
-  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  await logout(page);
   await login(page, 'administrativo'); await page.goto('/administracion/compras'); await expect(search).toHaveValue('');
   await page.clock.install(); await page.reload(); await expect(search).toBeVisible();
   await search.fill('EXPIRED-FILTER'); await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
