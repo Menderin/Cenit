@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { alias: {
+    '@cenit/contracts/purchases/examples': fileURLToPath(new URL('../../packages/contracts/src/purchases/examples.ts', import.meta.url)),
+    '@cenit/contracts/purchases': fileURLToPath(new URL('../../packages/contracts/src/purchases/index.ts', import.meta.url)),
     '@cenit/contracts/auth': fileURLToPath(new URL('../../packages/contracts/src/auth/index.ts', import.meta.url)),
     '@cenit/contracts/academic': fileURLToPath(new URL('../../packages/contracts/src/academic/index.ts', import.meta.url)),
     '@cenit/contracts': fileURLToPath(new URL('../../packages/contracts/src/index.ts', import.meta.url)),

@@ -29,7 +29,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clear]);
   const refresh = useCallback(async () => {
     const generation = ++epoch.current;
-    setState(previous => ({ status: 'checking', session: previous.session, message: '' }));
+    // Revalidate an active session in the background so a valid focus change does
+    // not destroy an unsaved form. Initial checks still hide all protected content.
+    setState(previous => previous.status === 'authenticated' ? previous : ({ status: 'checking', session: previous.session, message: '' }));
     try {
       const session = await client.fetchQuery({ queryKey: ['auth', 'session'], queryFn: ({ signal }) => getSession(signal), staleTime: 0 });
       if (epoch.current !== generation) return;

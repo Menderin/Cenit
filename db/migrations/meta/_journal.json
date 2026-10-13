@@ -26,7 +26,35 @@
     {
       "idx": 3,
       "version": "7",
-      "when": 1791853110098,
+      "when": 1791862086679,
+      "tag": "0003_purchase_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791862823870,
+      "tag": "0004_purchase_finite_amounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791863686238,
+      "tag": "0005_purchase_example_origin",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791864771891,
+      "tag": "0006_purchase_search_keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791914183863,
       "tag": "0003_academic_progress",
       "breakpoints": true
     }

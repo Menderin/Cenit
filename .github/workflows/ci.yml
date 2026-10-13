@@ -83,7 +83,7 @@ jobs:
     needs: prerequisites
     if: needs.prerequisites.outputs.academic_ready == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:17.11-alpine3.24@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
@@ -111,11 +111,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run catalog:check
       - run: npm run test:unit
+      - run: npm run build
       - run: npm run test:integration
-      - run: npm run build:academic
-      - name: Build minimal frontend
-        if: needs.prerequisites.outputs.web_ready == 'true'
-        run: npm run build:web
       - name: Install browser for authentication checks
         if: needs.prerequisites.outputs.web_ready == 'true'
         run: npm exec --no -- playwright install --with-deps chromium
@@ -125,6 +122,12 @@ jobs:
       - name: Test academic catalog in the browser
         if: needs.prerequisites.outputs.web_ready == 'true'
         run: npm run test:e2e:academic
+      - name: Test compiled monolith without Vite
+        run: npm run test:e2e:production
+      - name: Build and verify local candidate image
+        run: |
+          docker build --platform linux/amd64 --file Containerfile --build-arg "VCS_REF=$GITHUB_SHA" --tag cenit-candidate:verified .
+          python3 deploy/scripts/verify-image.py --image cenit-candidate:verified --revision "$GITHUB_SHA"
 
   application:
     name: Application
@@ -163,12 +166,17 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm run catalog:check
       - run: npm run test:unit
-      - run: npm run test:integration
       - run: npm run build
+      - run: npm run test:integration
       - name: Install Playwright browser
         run: npm exec --no -- playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Build and verify delivery image
+        run: |
+          docker build --platform linux/amd64 --file Containerfile --build-arg "VCS_REF=$GITHUB_SHA" --tag cenit-candidate:verified .
+          python3 deploy/scripts/verify-image.py --image cenit-candidate:verified --revision "$GITHUB_SHA"
 
   required:
     name: CI required

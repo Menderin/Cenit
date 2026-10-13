@@ -1,0 +1,49 @@
+﻿.purchase-records { line-height: 1.5; }
+.purchase-records h1 { margin-top: 18px; }
+.purchase-page-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.purchase-page-heading p, .purchase-records > p { color: var(--admin-muted); max-width: 75ch; }
+.purchase-list { margin-top: 36px; }
+.purchase-list h2 { margin-bottom: 8px; }
+.purchase-list > p { overflow-wrap: anywhere; }
+.purchase-records td.purchase-empty { padding: 36px 14px; text-align: center; color: var(--admin-muted); }
+.purchase-records button { padding: 8px 12px; border: 1px solid #94949d; border-radius: 6px; color: #202124; background: #fff; font-size: 13px; cursor: pointer; }
+.purchase-records button:hover { background: #f0f1f3; }
+.purchase-records button:disabled { opacity: .55; cursor: default; }
+.purchase-table-scroll { max-width: 100%; overflow-x: auto; background: #fff; border: 1px solid var(--admin-line); border-radius: 8px; scrollbar-color: #8c929b #f0f1f3; }
+.purchase-records table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.purchase-records th, .purchase-records td { text-align: left; vertical-align: top; padding: 14px; min-width: 120px; overflow-wrap: anywhere; }
+.purchase-records thead { background: #eeeef1; }
+.purchase-records tbody th { font-weight: 500; }
+.purchase-records tbody tr + tr { border-top: 1px solid var(--admin-line); }
+.purchase-row-actions { display: flex; flex-direction: column; gap: 12px; min-width: 180px !important; }
+.purchase-pagination { display: flex; gap: 16px; align-items: center; margin-top: 16px; font-size: 13px; }
+.purchase-confirm { background: #fff6df; color: #65480f; padding: 12px; border-radius: 6px; max-width: 55ch; font-size: 13px; }
+.purchase-confirm p { margin: 0 0 12px; }
+.purchase-confirm button { margin-right: 8px; margin-bottom: 8px; }
+.purchase-records fieldset { margin: 28px 0; padding: 24px; border: 1px solid var(--admin-line); border-radius: 8px; background: #fff; min-width: 0; }
+.purchase-records legend { padding: 0 8px; font-weight: 600; }
+.purchase-input-grid, .purchase-detail-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 28px; }
+.purchase-input label { display: block; font-size: 13px; margin-bottom: 8px; }
+.purchase-input input, .purchase-input textarea { width: 100%; box-sizing: border-box; color: #202124; background: #fff; border: 1px solid #94949d; border-radius: 4px; padding: 10px; font: inherit; font-size: 14px; }
+.purchase-input textarea { resize: vertical; }
+.purchase-input [aria-invalid="true"] { border-color: #a21d22; }
+.purchase-field-error, .purchase-records [role="alert"] { color: #a21d22; }
+.purchase-records td .purchase-input { min-width: 190px; }
+.purchase-records .purchase-save { background: #202124; color: #fff; padding: 12px 20px; }
+.purchase-detail-fields { background: #fff; padding: 24px; border: 1px solid var(--admin-line); border-radius: 8px; }
+.purchase-detail-fields dt { color: var(--admin-muted); font-size: 13px; }
+.purchase-detail-fields dd { margin: 6px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.purchase-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 600px) {
+  .purchase-records td.purchase-empty { text-align: left; }
+  .purchase-page-heading { align-items: stretch; flex-direction: column; gap: 12px; }
+  .purchase-records fieldset, .purchase-detail-fields { padding: 16px; }
+  .purchase-input-grid, .purchase-detail-fields { grid-template-columns: 1fr; }
+}
+.purchase-table-hint { font-size: 13px; color: var(--admin-muted); margin-bottom: 12px; }
+.purchase-origin-notice { font-size: 13px; color: #41434b; background: #eeeef1; padding: 10px 12px; border-radius: 6px; overflow-wrap: anywhere; }
+.purchase-filters { margin: 28px 0; padding: 20px; background: #fff; border: 1px solid var(--admin-line); border-radius: 8px; }
+.purchase-filters > p { margin: 0 0 20px; font-size: 13px; color: var(--admin-muted); }
+.purchase-filter-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.purchase-filter-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+@media (max-width: 600px) { .purchase-filter-grid { grid-template-columns: 1fr; } }
