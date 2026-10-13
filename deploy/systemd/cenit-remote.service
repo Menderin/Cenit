@@ -1,0 +1,16 @@
+[Unit]
+Description=Cenit private remote access (separate Tailscale instance)
+
+[Service]
+Type=simple
+UMask=0077
+RuntimeDirectory=cenit-remote
+RuntimeDirectoryMode=0700
+ExecStartPre=/usr/bin/install -d -m 0700 %h/.local/share/cenit/remote
+ExecStart=/usr/sbin/tailscaled --tun=userspace-networking --port=0 --statedir=%h/.local/share/cenit/remote --state=%h/.local/share/cenit/remote/tailscaled.state --socket=%t/cenit-remote/tailscaled.sock
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target
