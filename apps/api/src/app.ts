@@ -11,8 +11,9 @@ import { AcademicService, type AcademicReadRepository } from './modules/academic
 import { PurchaseRepository } from './modules/purchases/repositories/purchases.js';
 import { PurchaseService } from './modules/purchases/services/purchases.js';
 import { purchaseRoutes } from './modules/purchases/routes/index.js';
+import { registerFrontend } from './infrastructure/plugins/frontend.js';
 
-export function buildAcademicApp(options: { repository: AcademicReadRepository; purchases?: PurchaseRepository; authenticate?: AuthenticateAcademic; auth?: { service: AuthService; config: AuthConfig } }) {
+export function buildAcademicApp(options: { repository: AcademicReadRepository; purchases?: PurchaseRepository; frontendRoot?: string; authenticate?: AuthenticateAcademic; auth?: { service: AuthService; config: AuthConfig } }) {
   if (options.auth && options.authenticate) throw new Error('No combinar sesión real con adaptador de identidad de prueba.');
   const app = Fastify({ bodyLimit: 128 * 1024, genReqId: () => randomUUID(), ajv: { customOptions: { removeAdditional: false, coerceTypes: false } } });
   // Query-only coercion keeps HTTP pagination usable without accepting role/body coercion.
@@ -32,7 +33,8 @@ export function buildAcademicApp(options: { repository: AcademicReadRepository; 
     else if (['42P01', 'ECONNREFUSED', '57P01', '57P03', 'ETIMEDOUT', '08006', '53300'].includes(error.code ?? '')) { status = 503; code = 'SERVICE_UNAVAILABLE'; message = 'El servicio no está disponible.'; }
     return reply.status(status).send({ error: { code, message, requestId: request.id } });
   });
-  app.setNotFoundHandler((request, reply) => reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Recurso inexistente.', requestId: request.id } }));
+  if (options.frontendRoot) registerFrontend(app, options.frontendRoot);
+  else app.setNotFoundHandler((request, reply) => reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Recurso inexistente.', requestId: request.id } }));
   if (options.auth) {
     app.register(cookie);
     app.register(rateLimit, { global: false, errorResponseBuilder: () => Object.assign(new Error('Rate limit'), { code: 'AUTH_RATE_LIMIT', statusCode: 429 }) });

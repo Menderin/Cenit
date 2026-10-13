@@ -56,7 +56,7 @@ No añadir `--volumes` para un apagado habitual. No reutilizar volúmenes de otr
 
 ## Contrato para incorporar la aplicación
 
-Hay manifiestos API/contratos, migraciones del catálogo y login local de backend; faltan frontend y build completo. El [backend académico](../Docs/ACADEMICO.md) y [autenticación](../Docs/AUTENTICACION.md) se verifican con `build:academic`; no activar el perfil `application` todavía. Para iniciar/probar login en Windows, seguir AUTENTICACION.md, preparando cuentas explícitamente y usando conexión runtime/Origin/excepción HTTP de demo. El perfil y el `Containerfile` requieren:
+El monolito dispone de build completo, frontend servido por Fastify y readiness basado en migraciones/esquema. Para activar el perfil `application`, construir/verificar primero la imagen y seguir [ENSAYO-LOCAL.md](ENSAYO-LOCAL.md). `build:academic` conserva la compilación parcial. Las cuentas siguen siendo preparación explícita privada; CI/main y publicación mantienen su bloqueo de etapa parcial. El contrato de imagen exige:
 
 - Un solo `package-lock.json` y workspaces `apps/api`, `apps/web`, `packages/contracts`; npm 11.19.0 y scripts reales exigidos por CI.
 - `npm run build` genera `apps/api/dist/server.js`, `apps/web/dist/index.html` y `packages/contracts/dist`. Los exports de contratos deben apuntar a su código compilado.
@@ -68,7 +68,7 @@ Hay manifiestos API/contratos, migraciones del catálogo y login local de backen
 Cuando esos requisitos estén implementados y probados:
 
 ```powershell
-podman compose --profile application up --build -d db migrate app
+podman compose --profile application up -d db migrate app
 podman compose --profile application ps -a
 ```
 

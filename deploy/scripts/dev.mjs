@@ -69,7 +69,10 @@ async function main() {
     const result = await database.query("SELECT to_regclass('cenit.accounts') IS NOT NULL AND to_regclass('cenit.sessions') IS NOT NULL AND to_regclass('cenit.purchase_requests') IS NOT NULL AND to_regclass('cenit.purchase_request_lines') IS NOT NULL AND (SELECT count(*) FROM information_schema.columns WHERE table_schema='cenit' AND table_name='purchase_requests' AND column_name IN ('example_id','request_number_search','description_search'))=3 AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='cenit' AND table_name='purchase_request_lines' AND column_name='provider_search') AS ready");
     if (!result.rows[0].ready) throw new Error('missing-migrations');
   } catch (error) {
+    // Do not retain a database cause that could expose connection details in CLI output.
+    // eslint-disable-next-line preserve-caught-error
     if (error instanceof Error && error.message === 'missing-migrations') throw new Error('Faltan migraciones del proyecto. Sigue la preparación inicial del README (db:migrate).');
+    // eslint-disable-next-line preserve-caught-error
     throw new Error('PostgreSQL no está disponible con la conexión local. Ejecuta podman compose up -d db y revisa podman compose ps.');
   } finally { await database.end(); }
   if (stopping) return;
