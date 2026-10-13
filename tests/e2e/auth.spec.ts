@@ -216,15 +216,24 @@ test('normaliza visualmente espacios exteriores e interiores del correo repetida
   await email.fill('  DOC ENTE @ CENIT . INVALID  ');
   await email.press('Tab');
   await expect(email).toHaveValue('docente@cenit.invalid');
-  // Finish focus transitions so captures compare the final field, not animation timing.
-  const normalizedAppearance = await email.screenshot({ animations: 'disabled' });
+  // Compare the rendered text, excluding rounded borders/shadows whose antialiasing
+  // can differ by a few pixels after native editing even when the text is unchanged.
+  async function renderedEmail() {
+    const bounds = await email.boundingBox();
+    if (!bounds) throw new Error('El campo de correo no está visible.');
+    return page.screenshot({ animations: 'disabled', caret: 'hide', clip: {
+      x: bounds.x + 10, y: bounds.y + 8,
+      width: bounds.width - 20, height: bounds.height - 16,
+    } });
+  }
+  const normalizedAppearance = await renderedEmail();
   for (const edge of ['Home', 'End', 'Home', 'End']) {
     await email.press(edge);
     await email.pressSequentially('   ');
     await email.press('Tab');
     await expect(email).toHaveValue('docente@cenit.invalid');
     // Native email editing can show whitespace absent from input.value; check what is rendered too.
-    await expect.poll(async () => Buffer.compare(normalizedAppearance, await email.screenshot({ animations: 'disabled' }))).toBe(0);
+    await expect.poll(async () => Buffer.compare(normalizedAppearance, await renderedEmail())).toBe(0);
   }
   for (const whitespace of ['   ', '\u00a0']) {
     await email.press('Home');
@@ -232,7 +241,7 @@ test('normaliza visualmente espacios exteriores e interiores del correo repetida
     await email.pressSequentially(whitespace);
     await email.press('Tab');
     await expect(email).toHaveValue('docente@cenit.invalid');
-    await expect.poll(async () => Buffer.compare(normalizedAppearance, await email.screenshot({ animations: 'disabled' }))).toBe(0);
+    await expect.poll(async () => Buffer.compare(normalizedAppearance, await renderedEmail())).toBe(0);
   }
   // Enter submits without blur: the same normalization must also run on submission.
   await email.fill(' DOC ENTE @ CENIT . INVALID ');
