@@ -1,13 +1,13 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Static } from '@sinclair/typebox';
-import type { AccountRole } from '@cenit/contracts/auth';
+import type { Authenticate, Principal } from '../../auth/services/principal.js';
 import { ErrorResponseSchema } from '@cenit/contracts';
 import { PlanParamsSchema, PlanResponseSchema, PlansResponseSchema, StudentParamsSchema, StudentSearchSchema, StudentsResponseSchema, ProgressResponseSchema } from '@cenit/contracts/academic';
 import { AcademicError, AcademicService } from '../services/academic.js';
 
 // Server-side adapter supplied by the login task. Never construct this from headers/body/role query parameters.
-export type AcademicPrincipal = { accountId: string; role: AccountRole };
-export type AuthenticateAcademic = (request: FastifyRequest) => Promise<AcademicPrincipal | null>;
+export type AcademicPrincipal = Principal;
+export type AuthenticateAcademic = Authenticate;
 export async function academicRoutes(app: FastifyInstance, options: { service: AcademicService; authenticate: AuthenticateAcademic }) {
   const errors = { 400: ErrorResponseSchema, 401: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 500: ErrorResponseSchema, 503: ErrorResponseSchema };
   const principals = new WeakMap<FastifyRequest, AcademicPrincipal>();

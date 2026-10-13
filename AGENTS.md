@@ -14,6 +14,8 @@ Estas instrucciones aplican a todo el repositorio. Antes de iniciar una tarea, l
 
 Ante una contradicción que afecte alcance, contratos o reglas de negocio, explicarla y solicitar una decisión. No inventar procesos institucionales ni afirmar que una funcionalidad existe sin verificarla.
 
+- [Docs/EXTRACCION-COMPRAS.md](Docs/EXTRACCION-COMPRAS.md): contrato de candidatos, límites de imagen futuros y laboratorio administrativo. Leer antes de modificar extracción/revisión. No hay OCR ni endpoint de extracción activo; los ejemplos no acreditan extracción real.
+
 ## Alcance
 
 La aclaración más reciente define compras como recuperación y organización de registros ya cargados en Oracle, sustituyendo transcripción de pantallazos a Excel. Cenit no realiza compras ni modifica Oracle. Tabla consultable y registros conservados en Cenit confirmados; Google Sheets es opcional. Para actualizar copia, recuperar/reintentar y revisar cambios pertinentes; disparador manual o automático aún pendiente. No asumir edición manual libre ni implementación de contratos antiguos de PUT sin adaptar el flujo. Catálogo académico en PostgreSQL confirmado. Fichas y pendientes en `Docs/HISTORIAS-USUARIO-INVEST.md`; no resolver supuestos automáticamente. Las cuentas locales las prepara el equipo, sin registro público.
@@ -77,3 +79,5 @@ Usar `develop` como integración y `main` como rama de entrega; cambios mediante
 El contrato del ejecutor preparado está en `deploy/CD-VM.md`. Al implementar imagen/workflow respetar digest, procedencia verificable, nombres de gates/artefacto, `DATABASE_URL_FILE`, migrador separado y esquema `cenit`. No introducir credenciales administrativas en el runtime, semillas automáticas, rollback de datos ni prune global. La instalación local de archivos o un estado de espera no acreditan un despliegue real: ensayar entrega y recuperación en la VM antes de declararlo operativo.
 
 Transición de ramas del 11 de octubre: la antigua `produccion` deja de ser destino de CI/publicación. Mantener publicación deshabilitada hasta actualizar el ejecutor instalado en la VM para validar `main`; el cambio local de scripts no actualiza esa copia. Procedimiento y condiciones para retirar la rama antigua en `deploy/CI-CD.md`.
+
+- [Docs/COMPRAS.md](Docs/COMPRAS.md): persistencia manual, contratos/API, tablas y validación local. Leer antes de modificar guardado/listados/detalle/revisión de compras. Los mínimos y campos opcionales fueron acordados; no confundir validación local con aprobación Oracle. Laboratorio en `/administracion/compras/laboratorio`; Home sólo indicadores/gráfico ilustrativos.

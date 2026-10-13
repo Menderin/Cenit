@@ -4,11 +4,12 @@ import { AcademicRepository } from './modules/academic/repositories/academic.js'
 import { AuthRepository } from './modules/auth/repositories/auth.js';
 import { AuthService } from './modules/auth/services/auth.js';
 import { readAuthConfig } from './modules/auth/routes/index.js';
+import { PurchaseRepository } from './modules/purchases/repositories/purchases.js';
 
 async function main() {
   const config = readAuthConfig();
   const pool = createPool();
-  const app = buildAcademicApp({ repository: new AcademicRepository(pool), auth: { service: new AuthService(new AuthRepository(pool)), config } });
+  const app = buildAcademicApp({ repository: new AcademicRepository(pool), purchases: new PurchaseRepository(pool), auth: { service: new AuthService(new AuthRepository(pool)), config } });
   app.addHook('onClose', async () => { await pool.end(); });
   app.get('/health/live', () => ({ status: 'live' }));
   // Backend login exists; frontend and the full monolith remain dependencies.

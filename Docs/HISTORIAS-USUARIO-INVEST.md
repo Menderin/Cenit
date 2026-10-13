@@ -105,6 +105,8 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 
 ### S3-HU04 — Recuperar automáticamente datos para su revisión
 
+**HU04-T03, actualización del 12 de octubre:** contrato y pantalla ficticia de revisión implementados; [campos, schemas, límites y pendientes](EXTRACCION-COMPRAS.md). Sin OCR, ruta de extracción activa ni persistencia. HU04-T03 pendiente de revisión/integración; la historia no se considera completa hasta demostrar procesamiento real.
+
 **Alcance:** MVP requerido; vía técnica pendiente.
 
 **Descripción:** Como administrativo, quiero recuperar automáticamente los datos de una compra y revisarlos para reducir la transcripción y detectar errores antes de registrarla.
@@ -140,22 +142,24 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 
 **Criterios de aceptación:**
 
-1. Con datos válidos y suma exacta de imputaciones, guardo la compra completa y recibo confirmación del servidor.
-2. Con campos inválidos o suma diferente del total, el servidor rechaza el registro sin persistir partes de él.
+1. Con cabecera e ítems válidos, guardo la copia completa y recibo confirmación del servidor; no se exige igualdad entre suma de ítems y total.
+2. Con campos inválidos, el servidor rechaza el registro sin persistir partes de él.
 3. Un reintento con la misma identidad de operación no crea otra compra; referencia textual y ceros se conservan.
 4. Tras reiniciar la aplicación, el registro sigue disponible en PostgreSQL; un fallo conserva el borrador sin mostrar éxito.
 
-**Base acordada:** campos, estados, formatos, idempotencia e imputaciones del SDD. La integración con HU04 completa el recorrido de captura; probar guardado no exige esperar a Oracle.
+**Base acordada (13 de octubre):** solicitudes e ítems, montos exactos, revisión local e idempotencia del contrato vigente. No crear imputaciones presupuestarias ni exigir suma sin validar esas reglas con el cliente. El laboratorio transfiere ejemplos ficticios revisados sin extraer ni guardar automáticamente; la extracción real continúa en HU04.
 
 **Revisión INVEST:** independiente del origen de datos mediante contrato de compra revisada; valor vertical verificable. Tamaño de transacción/idempotencia por estimar.
 
 | Tarea | Descripción | Criterios de aceptación de la tarea |
 | --- | --- | --- |
-| HU05-T01 — Mockup de confirmación administrativa | Diseñar formulario con documento, imputaciones, errores y confirmación | Campos corresponden al SDD; total/suma distinguibles; estados guardar/error/éxito definidos |
-| HU05-T02 — Esquema y migración de compras | Definir tablas, relaciones, montos exactos y restricciones de compra/imputaciones; separar semillas demo | Migración ejecutable sobre PostgreSQL de prueba; claves y restricciones comprobadas; no se versionan datos ni secretos |
-| HU05-T03 — Contrato y alta transaccional | Implementar validación, POST, suma exacta e idempotencia según SDD | Schemas de solicitud/respuesta; guardado atómico; reintento sin duplicación; ninguna compra parcial |
-| HU05-T04 — Formulario administrativo integrado | Conectar confirmación al servidor y conservar borrador ante fallo | Éxito sólo tras respuesta correcta; validación visible; datos candidatos de HU04 integrables por contrato |
-| HU05-T05 — Verificación de consistencia y persistencia | Probar datos válidos/invalidos, rollback, doble intento y reinicio de aplicación | Evidencia contra PostgreSQL; suma inválida no deja filas parciales; reintento no duplica; registro persiste |
+| HU05-T01 — Mockup de confirmación administrativa | Diseñar formulario con cabecera, ítems, errores y confirmación | Procedencia visible; estados guardar/error/éxito definidos |
+| HU05-T02 — Esquema y migración de compras | Definir solicitudes/ítems, relaciones, montos exactos y procedencia; separar semillas demo | Migración PostgreSQL vacía/existente; claves, montos y coherencia del origen comprobados; sin datos ni secretos versionados |
+| HU05-T03 — Contrato y alta transaccional | Validar cabecera/ítems y origen; POST atómico e idempotencia compatible | Schemas validables; ninguna copia parcial; reintentos manuales y de ejemplos sin duplicación; procedencia diferente genera conflicto |
+| HU05-T04 — Formulario administrativo integrado | Transferir valores revisados en memoria y confirmar guardado por servidor | Éxito sólo tras respuesta correcta; validación visible; conserva borrador/operación ante fallo; distingue ejemplo ficticio; salida/expiración descartan datos |
+| HU05-T05 — Verificación de consistencia y persistencia | Probar errores, rollback, reintentos concurrentes y reinicio real de API | Evidencia PostgreSQL; datos inválidos no dejan filas parciales; reintento no duplica; registro completo sigue disponible tras detener y arrancar el proceso |
+
+**Estado de HU05-T02/T03/T04:** implementadas y verificadas localmente, pendientes de revisión, CI e integración. Evidencia: [COMPRAS.md](COMPRAS.md#evidencia-del-cierre-técnico-de-hu05). La transferencia del laboratorio es ficticia y no completa extracción real de HU04.
 
 ### S3-HU06 — Encontrar compras mediante búsqueda y filtros
 
@@ -166,18 +170,22 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 **Criterios de aceptación:**
 
 1. Búsqueda y filtros acordados del SDD devuelven registros coincidentes con orden y paginación definidos.
-2. Filtros combinados de unidad/proyecto se aplican a la misma imputación, sin producir coincidencias falsas.
-3. Montos documentales e importes imputados filtrados están diferenciados y no duplican totales.
+2. Filtros combinados de código de unidad/proyecto se aplican al mismo ítem de la solicitud, sin producir coincidencias falsas.
+3. El total documental suma una vez cada solicitud del conjunto filtrado, independientemente de la página y del número de ítems; no representa pagos ni imputaciones.
 4. La tabla muestra carga, vacío y error comprensibles; permite abrir un registro existente.
 
-**Revisión INVEST:** puede implementarse con datos persistidos de prueba, independiente de captura y alta en interfaz. El conjunto de filtros/totales debe estimarse; dividir por resultados de búsqueda si excede el tamaño, mediante decisión del equipo.
+**Decisión confirmada para HU06:** búsqueda por número/descripción/proveedor, fecha de envío inclusiva y códigos textuales de unidad/proyecto; no UUID de catálogos. Una barra común filtra ambas tablas, con paginación y total documental propios. Importes imputados quedan fuera del modelo vigente; no calcularlos desde ítems. Contrato detallado en [COMPRAS.md](COMPRAS.md#hu06-búsqueda-filtros-y-total-documental).
+
+**Revisión INVEST:** comprobable con registros persistidos ficticios, independiente de captura y alta en interfaz; alcance de filtros confirmado por el líder.
 
 | Tarea | Descripción | Criterios de aceptación de la tarea |
 | --- | --- | --- |
 | HU06-T01 — Mockup de listado administrativo | Diseñar columnas, búsqueda, filtros, paginación, totales y estados | Campos/filtros trazables al SDD; totales etiquetados; navegación a detalle definida |
 | HU06-T02 — Endpoint y consultas de listado | Construir GET con filtros validados, orden, paginación y agregados consistentes | Consultas parametrizadas; schemas de respuesta; filtros correctos y cabeceras no duplicadas |
 | HU06-T03 — Tabla administrativa integrada | Implementar controles y resultados con consultas al servidor | Cambios de filtro/página muestran resultados correctos; estados vacío/error/carga visibles; no usa datos fijos |
-| HU06-T04 — Verificación de filtros y totales | Preparar registros ficticios y probar coincidencias/combinaciones/agregados | Caso documento 100000 e imputación coincidente 70000 diferencia ambos totales; filtros cruzados no producen falsos positivos |
+| HU06-T04 — Verificación de filtros y totales | Preparar registros ficticios y probar coincidencias/combinaciones/agregados | Ítems A/X y B/Y no coinciden con A/Y; varias líneas no duplican cabecera ni monto; suma considera todas las páginas y el mismo snapshot |
+
+**Estado de HU06-T02 y controles mínimos de HU06-T03:** implementados y verificados localmente, pendientes de revisión, CI e integración. Evidencia de contratos, consultas PostgreSQL concurrentes y recorridos reales de navegador en [COMPRAS.md](COMPRAS.md#evidencia-local-de-hu06). No acredita una aprobación del cliente ni una entrega integrada.
 
 ### S3-HU07 — Consultar una compra y sus imputaciones
 
@@ -537,3 +545,9 @@ S3-HT03 queda desglosado en HU04-T01; S3-HT04 en HU10-T01. Diseño global S3-HT0
 | Q08 | Actualizar copia a partir del origen | Recuperar/reintentar y revisar cambios confirmado; disparador manual/automático, identidad y pertinencia pendientes; HU04/HU08 |
 
 Valoración actual: los resultados y criterios son más claros y las tareas son específicas por módulo. INVEST sigue pendiente en estimación/tamaño para todas y en independencia/viabilidad para las que dependen de fuente externa. Refinar esas dependencias antes de presentar el backlog como listo para compromiso.
+
+### Actualización del 13 de octubre: ingreso manual y revisión local
+
+Implementación de HU05-T02/T03/T04 y base de detalle HU07: dos tablas, alta transaccional idempotente, listados por revisión y detalle; campos mínimos número, fecha de envío, descripción general y total. «Validar registro» confirma revisión local y registra al administrativo, incluso si creó la copia; no aprueba en Oracle. Modelo vigente y adaptación de la propuesta antigua en [COMPRAS.md](COMPRAS.md). No se acreditan edición, búsqueda avanzada, sincronización ni extracción automática. Laboratorio separado; ingreso manual no sustituye HU04. Revisión independiente, integración y evidencia de Actions pendientes; no marcar completas las historias por implementación local.
+
+HU03: borrador manual confirmado sin persistencia; conservar ante errores/foco válido, avisar antes de abandonar, descartar al cerrar/expirar sin guardado automático. El comportamiento anterior del laboratorio permanece acotado a ejemplos.

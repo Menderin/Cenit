@@ -21,6 +21,12 @@
       ],
       "@cenit/contracts/auth": [
         "./packages/contracts/src/auth/index.ts"
+      ],
+      "@cenit/contracts/purchases": [
+        "./packages/contracts/src/purchases/index.ts"
+      ],
+      "@cenit/contracts/purchases/examples": [
+        "./packages/contracts/src/purchases/examples.ts"
       ]
     }
   },
