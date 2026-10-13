@@ -3,9 +3,16 @@ import { login } from './support/browser.js';
 
 const courses = (page: import('@playwright/test').Page) => page.getByRole('button', { name: /^Ver asignatura:/ });
 async function chooseStudent(page: import('@playwright/test').Page, name: string) {
-  const change = page.getByRole('button', { name: 'Cambiar estudiante', exact: true });
+  await expect(page.locator('.academic-students')).toBeVisible();
+  const change = page.getByRole('button', { name: /^(Cambiar estudiante|Buscar estudiante)$/ });
   if (await change.isVisible()) await change.click();
   await page.locator('.academic-students__results').getByRole('button', { name: new RegExp(`^${name}`) }).click();
+}
+
+async function expectLatestGrade(page: import('@playwright/test').Page, grade: string) {
+  await page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true }).click();
+  await expect(page.getByRole('dialog').locator('.academic-facts').first().getByText(grade, { exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
 }
 for (const role of ['docente', 'estudiante']) {
   test(`catálogo PostgreSQL, recarga y trazabilidad de API: ${role}`, async ({ page }) => {
@@ -13,11 +20,12 @@ for (const role of ['docente', 'estudiante']) {
     await expect(courses(page)).toHaveCount(52);
     const internados = page.getByRole('region', { name: 'Semestres IX–X', exact: true });
     await expect(internados.locator('button')).toHaveCount(4);
-    await expect(internados).toContainText('65 SCT');
+    await expect(internados.getByRole('heading')).toHaveText('IX–X');
     const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/2027-r1');
     expect(response.status()).toBe(200);
     const data = (await response.json()).data;
     expect(data.courses).toHaveLength(52);
+    expect(data.courses.filter((course: { semester: number }) => course.semester === 9).reduce((sum: number, course: { credits: number }) => sum + course.credits, 0)).toBe(65);
     expect(data.sources.map((source: { validationStatus: string }) => source.validationStatus)).toEqual(['teamReviewed', 'teamReviewed']);
     await page.reload(); await expect(courses(page)).toHaveCount(52);
   });
@@ -32,10 +40,49 @@ test('detalle con teclado, relaciones pendientes y ausencia desconocida', async 
   await expect(dialog).toContainText('Ciencia de los alimentos');
   await expect(dialog.getByRole('button', { name: 'Cerrar detalle' })).toBeFocused();
   await page.keyboard.press('Escape'); await expect(card).toBeFocused();
-  await page.getByRole('button', { name: 'Ver asignatura: Formación general electiva I', exact: true }).click();
+  await expect(card).toHaveCSS('outline-color', 'rgb(83, 97, 118)');
+  await expect(card).toHaveCSS('outline-style', 'solid');
+  await expect(card).toHaveCSS('outline-offset', '-2px');
+  await card.click();
+  await page.getByRole('button', { name: 'Cerrar detalle' }).click();
+  await expect(card).toBeFocused();
+  await expect(card).toHaveCSS('outline-style', 'none');
+  await page.getByRole('button', { name: 'Ver asignatura: Form. general I (Formación general electiva I)', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('Esto no confirma la ausencia de prerrequisitos.');
   await expect(page.getByRole('dialog').getByText('Sin prerrequisitos.', { exact: true })).toHaveCount(0);
 });
+
+for (const role of ['estudiante', 'docente']) {
+  test(`detalle y malla sin recuadros de foco al usar mouse: ${role}`, async ({ page }) => {
+    await login(page, role); await expect(courses(page)).toHaveCount(52);
+    const card = courses(page).first();
+    const board = page.getByRole('region', { name: 'Asignaturas por semestre', exact: true });
+    await card.click();
+    await expect(page.getByRole('button', { name: 'Cerrar detalle' })).toHaveCSS('outline-style', 'none');
+    await page.getByRole('button', { name: 'Cerrar detalle' }).click();
+    await expect(card).toBeFocused();
+    // Pasar por teclado reproduce el foco que puede conservar el diálogo.
+    await card.focus(); await card.press('Enter'); await page.keyboard.press('Escape');
+    await card.click();
+    const close = page.getByRole('button', { name: 'Cerrar detalle' });
+    await expect(close).toHaveCSS('outline-style', 'none');
+    await close.click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await card.click();
+    const backdrop = await page.locator('.academic-semester__header').first().boundingBox();
+    await page.mouse.click(backdrop!.x + backdrop!.width / 2, backdrop!.y + backdrop!.height / 2);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(card).toBeFocused();
+    await expect(card).toHaveCSS('outline-style', 'none');
+    await page.mouse.click(backdrop!.x + backdrop!.width / 2, backdrop!.y + backdrop!.height / 2);
+    // Safari puede mantener :focus-visible, pero el mouse no debe dibujar el borde.
+    await expect(board).toHaveCSS('outline-style', 'none');
+    await board.focus(); await page.keyboard.press('ArrowRight');
+    await expect(board).toHaveCSS('outline-style', 'solid');
+    await page.mouse.click(backdrop!.x + backdrop!.width / 2, backdrop!.y + backdrop!.height / 2);
+    await expect(board).toHaveCSS('outline-style', 'none');
+  });
+}
 
 test('lista vacía válida y respuesta inválida no se sustituyen por datos fijos', async ({ page }) => {
   await page.route('**/api/v1/academic/plans', route => route.fulfill({ json: { data: [] } }));
@@ -96,11 +143,16 @@ test('estudiante consulta RUT, estados e intentos propios y el docente ve el mis
   await login(page, 'estudiante');
   const context = page.getByRole('region', { name: 'Avance curricular', exact: true });
   await expect(context).toContainText('00.000.001-k');
-  const first = page.getByRole('button', { name: 'Ver asignatura: Ciencia de los alimentos', exact: true });
-  await expect(first).toContainText('Aprobada · 5,2');
+  const first = page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true });
+  await expect(first).toContainText('Aprobada');
+  await expect(first).not.toContainText('5,2');
+  await expect(first.locator('.academic-course__name')).toHaveText('Cs. alimentos');
+  await expect(first).toHaveAccessibleDescription('Aprobada 7 SCT');
   await first.click();
   const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('heading', { name: 'Ciencia de los alimentos', exact: true })).toBeVisible();
   await expect(dialog).toContainText('Historial de intentos');
+  await dialog.locator('summary').filter({ hasText: 'Historial de intentos' }).click();
   await expect(dialog.getByRole('row')).toHaveCount(3);
   await expect(dialog.getByRole('row').nth(1)).toContainText('Reprobada');
   await expect(dialog.getByRole('row').nth(1)).toContainText('3,2');
@@ -109,14 +161,14 @@ test('estudiante consulta RUT, estados e intentos propios y el docente ve el mis
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await page.screenshot({ path: testInfo.outputPath('historial-1440.png') });
   await page.keyboard.press('Escape');
-  await page.reload(); await expect(first).toContainText('Aprobada · 5,2');
+  await page.reload(); await expect(first).toContainText('Aprobada');
   const own = await page.request.get('/api/v1/academic/me/progress'); expect(own.status()).toBe(200);
   const data = (await own.json()).data;
   expect((await page.request.get(`/api/v1/academic/students/${data.student.id}/progress`)).status()).toBe(403);
   expect((await page.request.get('/api/v1/academic/students')).status()).toBe(403);
   await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
   await login(page);
-  await page.getByRole('button', { name: /^Estudiante Demo 00/ }).click();
+  await chooseStudent(page, 'Estudiante Demo');
   await expect(context).toContainText('00.000.001-k');
   const teacher = await page.request.get(`/api/v1/academic/students/${data.student.id}/progress`);
   expect((await teacher.json()).data).toEqual(data);
@@ -125,14 +177,16 @@ test('estudiante consulta RUT, estados e intentos propios y el docente ve el mis
 test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezclar datos', async ({ page }, testInfo) => {
   await login(page);
   const results = page.locator('.academic-students__results');
+  await expect(results).toBeHidden();
+  await page.getByRole('button', { name: 'Buscar estudiante', exact: true }).click();
   await expect(results.getByRole('button')).toHaveCount(3);
   await page.getByLabel('RUT', { exact: true }).fill('00000002-0');
   await page.getByRole('button', { name: 'Buscar', exact: true }).click();
   await expect(results.getByRole('button')).toHaveCount(1);
   await results.getByRole('button', { name: /^Camila Demo/ }).click();
   await expect(page.getByRole('region', { name: 'Avance curricular', exact: true })).toContainText('Camila Demo');
-  const first = page.getByRole('button', { name: 'Ver asignatura: Ciencia de los alimentos', exact: true });
-  await expect(first).toContainText('Aprobada · 6,5');
+  const first = page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true });
+  await expectLatestGrade(page, '6,5');
   await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
   await page.getByLabel('Nombre', { exact: true }).fill('Estudiante');
   await page.getByRole('button', { name: 'Buscar', exact: true }).click();
@@ -141,11 +195,17 @@ test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezcl
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
   await expect(results.getByRole('button')).toHaveCount(3);
   await chooseStudent(page, 'Tomás Demo');
-  await expect(first).toContainText('Aprobada · 6');
+  await expectLatestGrade(page, '6');
   await chooseStudent(page, 'Estudiante Demo');
-  await expect(first).toContainText('Aprobada · 5,2');
-  await expect(page.getByRole('button', { name: 'Ver asignatura: Fundamentos biológicos para la nutrición', exact: true })).toContainText('Reprobada · 2,5');
+  await expect(first).toContainText('Aprobada');
+  await expect(first).not.toContainText('5,2');
+  await expect(first.locator('.academic-course__name')).toHaveText('Cs. alimentos');
+  await expectLatestGrade(page, '5,2');
+  await page.getByRole('button', { name: 'Ver asignatura: Fund. biológicos (Fundamentos biológicos para la nutrición)', exact: true }).click();
+  await expect(page.getByRole('dialog').locator('.academic-facts').first()).toContainText('2,5');
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Ver asignatura: Inglés 1', exact: true }).click();
+  await page.getByRole('dialog').locator('summary').filter({ hasText: 'Historial de intentos' }).click();
   await expect(page.getByRole('dialog')).toContainText('Sin intentos registrados');
   await page.keyboard.press('Escape');
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1920, height: 1080 }, { width: 390, height: 844 }]) {
@@ -170,10 +230,10 @@ test('un historial tardío no sustituye al estudiante seleccionado después', as
   await expect.poll(() => Boolean(release)).toBe(true);
   await chooseStudent(page, 'Camila Demo');
   const context = page.getByRole('region', { name: 'Avance curricular', exact: true });
-  await expect(context).toContainText('Camila Demo');
+  await expect(context.locator('.academic-student-identity')).toContainText('Camila Demo');
   release!();
-  await expect(context).not.toContainText('Tomás Demo');
-  await expect(page.getByRole('button', { name: 'Ver asignatura: Ciencia de los alimentos', exact: true })).toContainText('Aprobada · 6,5');
+  await expect(context.locator('.academic-student-identity')).not.toContainText('Tomás Demo');
+  await expectLatestGrade(page, '6,5');
 });
 
 test('historial ausente o inválido no se convierte a no cursado y permite reintentar', async ({ page }) => {
@@ -192,12 +252,81 @@ test('historial ausente o inválido no se convierte a no cursado y permite reint
   await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
 });
 
+test('malla compacta conserva contexto, espacio de lectura y navegación plegable', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await login(page);
+  await expect(courses(page)).toHaveCount(52);
+  await expect(page.getByLabel('Nombre', { exact: true })).toBeHidden();
+  await expect(page.getByText('Plan 2027', { exact: true })).toBeVisible();
+  await expect(page.getByText('Prerrequisitos en revisión', { exact: true })).toBeVisible();
+  await expect(page.locator('.academic-semester__header h2')).toHaveText(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX–X']);
+  await chooseStudent(page, 'Estudiante Demo');
+  await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
+  await page.getByRole('heading', { name: 'Malla curricular', exact: true }).focus();
+  await page.evaluate(() => { document.querySelector('.academic-content')!.scrollTop = 0; });
+  const density = await page.evaluate(() => {
+    const visibleBottom = document.querySelector('.academic-content')!.getBoundingClientRect().bottom;
+    const cards = [...document.querySelectorAll('.academic-semester:first-child .academic-course')].map(element => element.getBoundingClientRect());
+    return { first: cards[0]!.top, completeRows: cards.filter(card => card.bottom <= visibleBottom).length };
+  });
+  expect(density.first).toBeLessThan(220);
+  expect(density.completeRows).toBeGreaterThanOrEqual(6);
+  await page.getByRole('button', { name: 'Ocultar navegación', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: 'Área académica' })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Cerrar sesión', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: 'Área académica' })).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const allVisible = await courses(page).evaluateAll(elements => {
+    const viewport = document.querySelector('.academic-content')!.getBoundingClientRect();
+    return elements.every(element => { const card = element.getBoundingClientRect(); return card.top >= viewport.top && card.bottom <= viewport.bottom && card.left >= viewport.left && card.right <= viewport.right; });
+  });
+  expect(allVisible).toBe(true);
+});
+
+test('selector sólo con varias versiones y un historial no se aplica a otra versión', async ({ page }) => {
+  await page.route('**/api/v1/academic/plans', async route => {
+    const response = await route.fetch(); const body = await response.json();
+    body.data[0].versions.push({ version: '2027-r2', isExample: true });
+    await route.fulfill({ json: body });
+  });
+  await page.route('**/api/v1/academic/plans/nutricion-dietetica/versions/2027-r2', async route => {
+    const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/2027-r1');
+    const body = await response.json(); body.data.version = '2027-r2'; body.data.isExample = true;
+    await route.fulfill({ json: body });
+  });
+  await login(page, 'estudiante');
+  await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
+  await page.getByLabel('Versión del plan', { exact: true }).selectOption('2027-r2');
+  await expect(page.getByRole('status')).toContainText('El historial pertenece a la versión 2027-r1');
+  await expect(page.locator('.academic-progress-badge')).toHaveCount(0);
+  await page.getByLabel('Versión del plan', { exact: true }).selectOption('2027-r1');
+  await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
+});
+
 test('malla y detalle legibles al redimensionar sin overflow del documento', async ({ page }, testInfo) => {
   const account = await login(page); await expect(courses(page)).toHaveCount(52);
+  await chooseStudent(page, 'Estudiante Demo');
+  await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
+  const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/2027-r1');
+  const names: string[] = (await response.json()).data.courses.map((course: { name: string }) => course.name);
   for (const width of [1920, 1440, 1280, 1024, 768, 721, 720, 390, 320]) {
     await page.setViewportSize({ width, height: 600 });
     if (width <= 720) await expect(page.locator('.academic-mobile-account')).toContainText(account.name);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `overflow a ${width}px`).toBe(true);
+    const cards = await courses(page).evaluateAll(elements => elements.map(element => {
+      const bounds = element.getBoundingClientRect();
+      const label = element.querySelector('.academic-course__name')!;
+      const name = label.getBoundingClientRect();
+      const footer = element.querySelector('.academic-course__footer')!;
+      const metadata = footer.getBoundingClientRect();
+      return { width: bounds.width, height: bounds.height, nameFits: label.scrollHeight <= label.clientHeight + 1 && label.scrollWidth <= label.clientWidth && name.bottom <= metadata.top && name.right <= bounds.right, label: label.textContent!, accessibleName: element.getAttribute('aria-label')!, footerFits: footer.scrollWidth <= footer.clientWidth };
+    }));
+    expect(Math.max(...cards.map(card => card.width)) - Math.min(...cards.map(card => card.width)), `ancho uniforme a ${width}px`).toBeLessThan(1);
+    expect(Math.max(...cards.map(card => card.height)) - Math.min(...cards.map(card => card.height)), `alto uniforme a ${width}px`).toBeLessThan(1);
+    expect(cards.every(card => card.nameFits && card.accessibleName.includes(card.label) && names.some(name => card.accessibleName === `Ver asignatura: ${name}` || card.accessibleName.endsWith(` (${name})`))), `etiqueta breve legible y nombre completo accesible a ${width}px`).toBe(true);
+    expect(new Set(cards.map(card => card.label)).size, 'etiquetas distintas para los 52 ramos').toBe(52);
+    expect(cards.every(card => card.footerFits), `estado y SCT completos a ${width}px`).toBe(true);
     if ([1920, 1440, 390].includes(width)) {
       const height = width === 1920 ? 1080 : width === 1440 ? 900 : 844;
       await page.setViewportSize({ width, height });
@@ -210,7 +339,7 @@ test('malla y detalle legibles al redimensionar sin overflow del documento', asy
       await page.screenshot({ path: testInfo.outputPath(`malla-${width}.png`) });
       await page.setViewportSize({ width, height: 600 });
     }
-    await page.getByRole('button', { name: 'Ver asignatura: Introducción a los determinantes sociales de la salud y salud pública', exact: true }).click();
+    await page.getByRole('button', { name: 'Ver asignatura: Det. sociales y salud pública (Introducción a los determinantes sociales de la salud y salud pública)', exact: true }).click();
     const dialog = page.getByRole('dialog'); await expect(dialog).toBeVisible();
     const bounds = await dialog.boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);

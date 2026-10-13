@@ -8,6 +8,8 @@ El repositorio contiene infraestructura, API/contratos académicos y [autenticac
 
 La ampliación de avance añade `academic/components/StudentLookup.tsx` para búsqueda/selección docente y `academic/model/progress-presentation.ts` para etiquetas de estado; `CatalogDetails.tsx` presenta intentos y notas. `academic/api/academic.ts` valida también los contratos de estudiantes/progreso existentes. No se duplican login, endpoints ni modelos de persistencia en frontend.
 
+`academic/model/course-label.ts` contiene los nombres breves de presentación de las tarjetas. Se eligen por nombre recibido, con fallback al original; no modifica catálogo/API ni nombres completos del detalle.
+
 ```text
 Cenit/
 ├── apps/

@@ -4,8 +4,8 @@ for (const role of ['administrativo', 'docente', 'estudiante']) {
   test(`login, recarga y aislamiento de rutas: ${role}`, async ({ page }) => {
     const account = await login(page, role), path = role === 'administrativo' ? '/administracion' : '/academico';
     await expect(page).toHaveURL(new RegExp(`${path}$`));
-    await expect(page.getByText(account.name, { exact: true })).toBeVisible();
-    await page.reload(); await expect(page.getByText(account.name, { exact: true })).toBeVisible();
+    await expect(page.locator('.academic-account, .cenit-access__account').getByText(account.name, { exact: true })).toBeVisible();
+    await page.reload(); await expect(page.locator('.academic-account, .cenit-access__account').getByText(account.name, { exact: true })).toBeVisible();
     await page.goto(path === '/administracion' ? '/academico' : '/administracion');
     await expect(page).toHaveURL(new RegExp(`${path}$`));
     await expect(page.getByRole('heading', { name: role === 'administrativo' ? 'Administración' : 'Malla curricular', exact: true })).toBeVisible();
@@ -37,7 +37,7 @@ test('logout invalida cookie, atrás no restaura cuenta y permite otra identidad
   await page.goBack(); await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
   await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
   const second = await login(page, 'estudiante');
-  await expect(page.getByText(second.name, { exact: true })).toBeVisible();
+  await expect(page.locator('.academic-account').getByText(second.name, { exact: true })).toBeVisible();
   await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
 });
 test('expiración del reloj del navegador oculta cuenta y pide login', async ({ page }) => {
