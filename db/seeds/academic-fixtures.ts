@@ -11,7 +11,7 @@ export function createAcademicDemoAccounts(): DemoCredential[] {
   }));
 }
 
-export function academicDemoStudents(accounts: Pick<DemoCredential, 'id' | 'name'>[], plan: AcademicPlan): DemoStudent[] {
+export function academicDemoStudents(accounts: Pick<DemoCredential, 'id' | 'name'>[], plan: AcademicPlan, normalizeLegacyRuts = false): DemoStudent[] {
   if (accounts.length !== 3) throw new Error('Se requieren tres cuentas estudiantiles de demostración.');
   return accounts.map((account, index) => {
     const attempts: DemoStudent['attempts'] = [];
@@ -26,6 +26,7 @@ export function academicDemoStudents(accounts: Pick<DemoCredential, 'id' | 'name
       else if (index === 0 && position === 2) attempts.push({ code: course.code, attempt: { attemptNumber: 1, status: 'failed', grade: '2,5' } });
     }
     return { id: `10000000-0000-4000-8000-00000000000${index + 1}`, accountId: account.id, name: account.name,
-      rut: ['00.000.001-k', '00.000.002-0', '00.000.003-1'][index]!, attempts };
+      rut: ['20.123.456-5', '21.123.456-3', '22.123.456-1'][index]!, attempts,
+      ...(normalizeLegacyRuts ? { legacyRut: ['00.000.001-k', '00.000.002-0', '00.000.003-1'][index]! } : {}) };
   });
 }

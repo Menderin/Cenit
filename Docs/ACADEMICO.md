@@ -55,7 +55,7 @@ Schemas y tipos públicos: `@cenit/contracts/academic`; ejemplos compilables: `@
 | `GET /api/v1/academic/students` | Docente; todos los ficticios de Nutrición |
 | `GET /api/v1/academic/students/:studentId/progress` | Docente |
 
-Listado de estudiantes: nombre parcial (ILIKE con comodines escapados), RUT exacto, combinación AND. `page` predeterminado 1 y `pageSize` 20 (máximo 100). RUT: conservar puntuación/case original y usar únicamente para búsqueda una clave sin puntos y con K mayúscula; no inventar validación institucional del dígito verificador. Consultas parametrizadas y snapshot de lectura para conteos/datos coherentes.
+Listado de estudiantes: nombre parcial (ILIKE con comodines escapados), prefijo de RUT, combinación AND. `page` predeterminado 1 y `pageSize` 20 (máximo 100); la interfaz solicita seis por página. RUT: búsqueda sin puntos/guion y con K mayúscula; el servidor comprueba módulo 11 cuando el filtro está completo. Los prefijos numéricos de hasta ocho cifras no requieren DV; un cuerpo de siete cifras con DV numérico se distingue mediante guion. Consultas parametrizadas y snapshot de lectura para conteos/datos coherentes. La clave persistida anterior se conserva: no se modifica el esquema ni migraciones aplicadas.
 
 Respuestas: `{data: ...}`; lista de estudiantes añade `page`, `pageSize`, `totalItems`. El catálogo conserva los campos previos y añade `semesterEnd`, `codeKind`, `officialCode`, `displayOrder`, `sources`, hashes/fechas y `prerequisiteEdges`. Nuevo caso `pending` en la unión de reglas. Los consumidores de catálogo, búsqueda e historial de `malla-interactiva` validan los contratos existentes; no cambian sus schemas. Su integración permanece pendiente.
 
@@ -66,6 +66,16 @@ Errores públicos `{error:{code,message,requestId}}` y header `X-Request-Id`: 40
 El plugin recibe `authenticate(request)` desde login y espera `{accountId,role}` obtenido del servidor. No analiza tokens ni acepta rol/identidad del body, headers o query por sí mismo. Sin adaptador devuelve 401. Los Bearer de prueba sólo existen en el harness de integración; no son cuentas reales ni una implementación de autenticación. Roles administrativos rechazados; docente no usa `/me/progress`, estudiante no lista ni consulta otros estudiantes. Progreso sin migración vinculada produce 503.
 
 ## Comandos
+
+### Búsqueda y RUT — 13 de octubre
+
+Por petición de Gael, nombre y RUT filtran automáticamente tras 250 ms sin escribir, conservando AND y volviendo a la primera página al cambiar un filtro. Se ocultan coincidencias anteriores mientras cambia la consulta; cada búsqueda conserva su propia clave/cancelación. La demo mantiene las tarjetas, con un máximo de seis por página y rango visible sobre el total: 40 estudiantes se recorren en siete páginas.
+
+El RUT agrega puntos al escribir el cuerpo y guion al ingresar el DV (ejemplo `211234563` → `21.123.456-3`), acepta pegado con/sin puntuación, K minúscula y edición con cursor. Un RUT completo incorrecto muestra un error accesible y no se consulta; el servidor aplica la misma validación. Helpers públicos en `packages/contracts/src/academic/rut.ts`. Módulo 11 verifica coherencia matemática, según el [manual del SII](https://www.sii.cl/ccp/formato_envio_cp_electronico.pdf); no acredita identidad, matrícula ni existencia institucional. No se restringe a 20–22 millones: ese rango se usa sólo en los tres ejemplos ficticios.
+
+La preparación explícita valida los RUT completos y mantiene los rechazos de perfiles/intentos incompatibles. `--normalize-ruts` permite sustituir únicamente el valor ficticio anterior esperado cuando ID, cuenta y nombre coinciden, dentro de la transacción de preparación; otro valor se rechaza y cualquier fallo revierte la corrección. Cuentas, contraseñas, adscripciones e intentos se conservan. No hay escritura pública de perfiles ni migración nueva.
+
+Verificación local: build completo, lint, typecheck, 75 unitarias y 90 integración PostgreSQL correctos; 49 E2E de académico/auth/compras en Chrome y 19 académicos en WebKit, ambos contra el servidor compilado. Incluye búsqueda al escribir, nombre/RUT combinados, DV incorrecto, K/0, prefijos, edición/borrado, respuesta tardía y 40 resultados paginados (respuesta controlada en navegador; paginación real también cubierta en PostgreSQL). Se ejecutó explícitamente la corrección de los tres RUT en `cenit_demo`, se reinició desarrollo y se comprobó su API/interfaz con capturas de 1440×900 y 390×844. Node 24.16.0/npm 11.13.0 disponibles: no acredita las versiones fijadas 24.21.0/11.19.0, Safari nativo, CI remoto ni revisión/integración del equipo.
 
 ### Vista de catálogo y avance — 12 de octubre
 
@@ -146,7 +156,13 @@ npm run db:migrate
 npm run academic:prepare-demo
 ```
 
-El CLI exige loopback `127.0.0.1`, rol `cenit_migrator`, base `cenit_demo`, tablas migradas y las cuentas originales privadas ya preparadas. Publica el catálogo usando el importador existente y conserva `estudiante@cenit.invalid` con RUT `00.000.001-k`. Crea sólo dos cuentas estudiantiles adicionales únicas: `estudiante2@cenit.invalid` (Camila Demo, `00.000.002-0`) y `estudiante3@cenit.invalid` (Tomás Demo, `00.000.003-1`), mediante la preparación de auth reutilizada. Sus claves aleatorias quedan en `.local/secrets/academic-demo-accounts.json`, sin imprimirse/versionarse. No rota cuentas/claves originales ni las duplica. Los RUT e historiales son ficticios; no representan personas o validaciones institucionales. `npm run dev`, migraciones y CD no ejecutan esta preparación.
+El CLI exige loopback `127.0.0.1`, rol `cenit_migrator`, base `cenit_demo`, tablas migradas y las cuentas originales privadas ya preparadas. Publica el catálogo usando el importador existente y conserva `estudiante@cenit.invalid` con RUT `20.123.456-5`. Crea sólo dos cuentas estudiantiles adicionales únicas: `estudiante2@cenit.invalid` (Camila Demo, `21.123.456-3`) y `estudiante3@cenit.invalid` (Tomás Demo, `22.123.456-1`), mediante la preparación de auth reutilizada. Sus claves aleatorias quedan en `.local/secrets/academic-demo-accounts.json`, sin imprimirse/versionarse. No rota cuentas/claves originales ni las duplica. Los RUT e historiales son ficticios; no representan personas o validaciones institucionales. `npm run dev`, migraciones y CD no ejecutan esta preparación.
+
+Para actualizar una demo ya preparada con `00.000.001-k`, `00.000.002-0` y `00.000.003-1`, con el mismo entorno privado de preparación anterior:
+
+```powershell
+npm run academic:prepare-demo -- --normalize-ruts
+```
 
 Actualización del 11 de octubre: `npm run dev --workspace @cenit/api` conecta la sesión local real de [AUTENTICACION.md](AUTENTICACION.md), con credencial runtime. Docente/estudiante autenticados pueden leer el catálogo; sin sesión, 401; administrativo, 403. `/health/ready` permanece en 503 porque falta frontend/build completo. No activar el proxy definitivo ni releases. `cenit.accounts.id` define identidad UUID; la nueva migración académica la reutiliza en esta rama, pendiente de revisión/integración. Preparación local y pruebas no acreditan disponibilidad de la VM.
 

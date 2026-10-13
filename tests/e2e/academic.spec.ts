@@ -142,7 +142,7 @@ test('respuesta de catálogo tardía no reaparece tras logout y cambio de cuenta
 test('estudiante consulta RUT, estados e intentos propios y el docente ve el mismo historial', async ({ page }, testInfo) => {
   await login(page, 'estudiante');
   const context = page.getByRole('region', { name: 'Avance curricular', exact: true });
-  await expect(context).toContainText('00.000.001-k');
+  await expect(context).toContainText('20.123.456-5');
   const first = page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true });
   await expect(first).toContainText('Aprobada');
   await expect(first).not.toContainText('5,2');
@@ -169,7 +169,7 @@ test('estudiante consulta RUT, estados e intentos propios y el docente ve el mis
   await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
   await login(page);
   await chooseStudent(page, 'Estudiante Demo');
-  await expect(context).toContainText('00.000.001-k');
+  await expect(context).toContainText('20.123.456-5');
   const teacher = await page.request.get(`/api/v1/academic/students/${data.student.id}/progress`);
   expect((await teacher.json()).data).toEqual(data);
 });
@@ -180,8 +180,7 @@ test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezcl
   await expect(results).toBeHidden();
   await page.getByRole('button', { name: 'Buscar estudiante', exact: true }).click();
   await expect(results.getByRole('button')).toHaveCount(3);
-  await page.getByLabel('RUT', { exact: true }).fill('00000002-0');
-  await page.getByRole('button', { name: 'Buscar', exact: true }).click();
+  await page.getByLabel('RUT', { exact: true }).fill('211234563');
   await expect(results.getByRole('button')).toHaveCount(1);
   await results.getByRole('button', { name: /^Camila Demo/ }).click();
   await expect(page.getByRole('region', { name: 'Avance curricular', exact: true })).toContainText('Camila Demo');
@@ -189,7 +188,6 @@ test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezcl
   await expectLatestGrade(page, '6,5');
   await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
   await page.getByLabel('Nombre', { exact: true }).fill('Estudiante');
-  await page.getByRole('button', { name: 'Buscar', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('No hay estudiantes que coincidan');
   await expect(first).not.toContainText('Aprobada');
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
@@ -234,6 +232,100 @@ test('un historial tardío no sustituye al estudiante seleccionado después', as
   release!();
   await expect(context.locator('.academic-student-identity')).not.toContainText('Tomás Demo');
   await expectLatestGrade(page, '6,5');
+});
+
+test('búsqueda automática por coincidencias y formato/verificación de RUT mientras se escribe', async ({ page }) => {
+  await login(page);
+  await page.getByRole('button', { name: 'Buscar estudiante', exact: true }).click();
+  const results = page.locator('.academic-students__results');
+  const name = page.getByLabel('Nombre', { exact: true });
+  const rut = page.getByLabel('RUT', { exact: true });
+  await expect(results.getByRole('button')).toHaveCount(3);
+  await name.pressSequentially('cam');
+  await expect(results.getByRole('button')).toHaveCount(1);
+  await expect(results).toContainText('Camila Demo');
+  await name.fill('');
+  await rut.pressSequentially('21');
+  await expect(results.getByRole('button')).toHaveCount(1);
+  await expect(results).toContainText('Camila Demo');
+  await rut.pressSequentially('1234563');
+  await expect(rut).toHaveValue('21.123.456-3');
+  await expect(results.getByRole('button')).toHaveCount(1);
+  await rut.press('Backspace');
+  await expect(rut).toHaveValue('21.123.456');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await rut.press('4');
+  await expect(rut).toHaveValue('21.123.456-4');
+  await expect(page.getByRole('alert')).toContainText('módulo 11');
+  await expect(rut).toHaveAttribute('aria-invalid', 'true');
+  await expect(results).toHaveCount(0);
+  await rut.fill(' 21.123.456-3 ');
+  await expect(rut).toHaveValue('21.123.456-3');
+  await expect(results).toContainText('Camila Demo');
+  await name.fill('Tomás');
+  await expect(page.getByRole('status')).toContainText('No hay estudiantes que coincidan');
+  await rut.fill('');
+  await expect(results).toContainText('Tomás Demo');
+  await rut.fill('20000003k');
+  await expect(rut).toHaveValue('20.000.003-K');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await rut.fill('20123456x');
+  await expect(page.getByRole('alert')).toContainText('módulo 11');
+  await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
+  await expect(results.getByRole('button')).toHaveCount(3);
+  await rut.fill('20.123.456-5');
+  await rut.evaluate((input: HTMLInputElement) => input.setSelectionRange(1, 1));
+  await rut.press('Delete');
+  await expect(rut).toHaveValue('2.123.456-5');
+  expect(await rut.evaluate((input: HTMLInputElement) => input.selectionStart)).toBe(1);
+});
+
+test('una respuesta de búsqueda tardía no reemplaza las coincidencias actuales', async ({ page }) => {
+  await login(page);
+  let release: (() => void) | undefined;
+  await page.route('**/api/v1/academic/students?**', async route => {
+    if (new URL(route.request().url()).searchParams.get('name') !== 'Camila') return route.continue();
+    const response = await route.fetch();
+    await new Promise<void>(resolve => { release = resolve; });
+    await route.fulfill({ response }).catch(() => {});
+  });
+  await page.getByRole('button', { name: 'Buscar estudiante', exact: true }).click();
+  await page.getByLabel('Nombre', { exact: true }).fill('Camila');
+  await expect.poll(() => Boolean(release)).toBe(true);
+  await page.getByLabel('Nombre', { exact: true }).fill('Tomás');
+  const results = page.locator('.academic-students__results');
+  await expect(results).toContainText('Tomás Demo');
+  release!();
+  await expect(results.getByRole('button')).toHaveCount(1);
+  await expect(results).not.toContainText('Camila Demo');
+});
+
+test('40 coincidencias se recorren en páginas de seis y un filtro nuevo vuelve a la primera', async ({ page }) => {
+  await page.route('**/api/v1/academic/students?**', async route => {
+    const search = new URL(route.request().url()).searchParams;
+    expect(search.get('pageSize')).toBe('6');
+    const current = Number(search.get('page'));
+    const total = search.has('name') ? 1 : 40;
+    const start = (current - 1) * 6;
+    const data = Array.from({ length: Math.min(6, total - start) }, (_, index) => ({ id: `10000000-0000-4000-8000-${String(start + index + 1).padStart(12, '0')}`, name: `Estudiante de prueba ${start + index + 1}`, rut: '20.123.456-5' }));
+    await route.fulfill({ json: { data, page: current, pageSize: 6, totalItems: total } });
+  });
+  await login(page);
+  await page.getByRole('button', { name: 'Buscar estudiante', exact: true }).click();
+  const results = page.locator('.academic-students__results');
+  await expect(results.getByRole('button')).toHaveCount(6);
+  await expect(page.getByRole('status')).toContainText('40 estudiantes encontrados · Mostrando 1–6');
+  await expect(page.getByRole('button', { name: 'Anterior', exact: true })).toBeDisabled();
+  for (let current = 2; current <= 7; current++) {
+    await page.getByRole('button', { name: 'Siguiente', exact: true }).click();
+    await expect(page.locator('.academic-students__pagination')).toContainText(`Página ${current} de 7`);
+  }
+  await expect(results.getByRole('button')).toHaveCount(4);
+  await expect(page.getByRole('button', { name: 'Siguiente', exact: true })).toBeDisabled();
+  await page.getByLabel('Nombre', { exact: true }).fill('prueba');
+  await expect(results.getByRole('button')).toHaveCount(1);
+  await expect(results).toContainText('Estudiante de prueba 1');
+  await expect(page.locator('.academic-students__pagination')).toHaveCount(0);
 });
 
 test('historial ausente o inválido no se convierte a no cursado y permite reintentar', async ({ page }) => {

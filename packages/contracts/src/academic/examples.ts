@@ -5,7 +5,7 @@ export const planExample: AcademicPlan = {
   source, sources: [source],
   courses: [{ code: 'DEMO-001', codeKind: 'internal', officialCode: null, name: 'Asignatura ficticia', semester: 9, semesterEnd: 10, credits: 13, displayOrder: 1, prerequisites: { kind: 'pending', description: 'Interpretación pendiente de confirmar.' } }], prerequisiteEdges: [],
 };
-export const studentsExample: StudentsResponse = { data: [{ id: '123e4567-e89b-42d3-a456-426614174001', name: 'Estudiante Demo', rut: '00.000.001-0' }], page: 1, pageSize: 20, totalItems: 1 };
+export const studentsExample: StudentsResponse = { data: [{ id: '123e4567-e89b-42d3-a456-426614174001', name: 'Estudiante Demo', rut: '20.123.456-5' }], page: 1, pageSize: 20, totalItems: 1 };
 export const progressExample: ProgressResponse = { data: {
   student: studentsExample.data[0]!, plan: { planId: planExample.planId, version: planExample.version }, origin: 'demo',
   courses: [

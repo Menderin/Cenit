@@ -1,7 +1,8 @@
 import type { Pool, PoolClient } from 'pg';
 import type { AcademicPlan, PlansResponse, StudentSearch, StudentsResponse, ProgressResponse, Prerequisite, Attempt } from '@cenit/contracts/academic';
+import { compactRut } from '@cenit/contracts/academic';
 import { validateCatalog } from '../services/catalog.js';
-import { buildProgress, normalizeRutSearch, formatAcademicGrade } from '../services/progress.js';
+import { buildProgress, formatAcademicGrade } from '../services/progress.js';
 
 export class AcademicRepository {
   constructor(private readonly pool: Pool) {}
@@ -40,8 +41,8 @@ export class AcademicRepository {
     return this.snapshot(async db => {
       // LIKE metacharacters are literal user input; values never become SQL.
       const name = search.name ? `%${search.name.replace(/[\\%_]/g, '\\$&')}%` : null;
-      const rut = search.rut ? normalizeRutSearch(search.rut) : null;
-      const where = `FROM cenit.academic_students s JOIN cenit.academic_enrollments e ON e.student_id=s.id JOIN cenit.academic_versions v ON v.id=e.version_id WHERE v.plan_id='nutricion-dietetica' AND v.status='published' AND ($1::text IS NULL OR s.name ILIKE $1) AND ($2::text IS NULL OR s.rut_search=$2)`;
+      const rut = search.rut ? `${compactRut(search.rut)}%` : null;
+      const where = `FROM cenit.academic_students s JOIN cenit.academic_enrollments e ON e.student_id=s.id JOIN cenit.academic_versions v ON v.id=e.version_id WHERE v.plan_id='nutricion-dietetica' AND v.status='published' AND ($1::text IS NULL OR s.name ILIKE $1) AND ($2::text IS NULL OR replace(s.rut_search, '-', '') LIKE $2)`;
       const { rows: count } = await db.query<{ total: string }>(`SELECT count(*)::text AS total ${where}`, [name, rut]);
       const { rows: data } = await db.query<StudentsResponse['data'][number]>(`SELECT s.id,s.name,s.rut ${where} ORDER BY s.name,s.id LIMIT $3 OFFSET $4`, [name, rut, search.pageSize, (search.page - 1) * search.pageSize]);
       return { data, page: search.page, pageSize: search.pageSize, totalItems: Number(count[0]!.total) };

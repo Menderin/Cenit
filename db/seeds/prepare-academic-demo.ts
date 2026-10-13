@@ -8,7 +8,8 @@ import { createAcademicDemoAccounts, academicDemoStudents } from './academic-fix
 import { seedAcademicDemo } from './academic-demo.js';
 
 async function main() {
-  if (process.argv.length > 2 || process.env.APP_ENV !== 'demo') throw new Error('Preparación exclusiva de demostración explícita.');
+  const normalizeLegacyRuts = process.argv[2] === '--normalize-ruts';
+  if (process.argv.length > (normalizeLegacyRuts ? 3 : 2) || (process.argv[2] && !normalizeLegacyRuts) || process.env.APP_ENV !== 'demo') throw new Error('Preparación exclusiva de demostración explícita.');
   if (new URL(databaseUrl()).hostname !== '127.0.0.1') throw new Error('Preparación limitada a PostgreSQL local.');
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
   if (!existsSync(resolve(root, '.local/secrets/auth-demo.json'))) throw new Error('Prepara primero las cuentas originales de login.');
@@ -26,7 +27,7 @@ async function main() {
     if (!ready.installed) throw new Error('Aplica primero la migración académica.');
     await loadCatalog(pool, plan, true);
     await prepareDemoStudentAccounts(pool, extra);
-    await seedAcademicDemo(pool, plan.planId, plan.version, academicDemoStudents([existing, ...extra], plan));
+    await seedAcademicDemo(pool, plan.planId, plan.version, academicDemoStudents([existing, ...extra], plan, normalizeLegacyRuts));
     console.log('Malla publicada y tres perfiles/historiales ficticios preparados. Cuentas originales conservadas; claves adicionales sólo en .local/secrets/academic-demo-accounts.json.');
   } finally { await pool.end(); }
 }

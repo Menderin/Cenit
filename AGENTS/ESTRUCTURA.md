@@ -12,6 +12,8 @@ El repositorio contiene infraestructura, API/contratos académicos y [autenticac
 
 La ampliación de avance añade `academic/components/StudentLookup.tsx` para búsqueda/selección docente y `academic/model/progress-presentation.ts` para etiquetas de estado; `CatalogDetails.tsx` presenta intentos y notas. `academic/api/academic.ts` valida también los contratos de estudiantes/progreso existentes. No se duplican login, endpoints ni modelos de persistencia en frontend.
 
+`packages/contracts/src/academic/rut.ts` comparte formato progresivo, clave compacta de búsqueda y validación módulo 11 entre interfaz, API y preparación explícita. La búsqueda docente admite prefijos; seis tarjetas por página en la interfaz, usando la paginación de API existente. `academic:prepare-demo -- --normalize-ruts` corrige sólo los RUT ficticios anteriores esperados sin sustituir cuentas/historiales; no vive en migraciones ni CD.
+
 `academic/model/course-label.ts` contiene los nombres breves de presentación de las tarjetas. Se eligen por nombre recibido, con fallback al original; no modifica catálogo/API ni nombres completos del detalle.
 
 ```text

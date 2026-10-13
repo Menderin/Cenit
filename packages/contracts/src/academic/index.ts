@@ -1,4 +1,5 @@
 import { Type, type Static } from '@sinclair/typebox';
+export { compactRut, isValidRut, isValidRutSearch, formatRutInput } from './rut.js';
 
 const strict = { additionalProperties: false };
 export const SlugSchema = Type.String({ minLength: 1, maxLength: 64, pattern: '^[A-Za-z0-9_-]+$' });
@@ -47,7 +48,7 @@ export const PlanParamsSchema = Type.Object({ planId: SlugSchema, version: SlugS
 export const StudentParamsSchema = Type.Object({ studentId: IdSchema }, strict);
 export const StudentSearchSchema = Type.Object({
   name: Type.Optional(Type.String({ minLength: 1, maxLength: 200, pattern: '.*\\S.*' })),
-  rut: Type.Optional(Type.String({ minLength: 1, maxLength: 30, pattern: '^[0-9.Kk-]+$' })),
+  rut: Type.Optional(Type.String({ minLength: 1, maxLength: 30, pattern: '^[0-9.Kk-]+$', description: 'Prefijo numérico de RUT o RUT completo (módulo 11). Puntos opcionales, K sin distinguir mayúsculas. Los cuerpos de siete cifras con DV numérico requieren guion para distinguirlos de un prefijo de ocho cifras.' })),
   page: Type.Integer({ minimum: 1, maximum: 100000, default: 1 }),
   pageSize: Type.Integer({ minimum: 1, maximum: 100, default: 20 }),
 }, strict);

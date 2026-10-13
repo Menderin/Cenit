@@ -1,4 +1,4 @@
-import type { StudentSearch } from '@cenit/contracts/academic';
+import { isValidRutSearch, type StudentSearch } from '@cenit/contracts/academic';
 import type { AcademicRepository } from '../repositories/academic.js';
 import { ApiError } from '../../../infrastructure/errors.js';
 export class AcademicError extends ApiError {}
@@ -11,7 +11,10 @@ export class AcademicService {
     if (!plan) throw new AcademicError(404, 'NOT_FOUND', 'Plan o versión inexistente.');
     return { data: plan };
   }
-  students(query: StudentSearch) { return this.repository.students(query); }
+  students(query: StudentSearch) {
+    if (query.rut && !isValidRutSearch(query.rut)) throw new AcademicError(400, 'VALIDATION_ERROR', 'Revisa el formato del RUT y su dígito verificador (módulo 11).');
+    return this.repository.students(query);
+  }
   async progress(studentId: string) {
     const result = await this.repository.progress(studentId);
     if (!result) throw new AcademicError(404, 'NOT_FOUND', 'Estudiante o plan inexistente.');

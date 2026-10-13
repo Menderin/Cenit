@@ -55,7 +55,7 @@ for (const source of ['academic', 'purchases']) {
       let purchaseId: string | undefined;
       if (source === 'academic') {
         await loadCatalog(pool, catalog, true);
-        await seedAcademicDemo(pool, catalog.planId, catalog.version, [{ id: randomUUID(), accountId: student.id, name: student.name, rut: '00.000.001-k', attempts: [{ code: catalog.courses[0]!.code, attempt: { attemptNumber: 1, status: 'passed', grade: '5,2' } }] }]);
+        await seedAcademicDemo(pool, catalog.planId, catalog.version, [{ id: randomUUID(), accountId: student.id, name: student.name, rut: '20.123.456-5', attempts: [{ code: catalog.courses[0]!.code, attempt: { attemptNumber: 1, status: 'passed', grade: '5,2' } }] }]);
       } else {
         const saved = await new PurchaseRepository(pool).create({ ...structuredClone(manualPurchaseExample), operationId: randomUUID() }, credentials.find(account => account.role === 'administrativo')!.id);
         purchaseId = saved.record.id;
