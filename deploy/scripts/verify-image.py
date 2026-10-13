@@ -23,13 +23,15 @@ class ImageCheck:
         self.network = self.prefix + '-net'
         self.database = self.prefix + '-db'
         self.application = self.prefix + '-app'
+        self.proxy = self.prefix + '-proxy'
+        self.phase = 'metadata'
 
     def run(self, *args, input_text=None, timeout=120):
         result = subprocess.run([self.engine, *args], input=input_text, text=True,
                                 capture_output=True, timeout=timeout)
         if result.returncode:
             # Never echo SQL, database URLs, complete container logs or credentials.
-            raise RuntimeError('Image verification command failed: ' + args[0])
+            raise RuntimeError('Image verification command failed: ' + args[0] + ' (' + self.phase + ')')
         return result.stdout
 
     def wait_database(self):
@@ -52,7 +54,7 @@ class ImageCheck:
 (async () => {
  const r = await fetch('http://127.0.0.1:3000/health/ready', {signal:AbortSignal.timeout(4000)});
  if (r.status !== 200 || JSON.stringify(await r.json()) !== '{"status":"ready"}') process.exit(1);
- for (const path of ['/', '/compras', '/academico']) {
+ for (const path of ['/', '/login', '/compras', '/academico', '/administracion/compras/nueva']) {
   const page = await fetch('http://127.0.0.1:3000' + path, {signal:AbortSignal.timeout(4000)});
   if (page.status !== 200 || !page.headers.get('content-type')?.includes('text/html')) process.exit(1);
  }
@@ -103,6 +105,7 @@ class ImageCheck:
                              '-v', f'{files / "migrator-url"}:/run/secrets/database-url:ro',
                              self.image, 'node', '/app/deploy/migrate.cjs', timeout=180)
                 self.run('run', '-d', '--name', self.application, '--network', self.network,
+                         '--network-alias', 'cenit-app',
                          '--memory=512m', '--cpus=1', '-e', 'DATABASE_URL_FILE=/run/secrets/database-url',
                          '-v', f'{files / "app-url"}:/run/secrets/database-url:ro', self.image)
                 deadline = time.monotonic() + 90
@@ -114,7 +117,40 @@ class ImageCheck:
                         if time.monotonic() >= deadline:
                             raise RuntimeError('Release image did not satisfy HTTP readiness/HTML contract.')
                         time.sleep(2)
+                self.run('run', '-d', '--name', self.proxy, '--network', self.network,
+                         '--network-alias', 'proxy', '--user', '101:101', '--read-only',
+                         '--tmpfs', '/var/cache/nginx:rw,size=64m,mode=1777',
+                         '--tmpfs', '/var/run:rw,size=1m,mode=1777', '--memory=128m',
+                         '-v', f'{ROOT / "deploy/nginx/cenit.conf"}:/etc/nginx/conf.d/default.conf:ro',
+                         '--entrypoint', 'nginx', images['nginx'], '-g', 'daemon off;')
+                self.phase = 'nginx configuration'
+                self.run('exec', self.proxy, 'nginx', '-t')
+                self.phase = 'nginx body limits'
+                self.run('exec', self.application, 'node', '-e', """
+const http = require('node:http');
+async function request(path, method, bytes) {
+ return new Promise((resolve,reject) => {
+  const r=http.request({hostname:'proxy',port:8080,path,method,
+    headers:{'Content-Type':'application/json','Content-Length':bytes}}, response => {
+      response.resume(); response.on('end',()=>resolve(response.statusCode));
+    });
+  r.on('error',reject); r.setTimeout(4000,()=>r.destroy(new Error('timeout')));
+  r.end('x'.repeat(bytes));
+ });
+}
+(async()=>{
+ // No session: a permitted-size purchase POST reaches authentication (401), not 413.
+ if(await request('/api/v1/purchases','POST',200*1024)!==401) process.exit(1);
+ for(const [path,method,bytes] of [
+  ['/api/v1/purchases','POST',513*1024],
+  ['/api/v1/purchases','GET',200*1024],
+  ['/api/v1/auth/login','POST',200*1024]]) {
+   if(await request(path,method,bytes)!==413) process.exit(1);
+ }
+})().catch(()=>process.exit(1));
+""", timeout=30)
                 self.run('stop', '--time', '10', self.database)
+                self.phase = 'database disconnect'
                 # Allow pools to observe disconnects, then require readiness to reject DB failure.
                 self.run('exec', self.application, 'node', '-e', """
 (async () => {
@@ -126,8 +162,12 @@ class ImageCheck:
  process.exit(1);
 })().catch(() => process.exit(1));
 """, timeout=50)
+                self.run('start', self.database)
+                self.phase = 'database recovery'
+                self.wait_database()
+                self.check_http()
             finally:
-                for name in (self.application, self.database):
+                for name in (self.proxy, self.application, self.database):
                     subprocess.run([self.engine, 'rm', '-f', '-v', name], capture_output=True, timeout=30)
                 subprocess.run([self.engine, 'network', 'rm', self.network], capture_output=True, timeout=30)
 

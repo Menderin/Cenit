@@ -13,6 +13,9 @@ Environment=NODE_ENV=production
 Environment=APP_ENV=demo
 Environment=HOST=0.0.0.0
 Environment=PORT=3000
+# Authorized HTTP rehearsal on the university network, with fictitious accounts.
+Environment=AUTH_COOKIE_SECURE=false
+Environment=AUTH_ALLOWED_ORIGINS=http://172.16.13.103:8081
 Environment=DATABASE_URL_FILE=/run/secrets/database-url
 Secret=cenit-app-database-url,type=mount,target=database-url,uid=1000,gid=1000,mode=0400
 NoNewPrivileges=true

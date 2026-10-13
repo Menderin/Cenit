@@ -13,7 +13,6 @@ import { buildAcademicApp } from '../../apps/api/src/app.js';
 import { AcademicRepository } from '../../apps/api/src/modules/academic/repositories/academic.js';
 import { AuthRepository } from '../../apps/api/src/modules/auth/repositories/auth.js';
 import { AuthService, sessionHash } from '../../apps/api/src/modules/auth/services/auth.js';
-import { SESSION_COOKIE } from '../../apps/api/src/modules/auth/routes/index.js';
 import { createDemoCredentials, demoPasswordKeys, demoPasswordsFromEnv, prepareDemoAccounts, privateDemoCredentials, type DemoPasswords } from '../../db/seeds/auth-demo.js';
 import { loadCatalog, readCatalog } from '../../db/seeds/load-academic.js';
 
