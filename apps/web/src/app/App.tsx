@@ -13,6 +13,7 @@ import { Personnel } from '../features/administration/pages/Personnel.js';
 import { Assets } from '../features/administration/pages/Assets.js';
 import { AccessLayout } from '../features/auth/components/AccessLayout.js';
 import { SessionWarning } from '../features/auth/components/SessionWarning.js';
+import { Academic } from '../features/academic/pages/Academic.js';
 
 function AreaUnderConstruction({ title }: { title: string }) {
   const heading = useRef<HTMLHeadingElement>(null);
@@ -25,6 +26,9 @@ function AreaUnderConstruction({ title }: { title: string }) {
 
 export function App() {
   const auth = useAuth();
+  if (auth.status === 'authenticated' && auth.session && auth.session.account.role !== 'administrativo') {
+    return <Routes><Route path="/academico" element={<Academic key={auth.session.account.id} />} /><Route path="*" element={<Navigate to="/academico" replace />} /></Routes>;
+  }
   let content;
   if (auth.status === 'checking' || auth.status === 'closing') content = <>
     <h1 id="access-title">Cenit</h1>

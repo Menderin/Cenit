@@ -1,18 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
-import { readFileSync } from 'node:fs';
-import type { DemoCredentials } from '../../db/seeds/auth-demo.js';
+import { credential, login } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 
-const credential = (role: string) => (JSON.parse(readFileSync('tmp/e2e-auth/credentials.json', 'utf8')) as DemoCredentials).find(c => c.role === role)!;
-async function login(page: Page, role = 'docente') {
-  const account = credential(role);
-  await page.goto('/login');
-  await page.getByLabel('Correo electrónico', { exact: true }).fill(account.email);
-  await page.getByLabel('Contraseña', { exact: true }).fill(account.password);
-  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible();
-  return account;
-}
 async function logout(page: Page) {
   const response = page.waitForResponse(response =>
     new URL(response.url()).pathname === '/api/v1/auth/logout' && response.request().method() === 'POST');
@@ -27,12 +16,12 @@ for (const role of ['administrativo', 'docente', 'estudiante']) {
   test(`login, recarga y aislamiento de rutas: ${role}`, async ({ page }) => {
     const account = await login(page, role), path = role === 'administrativo' ? '/administracion' : '/academico';
     await expect(page).toHaveURL(new RegExp(`${path}$`));
-    await expect(page.getByText(account.name, { exact: true })).toBeVisible();
-    await page.reload(); await expect(page.getByText(account.name, { exact: true })).toBeVisible();
+    await expect(page.locator('.academic-account, .admin-account').getByText(account.name, { exact: true })).toBeVisible();
+    await page.reload(); await expect(page.locator('.academic-account, .admin-account').getByText(account.name, { exact: true })).toBeVisible();
     await page.goto(path === '/administracion' ? '/academico' : '/administracion');
     await expect(page).toHaveURL(new RegExp(`${path}$`));
-    await expect(page.getByRole('heading', { name: role === 'administrativo' ? 'Administración' : 'Área académica', exact: true })).toBeVisible();
-    if (role !== 'administrativo') await expect(page.getByText('Este espacio está en construcción.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: role === 'administrativo' ? 'Administración' : 'Malla curricular', exact: true })).toBeVisible();
+    if (role !== 'administrativo') await expect(page.getByRole('region', { name: 'Asignaturas por semestre' })).toBeVisible();
     else await expect(page.getByRole('link', { name: 'Ir al sistema de compra', exact: true })).toBeVisible();
     await page.goto('/prototipo.html'); await expect(page).toHaveURL(new RegExp(`${path}$`));
     await page.goto('/compras'); await expect(page).toHaveURL(new RegExp(`${path}$`));
@@ -51,7 +40,7 @@ test('logout invalida cookie, atrás no restaura cuenta y permite otra identidad
   const account = await login(page, 'administrativo');
   // Leave a real protected document in history, rather than returning to about:blank.
   await page.goto('/administracion?prueba=historial');
-  await expect(page.getByText(account.name, { exact: true })).toBeVisible();
+  await expect(page.locator('.academic-account, .admin-account').getByText(account.name, { exact: true })).toBeVisible();
   const cookie = (await context.cookies()).find(c => c.name === 'cenit_session')!;
   await page.getByRole('button', { name: 'Cerrar sesión' }).click();
   await expect(page).toHaveURL(/\/login$/);
@@ -60,7 +49,7 @@ test('logout invalida cookie, atrás no restaura cuenta y permite otra identidad
   await page.goBack(); await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
   await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
   const second = await login(page, 'estudiante');
-  await expect(page.getByText(second.name, { exact: true })).toBeVisible();
+  await expect(page.locator('.academic-account').getByText(second.name, { exact: true })).toBeVisible();
   await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
 });
 test('expiración del reloj del navegador oculta cuenta y pide login', async ({ page }) => {
@@ -193,7 +182,7 @@ test('normaliza sólo el correo y permite teclado y carga antes del éxito real'
   expect(submitted?.email === account.email && submitted?.password === account.password).toBe(true);
   release!();
   await expect(page).toHaveURL(/\/academico$/);
-  await expect(page.getByRole('heading', { name: 'Área académica', exact: true })).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Malla curricular', exact: true })).toBeFocused();
   await logout(page);
   await expect(page).toHaveURL(/\/login$/);
   await expect(password).toHaveValue('');

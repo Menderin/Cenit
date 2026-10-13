@@ -6,9 +6,15 @@ Runtime compilado: `apps/api/src/runtime.ts` compone repositorios, salud y front
 
 Mapa revisado el 11 de octubre de 2026. Esta guía concreta la organización de la sección 4 del [SDD](SDD.md); no cambia stack, contratos ni alcance. Leer también [las instrucciones para agentes](../AGENTS.md) y [la guía de colaboración](../CONTRIBUTING.md). Si cambian responsabilidades o rutas, actualizar este mapa en el mismo PR.
 
-El repositorio contiene infraestructura, API/contratos académicos y [autenticación local](../Docs/AUTENTICACION.md), con login/logout visual integrado y destinos de área en construcción por rol: `/administracion` y `/academico`. `features/auth/components/AccessLayout.tsx` y `features/auth/access.css` contienen el marco de acceso; `app/App.tsx` compone los avisos de construcción. La lógica existente de sesión y los contratos siguen siendo compartidos. Los módulos de compras/malla aún no están implementados en esas pantallas. Consultar [el estado académico](../Docs/ACADEMICO.md): la identidad UUID está definida, pero migrar perfiles/progreso sigue siendo un entregable separado. Las carpetas se completan cuando una tarea necesita código real; no crear funciones vacías para ocuparlas.
+El repositorio contiene infraestructura, API/contratos académicos y [autenticación local](../Docs/AUTENTICACION.md). La rama `malla-interactiva` añade la primera vista de `/academico`; `/administracion` conserva el módulo de solicitudes persistentes y el laboratorio de ejemplos procedentes de develop. `features/auth/components/AccessLayout.tsx` y `features/auth/access.css` conservan el marco de acceso; `app/App.tsx` monta `features/academic/pages/Academic.tsx` únicamente para sesión académica. El layout/estilos propios viven en `features/academic/academic.css`, la lectura validada en `academic/api/academic.ts`, la agrupación en `academic/model/group-by-semester.ts` y el detalle modal nativo en `academic/components/CatalogDetails.tsx`. Se reutilizan sesión/transporte y QueryClient existentes. La nueva vista sigue pendiente de revisión/integración; perfiles/progreso y reglas completas mantienen los límites de [ACADEMICO.md](../Docs/ACADEMICO.md). Las carpetas se completan cuando una tarea necesita código real; no crear funciones vacías para ocuparlas.
 
 ## 1. Mapa de carpetas existentes
+
+La ampliación de avance añade `academic/components/StudentLookup.tsx` para búsqueda/selección docente y `academic/model/progress-presentation.ts` para etiquetas de estado; `CatalogDetails.tsx` presenta intentos y notas. `academic/api/academic.ts` valida también los contratos de estudiantes/progreso existentes. No se duplican login, endpoints ni modelos de persistencia en frontend.
+
+`packages/contracts/src/academic/rut.ts` comparte formato progresivo, clave compacta de búsqueda y validación módulo 11 entre interfaz, API y preparación explícita. La búsqueda docente admite prefijos; seis tarjetas por página en la interfaz, usando la paginación de API existente. `academic:prepare-demo -- --normalize-ruts` corrige sólo los RUT ficticios anteriores esperados sin sustituir cuentas/historiales; no vive en migraciones ni CD.
+
+`academic/model/course-label.ts` contiene los nombres breves de presentación de las tarjetas. Se eligen por nombre recibido, con fallback al original; no modifica catálogo/API ni nombres completos del detalle.
 
 ```text
 Cenit/
@@ -27,7 +33,7 @@ Cenit/
 │       │   └── academic/{routes,services,repositories}/
 │       └── infrastructure/{config,database,plugins}/
 ├── packages/contracts/src/{common,purchases,academic,auth}/
-├── db/{schema,migrations,seeds,pending}/
+├── db/{schema,migrations,seeds}/
 ├── catalogs/academic/
 ├── tests/{integration,e2e,infrastructure}/
 ├── deploy/
@@ -44,7 +50,9 @@ Cenit/
 
 Las llaves agrupan subcarpetas, no son nombres literales. No duplicar estas raíces con `front`, `back`, `bd`, `database` o `docs`; respetar `db` y `Docs`, también en Linux.
 
-`db/pending` contiene propuestas SQL con dependencias sin resolver; no se ejecutan desde el migrador ni se añaden automáticamente al journal. La propuesta académica depende de la tabla de cuentas revisada. Su uso en una base descartable de integración no acredita una migración de producción. TypeBox público vive en contratos; los schemas Drizzle y migraciones permanecen en `db`.
+El snapshot `db/migrations/meta/0007_snapshot.json` reúne compras y progreso académico para Drizzle/readiness. Los SQL anteriores se conservan, aunque ambas ramas usaron prefijo `0003`. El timestamp histórico académico se registra como alias en `meta/_legacy.json`; el journal le asigna uno posterior a compras para preservar la compatibilidad de la imagen anterior de compras. Ningún registro aplicado se reescribe. `tests/integration/migration-branches.test.ts` comprueba actualización desde cada historial sin perder datos. `playwright.production.config.ts` incluye auth/compras y académico contra el servidor compilado, reutilizando el harness existente.
+
+El historial académico de esta rama usa `db/schema/academic-progress.ts` y la migración `0003_academic_progress`, con FK a cuentas UUID de login; la plantilla pendiente con marcadores fue retirada. `db/seeds/academic-demo.ts` prepara perfiles de cuentas existentes; `academic-fixtures.ts` define datos ficticios y `prepare-academic-demo.ts` coordina preparación local explícita. Las dos cuentas de estudiante adicionales se preparan reutilizando auth; sus credenciales no viven en el repo. TypeBox público vive en contratos; los schemas Drizzle y migraciones permanecen en `db`. Revisión/integración de la rama no se acreditan con esta preparación local.
 
 ## 2. Frontend: `apps/web`
 

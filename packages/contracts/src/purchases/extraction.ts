@@ -94,4 +94,3 @@ export function createReviewDraft(response: ExtractionResponse): ExtractionRevie
   const values = (fields: Record<string, { value: string | null }>) => Object.fromEntries(Object.entries(fields).map(([key, field]) => [key, field.value]));
   return { header: values(response.data.header), lines: response.data.lines.map(values), administrative: values(response.data.administrative) } as ExtractionReviewDraft;
 }
-
