@@ -9,8 +9,10 @@ export type Student = StudentsResponse['data'][number];
 export function StudentLookup({ accountId, selected, onSelect }: { accountId: string; selected: Student | null; onSelect: (student: Student | null) => void }) {
   const [name, setName] = useState('');
   const [rut, setRut] = useState('');
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const switchButton = useRef<HTMLButtonElement>(null);
+  const nameInput = useRef<HTMLInputElement>(null);
+  const wasExpanded = useRef(true);
   const rutInput = useRef<HTMLInputElement>(null);
   const rutCaret = useRef<number | null>(null);
   useLayoutEffect(() => {
@@ -18,6 +20,10 @@ export function StudentLookup({ accountId, selected, onSelect }: { accountId: st
     rutCaret.current = null;
   }, [rut]);
   useEffect(() => { if (selected && !expanded) switchButton.current?.focus(); }, [selected?.id, expanded]);
+  useEffect(() => {
+    if (expanded && !wasExpanded.current) nameInput.current?.focus();
+    wasExpanded.current = expanded;
+  }, [expanded]);
   const [search, setSearch] = useState<StudentSearch>({ page: 1, pageSize: 6 });
   const input: StudentSearch = { page: 1, pageSize: 6, ...(name.trim() ? { name: name.trim() } : {}), ...(rut.trim() ? { rut: rut.trim() } : {}) };
   const validation = rut && !isValidRutSearch(rut) ? 'Revisa el formato del RUT y su dígito verificador (módulo 11).' : !Value.Check(StudentSearchSchema, input) ? 'Revisa el nombre y el formato del RUT.' : '';
@@ -44,18 +50,17 @@ export function StudentLookup({ accountId, selected, onSelect }: { accountId: st
     setRut(formatted); onSelect(null);
   };
   return <section className={`academic-students${expanded ? '' : ' academic-students--collapsed'}`} aria-label="Estudiantes de Nutrición">
-    <div className="academic-students__heading">
-      {selected && <p className="academic-student-identity"><strong>{selected.name}</strong><span>RUT {selected.rut}</span></p>}
-      <button ref={switchButton} type="button" className="academic-button" aria-expanded={expanded} aria-controls="academic-students-search" onClick={() => setExpanded(!expanded)}><MagnifyingGlass size={14} aria-hidden="true" />{expanded ? 'Ocultar búsqueda' : selected ? 'Cambiar estudiante' : 'Buscar estudiante'}</button>
-      {selected && <button type="button" className="academic-link-button" onClick={() => { onSelect(null); switchButton.current?.focus(); }}>Ver sólo catálogo</button>}
-    </div>
+    {selected && <div className="academic-students__heading">
+      <p className="academic-student-identity"><strong>{selected.name}</strong><span>RUT {selected.rut}</span></p>
+      <button ref={switchButton} type="button" className="academic-button" aria-expanded={expanded} aria-controls="academic-students-search" onClick={() => { setExpanded(true); onSelect(null); }}><MagnifyingGlass size={16} aria-hidden="true" />Cambiar estudiante</button>
+      <button type="button" className="academic-link-button" onClick={() => { setExpanded(true); onSelect(null); }}>Ver sólo catálogo</button>
+    </div>}
     <div id="academic-students-search" hidden={!expanded}>
     <form className="academic-students__search" onSubmit={submit}>
-      <label>Nombre<input value={name} onChange={e => { setName(e.target.value); onSelect(null); }} maxLength={200} placeholder="Buscar por nombre" /></label>
-      <label>RUT<input ref={rutInput} value={rut} onChange={changeRut} maxLength={30} aria-invalid={Boolean(rut && validation)} aria-describedby="academic-rut-help" placeholder="20.123.456-5" autoCapitalize="characters" spellCheck={false} /></label>
+      <label>Nombre<input ref={nameInput} value={name} onChange={e => { setName(e.target.value); onSelect(null); }} maxLength={200} placeholder="Buscar por nombre" /></label>
+      <label>RUT<input ref={rutInput} value={rut} onChange={changeRut} maxLength={30} aria-invalid={Boolean(rut && validation)} placeholder="20.123.456-5" autoCapitalize="characters" spellCheck={false} /></label>
       <button type="button" className="academic-button" onClick={() => { setName(''); setRut(''); onSelect(null); setSearch({ page: 1, pageSize: 6 }); }}>Limpiar</button>
     </form>
-    <p id="academic-rut-help" className="academic-students__hint">Búsqueda automática por nombre o RUT. Puedes escribir sólo el comienzo del RUT.</p>
     {validation && <p role="alert">{validation}</p>}
     {!validation && (waiting || query.isFetching) && <p role="status">Buscando estudiantes…</p>}
     {!validation && !waiting && query.error && <div className="academic-inline-error"><p role="alert">{query.error.message}</p><button className="academic-button" onClick={() => { void query.refetch(); }}>Reintentar búsqueda</button></div>}

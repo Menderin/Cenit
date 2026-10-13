@@ -4,7 +4,7 @@ import { login } from './support/browser.js';
 const courses = (page: import('@playwright/test').Page) => page.getByRole('button', { name: /^Ver asignatura:/ });
 async function chooseStudent(page: import('@playwright/test').Page, name: string) {
   await expect(page.locator('.academic-students')).toBeVisible();
-  const change = page.getByRole('button', { name: /^(Cambiar estudiante|Buscar estudiante)$/ });
+  const change = page.getByRole('button', { name: /^Cambiar estudiante$/ });
   if (await change.isVisible()) await change.click();
   await page.locator('.academic-students__results').getByRole('button', { name: new RegExp(`^${name}`) }).click();
 }
@@ -36,7 +36,9 @@ test('detalle con teclado, relaciones pendientes y ausencia desconocida', async 
   const card = page.getByRole('button', { name: 'Ver asignatura: Inocuidad alimentaria', exact: true });
   await card.focus(); await card.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Inocuidad alimentaria' });
-  await expect(dialog).toContainText('Interpretación pendiente');
+  await expect(dialog).toContainText('Relaciones entre asignaturas');
+  await expect(dialog).toContainText('No indican por sí solas los requisitos para inscribir la asignatura.');
+  await expect(dialog).not.toContainText('En revisión');
   await expect(dialog).toContainText('Ciencia de los alimentos');
   await expect(dialog.getByRole('button', { name: 'Cerrar detalle' })).toBeFocused();
   await page.keyboard.press('Escape'); await expect(card).toBeFocused();
@@ -48,7 +50,7 @@ test('detalle con teclado, relaciones pendientes y ausencia desconocida', async 
   await expect(card).toBeFocused();
   await expect(card).toHaveCSS('outline-style', 'none');
   await page.getByRole('button', { name: 'Ver asignatura: Form. general I (Formación general electiva I)', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Esto no confirma la ausencia de prerrequisitos.');
+  await expect(page.getByRole('dialog')).toContainText('Todavía no hay información de prerrequisitos para esta asignatura.');
   await expect(page.getByRole('dialog').getByText('Sin prerrequisitos.', { exact: true })).toHaveCount(0);
 });
 
@@ -175,11 +177,12 @@ test('estudiante consulta RUT, estados e intentos propios y el docente ve el mis
 });
 
 test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezclar datos', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await login(page);
   const results = page.locator('.academic-students__results');
-  await expect(results).toBeHidden();
-  await page.getByRole('button', { name: 'Buscar estudiante', exact: true }).click();
+  await expect(results).toBeVisible();
   await expect(results.getByRole('button')).toHaveCount(3);
+  await page.screenshot({ path: testInfo.outputPath('busqueda-docente-1440.png') });
   await page.getByLabel('RUT', { exact: true }).fill('211234563');
   await expect(results.getByRole('button')).toHaveCount(1);
   await results.getByRole('button', { name: /^Camila Demo/ }).click();
@@ -236,7 +239,6 @@ test('un historial tardío no sustituye al estudiante seleccionado después', as
 
 test('búsqueda automática por coincidencias y formato/verificación de RUT mientras se escribe', async ({ page }) => {
   await login(page);
-  await page.getByRole('button', { name: 'Buscar estudiante', exact: true }).click();
   const results = page.locator('.academic-students__results');
   const name = page.getByLabel('Nombre', { exact: true });
   const rut = page.getByLabel('RUT', { exact: true });
@@ -289,7 +291,6 @@ test('una respuesta de búsqueda tardía no reemplaza las coincidencias actuales
     await new Promise<void>(resolve => { release = resolve; });
     await route.fulfill({ response }).catch(() => {});
   });
-  await page.getByRole('button', { name: 'Buscar estudiante', exact: true }).click();
   await page.getByLabel('Nombre', { exact: true }).fill('Camila');
   await expect.poll(() => Boolean(release)).toBe(true);
   await page.getByLabel('Nombre', { exact: true }).fill('Tomás');
@@ -311,7 +312,6 @@ test('40 coincidencias se recorren en páginas de seis y un filtro nuevo vuelve 
     await route.fulfill({ json: { data, page: current, pageSize: 6, totalItems: total } });
   });
   await login(page);
-  await page.getByRole('button', { name: 'Buscar estudiante', exact: true }).click();
   const results = page.locator('.academic-students__results');
   await expect(results.getByRole('button')).toHaveCount(6);
   await expect(page.getByRole('status')).toContainText('40 estudiantes encontrados · Mostrando 1–6');
@@ -348,9 +348,12 @@ test('malla compacta conserva contexto, espacio de lectura y navegación plegabl
   await page.setViewportSize({ width: 1280, height: 720 });
   await login(page);
   await expect(courses(page)).toHaveCount(52);
-  await expect(page.getByLabel('Nombre', { exact: true })).toBeHidden();
-  await expect(page.getByText('Plan 2027', { exact: true })).toBeVisible();
-  await expect(page.getByText('Prerrequisitos en revisión', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Nombre', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Buscar estudiante', exact: true })).toHaveCount(0);
+  await expect(page.getByText('Plan 2027', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Búsqueda automática por nombre o RUT.', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('Prerrequisitos en revisión', { exact: true })).toHaveCount(0);
+  expect((await page.getByLabel('Nombre', { exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(36);
   await expect(page.locator('.academic-semester__header h2')).toHaveText(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX–X']);
   await chooseStudent(page, 'Estudiante Demo');
   await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
@@ -361,7 +364,7 @@ test('malla compacta conserva contexto, espacio de lectura y navegación plegabl
     const cards = [...document.querySelectorAll('.academic-semester:first-child .academic-course')].map(element => element.getBoundingClientRect());
     return { first: cards[0]!.top, completeRows: cards.filter(card => card.bottom <= visibleBottom).length };
   });
-  expect(density.first).toBeLessThan(220);
+  expect(density.first).toBeLessThan(230);
   expect(density.completeRows).toBeGreaterThanOrEqual(6);
   await page.getByRole('button', { name: 'Ocultar navegación', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'Área académica' })).toBeHidden();

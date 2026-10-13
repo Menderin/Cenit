@@ -6,7 +6,7 @@ import { progressLabels, type CourseProgress } from '../model/progress-presentat
 import type { Student } from './StudentLookup.js';
 
 function Rule({ rule, plan }: { rule: Prerequisite; plan: AcademicPlan }) {
-  if (rule.kind === 'pending') return <p className="academic-detail__explanation">Las relaciones están pendientes de interpretación; no confirman habilitación para cursar.</p>;
+  if (rule.kind === 'pending') return <p className="academic-detail__explanation">Requisitos aún no informados.</p>;
   if (rule.kind === 'unsupported') return <p className="academic-detail__explanation">{rule.description}</p>;
   if (rule.kind === 'none') return <p>Sin prerrequisitos.</p>;
   if (rule.kind === 'course') return <p>{plan.courses.find(c => c.code === rule.code)?.name ?? rule.code}</p>;
@@ -22,6 +22,7 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
   }, []);
   const incoming = plan.prerequisiteEdges.filter(edge => edge.toCode === course.code);
   const outgoing = plan.prerequisiteEdges.filter(edge => edge.fromCode === course.code);
+  const pending = course.prerequisites.kind === 'pending';
   return <dialog ref={ref} className="academic-detail" aria-labelledby="academic-detail-title" onClose={onClose} onClick={event => {
     if (event.target === event.currentTarget) ref.current?.close();
   }}>
@@ -36,17 +37,15 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
           </dl>
           {course.semester !== course.semesterEnd && <p className="academic-note">Rotaciones del intervalo {semesterLabel(course.semester, course.semesterEnd).replace('Semestres ', '')}, sin un orden asignado entre ellas.</p>}
           <section className="academic-detail__section" aria-labelledby="academic-rule-title">
-            <h3 id="academic-rule-title">Prerrequisitos</h3>
-            {(course.prerequisites.kind === 'pending' || course.prerequisites.kind === 'unsupported') && <span className="academic-tag">{course.prerequisites.kind === 'pending' ? 'Interpretación pendiente' : 'Regla no soportada'}</span>}
-            <Rule rule={course.prerequisites} plan={plan} />
-            {(incoming.length + outgoing.length > 0) && <h4 className="academic-relations-title">Relaciones observadas</h4>}
-            {[{ title: 'Hacia este ramo', edges: incoming, from: true }, { title: 'Desde este ramo', edges: outgoing, from: false }].map(group => group.edges.length > 0 && <div className="academic-relations" key={group.title}>
+            <h3 id="academic-rule-title">{pending ? 'Relaciones entre asignaturas' : 'Prerrequisitos'}</h3>
+            {pending ? <p className="academic-detail__explanation">Relaciones de la malla de referencia. No indican por sí solas los requisitos para inscribir la asignatura.</p> : <Rule rule={course.prerequisites} plan={plan} />}
+            {!pending && (incoming.length + outgoing.length > 0) && <h4 className="academic-relations-title">Relaciones de la malla</h4>}
+            {[{ title: 'Hacia esta asignatura', edges: incoming, from: true }, { title: 'Desde esta asignatura', edges: outgoing, from: false }].map(group => group.edges.length > 0 && <div className="academic-relations" key={group.title}>
               <h4>{group.title}</h4><ul>{group.edges.map(edge => <li key={`${edge.fromCode}-${edge.toCode}`}>
                 <span>{plan.courses.find(c => c.code === (group.from ? edge.fromCode : edge.toCode))?.name}</span>
-                <small>{edge.interpretation === 'pending' ? 'En revisión' : 'Relación confirmada'}</small>
               </li>)}</ul>
             </div>)}
-            {incoming.length + outgoing.length === 0 && <p className="academic-detail__explanation">Sin relaciones registradas. Esto no confirma la ausencia de prerrequisitos.</p>}
+            {pending && incoming.length + outgoing.length === 0 && <p className="academic-detail__explanation">Todavía no hay información de prerrequisitos para esta asignatura.</p>}
           </section>
           {progress && student && <details className="academic-detail__section academic-disclosure">
             <summary>Historial de intentos <span>{progress.attemptCount}</span></summary>
@@ -57,7 +56,6 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
           <details className="academic-detail__section academic-disclosure academic-plan-info">
             <summary>Información del plan</summary>
             <dl className="academic-facts"><div><dt>Plan</dt><dd>{plan.name}</dd></div><div><dt>Versión</dt><dd>{plan.version}</dd></div><div><dt>Código interno</dt><dd>{course.code}</dd></div>{course.officialCode && <div><dt>Código oficial</dt><dd>{course.officialCode}</dd></div>}</dl>
-            {course.prerequisites.kind === 'pending' && <p className="academic-detail__explanation">{course.prerequisites.description}</p>}
           </details>
       </div>
     </div>

@@ -82,7 +82,7 @@ export function Academic() {
             <div><h1 ref={heading} tabIndex={-1}>Malla curricular</h1><p className="academic-toolbar__subtitle">{plan?.name ?? 'Nutrición y Dietética'}{plan?.isExample && ' · Plan de ejemplo'}</p></div>
           </div>
           <div className="academic-toolbar__tools">
-            {version && (available!.versions.length > 1 ? <label className="academic-version">Plan<select aria-label="Versión del plan" value={version} onChange={event => { setDetail(null); setSelectedVersion(event.target.value); }}>{available!.versions.map(v => <option value={v.version} key={v.version}>{v.version}</option>)}</select></label> : <span className="academic-plan-version">Plan {version.replace(/-r\d+$/, '')}</span>)}
+            {version && available!.versions.length > 1 && <label className="academic-version">Plan<select aria-label="Versión del plan" value={version} onChange={event => { setDetail(null); setSelectedVersion(event.target.value); }}>{available!.versions.map(v => <option value={v.version} key={v.version}>{v.version}</option>)}</select></label>}
             <span className="academic-tag">Demostración</span>
             <button type="button" className="academic-mobile-logout academic-icon-button" aria-label="Cerrar sesión" onClick={() => { void auth.logout(); }}><SignOut size={18} aria-hidden="true" /></button>
           </div>
@@ -103,7 +103,7 @@ export function Academic() {
               {!progress.error && progress.data && !matchingProgress && <p role="status">El historial pertenece a la versión {progress.data.plan.version}. Selecciona esa versión para consultarlo sobre la malla.</p>}
               </>}
             </section>
-            <div className="academic-board-meta"><span className="academic-catalog-note"><Info size={14} aria-hidden="true" />Prerrequisitos en revisión</span>{boardOverflow && <span className="academic-scroll-hint">Desplaza para ver más <CaretRight size={12} aria-hidden="true" /></span>}</div>
+            {boardOverflow && <div className="academic-board-meta"><span className="academic-scroll-hint">Desplaza para ver más <CaretRight size={12} aria-hidden="true" /></span></div>}
             <p id="academic-scroll-hint" className="academic-sr-only">Asignaturas por semestre. Abre una asignatura para consultar su nombre completo, historial y prerrequisitos. Usa las flechas del teclado para recorrer el tablero cuando no quepa completo.</p>
             <div ref={board} className="academic-board" tabIndex={0} role="region" aria-label="Asignaturas por semestre" aria-describedby="academic-scroll-hint">
               <div className="academic-columns" style={{ '--semester-count': groups.length } as CSSProperties}>

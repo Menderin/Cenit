@@ -67,6 +67,14 @@ El plugin recibe `authenticate(request)` desde login y espera `{accountId,role}`
 
 ## Comandos
 
+### Ajuste puntual de UI/UX — 13 de octubre
+
+Por petición de Gael, se conserva la malla compacta original de 68 px, columnas/títulos, barra lateral y escala del detalle. Sólo las acciones superiores y los campos Nombre/RUT pasan discretamente de 32 a 36 px. Nombre/RUT y los estudiantes disponibles aparecen directamente al entrar como docente, sin «Buscar estudiante» ni «Ocultar búsqueda». La selección recoge la búsqueda y permite «Cambiar estudiante». Al entrar se conserva el foco del título; al cambiar estudiante el foco va a Nombre. Se mantienen búsqueda automática y combinación AND. Login/compras conservan su escala anterior.
+
+Se retiran «Plan 2027» cuando existe una única versión, la ayuda textual de búsqueda y «Prerrequisitos en revisión» del tablero. La versión sigue en el detalle y el selector aparece cuando hay varias versiones. El detalle simplifica etiquetas repetidas y mantiene una aclaración contextual sobre las relaciones, sin confirmar ausencia, AND/OR ni habilitación. Catálogo/API, permisos y preparación de datos permanecen intactos. Las comprobaciones se ejecutan una vez cerrado este ajuste visual, conforme a lo solicitado por Gael.
+
+Verificación final con Node 24.21.0/npm 11.19.0: lint, typecheck, catálogo, 75 unitarias, 90 de integración PostgreSQL y build completo correctos. Los 49 recorridos de Chrome quedaron verificados (48 en la ejecución general y el recorrido de densidad repetido con éxito tras ajustar sólo su posición esperada a los controles de 36 px); las seis filas en 1280×720 y las 52 tarjetas en 1440×900 siguen exigidas. Los 19 E2E académicos en WebKit también pasaron contra el servidor compilado y PostgreSQL descartable. Capturas de escritorio/móvil revisadas. El build conserva el aviso de bundle mayor de 500 kB; esta comprobación local no acredita revisión independiente, CI remoto ni integración.
+
 ### Búsqueda y RUT — 13 de octubre
 
 Por petición de Gael, nombre y RUT filtran automáticamente tras 250 ms sin escribir, conservando AND y volviendo a la primera página al cambiar un filtro. Se ocultan coincidencias anteriores mientras cambia la consulta; cada búsqueda conserva su propia clave/cancelación. La demo mantiene las tarjetas, con un máximo de seis por página y rango visible sobre el total: 40 estudiantes se recorren en siete páginas.
