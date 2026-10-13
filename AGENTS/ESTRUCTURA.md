@@ -176,3 +176,21 @@ Antes de añadir un archivo:
 Cuando una carpeta se vuelva demasiado amplia, dividir por responsabilidad/caso de uso coherente dentro del mismo módulo. No mover código sólo para obtener carpetas de tamaños similares. La modularidad se evalúa por responsabilidades y dependencias, no por cantidad de carpetas ocupadas.
 
 El lanzador local `deploy/scripts/dev.mjs`, invocado con `npm run dev`, coordina los procesos API/Vite y su cierre. Es tooling de desarrollo: no aloja reglas de negocio ni sustituye Compose/Quadlet o el ejecutor de CD.
+
+## Laboratorio de extracción HU04-T03
+
+`packages/contracts/src/purchases` contiene candidatos/metadata/draft, validadores puros y ejemplos ficticios. Importar por `@cenit/contracts/purchases` o `/examples`. Los ejemplos no son respuesta de OCR. La pantalla y componentes están en `apps/web/src/features/purchases`; CSS local `review.css`. El router sólo compone y protege el área; no incluye reglas de extracción. El módulo API de compras conserva sus carpetas vacías hasta implementar rutas/servicios reales. No crear persistencia para este laboratorio. Pruebas de contrato colocadas junto a schemas; recorrido en `tests/e2e/auth.spec.ts` reutiliza el harness PostgreSQL existente. Contrato/límites en [EXTRACCION-COMPRAS.md](../Docs/EXTRACCION-COMPRAS.md).
+
+El shell/navbar administrativo vive en `apps/web/src/app/AdministrativeLayout.tsx`, con estilos en `administration.css`. Home y los avisos sin funcionalidad de personal/bienes viven en `features/administration/pages`. Son navegación autorizada, no implementaciones de nuevos módulos. La revisión de candidatos sigue en `features/purchases/pages/PurchaseReview.tsx` y `/administracion/compras/laboratorio`; no mezclar contratos/reglas de compra en el dashboard. Login administrativo conserva `/administracion` como destino.
+
+La muestra ilustrativa de seguimiento del Home y sus cálculos se ubican en `apps/web/src/features/administration/model/dashboard-demo.ts`. Son datos locales del prototipo administrativo, separados de los contratos de extracción y de la persistencia de compras; no representan una integración con Oracle.
+
+Organización actual de compras: `pages/Purchases.tsx` lista; `PurchaseCreate.tsx` ingresa manualmente; `PurchaseDetail.tsx` consulta; `PurchaseReview.tsx` sigue como laboratorio en `/administracion/compras/laboratorio`. HTTP en `features/purchases/api`, etiquetas/formulario en `model`, confirmación de validación en `components`, estilos en `records.css`. Backend compras controla rutas/servicio/repositorio en `apps/api/src/modules/purchases`; persistencia en `db/schema/purchases.ts`; contratos de extracción en `purchases/extraction.ts` y persistencia en `records.ts`, exportados por `index.ts`. Identidad común autenticada proviene de auth; compras no depende de reglas académicas.
+
+## Transferencia de ejemplos a compras
+
+`apps/web/src/features/purchases/model/transfer.tsx` contiene el canal en memoria ligado a la cuenta administrativa, sin almacenamiento ni transporte por historial. El router monta el proveedor con clave de cuenta; las páginas de laboratorio y alta producen/consumen el borrador una vez. Las reglas públicas de origen permanecen en `packages/contracts/src/purchases/records.ts`; constraints en `db/schema/purchases.ts` y migración aditiva 0005. El repositorio de compras conserva el hash manual anterior y aplica procedencia al hash de ejemplos. Ver [COMPRAS.md](../Docs/COMPRAS.md).
+
+## Filtros y agregados del listado
+
+Schemas/validación pura de filtros y respuesta total documental viven en `packages/contracts/src/purchases/records.ts`; ejemplos en `record-examples.ts`. Normalización PostgreSQL y columnas generadas en la migración 0006/esquema, sin exponer claves internas en contratos. El repositorio de compras parametriza filtros y consulta dentro de un snapshot; el servicio valida fechas/rangos y la ruta normaliza sólo `q`/paginación. `features/purchases/pages/Purchases.tsx` controla la barra común en memoria y compone tablas con páginas independientes; la capa HTTP construye querystrings mediante URLSearchParams. No incluir reglas ni consultas de compras en Home.

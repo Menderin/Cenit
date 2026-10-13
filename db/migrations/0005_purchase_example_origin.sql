@@ -1,0 +1,3 @@
+ALTER TABLE "cenit"."purchase_requests" DROP CONSTRAINT "purchase_source";--> statement-breakpoint
+ALTER TABLE "cenit"."purchase_requests" ADD COLUMN "example_id" text;--> statement-breakpoint
+ALTER TABLE "cenit"."purchase_requests" ADD CONSTRAINT "purchase_source" CHECK (("cenit"."purchase_requests"."source" = 'manual' AND "cenit"."purchase_requests"."example_id" IS NULL) OR ("cenit"."purchase_requests"."source" = 'contract_example' AND "cenit"."purchase_requests"."example_id" IS NOT NULL AND "cenit"."purchase_requests"."example_id" IN ('recovered', 'partial', 'ambiguous')));

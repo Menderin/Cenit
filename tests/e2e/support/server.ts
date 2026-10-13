@@ -8,6 +8,7 @@ import { buildAcademicApp } from '../../../apps/api/src/app.js';
 import { AcademicRepository } from '../../../apps/api/src/modules/academic/repositories/academic.js';
 import { AuthRepository } from '../../../apps/api/src/modules/auth/repositories/auth.js';
 import { AuthService } from '../../../apps/api/src/modules/auth/services/auth.js';
+import { PurchaseRepository } from '../../../apps/api/src/modules/purchases/repositories/purchases.js';
 
 process.env.APP_ENV = 'test';
 const suffix = randomBytes(6).toString('hex');
@@ -67,7 +68,7 @@ async function main() {
   const credentials = createDemoCredentials();
   await prepareDemoAccounts(pool, credentials);
   writeFileSync(credentialsFile, JSON.stringify(credentials), { mode: 0o600 });
-  app = buildAcademicApp({ repository: new AcademicRepository(pool), auth: {
+  app = buildAcademicApp({ repository: new AcademicRepository(pool), purchases: new PurchaseRepository(pool), auth: {
     service: new AuthService(new AuthRepository(pool)), config: { cookieSecure: false, allowedOrigins: ['http://127.0.0.1:5174'] },
   } });
   // Browser scenarios share one proxy IP. Only this disposable server gets a

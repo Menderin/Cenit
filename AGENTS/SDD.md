@@ -6,6 +6,8 @@ Actualización de CI del 11 de octubre: los pushes a `feat/**`, `fix/**`, `test/
 
 Actualización de interfaz del 12 de octubre: por petición de Gael, el diseño visual de login se conecta al contrato/API de autenticación existente y sustituye la simulación separada. El inicio administrativo es `/administracion`; docente/estudiante conservan `/academico`. Ambos son avisos de área en construcción, no módulos de compras/malla. Compras pertenece al área administrativa; no se añade navegación de módulos futuros ni se cambian permisos/endpoints. Por petición de Gael, el formulario elimina espacios del correo en cualquier posición y lo convierte a minúsculas al salir/enviar; valida el resultado con el schema compartido sin cambiar el contrato de la API. Los antecedentes de pruebas del 11 de octubre que mencionan `/compras` corresponden al destino anterior. Evidencia y límites vigentes en [AUTENTICACION.md](../Docs/AUTENTICACION.md).
 
+Actualización HU04-T03 del 12 de octubre: [contrato de extracción](../Docs/EXTRACCION-COMPRAS.md) y laboratorio de ejemplos administrativos implementados, sin OCR ni endpoint de extracción/guardado activo. Cabecera Oracle, líneas y seguimiento separados; estados recovered/missing/invalid/ambiguous, valores textuales/null y correcciones sólo en memoria. Entrada futura PNG/JPEG, 5 MiB, 20 megapíxeles, procesamiento local temporal; hasta 100 líneas. La cabecera aportada por el líder requiere adaptar la antigua propuesta de factura/boleta e imputaciones: no implementarla como extracción ni suponer pago/aprobación. Contrato de persistencia continúa separado. No modifica migraciones ni autoriza releases.
+
 ### Decisión de autenticación local del 11 de octubre
 
 Aviso de interfaz acordado posteriormente: cinco minutos antes de vencer, mostrar cuenta regresiva en minutos y «Cerrar sesión ahora». No renovar la sesión fija ni guardar automáticamente; la política de borradores sigue pendiente.
@@ -285,6 +287,8 @@ Una advertencia documental usa `{ code: "POSSIBLE_DUPLICATE", message, relatedPu
 
 ## 12. Listado, filtros y agregados
 
+**Referencia histórica:** la propuesta siguiente de catálogos/imputaciones está reemplazada para HU06 por [el contrato vigente de consultas](../Docs/COMPRAS.md#hu06-búsqueda-filtros-y-total-documental). Usar `unitCode`/`projectCode` de un mismo ítem y sólo total documental; conservar el envelope actual de listas. No implementar `unitId`, `projectId` ni importes imputados de esta propuesta.
+
 - `q`: 1 a 100 caracteres, opcional; coincidencia literal de subcadena en referencia, descripción y nombre del proveedor. Ignorar mayúsculas y acentos, conservar ceros y puntuación. Escapar `%` y `_` para que no sean comodines. Normalización de búsqueda explícita; conservar el valor original. Preparar claves de búsqueda normalizadas al escribir/sembrar, sin exigir una extensión adicional de PostgreSQL.
 - `dateFrom` y `dateTo`: inclusivas sobre la fecha documental. Cualquiera puede omitirse; rango invertido produce 400.
 - `unitId`, `projectId`: UUID de catálogo. Si ambos se informan, coinciden en la misma imputación. Filtros de cabecera y clasificación se combinan con AND. ID válido pero inexistente produce 400 `INVALID_FILTER`.
@@ -552,3 +556,35 @@ Evidencia posterior del mismo día: Podman 6.0.2 instalado, máquina WSL 2 rootl
 Decisión del 11 de octubre: código/workflows del checkout actualizados para CI en `develop`/`main`, publicación sólo por push a `main` y verificación de esa rama en manifiesto, run, artifact e historial. Sólo `develop` admite scaffold sin aplicación; una inicialización incompleta falla también allí. Tests comprueban que el publicador/consumidor rechazan `develop` y la antigua `produccion` como origen de entrega. Se conservan nombres de gates, artifact, tag, digest y roles del contrato; no cambia `NODE_ENV=production`.
 
 La copia del ejecutor instalada en la VM sigue con la política anterior hasta reinstalarla el martes 13. Mantener `CENIT_RELEASE_ENABLED` deshabilitada. Configurar/revisar protecciones de `develop` y `main`; no borrar todavía la rama antigua sin verificar commits/PR pendientes y transición de la VM. Procedimiento completo en [CI-CD.md](../deploy/CI-CD.md). Las capturas, commits y aprobaciones de ramas del 10 de octubre descritos arriba son evidencia histórica del flujo anterior, no comprobación del nuevo. No se modificaron ramas ni reglas remotas.
+
+### Navegación administrativa autorizada
+
+El líder pidió Home/dashboard en `/administracion`, con navbar Home, Sistema de compra (`/administracion/compras`), Sistema de personal (`/administracion/personal`) y Sistema de bienes (`/administracion/bienes`). Sólo compras pertenece al MVP; personal/bienes tienen páginas «En construcción», sin procesos ni datos. Permisos y destino de login se conservan. La revisión ficticia se mueve al sistema de compra; «Ítem de la solicitud» explica las líneas internas, sin tablas nuevas ni extracción real. Ver [guía de extracción](../Docs/EXTRACCION-COMPRAS.md).
+
+### Prototipo del Home administrativo (13 de octubre de 2026)
+
+El líder autorizó KPIs, gráfico por fecha de envío y tabla de solicitudes ficticias pendientes de aprobación de Luis Lanas en `/administracion`. La muestra local pertenece a `features/administration/model`; no constituye un contrato de Oracle ni una ampliación del flujo de compras. Todos los indicadores se calculan desde la misma muestra y están identificados como ilustrativos. Pendiente validar con el cliente la utilidad, estados y alcance del seguimiento. Cenit no aprueba solicitudes ni modifica Oracle; aprobación y situación de pago permanecen separadas.
+
+### Persistencia manual y validación local de compras (13 de octubre)
+
+Decisión vigente que adapta la propuesta de las secciones 10–16: [COMPRAS.md](../Docs/COMPRAS.md). Una cabecera con 0–100 ítems, mínimos número/fecha/descripcion/total; campos inciertos textuales opcionales. Dos tablas `cenit.purchase_requests` y `cenit.purchase_request_lines`, montos exactos, transacciones e idempotencia por operación/cuenta. No implementar catálogos/imputaciones, suma de ítems obligatoria ni PUT de la propuesta antigua como reglas confirmadas.
+
+«Validar registro» es revisión de copia local, no aprobación Oracle ni pago; cualquier administrativo puede validar, incluso sus propios registros. Nuevas rutas de alta/listado/detalle/validación según la guía. Home sólo KPIs/gráfico ficticios; las tablas viven en Sistema de compra. Laboratorio separado en `/administracion/compras/laboratorio`. Formulario manual sin guardado automático: conserva borrador ante errores y foco con sesión válida; salida avisa y logout/expiración descartan. El ingreso manual no completa recuperación automática ni habilita releases.
+
+## HU05 — Procedencia y transferencia de ejemplos (13 de octubre de 2026)
+
+Decisión autorizada: mantener solicitudes e ítems sin regla de suma ni imputaciones presupuestarias. Los criterios antiguos que exigían suma de imputaciones quedan reemplazados para HU05 por guardado atómico de cabecera e ítems válidos. La extracción real sigue en HU04.
+
+El alta admite `origin?`: `{type: 'manual'}` o `{type: 'contract_example', exampleId: 'recovered'|'partial'|'ambiguous'}`. Omitirlo mantiene el comportamiento manual. Respuestas completas y resúmenes incluyen `source` y `exampleId`; la migración aditiva 0005 conserva manuales anteriores, añade columna nullable y exige coherencia mediante CHECK. Ningún origen acredita Oracle/OCR. No se modifican endpoints ni se habilitan releases.
+
+Idempotencia: serialización/hash manual anteriores sin cambios, incluso para origen manual explícito. Para ejemplos se incluye origen e ID; reutilizar operación con procedencia distinta devuelve conflicto. No guardar imágenes, texto OCR ni semillas en migraciones/CD.
+
+El laboratorio valida formatos y transfiere una copia revisada sólo en memoria, ligada a cuenta y consumida una vez, sin POST ni estado del historial. El formulario exige campos mínimos, identifica procedencia ficticia, preserva operación/borrador ante errores y los descarta al cerrar/expirar. Listados y detalle identifican ejemplos. Documentación vigente y evidencia: [COMPRAS.md](../Docs/COMPRAS.md) y [EXTRACCION-COMPRAS.md](../Docs/EXTRACCION-COMPRAS.md).
+
+## HU06 — Listado filtrado vigente (13 de octubre de 2026)
+
+Decisión del líder: búsqueda por número/descripción/proveedor, fechas inclusivas de envío y códigos textuales de unidad/proyecto del mismo ítem. No existen imputaciones ni catálogos presupuestarios. La propuesta histórica de la sección 12 se reemplaza para esta entrega por [COMPRAS.md](../Docs/COMPRAS.md#hu06-búsqueda-filtros-y-total-documental).
+
+GET conserva `data` como array y `pagination`; añade `totals: {currency:'CLP',documentTotal:string}` del conjunto filtrado de cada estado, sumando cabeceras una vez. Códigos inexistentes devuelven vacío; filtros mal formados/rangos inválidos devuelven 400. Consultas parametrizadas con EXISTS y snapshot de lectura REPEATABLE READ; orden fecha descendente/UUID descendente. Migración 0006 añade función de normalización y claves generadas, conserva datos/hash y no carga semillas. Barra común con aplicación explícita y limpieza; ambos listados reinician página y mantienen total/paginación propios. Filtros sólo en memoria.
+
+Contratos y frontend actualizados juntos; pruebas locales y evidencia en la guía. Revisión, Actions e integración pendientes; no habilita publicación.

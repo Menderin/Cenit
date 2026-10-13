@@ -1,0 +1,17 @@
+.purchase-review h2 { font-size: 1.4rem; font-weight: 600; margin: 12px 0; }
+.purchase-review p { margin: 10px 0; }
+.purchase-review__notice { background: #fff7d6; border: 1px solid #b68b16; padding: 12px; font-weight: 600; }
+.purchase-review label { display: block; font-weight: 600; margin-bottom: 6px; }
+.purchase-review select { max-width: 100%; border: 1px solid #64748b; padding: 10px; background: white; border-radius: 4px; }
+.purchase-review fieldset { border: 1px solid #cbd5e1; border-radius: 6px; padding: 20px; margin: 24px 0; min-width: 0; }
+.purchase-review legend { font-weight: 650; padding: 0 8px; }
+.purchase-review__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.purchase-review input, .purchase-review textarea { width: 100%; border: 1px solid #64748b; padding: 10px; border-radius: 4px; background: #fff; }
+.purchase-review textarea { resize: vertical; }
+.purchase-review :is(input, textarea, select, button):focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+.purchase-review__origin, .purchase-review__metadata { color: #475569; font-size: .875rem; overflow-wrap: anywhere; }
+.purchase-review__error, .purchase-review [role="alert"] { color: #991b1b; }
+.purchase-review [aria-invalid="true"] { border-color: #991b1b; }
+.purchase-review__actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+.purchase-review li { margin: 6px 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .purchase-review__grid { grid-template-columns: minmax(0, 1fr); } .purchase-review fieldset { padding: 12px; } }

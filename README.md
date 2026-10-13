@@ -46,7 +46,7 @@ La estructura completa y las reglas para ubicar código están en la sección 4 
 
 ## Estado de implementación
 
-Este checkout contiene infraestructura, catálogo académico, API de autenticación local y frontend mínimo de acceso/salida. Login usa correo/contraseña, roles de servidor y sesión fija de dos horas. Administración y académico son destinos de prueba, todavía sin compras ni visualización de malla; el historial continúa como propuesta separada. CI verifica esta base en tareas/`develop` y bloquea promoverla como aplicación completa a `main`. La [primera ejecución histórica](https://github.com/Menderin/Cenit/actions/runs/38071046810) no acredita estos nuevos checks. No hay imagen del MVP ni ensayo de entrega/recuperación completado.
+Este checkout contiene infraestructura, catálogo académico, API de autenticación local y frontend mínimo de acceso/salida. Login usa correo/contraseña, roles de servidor y sesión fija de dos horas. Administración contiene Home ilustrativo, solicitudes manuales persistentes con revisión local y laboratorio de extracción separado; académico sigue como destino de prueba. Todavía sin OCR ni visualización de malla; el historial continúa como propuesta separada. CI verifica esta base en tareas/`develop` y bloquea promoverla como aplicación completa a `main`. La [primera ejecución histórica](https://github.com/Menderin/Cenit/actions/runs/38071046810) no acredita estos nuevos checks. No hay imagen del MVP ni ensayo de entrega/recuperación completado.
 
 ## Probar login en el navegador
 
@@ -72,7 +72,7 @@ npm run dev
 
 Dejar esa terminal abierta. `npm run dev` comprueba puertos/BD/tablas y arranca API y Vite juntos; lee `.env` y la conexión privada de `cenit_app`. Sólo sus procesos reciben APP_ENV=development, cookie HTTP local, Origin de 5173/3000 y conexión runtime; no heredan la credencial del migrador como conexión efectiva. Antes de iniciar la API prepara/verifica las tres cuentas de demo con las claves de `.env`: crea sólo las ausentes y conserva identidades y hashes existentes. Una discrepancia detiene el arranque sin rotar claves ni borrar datos. No ejecuta Podman, migraciones, catálogo ni builds automáticamente. Esta preparación de cuentas es exclusiva del arranque local; migraciones y CD no cargan cuentas. Si falta preparación o hay un puerto ocupado, informa el paso necesario y no detiene procesos ajenos. `Ctrl+C` cierra API y frontend; PostgreSQL permanece en Podman. Para detener también la BD: `podman compose stop db`.
 
-Abrir **http://127.0.0.1:5173**. Consultar privadamente `.local/secrets/auth-demo.json` para ingresar con una cuenta de cada rol; no compartir ese archivo ni copiar contraseñas al repo. Administrativo llega a `/administracion`; docente/estudiante, a `/academico`. El login usa el diseño visual de Cenit y autentica con la API local existente. Ambos destinos muestran su área en construcción; no son pantallas de compras/malla. `/prototipo.html` ya no contiene una simulación independiente: redirige al login o al área de una sesión válida. Cada destino muestra cuenta/rol y permite salir. Recargar conserva la sesión válida; logout o expiración dejan el contenido protegido oculto. Vite usa `/api` relativo con proxy a 3000 y no publica secretos. El proxy bootstrap de 8081 sigue siendo otra ejecución, no esta interfaz.
+Abrir **http://127.0.0.1:5173**. Consultar privadamente `.local/secrets/auth-demo.json` para ingresar con una cuenta de cada rol; no compartir ese archivo ni copiar contraseñas al repo. Administrativo llega a `/administracion`; docente/estudiante, a `/academico`. El login usa el diseño visual de Cenit y autentica con la API local existente. Administración ofrece Home con KPIs/gráfico ficticios y Sistema de compra con ingreso manual, listados persistentes, detalle y validación local; los ejemplos de extracción están separados en /administracion/compras/laboratorio; académico muestra su área en construcción. No son módulos completos de compras/malla. `/prototipo.html` ya no contiene una simulación independiente: redirige al login o al área de una sesión válida. Cada destino muestra cuenta/rol y permite salir. Recargar conserva la sesión válida; logout o expiración dejan el contenido protegido oculto. Vite usa `/api` relativo con proxy a 3000 y no publica secretos. El proxy bootstrap de 8081 sigue siendo otra ejecución, no esta interfaz.
 
 Para verificar el frontend y los recorridos desde la raíz, con PostgreSQL preparado:
 
@@ -117,3 +117,28 @@ Se espera `status: ok`, `mode: bootstrap`. PostgreSQL persiste en un volumen pro
 CI se ejecuta al hacer **push** en `feat/**`, `fix/**`, `test/**`, `docs/**`, `codex/**`, `develop` y `main`, además de PR hacia `develop`/`main`. Un commit local necesita `Push origin` para llegar a Actions; no hace falta abrir PR para probar la rama. Consultar la ejecución por rama/commit en la pestaña Actions.
 
 `rama de tarea → develop → main`, mediante PR, revisión y CI. `develop` integra funcionalidades; `main` autoriza entregas verificadas. El publicador sigue deshabilitado hasta completar aplicación/tests y actualizar el ejecutor instalado en la VM para aceptar `main`. La rama antigua `produccion` no es destino del nuevo flujo; retirarla tras comprobar la transición según [CI/CD](deploy/CI-CD.md).
+
+## Probar el contrato de extracción de compras
+
+Con el entorno local preparado, ejecutar `podman compose up -d db` y `npm run dev`. Ingresar como administrativo en **http://127.0.0.1:5173/login**: En Home `/administracion`, abrir «Sistema de compra» y luego el laboratorio `/administracion/compras/laboratorio`; allí puedes editar, validar y restablecer candidatos ficticios. «Continuar al formulario de guardado» transfiere los valores revisados sin guardarlos; completa los obligatorios y pulsa «Guardar solicitud» para persistir una copia identificada como ejemplo ficticio sin extracción real. Personal y bienes sólo muestran «En construcción». No sube imágenes ni ejecuta OCR; el borrador se descarta al salir, expirar o recargar. Guía, límites y pendientes en [EXTRACCION-COMPRAS.md](Docs/EXTRACCION-COMPRAS.md). No activa releases ni acredita la HU04 completa.
+
+El Home administrativo incluye únicamente indicadores y un gráfico con datos ficticios para revisar la propuesta con el cliente. No están conectados a Oracle ni permiten aprobar solicitudes.
+
+## Solicitudes de compra
+
+Consultar [guía de compras](Docs/COMPRAS.md). Tras estos cambios, repetir `npm run db:migrate` con la conexión privada del migrador antes de `npm run dev`. En Sistema de compra, «Agregar solicitud manual» permite guardar copias; «Validar registro» sólo confirma revisión en Cenit. Home conserva únicamente KPIs/gráfico ficticios; no está conectado a Oracle.
+
+La migración nueva es `0005_purchase_example_origin.sql`. No recrea datos ni carga semillas. Con PostgreSQL levantado, en PowerShell:
+
+```powershell
+$env:DATABASE_URL_FILE = (Resolve-Path '.local/secrets/migrator-local-url').Path
+npm run db:migrate
+Remove-Item Env:DATABASE_URL_FILE
+npm run dev
+```
+
+`npm run dev` comprueba la columna de procedencia y avisa si falta migrar; no aplica migraciones automáticamente. Las pruebas de integración comprueban persistencia tras detener y volver a iniciar un proceso real de API sobre una base descartable.
+
+## Buscar solicitudes de compra
+
+La migración `0006_purchase_search_keys.sql` añade claves de búsqueda generadas; aplica `npm run db:migrate` con la conexión privada indicada arriba antes de iniciar. En Sistema de compra, utiliza búsqueda por número/descripción/proveedor, fechas de envío y códigos de unidad/proyecto. «Aplicar filtros» filtra ambas tablas y reinicia sus páginas; «Limpiar filtros» elimina la selección. Cada tabla muestra cantidad y total documental de todas las coincidencias. Unidad/proyecto deben coincidir en el mismo ítem. Guía y ejemplo HTTP en [COMPRAS.md](Docs/COMPRAS.md#hu06-búsqueda-filtros-y-total-documental).
