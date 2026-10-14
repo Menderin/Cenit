@@ -107,7 +107,7 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 
 **HU04-T03, actualización del 12 de octubre:** contrato y pantalla ficticia de revisión implementados; [campos, schemas, límites y pendientes](EXTRACCION-COMPRAS.md). Sin OCR, ruta de extracción activa ni persistencia. HU04-T03 pendiente de revisión/integración; la historia no se considera completa hasta demostrar procesamiento real.
 
-**Alcance:** MVP requerido; vía técnica pendiente.
+**Alcance:** MVP requerido; captura de pantalla con visión local elegida el 13 de octubre, sin acceso a Oracle. Procesamiento a cargo de Víctor; frontend a cargo de Gael.
 
 **Descripción:** Como administrativo, quiero recuperar automáticamente los datos de una compra y revisarlos para reducir la transcripción y detectar errores antes de registrarla.
 
@@ -119,16 +119,16 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 4. Entrada inválida, procesamiento parcial o fallo tienen un estado comprensible; puedo corregir o reintentar.
 5. Formato, campos objetivo y tratamiento de la entrada tienen criterios acordados antes de acreditar extracción suficiente.
 
-**Pendientes externos y supuestos:** producto/API Oracle, acceso de prueba, muestras representativas, campos recuperables y aceptación de exactitud. OCR/visión es alternativa por investigar. No se exige construir ambas vías ni se selecciona una por suposición.
+**Pendientes y supuestos:** modelo de visión local, máquina, capturas ficticias representativas, campos recuperables, tiempos y aceptación de exactitud. No habrá acceso a Oracle; la vía de capturas fue elegida por Gael el 13 de octubre. La procedencia de capturas reales debe integrarse con el contrato de guardado.
 
 **Revisión INVEST:** valiosa/comprobable una vez fijado el conjunto de muestras/campos. Actualmente no es estimable ni de tamaño acreditado; necesita S3-HT03. El guardado está separado en HU05. Si es grande, dividir por una fuente/formato acordado, sin quitar automáticamente otros compromisos.
 
 | Tarea | Descripción | Criterios de aceptación de la tarea |
 | --- | --- | --- |
-| HU04-T01 — Investigación y decisión de captura | Coordinar consulta a TI sobre Oracle y explorar extracción desde imágenes ficticias; comparar evidencia | Documento con producto/API/acceso o ausencia de ellos, resultados de exploración y vía decidida o bloqueo; no promete conexión no disponible |
+| HU04-T01 — Investigación y decisión de captura | Evaluar modelo/máquina de visión local con capturas ficticias; vía de imágenes ya elegida, sin acceso a Oracle | Evidencia de precisión por campo y tiempos; recursos comprobados, límites y fallos documentados |
 | HU04-T02 — Mockup de captura administrativa | Diseñar entrada según vía elegida, progreso, resultado parcial, revisión y error | Campos editables y ausencias visibles; extracción separada de guardar; no incluye interfaz académica |
 | HU04-T03 — Contrato de extracción | Definir campos candidatos, ausencias, errores y límites de entrada sin reutilizar el POST de guardado como extracción | Schemas y ejemplos validables; campos/límites acordados; no se inventan requisitos de precisión |
-| HU04-T04 — Adaptador de recuperación | Implementar la vía seleccionada y mapear resultado al contrato | Muestras ficticias procesadas realmente; fallos/ausencias no se convierten en datos válidos; acceso autorizado si es API |
+| HU04-T04 — Adaptador de recuperación | Víctor implementa visión local de capturas y mapea candidatos al contrato, con procedencia real coordinada | Capturas ficticias procesadas realmente; fallos/ausencias no se convierten en datos válidos; no accede a Oracle ni guarda al extraer |
 | HU04-T05 — Interfaz de revisión administrativa | Integrar entrada, progreso y corrección de datos candidatos | No persiste al extraer; conserva correcciones ante errores según contrato; ofrece continuidad a HU05 |
 | HU04-T06 — Verificación de extracción y revisión | Ejecutar muestras admitidas, parciales e inválidas y contrastar resultado esperado | Evidencia por campo/muestra según criterio acordado; errores visibles; ninguna compra creada sin confirmación |
 

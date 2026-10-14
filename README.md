@@ -129,9 +129,15 @@ CI se ejecuta al hacer **push** en `feat/**`, `fix/**`, `test/**`, `docs/**`, `c
 
 ## Probar el contrato de extracción de compras
 
-Con el entorno local preparado, ejecutar `podman compose up -d db` y `npm run dev`. Ingresar como administrativo en **http://127.0.0.1:5173/login**: En Home `/administracion`, abrir «Sistema de compra» y luego el laboratorio `/administracion/compras/laboratorio`; allí puedes editar, validar y restablecer candidatos ficticios. «Continuar al formulario de guardado» transfiere los valores revisados sin guardarlos; completa los obligatorios y pulsa «Guardar solicitud» para persistir una copia identificada como ejemplo ficticio sin extracción real. Personal y bienes sólo muestran «En construcción». No sube imágenes ni ejecuta OCR; el borrador se descarta al salir, expirar o recargar. Guía, límites y pendientes en [EXTRACCION-COMPRAS.md](Docs/EXTRACCION-COMPRAS.md). No activa releases ni acredita la HU04 completa.
+Con el entorno local preparado, ejecutar `podman compose up -d db` y `npm run dev`. Ingresar como administrativo en **http://127.0.0.1:5173/login**: Desde la navegación lateral de Inicio `/administracion`, abrir «Sistema de compra» y luego «Revisar ejemplo» (`/administracion/compras/laboratorio`); allí puedes editar, comprobar y restablecer candidatos ficticios. «Continuar al formulario» transfiere los valores revisados sin guardarlos; completa los obligatorios y pulsa «Guardar solicitud» para persistir una copia identificada como ejemplo de demostración. Personal y bienes muestran «Módulo no disponible». No sube imágenes ni ejecuta visión real; el borrador se descarta al salir, expirar o recargar. Guía, límites y pendientes en [EXTRACCION-COMPRAS.md](Docs/EXTRACCION-COMPRAS.md). No activa releases ni acredita la HU04 completa.
+
+La navegación lateral se recoge en móvil; «Mostrar navegación» permite abrir los cuatro destinos y el cierre de sesión. El formulario manual muestra primero sus cuatro mínimos y permite desplegar cada ítem; los errores abren el ítem y enfocan el primer campo inválido.
+
+La recuperación real se hará desde capturas mediante visión local implementada por Víctor, sin acceso a Oracle. El laboratorio actual sigue mostrando ejemplos; el endpoint y la procedencia de captura real están pendientes.
 
 El Home administrativo incluye únicamente indicadores y un gráfico con datos ficticios para revisar la propuesta con el cliente. No están conectados a Oracle ni permiten aprobar solicitudes.
+
+Para disponer también de solicitudes ficticias persistentes, con migraciones y cuenta administrativa ya preparadas, ejecutar explícitamente `APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run purchases:prepare-demo`. Es exclusivo de `cenit_migrator` sobre `cenit_demo` en `127.0.0.1`: prepara ocho solicitudes (cinco pendientes de revisión y tres validadas inicialmente), con varios ítems/proveedores y códigos para buscar/filtrar. Repetir conserva IDs, contenido y revisiones posteriores, sin duplicar ni restablecer compras/cuentas. No se ejecuta desde desarrollo, migraciones ni CD; no acredita extracción ni aprobación Oracle. Los KPIs de Inicio mantienen su muestra independiente. Preparación y límites en [COMPRAS.md](Docs/COMPRAS.md#datos-persistentes-de-demostración--14-de-octubre).
 
 ## Solicitudes de compra
 

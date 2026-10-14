@@ -1,5 +1,73 @@
 # Solicitudes de compra persistentes y validación local
 
+## Pulido administrativo — 14 de octubre
+
+Gael autorizó retirar los avisos repetidos de prototipo, muestra ilustrativa y preparación interna. El entorno se identifica con «Demostración» en la cabecera; la procedencia ficticia se conserva mediante etiquetas breves de ejemplo. El Home mantiene su muestra local y sus cálculos, sin acreditar conexión Oracle ni seguimiento institucional. Personal/bienes conservan sus rutas con «Módulo no disponible» y retorno a Inicio.
+
+Se mantienen sidebar de 220 px, margen de 16 px, tema claro y Phosphor. Controles principales de 36 px, superficies suaves, hover sólo con puntero compatible y presión a 0.96/150 ms condicionada a la preferencia de movimiento. Las migas y el título del navegador identifican la página. Filtros comunes con aplicación explícita: búsqueda/fechas visibles, unidad/proyecto bajo «Más filtros» y apertura/foco ante errores; totales y páginas independientes por tabla. Formulario con los cuatro mínimos primero, fecha/hora nativas canónicas, complementarios/seguimiento recogidos y apertura de ítems nuevos/secciones inválidas. El detalle destaca número, estado y monto; todos los campos siguen consultables. La revisión ofrece estados, incidencias y «Revisar original». Los resúmenes de error usan nombres de campos.
+
+Se conservan API, contratos, base de datos, permisos, origen, montos exactos, confirmación de revisión local y protección de borradores. No hay extracción real, aprobación Oracle, edición de registros guardados ni nuevos módulos funcionales.
+
+**Verificación de esta etapa:** revisión manual de navegador y capturas en 1280/1440/1920 y 390 px, incluyendo teclado, foco, desplegables, formulario vacío y candidatos ambiguos. La base local estaba vacía; detalle y filas con contenido se inspeccionaron con los mismos componentes y fixtures en memoria desde una vista temporal privada, retirada al finalizar. No se guardaron solicitudes. No se ejecutaron tests, suites, lint, typecheck ni build. La aceptación visual de Gael y las verificaciones posteriores siguen pendientes; la evidencia del 13 de octubre no acredita este pulido. Cobertura y capturas en `.local/cenit-review/ADMIN_POLISH_REVIEW_2026-10-14.md`.
+
+### Densidad y contraste con las fuentes — 14 de octubre
+
+Gael confirmó conservar la tabla resumida y consultar el resto en el detalle. Los KPIs reducen su altura natural de unos 156 a 117 px en escritorio (113 px en móvil): padding de 16 px, cifras de 26 px y menor separación entre etiqueta, cifra y nota. El gráfico usa padding de 20 px, filas separadas por 14 px y una columna introductoria de hasta 260 px. La jerarquía mantiene títulos de página de 22/20 px, secciones de 15 px, etiquetas/acciones de 13 px y metadatos de 12 px; los controles principales conservan 36 px. La sidebar descuenta también los dos bordes del marco para evitar desplazamiento vertical de una página que cabe en la ventana.
+
+Se cotejaron en lectura las 15 columnas de la planilla aportada y la captura Oracle. Todas tienen un campo disponible en el modelo y en las secciones del formulario/detalle; esto acredita cobertura de campos, no extracción automática ni equivalencia institucional confirmada. La correspondencia Nº Documento ↔ número de solicitud sigue provisional, con ID Oracle separado. Proveedor y códigos pertenecen a cada ítem; descripción general e individual, total documental e importe de ítem, código/nombre de unidad y unidad de línea permanecen distintos. Los códigos conservan ceros y espacios interiores. RUT, ITEM y situación de pago vacíos en la muestra no se completan; el significado de BI y los demás pendientes se conserva.
+
+La captura contiene secuencia de aprobación, acciones, fechas y notas que Cenit no registra; la aprobación continúa en Oracle y la revisión local no representa pago. Los anexos son una referencia textual. La etiqueta de impuesto es genérica y no distingue categorías tributarias. Home conserva datos ficticios independientes de la planilla y del listado persistido. No se importaron ni versionaron registros reales, ni se ampliaron contratos o permisos por este cotejo.
+
+**Verificación de esta iteración:** inspección manual de Inicio en 1280/1440/1920/390 px; formulario, revisión, detalle y tabla con contenido en escritorio y 390 px, con foco y apertura mediante teclado. Detalle y filas usan fixtures ficticias en memoria en una vista temporal privada, retirada al finalizar; no se guardaron solicitudes. No se ejecutaron tests, suites, lint, typecheck ni build. La aprobación visual y las verificaciones técnicas siguen pendientes. Correspondencia por columna y límites en `.local/cenit-review/ADMIN_DENSITY_SOURCE_REVIEW_2026-10-14.md`.
+
+## Datos persistentes de demostración — 14 de octubre
+
+Gael autorizó preparar datos ficticios para probar compras, equivalentes a la preparación explícita de perfiles académicos. Los ejemplos del laboratorio viven en memoria y las pruebas automatizadas usan bases descartables: ninguno llenaba el listado de la demo local. `db/seeds/purchases-demo.ts` y `purchases:prepare-demo` añaden esa preparación persistente.
+
+Con PostgreSQL migrado y la cuenta administrativa original existente:
+
+```bash
+APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run purchases:prepare-demo
+```
+
+En PowerShell, establecer ambas variables como en la preparación académica y ejecutar `npm run purchases:prepare-demo`. El CLI exige `127.0.0.1`, rol `cenit_migrator`, base `cenit_demo` y coincidencia de la cuenta privada administrativa activa; no crea cuentas ni imprime claves. Prepara `DEMO-COMPRA-001` a `008`, inicialmente cinco pendientes y tres validadas localmente, con uno/dos ítems, proveedores ficticios, dos códigos de unidad y proyectos con ceros/espacios para revisar filtros. BI, RUT, ITEM y pago desconocidos siguen vacíos. Los registros se identifican como ejemplos de demostración; no se copiaron datos reales del Excel o de Oracle.
+
+La carga reutiliza `PurchaseService`/`PurchaseRepository`, validación de contratos, transacciones por solicitud e idempotencia por cuenta/operación estable. Repetir conserva IDs, contenido, revisión posterior, primer revisor, fechas y versión; no restablece pendientes que el usuario haya validado. Un contenido incompatible se rechaza sin sobrescribirlo. Cada alta y cada revisión son transacciones propias; si una carga se interrumpe, repetir completa las operaciones pendientes sin duplicarlas. Nunca corre desde `npm run dev`, migraciones o CD.
+
+Los estados son de revisión de datos en Cenit, distintos de aprobación o pago. Los indicadores del Home conservan su muestra independiente y no se convierten en consultas reales mediante esta carga. La extracción mediante visión sigue pendiente. Las pruebas de esta preparación usan exclusivamente bases descartables.
+
+### Verificación después de la revisión visual
+
+Node 24.21.0/npm 11.19.0. Tipos, lint, catálogo (52 asignaturas), build del monolito, 77 unitarias, 93 integración PostgreSQL/API y 44 infraestructura correctos. Los 50 recorridos de producción quedan verificados entre la última ejecución general (48 correctos) y la repetición exitosa de los dos afectados. Se actualizaron nombres, foco, originales consultables y apertura de secciones sin retirar las comprobaciones de guardado, idempotencia, procedencia, errores, permisos y borradores. Las incidencias de la primera pasada se debían a referencias de pruebas a la interfaz anterior; se corrigieron también una tecla renombrada durante la actualización y selectores ambiguos de detalle. No requirieron cambios funcionales de producto.
+
+Imagen local Linux/amd64 construida y verificada: metadata, roles limitados, migrador repetible, HTML/readiness, límites de Nginx y recuperación de PostgreSQL. Se conserva el adaptador privado del ensayo anterior para Docker Desktop: copia insumos idénticos a los contenedores descartables y ejecuta todas las aserciones del verificador original. La etiqueta de imagen identifica el candidato local basado en HEAD previo al commit; no es una entrega publicada. El build conserva el aviso no bloqueante de bundle web superior a 500 KiB.
+
+La preparación se ejecutó explícitamente dos veces en la demo local: primera carga, ocho nuevas; segunda, cero nuevas y ocho conservadas. Resultado: cinco pendientes ($1.510.000) y tres validadas ($285.000). Se conservan cinco cuentas, tres perfiles académicos y 56 intentos. Listado y detalle reales inspeccionados en navegador, sin cargar los datos del Excel ni de la captura. Capturas privadas `compras-demo-persistentes-2026-10-14.jpg` y `detalle-demo-persistente-2026-10-14.jpg` en `.local/cenit-review/screenshots/`.
+
+Revisión independiente, CI remoto e integración siguen pendientes; no se creó PR, hizo merge ni modificó la VM o la publicación. Las cuentas/datos locales no forman parte del commit; sólo la preparación ficticia reproducible.
+
+## Rediseño administrativo — 13 de octubre
+
+Gael autorizó continuar en la rama existente `feat/modulo_de_compra`, sincronizada mediante avance directo con `develop` `aa4878a`. La base funcional de compras de Víctor ya está integrada por PR #10/#11; el CI de develop incluye `Application` y terminó correctamente. El rediseño está implementado y verificado localmente; sigue pendiente de revisión visual del usuario, commit/push, CI remoto y revisión/integración del equipo.
+
+El marco administrativo usa sidebar clara, cuenta/salida al pie y navegación recogible en móvil, con Phosphor `regular`/`fill` según selección. Home conserva únicamente indicadores y gráfico ficticios; personal/bienes siguen en construcción. El listado conserva dos grupos visibles, filtros comunes, paginación independiente y total documental exacto, ahora formateado como CLP sin convertir a Number. Alta y detalle agrupan cabecera, ítems desplegables, seguimiento y procedencia. Los cuatro campos obligatorios aparecen primero; los errores abren el ítem correspondiente y enfocan el primer campo inválido. Claves visuales estables conservan el estado de los ítems al eliminar otro.
+
+No se modifican API, contratos, migraciones, permisos, idempotencia ni reglas de guardado/validación. Se conservan borradores y avisos de salida. Los montos del documento permanecen independientes de la suma de ítems.
+
+La vía de recuperación elegida es captura de pantalla con visión local a cargo de Víctor, sin acceso a Oracle. El laboratorio conserva ejemplos claramente identificados. Recorrido y dependencia de procedencia real en [EXTRACCION-COMPRAS.md](EXTRACCION-COMPRAS.md#decisión-y-recorrido-de-captura--13-de-octubre).
+
+
+### Evidencia final del rediseño
+
+- Node 24.21.0/npm 11.19.0; tipos, lint, catálogo y build del monolito correctos. 77 unitarias, 90 integración PostgreSQL y 44 infraestructura exitosas.
+- 50 escenarios Chromium contra el runtime de producción verificados entre la ejecución completa (47 correctos) y las repeticiones de los afectados. Se restauró el nombre accesible del grupo de ítems del laboratorio y se actualizaron espera de navegación móvil y selector de procedencia; las garantías de origen/reintento/guardado se conservan. Tres escenarios adicionales en WebKit instalado correctos; el de ítems se repitió tras ampliar la cobertura de montos máximos.
+- Se comprobó que 255 dígitos se conservan al guardar/consultar y no desbordan formulario, detalle o total del listado móvil. La unidad de presentación comprueba también valores superiores a la precisión de Number y borradores inválidos sin caída de render.
+- Capturas y revisión visual en 1280/1440/1920/390; navegación, foco, errores y estados preservados. Los datos de QA viven en bases descartables; no se agregaron solicitudes a cenit_demo para las pruebas. Reflow adicional del listado en 640 y 320 CSS px sin desbordamiento, equivalente a reducir el espacio disponible al ampliar; no se acredita zoom nativo, pantallas físicas del usuario ni Safari real.
+- Imagen local Linux/amd64 `cenit-purchases-ui:local` compilada y verificada: roles limitados, migración repetible, HTML/readiness, límites de Nginx y desconexión/recuperación de PostgreSQL. Docker Desktop rechazó ejecutar el inicializador ligado desde el host; el ensayo final copió los mismos insumos a su contenedor descartable, comprobando igualdad byte a byte y conservando todas las aserciones del verificador. La adaptación es privada de QA: no modifica scripts de deploy, runtime ni el flujo de CI. La etiqueta de revisión es la base aa4878a, no un commit del rediseño ni una entrega publicada.
+- Jira: SCRUM-31/49/55/57/60/62 en revisión; 31/46/57/62 reasignadas a Gael. La autoría/estado de SCRUM-52 y los responsables de backend/QA/entrega se conservan. Se actualizó alcance de captura y criterios históricos sin cerrar historias automáticamente.
+
+No se añadieron dependencias ni se cambiaron API, migraciones, cuentas, política de sesión o CD. La visión local y procedencia de captura real permanecen con Víctor. Los apartados siguientes conservan evidencia histórica de cortes anteriores.
+
 Implementación autorizada por Víctor el 13 de octubre de 2026. Conserva copias manuales y borradores revisados del laboratorio de ejemplos ficticios, identificando su procedencia. No crea compras, no aprueba solicitudes en Oracle, no implementa OCR ni acredita la historia de recuperación automática. Estado: implementación local; revisión/integración y Actions pendientes.
 
 ## Pantallas y reglas acordadas

@@ -14,6 +14,7 @@ import { createDemoCredentials, prepareDemoAccounts } from '../../db/seeds/auth-
 import { buildAcademicApp } from '../../apps/api/src/app.js';
 import { AcademicRepository } from '../../apps/api/src/modules/academic/repositories/academic.js';
 import { PurchaseRepository } from '../../apps/api/src/modules/purchases/repositories/purchases.js';
+import { purchaseDemoExamples, seedPurchaseDemo } from '../../db/seeds/purchases-demo.js';
 import { AuthRepository } from '../../apps/api/src/modules/auth/repositories/auth.js';
 import { AuthService } from '../../apps/api/src/modules/auth/services/auth.js';
 
@@ -69,6 +70,7 @@ beforeAll(async () => {
   app = buildAcademicApp({ repository: new AcademicRepository(pools[0]!), purchases: repository, auth: { service: new AuthService(new AuthRepository(pools[0]!)), config: { allowedOrigins: [origin], cookieSecure: false } } });
   await app.ready();
 });
+
 afterAll(async () => {
   if (app) await app.close();
   await Promise.all(pools.map(closeTestPool));
@@ -312,5 +314,45 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     } finally { await failed.close(); }
     expect((await request('POST', '/api/v1/auth/logout', {})).statusCode).toBe(204);
     expect((await request('GET', '/api/v1/purchases?reviewStatus=pending')).statusCode).toBe(401);
+  });
+});
+
+describe('preparación explícita de compras ficticias', () => {
+  it('rechaza producción y el CLI rechaza destinos distintos de la demo local', async () => {
+    process.env.APP_ENV = 'production';
+    try { await expect(seedPurchaseDemo(pools[0]!, credentials[0]!.id)).rejects.toThrow('demo/pruebas'); }
+    finally { process.env.APP_ENV = 'test'; }
+    for (const url of ['postgres://cenit_migrator@192.0.2.1/cenit_demo', 'postgres://cenit_app@127.0.0.1/cenit_demo', 'postgres://cenit_migrator@127.0.0.1/otra_base']) {
+      expect(() => execFileSync(process.execPath, ['--import', 'tsx', 'db/seeds/purchases-demo.ts'], { env: { ...process.env, APP_ENV: 'demo', DATABASE_URL_FILE: '', DATABASE_URL: url }, stdio: 'pipe' })).toThrow();
+    }
+  });
+  it('carga estados e ítems, conserva ceros/espacios y repetir no duplica ni revierte revisiones', async () => {
+    const pool = pools[0]!, actor = credentials.find(account => account.role === 'administrativo')!.id;
+    expect(await seedPurchaseDemo(pool, actor)).toEqual({ created: 8, retained: 0 });
+    const pending = await repository.list({ reviewStatus: 'pending', page: 1, pageSize: 20, q: 'DEMO-COMPRA-' });
+    const reviewed = await repository.list({ reviewStatus: 'reviewed', page: 1, pageSize: 20, q: 'DEMO-COMPRA-' });
+    expect(pending.pagination.total).toBe(5); expect(reviewed.pagination.total).toBe(3);
+    expect(pending.totals.documentTotal).toBe('1510000');
+    for (const row of [...pending.data, ...reviewed.data]) {
+      const record = (await repository.get(row.id))!, fixture = purchaseDemoExamples.find(example => example.input.header.requestNumber === row.requestNumber)!;
+      expect(record.header).toEqual(fixture.input.header); expect(record.lines).toEqual(fixture.input.lines);
+      expect(record.source).toBe('contract_example'); expect(record.exampleId).toBe('recovered');
+    }
+    const spaced = await repository.list({ reviewStatus: 'pending', page: 1, pageSize: 20, unitCode: '270101', projectCode: '0 0000000', q: 'DEMO-COMPRA-' });
+    expect(spaced.pagination.total).toBe(1);
+    const changed = await repository.validate(pending.data[0]!.id, 1, actor);
+    const snapshots = await Promise.all([...pending.data, ...reviewed.data].map(row => repository.get(row.id)));
+    expect(await seedPurchaseDemo(pool, actor)).toEqual({ created: 0, retained: 8 });
+    expect(await Promise.all([...pending.data, ...reviewed.data].map(row => repository.get(row.id)))).toEqual(snapshots);
+    expect(await repository.get(changed.id)).toEqual(changed);
+  });
+  it('rechaza cuentas ajenas al rol administrativo y contenido incompatible sin sobrescribirlo', async () => {
+    const pool = pools[0]!, actor = credentials.find(account => account.role === 'administrativo')!.id;
+    await expect(seedPurchaseDemo(pool, credentials.find(account => account.role === 'estudiante')!.id)).rejects.toThrow('cuenta administrativa');
+    const fixture = purchaseDemoExamples[0]!.input;
+    const saved = (await repository.create(fixture, actor)).record;
+    await pool.query('UPDATE cenit.purchase_requests SET payload_hash=$2 WHERE id=$1', [saved.id, '0'.repeat(64)]);
+    await expect(seedPurchaseDemo(pool, actor)).rejects.toMatchObject({ code: 'OPERATION_CONFLICT' });
+    expect(await repository.get(saved.id)).toEqual(saved);
   });
 });

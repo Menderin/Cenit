@@ -1,6 +1,5 @@
-import { useEffect, useRef } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
-import { useAuth, destination } from '../features/auth/model/session.js';
+import { useAuth } from '../features/auth/model/session.js';
 import { Login } from '../features/auth/pages/Login.js';
 import { PurchaseReview } from '../features/purchases/pages/PurchaseReview.js';
 import { Purchases } from '../features/purchases/pages/Purchases.js';
@@ -12,17 +11,7 @@ import { Home } from '../features/administration/pages/Home.js';
 import { Personnel } from '../features/administration/pages/Personnel.js';
 import { Assets } from '../features/administration/pages/Assets.js';
 import { AccessLayout } from '../features/auth/components/AccessLayout.js';
-import { SessionWarning } from '../features/auth/components/SessionWarning.js';
 import { Academic } from '../features/academic/pages/Academic.js';
-
-function AreaUnderConstruction({ title }: { title: string }) {
-  const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => { heading.current?.focus(); }, []);
-  return <div className="cenit-access__completion">
-    <h1 id="access-title" ref={heading} tabIndex={-1}>{title}</h1>
-    <p className="cenit-access__intro">Este espacio está en construcción.</p>
-  </div>;
-}
 
 export function App() {
   const auth = useAuth();
@@ -40,19 +29,6 @@ export function App() {
     <button className="cenit-access__primary" onClick={() => { void (auth.status === 'logout-error' ? auth.logout() : auth.refresh()); }}>Reintentar</button>
   </>;
   else if (!auth.session) content = <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Navigate to="/login" replace />} /></Routes>;
-  else {
-    const home = destination(auth.session);
-    content = <>
-      <Routes>
-        <Route path="/administracion" element={<Navigate to={home} replace />} />
-        <Route path="/academico" element={home === '/academico' ? <AreaUnderConstruction title="Área académica" /> : <Navigate to={home} replace />} />
-        <Route path="*" element={<Navigate to={home} replace />} />
-      </Routes>
-      <p className="cenit-access__account"><span>{auth.session.account.name}</span><span>Rol: {auth.session.account.role}</span></p>
-      <SessionWarning expiresAt={auth.session.expiresAt} logout={auth.logout} />
-      <button className="cenit-access__primary" onClick={() => { void auth.logout(); }}>Cerrar sesión</button>
-    </>;
-  }
   if (auth.status === 'authenticated' && auth.session?.account.role === 'administrativo') return <PurchaseTransferProvider key={auth.session.account.id}><AdministrativeLayout account={auth.session.account} expiresAt={auth.session.expiresAt} logout={auth.logout}>
     <Routes>
       <Route path="/administracion" element={<Home />} />
