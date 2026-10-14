@@ -137,6 +137,8 @@ Datos de PostgreSQL viven en volúmenes; nunca en estas carpetas. Esquemas de ta
 
 ## 7. Pruebas
 
+Por petición del líder, los experimentos viven en la raíz `experiments/`, separados de las pruebas de aplicación. `experiments/purchases` contiene el entorno aislado, generadores ficticios y benchmarks de extracción OCR; `baseline` conserva el primer ensayo. Sus imágenes, pesos y salidas completas se generan en `tmp/ocr-research` y `tmp/ocr-battery`; sólo la evidencia resumida y las dependencias se versionan. No es código de producción ni una suite obligatoria de CI. Guía: [investigación de extracción](../Docs/INVESTIGACION-EXTRACCION-COMPRAS.md).
+
 | Ubicación | Qué verificar |
 | --- | --- |
 | Junto al código: `*.test.ts` / `*.test.tsx` | Reglas/transformaciones puras, helpers, componentes y contratos con Vitest |

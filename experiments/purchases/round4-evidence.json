@@ -1,0 +1,972 @@
+{
+  "date": "2026-10-14",
+  "environment": "Notebook / rootless Podman Linux CPU-only, 1 CPU / 1 GiB, sequential, network disabled",
+  "baselineEvidenceSha256": "f4ba42992d9ccee8c5799ccc6d6c833c10e64e4585b975529de5759ab85e7cd0",
+  "samePretrainedWeights": true,
+  "previousBatteryEvidenceSha256": "b4e4e73f484b55a730354c1ec656bba02d9dea62ded1a8c961dcc7dfce5243e9",
+  "developmentExecutions": 12,
+  "holdoutExecutions": 48,
+  "sourceHashes": {
+    "dataset_v3.py": "1f698179e443dc42e484a6bb7471800dd525200ae8ff7c1182fe294330fa5c13",
+    "dataset_v4.py": "dc754e591207b35256c512caf38e3a9b058d6ff5b596162d816a2475b28abd9a",
+    "pipeline.py": "c233182b85565cf37757537f2fcd2709768c2bef5816777bbad2f2df7e8d4181",
+    "pipeline_v3.py": "6082c6bc470331fedf620e809a37007c9da5316d69ba5d7aa8e3d37a6d6e2340",
+    "pipeline_v4.py": "201a7c1f0bc3b9f53aa827f0ed08e0983c8feb06a46408a397db9368ffe40af8",
+    "round4.py": "0e743777a2725f0586ccc5f02c99bf10f0462deb35b515e0a4408876a4a8c7ce"
+  },
+  "fixtureHashes": {
+    "clear": "db1b46be1ada538555d32d623b1d4fb5523690a249d9e9f9e2776c91b4d6c6c5",
+    "multiline": "4dc7d47798eddc30c61b6cfb8c68b5582a59b9f328bc933e5ad1f010eb2d4b6d",
+    "jpeg": "7f43b04e09bdf8111a91a0fa7a503d2d75e7502462885b75b8f5efcb505aea77",
+    "zero": "986dccea890edd5ffb117ac1519a0022ccb2d263a6ee46f55fe833983d38af09",
+    "small": "d16ef50d1218602de819eb25c99814e51028f5403f7d9a569b78939d0daf9a93",
+    "serif": "75274767631f2d8421081d29719b82ae44d34f399a7c7e7bfb9c7f332c417d63",
+    "margin": "0b029ee658be44d1c34c31b41c966b3a67c5e3e647a6a474b75d944ee4d31cae",
+    "no-grid": "2e0c4662a05e65cf431d0784d5f3beff93cf0e6d2ff01cf36578bd95179cdf38"
+  },
+  "variants": [
+    {
+      "variant": "baseline",
+      "runs": 16,
+      "samples": [
+        {
+          "case": "clear",
+          "visibleExact": 15,
+          "visibleFields": 16,
+          "numericExact": 6,
+          "numericFields": 6,
+          "moneyExact": 2,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 7,
+          "lineFields": 7,
+          "wrongNonNull": 1,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 3.5555986055001085,
+          "maxSeconds": 3.7724520720003056,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "02-Dic-2026 12:17:09",
+              "actual": "02-Dic-2026 12:17: 09",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "multiline",
+          "visibleExact": 30,
+          "visibleFields": 30,
+          "numericExact": 14,
+          "numericFields": 14,
+          "moneyExact": 6,
+          "moneyFields": 6,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 21,
+          "lineFields": 21,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 4.507172759999776,
+          "maxSeconds": 4.738323935000153,
+          "repeatable": true,
+          "issues": [],
+          "failures": []
+        },
+        {
+          "case": "jpeg",
+          "visibleExact": 21,
+          "visibleFields": 23,
+          "numericExact": 10,
+          "numericFields": 10,
+          "moneyExact": 4,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 13,
+          "lineFields": 14,
+          "wrongNonNull": 2,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 3.626812113499909,
+          "maxSeconds": 3.7677837130004264,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/totalAmount",
+              "expected": "412000 CLP",
+              "actual": "412000CLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": "MATERIAL DE LABORATORIO PARA DOCENCIA1",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "zero",
+          "visibleExact": 15,
+          "visibleFields": 16,
+          "numericExact": 6,
+          "numericFields": 6,
+          "moneyExact": 2,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 7,
+          "lineFields": 7,
+          "wrongNonNull": 1,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 2.982082216499748,
+          "maxSeconds": 3.1163433510000687,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "02-Dic-2026 12:17:09",
+              "actual": "02-Dic-2026 12:17: 09",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "small",
+          "visibleExact": 19,
+          "visibleFields": 23,
+          "numericExact": 10,
+          "numericFields": 10,
+          "moneyExact": 4,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 7,
+          "headerFields": 9,
+          "lineExact": 12,
+          "lineFields": 14,
+          "wrongNonNull": 4,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 3.0496406740003295,
+          "maxSeconds": 3.1504511960001764,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "02-Dic-2026 12:17:09",
+              "actual": "02-Dic-2026 12: 17:09",
+              "exact": false
+            },
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "CLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": "MATERIAL DE LABORATORIO PARA D0CENCIA 1",
+              "exact": false
+            },
+            {
+              "path": "lines/1/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 2",
+              "actual": "MATERIAL DE LABORATORIO PARA D0CENCIA 2",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "serif",
+          "visibleExact": 16,
+          "visibleFields": 16,
+          "numericExact": 6,
+          "numericFields": 6,
+          "moneyExact": 2,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 7,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 3.1005238000002464,
+          "maxSeconds": 3.185082450000664,
+          "repeatable": true,
+          "issues": [],
+          "failures": []
+        },
+        {
+          "case": "margin",
+          "visibleExact": 22,
+          "visibleFields": 22,
+          "numericExact": 10,
+          "numericFields": 10,
+          "moneyExact": 4,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 8,
+          "lineExact": 14,
+          "lineFields": 14,
+          "wrongNonNull": 0,
+          "absencesCorrect": 1,
+          "absences": 1,
+          "rowsCorrect": true,
+          "medianSeconds": 4.044595556999866,
+          "maxSeconds": 4.160831481000059,
+          "repeatable": true,
+          "issues": [],
+          "failures": []
+        },
+        {
+          "case": "no-grid",
+          "visibleExact": 9,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 3.073978706500384,
+          "maxSeconds": 3.1386705080003594,
+          "repeatable": true,
+          "issues": [
+            "TABLE_ROWS_UNRESOLVED"
+          ],
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "4",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "54000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "216000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        }
+      ],
+      "visibleExact": 147,
+      "visibleFields": 162,
+      "moneyExact": 24,
+      "moneyFields": 26,
+      "moneyWrongNonNull": 0,
+      "moneyMissing": 2,
+      "medianSeconds": 3.2619137945002876,
+      "maxSeconds": 4.738323935000153,
+      "processPeakRssKiB": 693772,
+      "containerMemoryPeakBytes": 653774848,
+      "initializationSeconds": 0.017149025999970036,
+      "models": [
+        {
+          "name": "ch_PP-OCRv5_det_mobile.onnx",
+          "sha256": "4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae"
+        },
+        {
+          "name": "latin_PP-OCRv5_rec_mobile.onnx",
+          "sha256": "b20bd37c168a570f583afbc8cd7925603890efbcdc000a59e22c269d160b5f5a"
+        }
+      ]
+    },
+    {
+      "variant": "structured",
+      "runs": 16,
+      "samples": [
+        {
+          "case": "clear",
+          "visibleExact": 15,
+          "visibleFields": 16,
+          "numericExact": 6,
+          "numericFields": 6,
+          "moneyExact": 2,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 7,
+          "lineFields": 7,
+          "wrongNonNull": 1,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 3.9027403159998357,
+          "maxSeconds": 4.126616089999516,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "02-Dic-2026 12:17:09",
+              "actual": "02-Dic-2026 12:17: 09",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "multiline",
+          "visibleExact": 30,
+          "visibleFields": 30,
+          "numericExact": 14,
+          "numericFields": 14,
+          "moneyExact": 6,
+          "moneyFields": 6,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 21,
+          "lineFields": 21,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 6.994954968999991,
+          "maxSeconds": 7.032871405000151,
+          "repeatable": true,
+          "issues": [],
+          "failures": []
+        },
+        {
+          "case": "jpeg",
+          "visibleExact": 22,
+          "visibleFields": 23,
+          "numericExact": 10,
+          "numericFields": 10,
+          "moneyExact": 4,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 14,
+          "lineFields": 14,
+          "wrongNonNull": 1,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 4.7597485745000085,
+          "maxSeconds": 5.236307707000378,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/totalAmount",
+              "expected": "412000 CLP",
+              "actual": "412000CLP",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "zero",
+          "visibleExact": 15,
+          "visibleFields": 16,
+          "numericExact": 6,
+          "numericFields": 6,
+          "moneyExact": 2,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 7,
+          "lineFields": 7,
+          "wrongNonNull": 1,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 3.6415048904996183,
+          "maxSeconds": 3.8531610669997463,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "02-Dic-2026 12:17:09",
+              "actual": "02-Dic-2026 12:17: 09",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "small",
+          "visibleExact": 19,
+          "visibleFields": 23,
+          "numericExact": 10,
+          "numericFields": 10,
+          "moneyExact": 4,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 7,
+          "headerFields": 9,
+          "lineExact": 12,
+          "lineFields": 14,
+          "wrongNonNull": 4,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 4.0755367775000195,
+          "maxSeconds": 4.2504513350004345,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "02-Dic-2026 12:17:09",
+              "actual": "02-Dic-2026 12: 17:09",
+              "exact": false
+            },
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "CLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": "MATERIAL DE LABORATORIO PARA DOCENCIA1",
+              "exact": false
+            },
+            {
+              "path": "lines/1/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 2",
+              "actual": "MATERIAL DE LABORATORIO PARA DOCENCIA2",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "serif",
+          "visibleExact": 16,
+          "visibleFields": 16,
+          "numericExact": 6,
+          "numericFields": 6,
+          "moneyExact": 2,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 7,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 4.027140787499775,
+          "maxSeconds": 4.277071563999925,
+          "repeatable": true,
+          "issues": [],
+          "failures": []
+        },
+        {
+          "case": "margin",
+          "visibleExact": 22,
+          "visibleFields": 22,
+          "numericExact": 10,
+          "numericFields": 10,
+          "moneyExact": 4,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 8,
+          "lineExact": 14,
+          "lineFields": 14,
+          "wrongNonNull": 0,
+          "absencesCorrect": 1,
+          "absences": 1,
+          "rowsCorrect": true,
+          "medianSeconds": 5.259710491499845,
+          "maxSeconds": 5.455912137999803,
+          "repeatable": true,
+          "issues": [],
+          "failures": []
+        },
+        {
+          "case": "no-grid",
+          "visibleExact": 9,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 3.0806957150002745,
+          "maxSeconds": 3.235444545000064,
+          "repeatable": true,
+          "issues": [
+            "TABLE_ROWS_UNRESOLVED",
+            "VERIFIED_GRID_UNAVAILABLE"
+          ],
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "4",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "54000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "216000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        }
+      ],
+      "visibleExact": 148,
+      "visibleFields": 162,
+      "moneyExact": 24,
+      "moneyFields": 26,
+      "moneyWrongNonNull": 0,
+      "moneyMissing": 2,
+      "medianSeconds": 4.188533712499975,
+      "maxSeconds": 7.032871405000151,
+      "processPeakRssKiB": 648316,
+      "containerMemoryPeakBytes": 606322688,
+      "initializationSeconds": 0.03547898200031341,
+      "models": [
+        {
+          "name": "ch_PP-OCRv5_det_mobile.onnx",
+          "sha256": "4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae"
+        },
+        {
+          "name": "latin_PP-OCRv5_rec_mobile.onnx",
+          "sha256": "b20bd37c168a570f583afbc8cd7925603890efbcdc000a59e22c269d160b5f5a"
+        }
+      ]
+    },
+    {
+      "variant": "verified",
+      "runs": 16,
+      "samples": [
+        {
+          "case": "clear",
+          "visibleExact": 15,
+          "visibleFields": 16,
+          "numericExact": 6,
+          "numericFields": 6,
+          "moneyExact": 2,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 7,
+          "lineFields": 7,
+          "wrongNonNull": 1,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 4.955476936499963,
+          "maxSeconds": 5.125314863999847,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "02-Dic-2026 12:17:09",
+              "actual": "02-Dic-2026 12:17: 09",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "multiline",
+          "visibleExact": 30,
+          "visibleFields": 30,
+          "numericExact": 14,
+          "numericFields": 14,
+          "moneyExact": 6,
+          "moneyFields": 6,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 21,
+          "lineFields": 21,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 9.733002973000566,
+          "maxSeconds": 9.921934204000536,
+          "repeatable": true,
+          "issues": [],
+          "failures": []
+        },
+        {
+          "case": "jpeg",
+          "visibleExact": 22,
+          "visibleFields": 23,
+          "numericExact": 10,
+          "numericFields": 10,
+          "moneyExact": 4,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 14,
+          "lineFields": 14,
+          "wrongNonNull": 1,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 6.169122803499704,
+          "maxSeconds": 6.36799035399963,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/totalAmount",
+              "expected": "412000 CLP",
+              "actual": "412000CLP",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "zero",
+          "visibleExact": 15,
+          "visibleFields": 16,
+          "numericExact": 6,
+          "numericFields": 6,
+          "moneyExact": 2,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 7,
+          "lineFields": 7,
+          "wrongNonNull": 1,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 4.521969644500132,
+          "maxSeconds": 4.798808251000082,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "02-Dic-2026 12:17:09",
+              "actual": "02-Dic-2026 12:17: 09",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "small",
+          "visibleExact": 19,
+          "visibleFields": 23,
+          "numericExact": 10,
+          "numericFields": 10,
+          "moneyExact": 4,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 7,
+          "headerFields": 9,
+          "lineExact": 12,
+          "lineFields": 14,
+          "wrongNonNull": 4,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 6.039841086000251,
+          "maxSeconds": 6.253085948000262,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "02-Dic-2026 12:17:09",
+              "actual": "02-Dic-2026 12: 17:09",
+              "exact": false
+            },
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "CLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": "MATERIAL DE LABORATORIO PARA DOCENCIA1",
+              "exact": false
+            },
+            {
+              "path": "lines/1/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 2",
+              "actual": "MATERIAL DE LABORATORIO PARA DOCENCIA2",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "serif",
+          "visibleExact": 16,
+          "visibleFields": 16,
+          "numericExact": 6,
+          "numericFields": 6,
+          "moneyExact": 2,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 7,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 4.520528794999791,
+          "maxSeconds": 4.537762367000141,
+          "repeatable": true,
+          "issues": [],
+          "failures": []
+        },
+        {
+          "case": "margin",
+          "visibleExact": 22,
+          "visibleFields": 22,
+          "numericExact": 10,
+          "numericFields": 10,
+          "moneyExact": 4,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 8,
+          "lineExact": 14,
+          "lineFields": 14,
+          "wrongNonNull": 0,
+          "absencesCorrect": 1,
+          "absences": 1,
+          "rowsCorrect": true,
+          "medianSeconds": 7.294208323499788,
+          "maxSeconds": 7.82936598499964,
+          "repeatable": true,
+          "issues": [],
+          "failures": []
+        },
+        {
+          "case": "no-grid",
+          "visibleExact": 9,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 3.2480705875004787,
+          "maxSeconds": 3.2957779710004615,
+          "repeatable": true,
+          "issues": [
+            "TABLE_ROWS_UNRESOLVED",
+            "VERIFIED_GRID_UNAVAILABLE"
+          ],
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "4",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "54000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "216000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        }
+      ],
+      "visibleExact": 148,
+      "visibleFields": 162,
+      "moneyExact": 24,
+      "moneyFields": 26,
+      "moneyWrongNonNull": 0,
+      "moneyMissing": 2,
+      "medianSeconds": 5.475955544000044,
+      "maxSeconds": 9.921934204000536,
+      "processPeakRssKiB": 588532,
+      "containerMemoryPeakBytes": 546447360,
+      "initializationSeconds": 0.017727872999785177,
+      "models": [
+        {
+          "name": "ch_PP-OCRv5_det_mobile.onnx",
+          "sha256": "4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae"
+        },
+        {
+          "name": "latin_PP-OCRv5_rec_mobile.onnx",
+          "sha256": "b20bd37c168a570f583afbc8cd7925603890efbcdc000a59e22c269d160b5f5a"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Synthetic held-out configurations, not independent customer screenshots",
+    "Raw text exact match for a subset of the public contract",
+    "Seven-column bordered tables only; no-grid is a deliberate unsupported case"
+  ]
+}

@@ -107,7 +107,7 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 
 **HU04-T03, actualización del 12 de octubre:** contrato y pantalla ficticia de revisión implementados; [campos, schemas, límites y pendientes](EXTRACCION-COMPRAS.md). Sin OCR, ruta de extracción activa ni persistencia. HU04-T03 pendiente de revisión/integración; la historia no se considera completa hasta demostrar procesamiento real.
 
-**Alcance:** MVP requerido; captura de pantalla con visión local elegida el 13 de octubre, sin acceso a Oracle. Procesamiento a cargo de Víctor; frontend a cargo de Gael.
+**Alcance:** MVP requerido; captura PNG/JPEG con procesamiento local o en equipo propio elegida el 13 de octubre, sin acceso a Oracle. Víctor realiza procesamiento/API y Gael el frontend. OCR móvil recomendado provisionalmente tras investigación local; implementación y ensayo de VM pendientes.
 
 **Descripción:** Como administrativo, quiero recuperar automáticamente los datos de una compra y revisarlos para reducir la transcripción y detectar errores antes de registrarla.
 
@@ -119,13 +119,13 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 4. Entrada inválida, procesamiento parcial o fallo tienen un estado comprensible; puedo corregir o reintentar.
 5. Formato, campos objetivo y tratamiento de la entrada tienen criterios acordados antes de acreditar extracción suficiente.
 
-**Pendientes y supuestos:** modelo de visión local, máquina, capturas ficticias representativas, campos recuperables, tiempos y aceptación de exactitud. No habrá acceso a Oracle; la vía de capturas fue elegida por Gael el 13 de octubre. La procedencia de capturas reales debe integrarse con el contrato de guardado.
+**Decisión de captura del 13/10, confirmada por el líder el 14/10:** no habrá acceso a Oracle ni a su API. Capturas PNG/JPEG y procesamiento local/en equipo propio son la vía de esta entrega. Se autoriza comparar OCR ligero con visión generativa. Investigación y evidencia: [INVESTIGACION-EXTRACCION-COMPRAS.md](INVESTIGACION-EXTRACCION-COMPRAS.md). No se realizó ni se atribuye una consulta directa a TI desde esta tarea. Pendientes: muestras representativas del cliente, exactitud aceptada, ensayo de recursos en VM e integración del endpoint y procedencia de captura real de SCRUM-45 con el contrato de guardado.
 
 **Revisión INVEST:** valiosa/comprobable una vez fijado el conjunto de muestras/campos. Actualmente no es estimable ni de tamaño acreditado; necesita S3-HT03. El guardado está separado en HU05. Si es grande, dividir por una fuente/formato acordado, sin quitar automáticamente otros compromisos.
 
 | Tarea | Descripción | Criterios de aceptación de la tarea |
 | --- | --- | --- |
-| HU04-T01 — Investigación y decisión de captura | Evaluar modelo/máquina de visión local con capturas ficticias; vía de imágenes ya elegida, sin acceso a Oracle | Evidencia de precisión por campo y tiempos; recursos comprobados, límites y fallos documentados |
+| HU04-T01 — Investigación y decisión de captura | Registrar ausencia de acceso Oracle y comparar modelo/máquina de extracción local con capturas ficticias, recursos, calidad y tiempos | Evidencia reproducible por campo y muestra, tiempos, recursos, límites y fallos; vía decidida o bloqueo, sin prometer API ni acreditar el endpoint de SCRUM-45 |
 | HU04-T02 — Mockup de captura administrativa | Diseñar entrada según vía elegida, progreso, resultado parcial, revisión y error | Campos editables y ausencias visibles; extracción separada de guardar; no incluye interfaz académica |
 | HU04-T03 — Contrato de extracción | Definir campos candidatos, ausencias, errores y límites de entrada sin reutilizar el POST de guardado como extracción | Schemas y ejemplos validables; campos/límites acordados; no se inventan requisitos de precisión |
 | HU04-T04 — Adaptador de recuperación | Víctor implementa visión local de capturas y mapea candidatos al contrato, con procedencia real coordinada | Capturas ficticias procesadas realmente; fallos/ausencias no se convierten en datos válidos; no accede a Oracle ni guarda al extraer |
@@ -537,7 +537,7 @@ S3-HT03 queda desglosado en HU04-T01; S3-HT04 en HU10-T01. Diseño global S3-HT0
 | --- | --- | --- |
 | Q01 | Identificador y preparación técnica de cuentas locales | Resuelto el 11 de octubre: correo/contraseña, un rol, comando de demo privado; sin registro público; HU01 |
 | Q02 | Duración de sesión y conducta de borradores al expirar | Dos horas fijas confirmadas; conducta de borradores/interfaz pendiente; HU03 |
-| Q03 | API Oracle o imagen, muestras, campos y criterio de extracción suficiente | Investigación/contacto TI pendientes; HU04 |
+| Q03 | Capturas PNG/JPEG, muestras y criterio de extracción suficiente | API Oracle descartada; benchmark local ejecutado. Precisión institucional, recursos VM e integración pendientes; HU04 |
 | Q04 | Fuente oficial de prerrequisitos y versión del plan | Prerrequisitos obligatorios confirmados; Registro Curricular pendiente; HU10 |
 | Q05 | Esquema del catálogo académico | PostgreSQL confirmado; concretar tablas/relaciones/migraciones de HU09/HU10 |
 | Q06 | Roles, alcance y almacenamiento de simulación futura | Fuera del MVP; HU11/HU12 |

@@ -6,6 +6,8 @@ Para build completo/servidor compilado/ensayo de imagen, leer [deploy/ENSAYO-LOC
 
 ## Aplicación y referencias
 
+- [Docs/INVESTIGACION-EXTRACCION-COMPRAS.md](Docs/INVESTIGACION-EXTRACCION-COMPRAS.md): investigación experimental de OCR local y regiones dinámicas. Oracle/API descartados por el equipo; no confundir el benchmark con un endpoint ni con extracción integrada.
+
 Estas instrucciones aplican a todo el repositorio. Antes de iniciar una tarea, leer [CONTRIBUTING.md](CONTRIBUTING.md). Antes de modificar código, leer además [AGENTS/SDD.md](AGENTS/SDD.md), [la guía de estructura](AGENTS/ESTRUCTURA.md) y las instrucciones adicionales de la carpeta afectada.
 
 - `Docs/Guía de trabajo para el MVP de Cenit.pdf`: contexto y alcance de la demostración del 15 de octubre de 2026.
