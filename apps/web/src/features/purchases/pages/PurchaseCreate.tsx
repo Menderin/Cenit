@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useBeforeUnload, useBlocker, useNavigate } from 'react-router';
+import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft';
+import { PlusIcon } from '@phosphor-icons/react/dist/csr/Plus';
+import { FloppyDiskIcon } from '@phosphor-icons/react/dist/csr/FloppyDisk';
+import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { validateCreatePurchase, type ContractProblem, type ExtractionReviewDraft, type CreatePurchase } from '@cenit/contracts/purchases';
 import { createPurchase } from '../api/purchases.js';
-import { emptyDraft, emptyLine, purchaseLabels } from '../model/fields.js';
+import { emptyDraft, emptyLine, purchaseLabels, amountLabel, purchaseProblemLabel, purchaseExampleLabel } from '../model/fields.js';
 import { usePurchaseTransfer } from '../model/transfer.js';
 import '../records.css';
 
@@ -13,6 +17,9 @@ export function PurchaseCreate() {
   const transfer = usePurchaseTransfer();
   const [incoming] = useState(() => transfer.peek());
   const [draft, setDraft] = useState<ExtractionReviewDraft>(() => incoming?.draft ?? emptyDraft());
+  const [lineKeys, setLineKeys] = useState(() => draft.lines.map(() => crypto.randomUUID()));
+  const initialLineKeys = useRef(new Set(lineKeys));
+  const form = useRef<HTMLFormElement>(null);
   const [dirty, setDirty] = useState(!!incoming), [problems, setProblems] = useState<ContractProblem[]>([]);
   const operationId = useRef(incoming?.operationId ?? crypto.randomUUID()), saved = useRef(false);
   useEffect(() => { if (incoming) transfer.consume(incoming.operationId); }, [incoming, transfer]);
@@ -40,6 +47,15 @@ export function PurchaseCreate() {
     void client.invalidateQueries({ queryKey: ['purchases'] });
     navigate(`/administracion/compras/${result.data.id}`, { replace: true });
   } });
+  useEffect(() => {
+    if (!problems.length) return;
+    const fields = form.current?.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[aria-invalid="true"]');
+    fields?.forEach(field => {
+      let section = field.closest('details');
+      while (section) { section.open = true; section = section.parentElement?.closest('details') ?? null; }
+    });
+    fields?.[0]?.focus();
+  }, [problems]);
   function edit(group: 'header' | 'administrative' | 'lines', key: string, value: string, index = 0) {
     const next = value === '' ? null : value;
     setDraft(previous => group === 'lines' ? { ...previous, lines: previous.lines.map((line, i) => i === index ? { ...line, [key]: next } : line) } : { ...previous, [group]: { ...previous[group], [key]: next } });
@@ -50,29 +66,31 @@ export function PurchaseCreate() {
     const problem = problems.find(entry => entry.path === path), mandatory = group === 'header' && required.has(key);
     const props = { id, value: value ?? '', required: mandatory, disabled: mutation.isPending, 'aria-invalid': !!problem, 'aria-describedby': problem ? `${id}-error` : undefined,
       maxLength: key === 'description' ? 1000 : 255, onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => edit(group, key, event.target.value, index) };
-    return <div className="purchase-input" key={key}><label htmlFor={id}>{purchaseLabels[key]}{mandatory ? ' *' : ''}{group === 'lines' ? ` · ítem ${index + 1}` : ''}</label>
-      {key === 'description' ? <textarea {...props} rows={3} /> : <input {...props} />}
+    return <div className={`purchase-input${key === 'description' ? ' purchase-input--wide' : ''}`} key={key}><label htmlFor={id}>{purchaseLabels[key]}{mandatory ? ' *' : ''}<span className="purchase-sr-only">{group === 'lines' ? ` · ítem ${index + 1}` : ''}</span></label>
+      {key === 'description' ? <textarea {...props} rows={3} /> : <input {...props} type={key === 'sentDate' ? 'date' : key === 'sentTime' ? 'time' : 'text'} step={key === 'sentTime' ? 1 : undefined} inputMode={['totalAmount', 'taxAmount', 'price', 'amount'].includes(key) ? 'numeric' : undefined} />}
       {problem && <p id={`${id}-error`} className="purchase-field-error">{problem.message}</p>}
     </div>;
   }
-  return <section className="purchase-records"><Link to="/administracion/compras">Volver a solicitudes</Link><h1>{incoming ? 'Guardar ejemplo revisado' : 'Agregar solicitud manual'}</h1>
-    {incoming && <p className="purchase-origin-notice">Origen: ejemplo ficticio sin extracción real ({incoming.origin.type === 'contract_example' ? incoming.origin.exampleId : ''}). Revisa y completa los campos antes de guardar.</p>}
-    <p>Registra una copia en Cenit; no crea una compra en Oracle. Los campos con * son obligatorios.</p>
-    <p>El borrador no se guarda automáticamente y se descarta al cerrar o expirar la sesión.</p>
-    <form noValidate onSubmit={event => {
+  return <section className="purchase-records"><Link className="purchase-back-link" to="/administracion/compras"><ArrowLeftIcon size={13} aria-hidden="true" />Volver a solicitudes</Link>
+    <div className="purchase-page-heading"><div><h1>Nueva solicitud</h1><p>Los campos con * son obligatorios.</p></div>{incoming && <span className="purchase-origin-badge">Ejemplo de demostración · {purchaseExampleLabel(incoming.origin.type === 'contract_example' ? incoming.origin.exampleId : null)}</span>}</div>
+    <form ref={form} noValidate onSubmit={event => {
       event.preventDefault(); if (mutation.isPending) return;
       const input = { operationId: operationId.current, ...(incoming ? { origin: incoming.origin } : {}), ...draft }, errors = validateCreatePurchase(input);
       setProblems(errors); if (!errors.length) mutation.mutate(input as CreatePurchase);
     }}>
-      <fieldset><legend>Cabecera de la solicitud</legend><div className="purchase-input-grid">{Object.entries(draft.header).map(([key, value]) => input('header', key, value))}</div></fieldset>
-      <fieldset><legend>Ítems de la solicitud</legend><p>Todos pertenecen a esta solicitud. Puedes agregar hasta 100; no es obligatorio añadirlos. Desplaza la tabla para ver todos sus campos.</p>
-        {!draft.lines.length ? <p>No hay ítems añadidos.</p> : <div className="purchase-table-scroll" tabIndex={0} role="region" aria-label="Editar ítems de la solicitud"><table><thead><tr><th scope="col">Ítem</th>{Object.keys(emptyLine()).map(key => <th scope="col" key={key}>{purchaseLabels[key]}</th>)}<th scope="col">Acciones</th></tr></thead><tbody>{draft.lines.map((line, index) => <tr key={index}><th scope="row">{index + 1}</th>{Object.entries(line).map(([key, value]) => <td key={key}>{input('lines', key, value, index)}</td>)}<td><button type="button" disabled={mutation.isPending} onClick={() => { setDraft(previous => ({ ...previous, lines: previous.lines.filter((_, i) => i !== index) })); setDirty(true); setProblems([]); }}>Eliminar ítem {index + 1}</button></td></tr>)}</tbody></table></div>}
-        <button type="button" disabled={draft.lines.length >= 100 || mutation.isPending} onClick={() => { setDraft(previous => ({ ...previous, lines: [...previous.lines, emptyLine()] })); setDirty(true); }}>Agregar ítem</button>
+      <fieldset><legend>Datos principales</legend><div className="purchase-input-grid purchase-main-grid">{['requestNumber', 'sentDate', 'totalAmount', 'description'].map(key => input('header', key, draft.header[key as keyof typeof draft.header]))}</div></fieldset>
+      <details className="purchase-item purchase-disclosure"><summary><CaretRightIcon className="purchase-chevron" size={15} aria-hidden="true" /><span>Datos complementarios</span><span className="purchase-section-hint">Opcional</span></summary><div className="purchase-item__body"><div className="purchase-input-grid">{Object.entries(draft.header).filter(([key]) => !required.has(key)).map(([key, value]) => input('header', key, value))}</div></div></details>
+      <fieldset><legend>Ítems de la solicitud <span className="purchase-count">{draft.lines.length}</span></legend>
+        {!draft.lines.length ? <div className="purchase-items-empty"><p>Agrega productos o servicios a la solicitud.</p><span>Opcional · Hasta 100 ítems</span></div> : draft.lines.map((line, index) => <details className="purchase-item" key={lineKeys[index]} open={!initialLineKeys.current.has(lineKeys[index]!)}>
+          <summary><CaretRightIcon className="purchase-chevron" size={15} aria-hidden="true" /><span className="purchase-item__number">Ítem {index + 1}</span><span className="purchase-item__description">{line.description || 'Nuevo ítem'}</span><span className="purchase-item__provider">{line.provider || 'Sin proveedor'}</span><span className="purchase-item__amount">{amountLabel(line.amount)}</span></summary>
+          <div className="purchase-item__body"><div className="purchase-input-grid">{Object.entries(line).map(([key, value]) => input('lines', key, value, index))}</div><button type="button" disabled={mutation.isPending} onClick={() => { setDraft(previous => ({ ...previous, lines: previous.lines.filter((_, i) => i !== index) })); setLineKeys(previous => previous.filter((_, i) => i !== index)); setDirty(true); setProblems([]); mutation.reset(); }}>Eliminar ítem {index + 1}</button></div>
+        </details>)}
+        <button type="button" disabled={draft.lines.length >= 100 || mutation.isPending} onClick={() => { setDraft(previous => ({ ...previous, lines: [...previous.lines, emptyLine()] })); setLineKeys(previous => [...previous, crypto.randomUUID()]); setDirty(true); setProblems([]); mutation.reset(); }}><PlusIcon size={14} aria-hidden="true" />Agregar ítem</button>
       </fieldset>
-      <fieldset><legend>Seguimiento administrativo</legend><p>Los campos de significado pendiente se conservan como texto; no se deducen estados de pago o aprobación.</p><div className="purchase-input-grid">{Object.entries(draft.administrative).map(([key, value]) => input('administrative', key, value))}</div></fieldset>
-      {problems.length > 0 && <div role="alert"><p>Revisa los campos antes de guardar.</p><ul>{problems.map((problem, index) => <li key={index}>{problem.path}: {problem.message}</li>)}</ul></div>}
+      <details className="purchase-item purchase-disclosure"><summary><CaretRightIcon className="purchase-chevron" size={15} aria-hidden="true" /><span>Seguimiento administrativo</span><span className="purchase-section-hint">Opcional</span></summary><div className="purchase-item__body"><div className="purchase-input-grid">{Object.entries(draft.administrative).map(([key, value]) => input('administrative', key, value))}</div></div></details>
+      {problems.length > 0 && <div className="purchase-error-summary" role="alert"><p>Revisa los campos antes de guardar.</p><ul>{problems.map((problem, index) => <li key={index}><strong>{purchaseProblemLabel(problem.path)}</strong>: {problem.message}</li>)}</ul></div>}
       {mutation.isError && <p role="alert">{mutation.error.message} El formulario conserva tus datos.</p>}
-      <button className="purchase-save" type="submit" disabled={mutation.isPending}>{mutation.isPending ? 'Guardando…' : 'Guardar solicitud'}</button>
+      <div className="purchase-form-footer"><button className="purchase-save" type="submit" disabled={mutation.isPending}><FloppyDiskIcon size={15} aria-hidden="true" />{mutation.isPending ? 'Guardando…' : 'Guardar solicitud'}</button><span>Sin guardar</span></div>
     </form>
   </section>;
 }

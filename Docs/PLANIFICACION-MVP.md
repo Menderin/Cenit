@@ -1,10 +1,12 @@
 # Planificación del MVP de Cenit
 
+Actualización autorizada por Gael el 13 de octubre: el equipo no tendrá acceso a Oracle. La recuperación se implementará mediante visión local desde capturas de pantalla de la orden de compra; Víctor realiza backend/modelo y Gael frontend. Esta decisión sustituye la alternativa API Oracle de PL01. El frontend se rediseña en la rama existente `feat/modulo_de_compra` sobre develop integrado; no acredita extracción real. Jira actualiza responsables/criterios de compras sin cerrar tareas automáticamente. La inferencia sigue pendiente de endpoint, procedencia, recursos y evaluación de precisión; ver EXTRACCION-COMPRAS.md.
+
 Fecha: 10 de octubre de 2026. Estado: borrador para acordar con el equipo; no constituye un compromiso de esfuerzo validado ni una entrega implementada.
 
 ## Decisiones y cambios de alcance
 
-Víctor confirmó que la carrera es Nutrición. Se conserva la gestión de compras y la malla; se añaden login y recuperación automática de datos de compras. Para el acceso propuso cuentas propias ficticias de profesores y estudiantes. La captura tiene dos alternativas por investigar: datos estructurados del sistema Oracle mediante una API, o extracción desde imágenes mediante OCR/visión. Aún no se contacta a los encargados; ninguna alternativa está seleccionada ni su viabilidad acreditada. Estas aclaraciones del líder amplían la guía anterior; no acreditan acuerdo colectivo ni validación institucional.
+Víctor confirmó que la carrera es Nutrición. Se conserva la gestión de compras y la malla; se añaden login y recuperación automática de datos de compras. Para el acceso propuso cuentas propias ficticias de profesores y estudiantes. La decisión del 13 de octubre selecciona capturas de pantalla y visión local, sin acceso a Oracle. Modelo, recursos y precisión siguen pendientes de evaluación por Víctor. Estas aclaraciones del líder amplían la guía anterior; no acreditan acuerdo colectivo ni validación institucional.
 
 Registro manual significa escribir los campos en un formulario. OCR convierte texto de una imagen en texto digital; identificar fecha, referencia y monto requiere procesamiento adicional. Revisar y corregir lo extraído antes de guardarlo no sustituye la automatización requerida. Recuperar datos mediante API es una vía distinta, sin necesidad de OCR. No se promete implementar ambas vías para el jueves.
 
@@ -12,7 +14,7 @@ Antes de cerrar historias y tareas dependientes hay que resolver:
 
 | Pendiente | Información necesaria | Trabajo que bloquea |
 | --- | --- | --- |
-| PL01 | Contactar encargados, identificar producto/API Oracle y acceso de prueba; conseguir imágenes ficticias representativas y elegir vía | Contratos, implementación y estimación de captura automática |
+| PL01 | Vía elegida: captura y visión local, sin acceso a Oracle. Conseguir capturas ficticias representativas, evaluar modelo/máquina y ampliar procedencia con Víctor | Implementación, precisión y conexión real del frontend de captura |
 | PL02 | Login local confirmado; Google se posterga. Precarga de cuentas, detalle de credenciales, contrato y duración de sesión por concretar | Implementación y pruebas; no se presupone registro público ni envío de correos |
 | PL03 | Fuente recibida: `Docs/malla-nutricion-y-dietetica-2027.pdf`. Confirmar versión y conseguir prerrequisitos oficiales obligatorios; no figuran en la malla gráfica | Ya permite transcribir y visualizar; bloquea completar consulta de prerrequisitos oficiales |
 | PL04 | Roles definidos: docente/estudiante para malla y administrativo para compras. Concretar matriz en contratos y probarla | Autorización en servidor; separación acordada, todavía no implementada |

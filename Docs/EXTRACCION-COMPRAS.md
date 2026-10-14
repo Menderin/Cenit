@@ -1,5 +1,34 @@
 # HU04-T03 — Contrato de extracción de compras
 
+## Presentación de la revisión — 14 de octubre
+
+Por petición de Gael, el laboratorio conserva su ruta y un acceso secundario «Revisar ejemplo», con título «Revisar datos» y etiqueta «Ejemplo de demostración». Se retiran avisos extensos de implementación: no cambian origen, candidatos ni límites funcionales. El entorno administrativo conserva «Demostración» en la cabecera.
+
+Los datos principales aparecen primero; complementarios, ítems y seguimiento se despliegan para consultar o corregir. Cada campo conserva estado de fuente, modificación, incidencia y errores; «Revisar original» permite consultar valor/texto originales intactos. Incidencias y resúmenes usan nombres de campos. «Continuar al formulario» transfiere en memoria sin guardar; «Comprobar datos» conserva la validación de formatos del contrato. No se añade subida, procesamiento, OCR ni procedencia real. Los textos anteriores sobre el aviso permanente corresponden al corte previo.
+
+Revisión visual manual de escritorio/móvil y teclado; tests y verificación técnica se posponen hasta la aceptación visual del usuario. No acreditar las comprobaciones anteriores para este nuevo marcado.
+
+## Decisión y recorrido de captura — 13 de octubre
+
+Gael confirmó que el equipo **no tendrá acceso a Oracle**. La recuperación se realizará desde una captura de pantalla de la orden de compra mediante un modelo de visión local o en un equipo propio. Víctor implementa el procesamiento/API; Gael realiza el frontend. Esta decisión sustituye la investigación entre API Oracle e imagen, conservando los campos y límites del contrato actual. El modelo, la máquina y su precisión siguen pendientes de comprobación.
+
+El rediseño administrativo conserva el laboratorio ficticio en su ruta actual. No hay subida ni extracción real disponible. La interfaz de captura se conectará cuando Víctor entregue el endpoint y acuerde la procedencia de resultados reales; hoy el guardado sólo admite `manual` y `contract_example`.
+
+### Especificación visual para conectar el procesamiento
+
+| Estado | Presentación y acciones |
+| --- | --- |
+| Elegir captura | En el marco administrativo, título «Revisar captura», etiqueta «Captura de la orden de compra», selector PNG/JPEG y límites 5 MiB/20 MP. Vista previa con nombre y acción para cambiar imagen; campos aún vacíos |
+| Procesar | Acción «Extraer datos»; carga explícita sin porcentaje inventado. Conservar imagen y deshabilitar envío duplicado; no mostrar éxito ni guardar |
+| Revisar | Vista previa junto a cabecera/ítems en escritorio, encima en móvil. Cada campo muestra candidato, estado y original; ausencias siguen vacías. Ítems desplegables y una lista de incidencias |
+| Parcial | Mantener campos recuperados y mostrar faltantes/ambiguos junto al campo. Permitir corregir; no completar número, proveedor, monto o pago por inferencia |
+| Fallo | Mensaje del error público; conservar la captura para reintentar o reemplazar. No presentar un ejemplo precargado como resultado de visión |
+| Continuar | «Continuar al formulario de guardado» transfiere una copia revisada en memoria. El formulario exige los cuatro mínimos y guarda sólo mediante POST explícito; volver/cancelar no persiste |
+
+Tema claro y tratamiento de superficies/controles de las referencias Synapse; iconos Phosphor de imagen, extracción, aviso y continuidad con texto visible. Selección de archivo accesible con teclado; no es necesario añadir drag-and-drop. El borrador pertenece a la cuenta actual y se descarta al cerrar/expirar/cambiar sesión. La imagen temporal debe descartarse conforme al contrato, sin publicarla ni almacenarla como anexo.
+
+Para Víctor: usar la respuesta de candidatos existente y validar tanto schema como coherencia. Puede evaluar visión local con salida JSON Schema (por ejemplo, [Ollama](https://docs.ollama.com/capabilities/structured-outputs)); JSON válido no acredita lectura correcta. Probar capturas ficticias legibles, recortadas, con varios ítems, campos ausentes y valores ambiguos. No cargar inferencia dentro del runtime de 512 MiB sin medir capacidad. La integración real queda en SCRUM-41/45; el mockup/laboratorio no completa extracción.
+
 Fecha: 12 de octubre de 2026. Estado: contrato y laboratorio de ejemplos implementados; extracción real, revisión independiente e integración pendientes.
 
 ## Qué existe y cómo probarlo
