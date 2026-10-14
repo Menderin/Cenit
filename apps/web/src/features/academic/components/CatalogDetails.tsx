@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, BookOpen } from '@phosphor-icons/react';
 import type { AcademicCourse, AcademicPlan, Prerequisite } from '@cenit/contracts/academic';
 import { semesterLabel } from '../model/group-by-semester.js';
@@ -15,19 +15,26 @@ function Rule({ rule, plan }: { rule: Prerequisite; plan: AcademicPlan }) {
 
 export function CatalogDetails({ course, plan, progress, student, onClose }: { course: AcademicCourse; plan: AcademicPlan; progress?: CourseProgress; student?: Student; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const [closing, setClosing] = useState(false);
   useEffect(() => {
     const dialog = ref.current!;
     dialog.showModal();
     return () => dialog.close();
   }, []);
+  useEffect(() => {
+    if (!closing) return;
+    const timer = window.setTimeout(() => ref.current?.close(), 150);
+    return () => clearTimeout(timer);
+  }, [closing]);
   const incoming = plan.prerequisiteEdges.filter(edge => edge.toCode === course.code);
   const outgoing = plan.prerequisiteEdges.filter(edge => edge.fromCode === course.code);
   const pending = course.prerequisites.kind === 'pending';
-  return <dialog ref={ref} className="academic-detail" aria-labelledby="academic-detail-title" onClose={onClose} onClick={event => {
-    if (event.target === event.currentTarget) ref.current?.close();
+  return <dialog ref={ref} className={`academic-detail${closing ? ' academic-detail--closing' : ''}`} aria-labelledby="academic-detail-title" onClose={onClose}
+    onCancel={event => { event.preventDefault(); setClosing(true); }} onTransitionEnd={event => { if (closing && event.target === event.currentTarget && event.propertyName === 'opacity') ref.current?.close(); }} onClick={event => {
+    if (event.target === event.currentTarget) setClosing(true);
   }}>
     <div className="academic-detail__surface">
-      <header className="academic-detail__bar"><span><BookOpen size={16} weight="regular" aria-hidden="true" />Asignatura</span><button type="button" className="academic-icon-button" aria-label="Cerrar detalle" autoFocus onClick={() => ref.current?.close()}><X size={18} aria-hidden="true" /></button></header>
+      <header className="academic-detail__bar"><span><BookOpen size={16} weight="regular" aria-hidden="true" />Asignatura</span><button type="button" className="academic-icon-button" aria-label="Cerrar detalle" autoFocus onClick={() => setClosing(true)}><X size={18} aria-hidden="true" /></button></header>
       <div className="academic-detail__body">
         <h2 id="academic-detail-title">{course.name}</h2>
           <dl className="academic-facts">

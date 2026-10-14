@@ -5,6 +5,10 @@ import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight';
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
 import { WarningCircleIcon } from '@phosphor-icons/react/dist/csr/WarningCircle';
 import { usePurchaseTransfer } from '../model/transfer.js';
+import { useAuth } from '../../auth/model/session.js';
+import { usePurchaseDraft } from '../model/drafts.js';
+import { useGuardChanges, usePurchaseGuard } from '../model/guard.js';
+import { usePurchaseReturnTo } from '../model/location.js';
 import { createReviewDraft, validateReviewDraft, validateExtractionResponse, type ExtractionReviewDraft, type ExtractionCandidate, type ContractProblem } from '@cenit/contracts/purchases';
 import { extractionExamples, extractionErrorExamples } from '@cenit/contracts/purchases/examples';
 import { CandidateField } from '../components/CandidateField.js';
@@ -16,13 +20,19 @@ const primary = new Set(['requestNumber', 'sentDate', 'totalAmount', 'descriptio
 const first = extractionExamples[0];
 export function PurchaseReview() {
   const transfer = usePurchaseTransfer(), navigate = useNavigate();
-  const [exampleId, setExampleId] = useState<string>(first.id);
+  const snapshot = usePurchaseDraft(), guard = usePurchaseGuard(), returnTo = usePurchaseReturnTo();
+  const accountId = useAuth().session!.account.id;
+  const [restored] = useState(() => snapshot.current?.accountId === accountId && snapshot.current.kind === 'review' ? snapshot.current : null);
+  const [exampleId, setExampleId] = useState<string>(restored?.exampleId ?? first.id);
   const example = extractionExamples.find(entry => entry.id === exampleId);
   const original = example?.response;
-  const [draft, setDraft] = useState<ExtractionReviewDraft>(() => createReviewDraft(first.response));
+  const [draft, setDraft] = useState<ExtractionReviewDraft>(() => restored?.draft ?? createReviewDraft(first.response));
   const [problems, setProblems] = useState<ContractProblem[]>([]);
   const [checked, setChecked] = useState(false);
   const form = useRef<HTMLFormElement>(null);
+  const dirty = !!original && JSON.stringify(draft) !== JSON.stringify(createReviewDraft(original));
+  useGuardChanges(dirty, false, () => { snapshot.current = null; });
+  useEffect(() => { snapshot.current = { kind: 'review', accountId, exampleId, draft }; }, [accountId, exampleId, draft, snapshot]);
   useEffect(() => {
     if (!problems.length) return;
     const invalid = form.current?.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[aria-invalid="true"]');
@@ -50,9 +60,12 @@ export function PurchaseReview() {
     })}</div>;
   }
   return <section className="purchase-records purchase-review">
-    <Link className="purchase-back-link" to="/administracion/compras"><ArrowLeftIcon size={13} aria-hidden="true" />Volver a solicitudes</Link>
+    <Link className="purchase-back-link" to={returnTo} onClick={event => event.currentTarget.focus({ preventScroll: true })}><ArrowLeftIcon size={13} aria-hidden="true" />Volver a solicitudes</Link>
     <div className="purchase-page-heading"><div><h1>Revisar datos</h1><p>Revisa y completa la información antes de continuar.</p></div><span className="purchase-origin-badge">Ejemplo de demostración</span></div>
-    <div className="purchase-review__toolbar"><div><label htmlFor="review-example">Datos de ejemplo</label><select id="review-example" value={exampleId} onChange={event => select(event.target.value)}>
+    <div className="purchase-review__toolbar"><div><label htmlFor="review-example">Datos de ejemplo</label><select id="review-example" value={exampleId} onChange={event => {
+      const next = event.target.value;
+      guard.request(() => select(next), { title: 'Cambiar ejemplo', description: 'Se descartarán tus correcciones y se cargarán los datos del otro ejemplo.', confirmLabel: 'Descartar y cambiar' });
+    }}>
       {extractionExamples.map(entry => <option key={entry.id} value={entry.id}>{purchaseExampleLabel(entry.id)}</option>)}
       <option value="failure">Fallo de procesamiento</option>
     </select></div>{original && <span className="purchase-review__metadata">Fuente: {original.data.input.name}</span>}</div>
@@ -69,9 +82,10 @@ export function PurchaseReview() {
           const errors = validateReviewDraft(draft); setProblems(errors); setChecked(true);
           if (!errors.length && example && !invalidFixture) {
             transfer.put(draft, { type: 'contract_example', exampleId: example.id });
-            navigate('/administracion/compras/nueva');
+            snapshot.current = null;
+            guard.leave(() => navigate('/administracion/compras/nueva', { state: { purchasesReturnTo: returnTo } }));
           }
-        }}>Continuar al formulario<ArrowRightIcon size={15} aria-hidden="true" /></button><button type="submit">Comprobar datos</button><button type="button" onClick={() => select(exampleId)}>Restablecer ejemplo</button></div>
+        }}>Continuar al formulario<ArrowRightIcon size={15} aria-hidden="true" /></button><button type="submit">Comprobar datos</button><button type="button" onClick={event => { event.currentTarget.focus({ preventScroll: true }); guard.request(() => select(exampleId), { title: 'Restablecer ejemplo', description: 'Se descartarán tus correcciones y se recuperarán los valores originales.', confirmLabel: 'Descartar y restablecer' }); }}>Restablecer ejemplo</button></div>
         {checked && (problems.length ? <div className="purchase-error-summary" role="alert"><p>Revisa los campos indicados.</p><ul>{problems.map((problem, i) => <li key={i}><strong>{purchaseProblemLabel(problem.path)}</strong>: {problem.message}</li>)}</ul></div> : <p role="status">Formatos correctos. Puedes continuar y completar los campos obligatorios.</p>)}
       </form>
     </>}

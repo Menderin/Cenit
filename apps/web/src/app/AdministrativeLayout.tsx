@@ -9,6 +9,7 @@ import { SignOutIcon } from '@phosphor-icons/react/dist/csr/SignOut';
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
 import type { Account } from '@cenit/contracts/auth';
 import { SessionWarning } from '../features/auth/components/SessionWarning.js';
+import { usePurchaseReturnTo } from '../features/purchases/model/location.js';
 import './administration.css';
 const navigation = [
   { to: '/administracion', label: 'Inicio', end: true, icon: HouseIcon },
@@ -20,6 +21,7 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
   account: Account; expiresAt: string; logout: () => Promise<void>; children: ReactNode;
 }) {
   const location = useLocation(), main = useRef<HTMLElement>(null);
+  const returnTo = usePurchaseReturnTo();
   const [collapsed, setCollapsed] = useState(() => window.matchMedia('(max-width: 760px)').matches);
   const current = navigation.find(link => link.end ? location.pathname === link.to : location.pathname.startsWith(link.to));
   const page = location.pathname === '/administracion/compras/nueva' ? 'Nueva solicitud'
@@ -38,26 +40,26 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
     <a className="admin-skip" href="#admin-content">Ir al contenido</a>
     <div className={`admin-shell${collapsed ? ' admin-shell--collapsed' : ''}`}>
       <aside className="admin-sidebar" id="admin-navigation" hidden={collapsed}>
-        <NavLink to="/administracion" className="admin-brand" aria-label="Cenit, inicio administrativo">Cenit<span>Espacio administrativo</span></NavLink>
+        <NavLink to="/administracion" onClick={event => event.currentTarget.focus({ preventScroll: true })} className="admin-brand" aria-label="Cenit, inicio administrativo">Cenit<span>Espacio administrativo</span></NavLink>
         <nav className="admin-nav" aria-label="Sistemas administrativos">
           <p className="admin-eyebrow">Administración</p>
-          {navigation.map(({ icon: Icon, ...link }) => <NavLink key={link.to} to={link.to} end={link.end} className={({ isActive }) => `admin-nav-item${isActive ? ' admin-nav-item--active' : ''}`}>
+          {navigation.map(({ icon: Icon, ...link }) => <NavLink key={link.to} to={link.to} end={link.end} onClick={event => event.currentTarget.focus({ preventScroll: true })} className={({ isActive }) => `admin-nav-item${isActive ? ' admin-nav-item--active' : ''}`}>
             {({ isActive }) => <><Icon size={18} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" /><span>{link.label}</span></>}
           </NavLink>)}
         </nav>
         <div className="admin-sidebar__bottom">
-          <button className="admin-logout" data-session-exit onClick={() => { void logout(); }}><SignOutIcon size={18} aria-hidden="true" />Cerrar sesión</button>
+          <button className="admin-logout" onClick={event => { event.currentTarget.focus({ preventScroll: true }); void logout(); }}><SignOutIcon size={18} aria-hidden="true" />Cerrar sesión</button>
           <div className="admin-account"><span className="admin-avatar" aria-hidden="true">{account.name.slice(0, 1)}</span><div><strong>{account.name}</strong><span>Administrativo</span></div></div>
         </div>
       </aside>
       <div className="admin-main">
         <header className="admin-toolbar">
-          <div className="admin-toolbar__context"><button type="button" className="admin-icon-button" aria-label={collapsed ? 'Mostrar navegación' : 'Ocultar navegación'} aria-expanded={!collapsed} aria-controls="admin-navigation" onClick={() => setCollapsed(!collapsed)}><SidebarSimpleIcon size={18} aria-hidden="true" /></button><nav className="admin-breadcrumb" aria-label="Ubicación"><NavLink to="/administracion">Administración</NavLink><CaretRightIcon size={12} aria-hidden="true" />{page !== current?.label && <><NavLink to="/administracion/compras">Compras</NavLink><CaretRightIcon size={12} aria-hidden="true" /></>}<span aria-current="page">{page}</span></nav></div>
-          <div className="admin-toolbar__tools"><span className="admin-demo-tag">Demostración</span>{collapsed && <button className="admin-icon-button" data-session-exit aria-label="Cerrar sesión" onClick={() => { void logout(); }}><SignOutIcon size={18} aria-hidden="true" /></button>}</div>
+          <div className="admin-toolbar__context"><button type="button" className="admin-icon-button" aria-label={collapsed ? 'Mostrar navegación' : 'Ocultar navegación'} aria-expanded={!collapsed} aria-controls="admin-navigation" onClick={() => setCollapsed(!collapsed)}><SidebarSimpleIcon size={18} aria-hidden="true" /></button><nav className="admin-breadcrumb" aria-label="Ubicación"><NavLink to="/administracion" onClick={event => event.currentTarget.focus({ preventScroll: true })}>Administración</NavLink><CaretRightIcon size={12} aria-hidden="true" />{page !== current?.label && <><NavLink to={returnTo} onClick={event => event.currentTarget.focus({ preventScroll: true })}>Compras</NavLink><CaretRightIcon size={12} aria-hidden="true" /></>}<span aria-current="page">{page}</span></nav></div>
+          <div className="admin-toolbar__tools"><span className="admin-demo-tag">Demostración</span>{collapsed && <button className="admin-icon-button" aria-label="Cerrar sesión" onClick={event => { event.currentTarget.focus({ preventScroll: true }); void logout(); }}><SignOutIcon size={18} aria-hidden="true" /></button>}</div>
         </header>
         <main className="admin-content" id="admin-content" ref={main} tabIndex={-1}>
           <SessionWarning expiresAt={expiresAt} logout={logout} />
-          {children}
+          <div key={location.pathname} className="cenit-page-enter">{children}</div>
         </main>
       </div>
     </div>

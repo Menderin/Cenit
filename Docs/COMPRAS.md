@@ -1,5 +1,9 @@
 # Solicitudes de compra persistentes y validación local
 
+Pulido autorizado del 14 de octubre en `fix/ux-flujos-y-movimiento`: Cancelar vuelve directamente si el formulario está vacío o los cambios se revirtieron; con contenido/ítems, confirma descarte. Navegación interna, atrás y logout comparten un guard, sin interceptar globalmente clics. Escape conserva datos y devuelve el foco. Mientras el servidor confirma un guardado, las salidas voluntarias quedan bloqueadas; recargar/cerrar conserva el aviso nativo. Cambiar/restablecer ejemplos confirma descarte de correcciones. Cancelar o transferir no hace POST; los reintentos conservan operación/procedencia.
+
+Fecha de envío y filtros usan Calendar/Popover (Radix y DayPicker, composición seleccionada de shadcn), español y entrada `dd/MM/aaaa`, con API `YYYY-MM-DD` sin convertir a UTC. Filtros aplicados y páginas independientes viven en la URL; detalle/alta/laboratorio reciben el destino de retorno. Aplicar/Limpiar reinician ambas páginas. Sonner confirma guardado/validación después del servidor; errores y problemas que requieren acción siguen visibles. Borradores se recuperan tras fallos temporales de sesión para la misma cuenta; logout/expiración siguen descartándolos. Home continúa como resumen ficticio independiente y habla de revisión. Evidencia y pendientes en [revisión de UX](REVISION-UX-2026-10-14.md).
+
 ## Pulido administrativo — 14 de octubre
 
 Gael autorizó retirar los avisos repetidos de prototipo, muestra ilustrativa y preparación interna. El entorno se identifica con «Demostración» en la cabecera; la procedencia ficticia se conserva mediante etiquetas breves de ejemplo. El Home mantiene su muestra local y sus cálculos, sin acreditar conexión Oracle ni seguimiento institucional. Personal/bienes conservan sus rutas con «Módulo no disponible» y retorno a Inicio.
@@ -181,7 +185,7 @@ Ejemplo de consulta:
 /api/v1/purchases?reviewStatus=pending&q=demostracion&dateFrom=2026-10-12&dateTo=2026-10-12&unitCode=270101&projectCode=00000000&page=1&pageSize=20
 ```
 
-La barra común de Sistema de compra tiene «Aplicar filtros» y «Limpiar filtros»; editar controles no consulta hasta aplicar. Ambas tablas vuelven a página 1 al aplicar/limpiar y mantienen paginación, conteo y monto propios. Valida con contratos compartidos, muestra errores junto al campo, carga/vacío/error con reintento y conserva navegación a detalle. Las claves de consulta incluyen filtros y no reutilizan resultados de otra combinación como actuales. Filtros sólo en memoria: salir del listado, recargar o cerrar/expirar/cambiar la sesión los descarta.
+La barra común tiene «Aplicar filtros» y «Limpiar»; editar controles no consulta hasta aplicar. Ambas tablas vuelven a página 1 al aplicar/limpiar y mantienen paginación, conteo y monto propios. Valida con contratos compartidos, muestra errores junto al campo y carga/vacío/error con reintento. Las claves incluyen filtros y no presentan resultados de otra combinación como actuales. Filtros aplicados y páginas viven en URL: retorno desde detalle y recarga los restauran. No se guardan borradores ni credenciales en URL. Salir de sesión redirige al login sin transportar filtros a otra identidad.
 
 Las tablas vacías conservan cabecera y las cinco columnas (número, fecha, detalle, tipo de documento y acciones). El mensaje «No hay solicitudes en esta página» aparece en una fila que abarca las columnas, con conteo, total cero y paginación deshabilitada donde corresponde. No se agregan registros ficticios para llenar la vista.
 

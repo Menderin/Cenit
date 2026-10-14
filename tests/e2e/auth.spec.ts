@@ -9,7 +9,8 @@ async function navigateAdministration(page: Page, name: string) {
   const path = await link.getAttribute('href');
   const changesPage = new URL(page.url()).pathname !== path;
   await link.click();
-  if (changesPage && (page.viewportSize()?.width ?? 1280) <= 760) await expect(page.getByRole('button', { name: 'Mostrar navegación', exact: true })).toBeVisible();
+  if (changesPage) await expect.poll(async () => new URL(page.url()).pathname === path || await page.getByRole('alertdialog').isVisible()).toBe(true);
+  if (changesPage && (page.viewportSize()?.width ?? 1280) <= 760 && !await page.getByRole('alertdialog').isVisible()) await expect(page.getByRole('button', { name: 'Mostrar navegación', exact: true })).toBeVisible();
 }
 
 async function expandPurchaseSection(page: Page, name: string) {
@@ -21,6 +22,8 @@ async function logout(page: Page) {
   const response = page.waitForResponse(response =>
     new URL(response.url()).pathname === '/api/v1/auth/logout' && response.request().method() === 'POST');
   await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  const discard = page.getByRole('alertdialog', { name: 'Descartar cambios' });
+  if (await discard.isVisible()) await discard.getByRole('button', { name: 'Descartar y salir' }).click();
   expect((await response).status()).toBe(204);
   // A click only dispatches the asynchronous logout. Do not navigate/reload until
   // the server confirms it and the interface has completed the session transition.
@@ -72,7 +75,7 @@ test('expiración del reloj del navegador oculta cuenta y pide login', async ({ 
   const account = await login(page);
   await page.clock.fastForward(7201000);
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
+  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
   await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
 });
 test('avisa cinco minutos antes, actualiza el tiempo y vence sin renovación', async ({ page }) => {
@@ -86,7 +89,7 @@ test('avisa cinco minutos antes, actualiza el tiempo y vence sin renovación', a
   await expect(page.getByRole('status')).toHaveText('Tu sesión vencerá en 1 minuto. Guarda tu trabajo antes de volver a iniciar sesión.');
   await page.clock.fastForward(60000);
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
+  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
 });
 test('el aviso permite cerrar la sesión antes del vencimiento', async ({ page }) => {
   await page.clock.install();
@@ -94,14 +97,14 @@ test('el aviso permite cerrar la sesión antes del vencimiento', async ({ page }
   await page.clock.fastForward(6901000);
   await page.getByRole('button', { name: 'Cerrar sesión ahora', exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole('status')).toHaveText('Sesión cerrada.');
+  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Sesión cerrada.');
   expect((await page.request.get('/api/v1/auth/session')).status()).toBe(401);
 });
 test('401 al revalidar oculta cuenta y avisa', async ({ page }) => {
   const account = await login(page);
   await page.route('**/api/v1/auth/session', route => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: { code: 'AUTHENTICATION_REQUIRED', message: 'Debes iniciar sesión.', requestId: 'test' } }) }));
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-  await expect(page.getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
+  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
   await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
 });
 test('fallo de logout oculta contenido y permite reintentar sin falso éxito', async ({ page }) => {
@@ -169,7 +172,7 @@ test('valida formato sin consultar API y rechaza correos que no son cuentas', as
   expect(loginRequests).toBe(1);
 });
 
-test('normaliza sólo el correo y permite teclado y carga antes del éxito real', async ({ page }) => {
+test('normaliza sólo el correo y permite teclado y carga antes del éxito real', async ({ page, browserName }) => {
   const account = credential('docente');
   let release: (() => void) | undefined;
   let submitted: { email: string; password: string } | undefined;
@@ -185,12 +188,17 @@ test('normaliza sólo el correo y permite teclado y carga antes del éxito real'
   await email.press('Tab');
   await expect(email).toHaveValue(account.email);
   await password.fill(account.password);
-  await password.press('Tab'); await page.keyboard.press('Space');
+  await password.press('Tab');
+  // macOS WebKit skips buttons in Tab navigation unless full keyboard access is enabled.
+  if (browserName === 'webkit') await page.getByRole('button', { name: 'Mostrar contraseña', exact: true }).focus();
+  await page.keyboard.press('Space');
   await expect(password).toHaveAttribute('type', 'text');
   await expect(page.getByRole('button', { name: 'Ocultar contraseña' })).toBeFocused();
   await page.keyboard.press('Space');
   await expect(password).toHaveAttribute('type', 'password');
-  await page.keyboard.press('Tab'); await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
+  if (browserName === 'webkit') await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).focus();
+  await page.keyboard.press('Enter');
   await expect(page.getByRole('button', { name: 'Entrando…' })).toBeDisabled();
   await expect(page.locator('form')).toHaveAttribute('aria-busy', 'true');
   await expect.poll(() => Boolean(release)).toBe(true);
@@ -310,6 +318,8 @@ test('contrato de compras: revisar ejemplos, corregir sin alterar original y res
   await page.getByRole('button', { name: 'Comprobar datos' }).click();
   await expect(page.getByRole('status')).toContainText('Formatos correctos.');
   await page.getByRole('button', { name: 'Restablecer ejemplo' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Descartar y restablecer' }).click();
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await expect(number).toHaveValue('000125');
   await expect(page.getByLabel('BI', { exact: true })).toHaveValue('');
   await page.getByLabel('Datos de ejemplo').selectOption('partial');
@@ -410,6 +420,9 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await page.getByRole('link', { name: 'Revisar ejemplo' }).click();
   await page.getByLabel('Nº Documento / solicitud', { exact: true }).fill('navigation-draft');
   await navigateAdministration(page, 'Inicio');
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Descartar y salir' }).click();
+  await expect(page).toHaveURL(/\/administracion$/);
+  await expect(page.getByRole('button', { name: 'Mostrar navegación', exact: true })).toBeVisible();
   await navigateAdministration(page, 'Sistema de compra');
   await page.getByRole('link', { name: 'Revisar ejemplo' }).click();
   await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveValue('000125');
@@ -462,8 +475,8 @@ test('solicitudes persistentes: ingreso, varios ítems, recarga, detalle y valid
   const row = pending.getByRole('row').filter({ hasText: number });
   await expect(row.getByText('Sin dato', { exact: true })).toBeVisible();
   await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
-  await expect(row.getByText('¿Confirmas la revisión de los datos registrados en Cenit?')).toBeVisible();
-  await row.getByRole('button', { name: 'Confirmar validación' }).click();
+  await expect(page.getByRole('alertdialog')).toContainText('¿Confirmas la revisión de los datos registrados en Cenit?');
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Confirmar validación' }).click();
   await expect(row).toHaveCount(0);
   const reviewed = page.getByRole('region', { name: 'Registros validados', exact: true });
   const reviewedRow = reviewed.getByRole('row').filter({ hasText: number });
@@ -486,20 +499,21 @@ test('formulario manual: errores conservan datos, foco válido y navegación con
   const focusResponse = page.waitForResponse(response => response.url().endsWith('/api/v1/auth/session'));
   await page.evaluate(() => window.dispatchEvent(new Event('focus'))); await focusResponse;
   await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveValue('DRAFT-ERROR');
-  const dismissed = new Promise<void>(resolve => page.once('dialog', async dialog => { await dialog.dismiss(); resolve(); }));
   await navigateAdministration(page, 'Inicio');
-  await dismissed;
+  const discard = page.getByRole('alertdialog', { name: 'Descartar cambios' });
+  await expect(discard.getByRole('button', { name: 'Seguir editando' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(discard).toHaveCount(0);
   await expect(page).toHaveURL(/\/compras\/nueva$/);
-  const accepted = new Promise<void>(resolve => page.once('dialog', async dialog => { await dialog.accept(); resolve(); }));
+  await expect(page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link', { name: 'Inicio', exact: true })).toBeFocused();
   await navigateAdministration(page, 'Inicio');
-  await accepted;
+  await discard.getByRole('button', { name: 'Descartar y salir' }).click();
   await expect(page).toHaveURL(/\/administracion$/);
   await expect(page.getByRole('table')).toHaveCount(0);
 });
 
 test('formulario manual: logout y expiración descartan datos sin guardar', async ({ page }) => {
   await manualForm(page, 'PRIVATE-UNSAVED');
-  page.once('dialog', dialog => dialog.accept());
   await logout(page);
   await expect(page).toHaveURL(/\/login$/);
   await login(page, 'estudiante');
@@ -549,7 +563,7 @@ test('laboratorio: transferir correcciones no guarda, y el reintento conserva op
   const row = pending.getByRole('row').filter({ hasText: number });
   await expect(row.getByText('Ejemplo de demostración', { exact: true })).toBeVisible();
   await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
-  await row.getByRole('button', { name: 'Confirmar validación' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Confirmar validación' }).click();
   const reviewed = page.getByRole('region', { name: 'Registros validados', exact: true }).getByRole('row').filter({ hasText: number });
   await expect(reviewed.getByText('Ejemplo de demostración', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Nueva solicitud' }).click();
@@ -565,6 +579,8 @@ test('laboratorio: formato inválido bloquea transferencia, original intacto y b
   await expect(page).toHaveURL(/\/laboratorio$/);
   await expect(page.getByRole('alert')).toContainText('Revisa los campos indicados.');
   await page.getByRole('button', { name: 'Restablecer ejemplo' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Descartar y restablecer' }).click();
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await expect(page.getByLabel('Monto total (CLP)', { exact: true })).toHaveValue('200000');
   await page.getByLabel('Datos de ejemplo').selectOption('failure');
   await expect(page.getByRole('button', { name: 'Continuar al formulario' })).toHaveCount(0);
@@ -572,7 +588,6 @@ test('laboratorio: formato inválido bloquea transferencia, original intacto y b
   await page.getByLabel('Nº Documento / solicitud', { exact: true }).fill('PRIVATE-TRANSFER');
   await page.getByRole('button', { name: 'Continuar al formulario' }).click();
   await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveValue('PRIVATE-TRANSFER');
-  page.once('dialog', dialog => dialog.accept());
   await logout(page);
   await expect(page).toHaveURL(/\/login$/);
   await login(page, 'docente'); await page.goto('/administracion/compras/nueva');
@@ -615,6 +630,15 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
   await reviewed.getByRole('button', { name: 'Siguiente' }).click();
   await expect(pending.getByText('Página 2', { exact: true })).toBeVisible();
   await expect(reviewed.getByText('Página 2', { exact: true })).toBeVisible();
+  const returnUrl = page.url();
+  await pending.getByRole('link', { name: 'Ver detalles' }).first().click();
+  await page.getByRole('link', { name: 'Volver a solicitudes' }).click();
+  await expect(page).toHaveURL(returnUrl);
+  await expect(pending.getByText('Página 2', { exact: true })).toBeVisible();
+  await expect(reviewed.getByText('Página 2', { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(pending.getByText('Página 2', { exact: true })).toBeVisible();
+  await expect(reviewed.getByText('Página 2', { exact: true })).toBeVisible();
   const search = page.getByLabel('Buscar solicitudes', { exact: true });
   await search.fill('clinica hu06');
   await expect(pending.getByText('Página 2', { exact: true })).toBeVisible();
@@ -650,7 +674,9 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
   await pending.getByRole('link', { name: 'Ver detalles' }).click();
   await expect(page.getByText(targets[0]!, { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Volver a solicitudes' }).click();
-  await expect(search).toHaveValue('');
+  await expect(search).toHaveValue('100%_\\');
+  await expect(page.getByLabel('Enviado desde', { exact: true })).toHaveValue('01/02/2027');
+  await expect(page.getByLabel('Código de proyecto', { exact: true })).toHaveValue('000X');
   await search.fill('no coincidence'); await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
   await expect(pending.getByText('0 registros', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();

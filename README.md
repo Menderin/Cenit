@@ -1,5 +1,7 @@
 # Cenit
 
+Pulido de flujos del 14 de octubre: Cancelar y descarte con diálogo, calendario en español, avisos Sonner y retorno al listado con filtros/páginas. La sesión mantiene dos horas; jornada se implementará después de la demo/integración. Cambios, evidencia y conciliación pendiente de Jira en [revisión de UX](Docs/REVISION-UX-2026-10-14.md).
+
 Actualización del 13 de octubre: el líder autoriza entregar la demo actual por HTTP en la VM, aunque malla y extracción real sigan pendientes. CI completo usa `Application` con lint, catálogo, build, integración, E2E contra producción y verificación de imagen. El marcador parcial fue retirado tras verificar estos checks localmente. La variable de publicación se habilita durante el primer ensayo supervisado, no mediante este cambio local. Procedimiento vigente: [primera entrega automática](deploy/PRIMER-DESPLIEGUE.md). Las menciones anteriores a bloqueo o ausencia de aplicación son antecedentes de preparación, no el estado técnico vigente.
 
 Para probar la imagen compilada con API y frontend por el mismo puerto, seguir [el ensayo local con Podman](deploy/ENSAYO-LOCAL.md). `npm run build` compila contratos/API/web; `npm start` inicia el servidor compilado con configuración de BD/sesión explícita. Desarrollo conserva `npm run dev`. El ensayo local no habilita entregas a `main` ni publicación de releases.

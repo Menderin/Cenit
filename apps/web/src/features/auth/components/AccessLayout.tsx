@@ -12,7 +12,7 @@ export function AccessLayout({ children }: { children: ReactNode }) {
       </div>
       <span className="cenit-access__location">Coquimbo, Chile</span>
       <section className="cenit-access__access" aria-labelledby="access-title">
-        <div className="cenit-access__content">
+        <div className="cenit-access__content cenit-page-enter">
           <p className="cenit-access__brand">Cenit</p>
           {children}
           <footer className="cenit-access__institution" aria-label="Institución">

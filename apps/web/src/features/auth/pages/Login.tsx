@@ -4,6 +4,7 @@ import { AccountEmailSchema } from '@cenit/contracts/auth';
 import { EyeIcon } from '@phosphor-icons/react/dist/csr/Eye';
 import { EyeSlashIcon } from '@phosphor-icons/react/dist/csr/EyeSlash';
 import { useAuth } from '../model/session.js';
+import { StatusNotice } from '../../../shared/components/StatusNotice.js';
 
 type Errors = { email?: string; password?: string };
 
@@ -49,7 +50,7 @@ export function Login() {
       <h1 id="access-title">Iniciar sesión</h1>
       <p className="cenit-access__intro">Bienvenido a tu espacio en Cenit.</p>
     </header>
-    {auth.message && <p className="cenit-access__notice" role="status">{auth.message}</p>}
+    {auth.message && <StatusNotice kind={auth.notice === 'signed-out' ? 'success' : 'warning'} title={auth.notice === 'signed-out' ? 'Saliste de Cenit' : 'Vuelve a iniciar sesión'} message={auth.message} />}
     {error && <p className="cenit-access__notice cenit-access__error" role="alert">{error}</p>}
     <form className="cenit-access__form" noValidate onSubmit={submit} aria-busy={busy}>
       <div className="cenit-access__field">

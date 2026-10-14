@@ -7,7 +7,7 @@ import { HttpError } from '../../../shared/lib/http.js';
 
 type Session = SessionResponse['data'];
 type Status = 'checking' | 'authenticated' | 'guest' | 'error' | 'closing' | 'logout-error';
-type State = { status: Status; session: Session | null; message: string };
+type State = { status: Status; session: Session | null; message: string; notice?: 'signed-out' | 'expired' };
 type Auth = State & { login: (input: LoginRequest) => Promise<void>; logout: () => Promise<void>; refresh: () => Promise<void> };
 const Context = createContext<Auth | null>(null);
 const expiredMessage = 'Tu sesión ya no es válida. Vuelve a iniciar sesión.';
@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [client]);
   const invalidate = useCallback(() => {
     clear(); hadSession.current = false;
-    setState({ status: 'guest', session: null, message: expiredMessage });
+    setState({ status: 'guest', session: null, message: expiredMessage, notice: 'expired' });
   }, [clear]);
   const refresh = useCallback(async () => {
     const generation = ++epoch.current;
@@ -43,9 +43,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error instanceof HttpError && error.status === 401) {
         const message = hadSession.current ? expiredMessage : '';
         clear(); hadSession.current = false;
-        setState({ status: 'guest', session: null, message });
+        setState({ status: 'guest', session: null, message, notice: message ? 'expired' : undefined });
       } else {
-        clear(); setState({ status: 'error', session: null, message: 'No se pudo comprobar la sesión. Intenta nuevamente.' });
+        // Keep only the previous identity/deadline; App hides all protected content.
+        // The deadline still runs while disconnected, and the draft stays private until revalidated.
+        clear(); setState(previous => ({ status: 'error', session: previous.session, message: 'No se pudo comprobar la sesión. Intenta nuevamente.' }));
       }
     }
   }, [client, clear, invalidate]);
@@ -83,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: 'closing', session: null, message: '' });
     try {
       await signOut();
-      if (epoch.current === generation) setState({ status: 'guest', session: null, message: 'Sesión cerrada.' });
+      if (epoch.current === generation) setState({ status: 'guest', session: null, message: 'Sesión cerrada.', notice: 'signed-out' });
     } catch {
       if (epoch.current === generation) setState({ status: 'logout-error', session: null, message: 'No se pudo confirmar el cierre de sesión.' });
     }

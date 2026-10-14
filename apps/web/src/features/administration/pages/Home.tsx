@@ -15,14 +15,14 @@ export function Home() {
       <div><p className="admin-section-label">Vista general</p><h1>Administración</h1><p className="admin-intro">Seguimiento de solicitudes de compra</p></div>
       <Link className="admin-button" to="/administracion/compras">Ver solicitudes<ArrowUpRightIcon size={15} aria-hidden="true" /></Link>
     </div>
-    <p className="dashboard-period">5 al 9 de octubre de 2026</p>
+    <p className="dashboard-period">Resumen de ejemplo · 5 al 9 de octubre de 2026</p>
     <dl className="dashboard-kpis" aria-label="Resumen de solicitudes">
       <div><dt><FilesIcon size={17} aria-hidden="true" />Solicitudes</dt><dd>{requests.length}</dd><dd className="dashboard-kpi-detail">En el período</dd></div>
-      <div><dt><ClockIcon size={17} aria-hidden="true" />Pendientes de aprobación</dt><dd>{pending.length}</dd><dd className="dashboard-kpi-detail">Responsable: Luis Lanas</dd></div>
+      <div><dt><ClockIcon size={17} aria-hidden="true" />Pendientes de revisión</dt><dd>{pending.length}</dd><dd className="dashboard-kpi-detail">Revisión de datos en Cenit</dd></div>
       <div><dt><CurrencyDollarIcon size={17} aria-hidden="true" />Monto pendiente</dt><dd>{currency.format(pendingAmount)}</dd><dd className="dashboard-kpi-detail">Total de solicitudes · CLP</dd></div>
     </dl>
     <section className="dashboard-chart" aria-labelledby="pending-chart-title">
-      <div><p className="admin-section-label">Actividad del período</p><h2 id="pending-chart-title">Pendientes por fecha de envío</h2><p>Solicitudes que esperan aprobación.</p></div>
+      <div><p className="admin-section-label">Actividad del período</p><h2 id="pending-chart-title">Pendientes por fecha de envío</h2><p>Solicitudes que esperan revisión de sus datos.</p></div>
       <ul aria-label="Cantidad de solicitudes pendientes por día">
         {days.map(day => <li key={day.date}>
           <span className="dashboard-chart-date">{day.label}</span>
