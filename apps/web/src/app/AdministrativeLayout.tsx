@@ -23,6 +23,7 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
   const [collapsed, setCollapsed] = useState(() => window.matchMedia('(max-width: 760px)').matches);
   const current = navigation.find(link => link.end ? location.pathname === link.to : location.pathname.startsWith(link.to));
   const page = location.pathname === '/administracion/compras/nueva' ? 'Nueva solicitud'
+    : location.pathname === '/administracion/compras/captura' ? 'Revisar captura'
     : location.pathname === '/administracion/compras/laboratorio' ? 'Revisar datos'
     : location.pathname.startsWith('/administracion/compras/') ? 'Detalle de solicitud' : current?.label ?? 'Inicio';
   useEffect(() => { document.title = `Cenit · ${page}`; return () => { document.title = 'Cenit'; }; }, [page]);

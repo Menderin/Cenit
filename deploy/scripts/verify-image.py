@@ -146,8 +146,10 @@ async function request(path, method, bytes) {
 (async()=>{
  // No session: a permitted-size purchase POST reaches authentication (401), not 413.
  if(await request('/api/v1/purchases','POST',200*1024)!==401) process.exit(1);
+ if(await request('/api/v1/purchases/extractions','POST',2*1024*1024)!==401) process.exit(1);
  for(const [path,method,bytes] of [
   ['/api/v1/purchases','POST',513*1024],
+  ['/api/v1/purchases/extractions','POST',6*1024*1024+1],
   ['/api/v1/purchases','GET',200*1024],
   ['/api/v1/auth/login','POST',200*1024]]) {
    if(await request(path,method,bytes)!==413) process.exit(1);

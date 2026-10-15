@@ -1,5 +1,11 @@
 # HU04-T03 — Contrato de extracción de compras
 
+## Adaptador operativo local — 14 de octubre
+
+El endpoint administrativo `POST /api/v1/purchases/extractions` incorpora procesamiento real con PaddleOCR móvil ONNX en un contenedor auxiliar del notebook. La continuidad autorizada añade «Subir captura», selección/vista previa, extracción y revisión antes del formulario de guardado. Contrato ampliado con `captureLayout`, rechazo `UNSUPPORTED_CAPTURE_LAYOUT` y procedencia firmada `image_capture`. Reconoce estructura, sin acreditar autenticidad ni exigir color azul; admite parciales. Preparación, navegador y HTTP en [ADAPTADOR-CAPTURAS.md](ADAPTADOR-CAPTURAS.md). No modifica Oracle ni guarda al extraer. El laboratorio continúa siendo ficticio. Las notas siguientes sobre ausencia de pantalla/endpoint corresponden a etapas anteriores.
+
+Actualización del 14 de octubre: el equipo confirmó que no habrá acceso/API Oracle. La captura PNG/JPEG es la única vía de esta entrega. Se investigaron OCR ligero con anclas y modelos locales; evidencia y límites en [INVESTIGACION-EXTRACCION-COMPRAS.md](INVESTIGACION-EXTRACCION-COMPRAS.md). Los ensayos son procesamiento real aislado de imágenes ficticias: el laboratorio y la API de aplicación siguen sin extracción activa. SCRUM-45 debe implementar el adaptador, endpoint y procedencia real antes de conectar el frontend de Gael.
+
 ## Presentación de la revisión — 14 de octubre
 
 Por petición de Gael, el laboratorio conserva su ruta y un acceso secundario «Revisar ejemplo», con título «Revisar datos» y etiqueta «Ejemplo de demostración». Se retiran avisos extensos de implementación: no cambian origen, candidatos ni límites funcionales. El entorno administrativo conserva «Demostración» en la cabecera.
@@ -10,7 +16,7 @@ Revisión visual manual de escritorio/móvil y teclado; tests y verificación t�
 
 ## Decisión y recorrido de captura — 13 de octubre
 
-Gael confirmó que el equipo **no tendrá acceso a Oracle**. La recuperación se realizará desde una captura de pantalla de la orden de compra mediante un modelo de visión local o en un equipo propio. Víctor implementa el procesamiento/API; Gael realiza el frontend. Esta decisión sustituye la investigación entre API Oracle e imagen, conservando los campos y límites del contrato actual. El modelo, la máquina y su precisión siguen pendientes de comprobación.
+Gael confirmó que el equipo **no tendrá acceso a Oracle**. La recuperación se realizará desde una captura de pantalla de la orden de compra mediante un modelo de visión local o en un equipo propio. Víctor implementa el procesamiento/API; Gael realiza el frontend. Esta decisión sustituye la investigación entre API Oracle e imagen, conservando los campos y límites del contrato actual. La investigación del 14 de octubre recomienda provisionalmente PaddleOCR móvil vía ONNX a partir de capturas ficticias. La capacidad de la VM, el formato completo de Oracle y la exactitud aceptada por el cliente siguen pendientes de comprobación.
 
 El rediseño administrativo conserva el laboratorio ficticio en su ruta actual. No hay subida ni extracción real disponible. La interfaz de captura se conectará cuando Víctor entregue el endpoint y acuerde la procedencia de resultados reales; hoy el guardado sólo admite `manual` y `contract_example`.
 

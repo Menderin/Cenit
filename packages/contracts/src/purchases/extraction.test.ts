@@ -4,6 +4,19 @@ import { ErrorResponseSchema } from '../common/index.js';
 import { ExtractionResponseSchema, ExtractionReviewDraftSchema, EXTRACTION_LIMITS, validateInputMetadata, validateExtractionResponse, validateReviewDraft, createReviewDraft } from './index.js';
 import { recoveredExample, partialExample, ambiguousExample, extractionExamples, extractionErrorExamples } from './examples.js';
 describe('contrato de extracción, sin OCR ni persistencia', () => {
+  it('conserva ejemplos anteriores y verifica señales/estado del formato de captura', () => {
+    const response = structuredClone(recoveredExample);
+    response.data.captureLayout = { status: 'compatible', signals: ['request_title', 'header_fields', 'line_section', 'eight_column_table'] };
+    expect(validateExtractionResponse(response)).toEqual([]);
+    response.data.captureLayout = { status: 'partial', signals: ['request_title', 'header_fields'] };
+    expect(validateExtractionResponse(response)).toEqual([]);
+    response.data.captureLayout = { status: 'compatible', signals: ['request_title'] };
+    expect(validateExtractionResponse(response).length).toBeGreaterThan(0);
+    response.data.captureLayout = { status: 'partial', signals: ['line_section', 'eight_column_table'] };
+    expect(validateExtractionResponse(response)).toEqual([]);
+    response.data.captureLayout = { status: 'partial', signals: ['request_title', 'request_title'] };
+    expect(validateExtractionResponse(response).length).toBeGreaterThan(0);
+  });
   it('valida fixtures de candidatos y todos los errores futuros', () => {
     for (const example of extractionExamples) {
       expect(Value.Check(ExtractionResponseSchema, example.response)).toBe(true);

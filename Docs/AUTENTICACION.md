@@ -1,5 +1,15 @@
 # Autenticación local de Cenit
 
+## Cambio explícito de claves ficticias en la VM
+
+El líder autorizó igualar las tres claves de la VM con las locales. `deploy/scripts/rotate-demo-passwords.mjs` es mantenimiento supervisado, nunca arranque, migración o CD. Se ejecuta con Node en la imagen de herramientas, montado en `/app/deploy/scripts/rotate-demo-passwords.mjs`, con `APP_ENV=demo`, el secreto de conexión del migrador y el directorio privado de demo en `/app/.local`.
+
+Lee `secrets/auth-demo.json` (cuentas actuales de la VM) y `secrets/requested-passwords.json` (sólo email/rol/password de las cuentas locales). Exige tres roles ficticios exactos y claves de 12–128 caracteres; verifica identidad, estado y clave anterior antes de actualizar hashes en una transacción y revocar sesiones. Conserva UUID, nombre y rol de la VM. Actualiza también el archivo privado para que `auth:prepare-demo` siga verificando las cuentas sin rotarlas. No copiar los UUID locales sobre las cuentas de la VM.
+
+El archivo de transferencia local se prepara en `.local/secrets/vm-demo-passwords.json`, fuera de Git, y se copia únicamente al directorio privado de la VM. Retirarlo del destino después del éxito. Si falla, no borrar `auth-demo.json.next` ni reintentar a ciegas: revisar el estado de la transacción y los archivos privados, sin compartir sus contenidos. No requiere otra release ni reiniciar la aplicación.
+
+Verificado en contenedor contra PostgreSQL descartable: tres cuentas conservan UUID/nombre/rol, sesión anterior revocada y nuevas claves comprobadas por el preparador existente. Lint del script pasó. La aplicación en la VM depende de ejecutar el comando supervisado; no se afirma que ya se modificaron sus cuentas.
+
 Decisión del líder del 11 de octubre de 2026: correo/contraseña local, un rol por cuenta, sesión de dos horas desde el login sin renovación automática. API de HU01-T03/T04 y HU03 implementada; frontend mínimo de prueba para los tres roles, sin Google, registro público, recuperación de contraseña ni editor de cuentas. La revisión del equipo y el PR siguen pendientes.
 
 Actualización del frontend del 12 de octubre de 2026: diseño visual de acceso integrado con el proveedor de sesión y la API existentes, sin whitelist de correos ni contraseñas en el cliente. Por petición del usuario, el formulario elimina espacios del correo en cualquier posición y lo convierte a minúsculas al salir del campo o enviar; después rechaza formatos inválidos y no transforma la contraseña. Es una corrección visible de interfaz: la API conserva su validación del correo recibido y las cuentas no cambian. Administrativo entra en `/administracion`, docente/estudiante en `/academico`; ambos destinos son avisos de área en construcción, sin módulos de negocio. Se retiró el éxito simulado de `/prototipo.html`. No cambian endpoints, cuentas, permisos, duración, migraciones o despliegue.

@@ -1,0 +1,167 @@
+{
+  "date": "2026-10-14",
+  "description": "Synthetic reference-layout diagnostic; not institutional accuracy or independent holdout",
+  "sourceHashes": {
+    "extractor.py": "cd350d9448a1e9032a77c450baf0ab8fdd2a1f4924455f0a1fbd47bc3838a5f3",
+    "server.py": "1ae77282561d3530efd2d28f91689a640ac7abddfa029071696f38006d61b971"
+  },
+  "generatorSha256": "834c1eb44a2a4c252257b6702c1bce41712952f0d80f3ec59ab41aef561a2a9f",
+  "fontSha256": "b3658eadae55e682b5f69eb64c439c1ecc8f196c0bb8d4756d145d13bc86476a",
+  "counts": {
+    "exact": 50,
+    "wrong": 21,
+    "missing": 93
+  },
+  "medianSeconds": 6.418,
+  "byField": {
+    "requestNumber": {
+      "exact": 8,
+      "wrong": 0,
+      "missing": 0
+    },
+    "oracleId": {
+      "exact": 7,
+      "wrong": 0,
+      "missing": 1
+    },
+    "sender": {
+      "exact": 7,
+      "wrong": 1,
+      "missing": 0
+    },
+    "recipient": {
+      "exact": 0,
+      "wrong": 8,
+      "missing": 0
+    },
+    "sentDate": {
+      "exact": 4,
+      "wrong": 0,
+      "missing": 4
+    },
+    "sentTime": {
+      "exact": 4,
+      "wrong": 0,
+      "missing": 4
+    },
+    "description": {
+      "exact": 0,
+      "wrong": 8,
+      "missing": 12
+    },
+    "totalAmount": {
+      "exact": 8,
+      "wrong": 0,
+      "missing": 0
+    },
+    "taxAmount": {
+      "exact": 8,
+      "wrong": 0,
+      "missing": 0
+    },
+    "attachmentReference": {
+      "exact": 4,
+      "wrong": 4,
+      "missing": 0
+    },
+    "provider": {
+      "exact": 0,
+      "wrong": 0,
+      "missing": 12
+    },
+    "costCenter": {
+      "exact": 0,
+      "wrong": 0,
+      "missing": 12
+    },
+    "lineUnit": {
+      "exact": 0,
+      "wrong": 0,
+      "missing": 12
+    },
+    "quantity": {
+      "exact": 0,
+      "wrong": 0,
+      "missing": 12
+    },
+    "price": {
+      "exact": 0,
+      "wrong": 0,
+      "missing": 12
+    },
+    "amount": {
+      "exact": 0,
+      "wrong": 0,
+      "missing": 12
+    }
+  },
+  "samples": [
+    {
+      "case": "01-completa",
+      "httpStatus": 200,
+      "seconds": 6.216,
+      "rowsExpected": 1,
+      "rowsActual": 0,
+      "imageSha256": "cf46ae42f0096e08392e3f2577e5d07feb6239d9cdff49ff0cd20dc9b4850dc6"
+    },
+    {
+      "case": "02-dos-items",
+      "httpStatus": 200,
+      "seconds": 6.507,
+      "rowsExpected": 2,
+      "rowsActual": 0,
+      "imageSha256": "b1323c4a931c5d73b653b536bcefc7b4e17ad6fc6a28ae84ef3dbadf060b9883"
+    },
+    {
+      "case": "03-tres-items",
+      "httpStatus": 200,
+      "seconds": 7.706,
+      "rowsExpected": 3,
+      "rowsActual": 0,
+      "imageSha256": "25c44b91bf9da94538716bff4f495f80564bb37426891e789a2b25b8349611cc"
+    },
+    {
+      "case": "04-jpeg",
+      "httpStatus": 200,
+      "seconds": 6.458,
+      "rowsExpected": 1,
+      "rowsActual": 0,
+      "imageSha256": "92b0c0bec2839ad7caf7bac19e797844a0077e918a7ba264ad1f3f14728747c2"
+    },
+    {
+      "case": "05-reducida",
+      "httpStatus": 200,
+      "seconds": 6.151,
+      "rowsExpected": 1,
+      "rowsActual": 0,
+      "imageSha256": "8ec8f8c7094c3c97edc2227c06fd75d3fedd452a2f8ed661063692d57956d8a2"
+    },
+    {
+      "case": "06-ampliada",
+      "httpStatus": 200,
+      "seconds": 6.825,
+      "rowsExpected": 2,
+      "rowsActual": 0,
+      "imageSha256": "aef2aaafd3f1dedcc2cd123c208b8f9e5d5f4a8de9735eb1fe09c707d43c57e3"
+    },
+    {
+      "case": "07-grises",
+      "httpStatus": 200,
+      "seconds": 6.378,
+      "rowsExpected": 1,
+      "rowsActual": 0,
+      "imageSha256": "ebb260856bc9e719ede2afaf2d2c040f819a459a3c55f2033fd85c7f3535fb73"
+    },
+    {
+      "case": "08-cabecera-recortada",
+      "httpStatus": 200,
+      "seconds": 6.179,
+      "rowsExpected": 1,
+      "rowsActual": 0,
+      "imageSha256": "59c57fb9f8b72144ecf89fff8579d940c22bb4f4df2b6d6f8b45139faf00b645"
+    }
+  ],
+  "excludedFields": [
+    "/lines/*/chargeAccount"
+  ]
+}

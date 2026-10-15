@@ -19,3 +19,17 @@ tmp/
 # Python utility bytecode
 __pycache__/
 *.pyc
+
+# Experimental environments, downloaded weights and generated reports
+/experiments/**/.venv/
+/experiments/**/venv/
+/experiments/**/models/
+/experiments/**/results/
+/experiments/**/reports/
+/experiments/**/*.onnx
+/experiments/**/*.pdmodel
+/experiments/**/*.pdiparams
+/experiments/**/*.pth
+/experiments/**/*.pt
+/apps/ocr/models/
+/apps/ocr/.venv/

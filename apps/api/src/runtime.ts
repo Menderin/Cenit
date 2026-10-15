@@ -7,12 +7,16 @@ import { AuthRepository } from './modules/auth/repositories/auth.js';
 import { AuthService } from './modules/auth/services/auth.js';
 import { readAuthConfig } from './modules/auth/routes/index.js';
 import { PurchaseRepository } from './modules/purchases/repositories/purchases.js';
+import { ExtractionService, httpExtractionProcessor } from './modules/purchases/services/extractions.js';
+import { readCaptureReceipts } from './modules/purchases/services/capture-receipts.js';
 
 export function createRuntimeApp() {
   const config = readAuthConfig();
+  const captureReceipts = readCaptureReceipts();
+  const extraction = new ExtractionService(process.env.OCR_URL ? httpExtractionProcessor(process.env.OCR_URL) : undefined, captureReceipts);
   const pool = createPool();
   const readiness = createReadiness(databaseUrl(), fileURLToPath(new URL('../../../db/migrations/', import.meta.url)));
-  const app = buildAcademicApp({ repository: new AcademicRepository(pool), purchases: new PurchaseRepository(pool), frontendRoot: process.env.NODE_ENV === 'production' ? fileURLToPath(new URL('../../web/dist/', import.meta.url)) : undefined, auth: { service: new AuthService(new AuthRepository(pool)), config } });
+  const app = buildAcademicApp({ extraction, captureReceipts, repository: new AcademicRepository(pool), purchases: new PurchaseRepository(pool), frontendRoot: process.env.NODE_ENV === 'production' ? fileURLToPath(new URL('../../web/dist/', import.meta.url)) : undefined, auth: { service: new AuthService(new AuthRepository(pool)), config } });
   app.addHook('onClose', async () => { await Promise.all([pool.end(), readiness.close()]); });
   app.get('/health/live', () => ({ status: 'live' }));
   app.get('/health/ready', async (_request, reply) => {
