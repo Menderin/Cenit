@@ -15,10 +15,13 @@ export function ValidateRecord({ id, version, requestNumber, fallbackFocus }: { 
   const mutation = useMutation({ mutationFn: (record: { id: string; version: number }) => validatePurchase(record.id, record.version), onSettled: () => { sending.current = false; }, onSuccess: async () => {
     if (!active.current) return;
     setConfirming(false); toast.success('Registro validado', { description: 'La revisión de los datos quedó registrada en Cenit.' });
+    // Keep the row and its anchor until the confirmation has finished exiting.
+    await new Promise(resolve => window.setTimeout(resolve, 150));
+    if (!active.current) return;
     await client.invalidateQueries({ queryKey: ['purchases'] });
   } });
   useEffect(() => { setConfirming(false); }, [id, version]);
-  return <><button type="button" ref={trigger} aria-haspopup="dialog" aria-expanded={confirming} onClick={event => {
+  return <><button type="button" ref={trigger} disabled={mutation.isPending} aria-haspopup="dialog" aria-expanded={confirming} onClick={event => {
     event.currentTarget.focus({ preventScroll: true }); selected.current = { id, version }; setConfirming(true);
   }}>Validar registro</button>
     <ContextualConfirm open={confirming} origin={trigger.current} fallbackFocus={fallbackFocus} title={`¿Validar ${requestNumber}?`} description="La revisión de los datos quedará registrada en Cenit."

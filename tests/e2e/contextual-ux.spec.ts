@@ -67,10 +67,22 @@ test('validar espera servidor, conserva conflicto, evita duplicados y retorna fo
   expect(bodies).toEqual([{ expectedVersion: 1 }]); release!();
   await expect(dialog(page).getByRole('alert')).toContainText('El registro cambió');
   await page.unroute(routePattern);
+  await page.evaluate(() => {
+    let start: number | undefined;
+    const observer = new MutationObserver(() => {
+      if (document.querySelector('.cenit-confirm.cenit-closing')) start ??= performance.now();
+      if (!document.querySelector('.cenit-confirm')) {
+        document.body.dataset.confirmExitDuration = String(start === undefined ? 0 : performance.now() - start);
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+  });
   await dialog(page).getByRole('button', { name: 'Validar registro', exact: true }).click();
   await expect(pending(page).getByRole('row').filter({ hasText: record.number })).toHaveCount(0);
   await expect(pending(page).getByRole('heading', { name: 'Pendientes de validación' })).toBeFocused();
   await expect(page.getByText('Registro validado', { exact: true })).toBeVisible();
+  expect(Number(await page.locator('body').getAttribute('data-confirm-exit-duration'))).toBeGreaterThanOrEqual(130);
   const detail = (await fixtures(page, 1))[0]!; await page.goto(`/administracion/compras/${detail.id}`);
   await page.getByRole('button', { name: 'Validar registro', exact: true }).click();
   await dialog(page).getByRole('button', { name: 'Validar registro', exact: true }).click();

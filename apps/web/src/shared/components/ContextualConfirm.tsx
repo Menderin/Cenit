@@ -40,10 +40,11 @@ export function ContextualConfirm({ open, origin, title, description, confirmLab
         onOpenAutoFocus={event => { event.preventDefault(); cancel.current?.focus({ preventScroll: true }); }}
         onCloseAutoFocus={event => {
           event.preventDefault();
+          const usableOrigin = anchor.current?.isConnected && !anchor.current.matches(':disabled');
           const target = path !== route.current ? document.querySelector<HTMLElement>('#admin-content')
-            : anchor.current?.isConnected ? anchor.current : fallbackFocus?.current;
+            : usableOrigin ? anchor.current : fallbackFocus?.current;
           if (target?.isConnected) {
-            if (!anchor.current?.isConnected) target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            if (!usableOrigin) target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
             target.focus({ preventScroll: true });
           }
         }}
