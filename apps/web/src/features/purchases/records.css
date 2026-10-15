@@ -99,8 +99,8 @@
 .purchase-filter-actions { justify-content: space-between; margin-top: 16px; }
 .purchase-records .purchase-filter-toggle { background: transparent; box-shadow: none; padding-inline: 0; color: var(--admin-muted); }
 .purchase-filter-toggle[aria-expanded="true"] > svg { transform: rotate(180deg); }
-.purchase-filter-dot { width: 5px; height: 5px; border-radius: 50%; background: #526bb5; }
-.purchase-applied-filters { display: inline-block; margin: 12px 0 0; padding: 4px 7px; border-radius: 5px; color: #455d96; background: #f2f5fb; font-size: 12px; }
+.purchase-filter-dot { width: 5px; height: 5px; border-radius: 50%; background: #45454d; }
+.purchase-applied-filters { display: inline-block; margin: 12px 0 0; padding: 4px 7px; border-radius: 5px; color: #45454d; background: #f3f3f6; font-size: 12px; }
 .purchase-filter-help { margin: 0 0 14px; color: var(--admin-muted); font-size: 12px; }
 .purchase-filter-feedback { margin: 12px 0 0; color: var(--admin-muted); font-size: 12px; }
 .purchase-filter-feedback:empty { margin: 0; }

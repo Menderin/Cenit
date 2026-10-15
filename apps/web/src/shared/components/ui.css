@@ -68,11 +68,11 @@
 .cenit-confirm { z-index: 101; box-sizing: border-box; width: min(340px, calc(100vw - 32px)); max-height: var(--radix-popover-content-available-height); overflow-y: auto; overscroll-behavior: contain; padding: 18px; border: 1px solid transparent; border-radius: 12px; background: #fff; color: #29292f; font: 13px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; box-shadow: 0 0 0 1px #0000000f, 0 12px 30px #0000001a, 0 4px 10px #00000008; transition: opacity 150ms ease-out; }
 .cenit-confirm-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .cenit-confirm-heading > svg { flex: none; color: #7b613b; }
-.cenit-confirm h2 { margin: 0; color: #455d96; font-size: 15px; font-weight: 550; line-height: 1.4; overflow-wrap: anywhere; }
+.cenit-confirm h2 { margin: 0; color: #35353d; font-size: 15px; font-weight: 550; line-height: 1.4; overflow-wrap: anywhere; }
 .cenit-confirm p { margin: 0; color: #62626c; }
 .cenit-confirm .cenit-dialog-error { margin-top: 12px; padding: 8px 10px; border-radius: 6px; color: #9e3935; background: #fcf3f1; }
 .cenit-confirm-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
-.cenit-confirm :is(button, a):focus-visible { outline: 2px solid #526bb5; outline-offset: 3px; }
+.cenit-confirm :is(button, a):focus-visible { outline: 2px solid #7b613b; outline-offset: 3px; }
 .cenit-confirm-arrow { fill: #fff; }
 .cenit-confirm.cenit-closing { opacity: 0; }
 @starting-style { .cenit-confirm-overlay, .cenit-confirm { opacity: 0; } }

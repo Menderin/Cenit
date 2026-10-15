@@ -2,7 +2,7 @@
 .admin-workspace *, .admin-workspace *::before, .admin-workspace *::after { box-sizing: border-box; }
 .admin-workspace button, .admin-workspace input, .admin-workspace textarea, .admin-workspace select { font: inherit; }
 .admin-workspace ::selection { background: #dce7f4; color: #162b48; }
-.admin-workspace :is(a, button, input, textarea, select, summary):focus-visible { outline: 2px solid #526bb5; outline-offset: 3px; }
+.admin-workspace :is(a, button, input, textarea, select, summary):focus-visible { outline: 2px solid #7b613b; outline-offset: 3px; }
 .admin-workspace button { -webkit-tap-highlight-color: transparent; }
 .admin-workspace button:disabled { opacity: .5; cursor: default; }
 .admin-workspace a { color: inherit; text-underline-offset: 3px; }
