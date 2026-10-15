@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-14",
+  "purpose": "Real OCR layout regression; not an independent accuracy holdout",
+  "sourceHashes": {
+    "extractor.py": "2c8a983c92629e46bb8215a3d03d0911a1388e92f4929092c68d4a1b2436d837",
+    "server.py": "1ae77282561d3530efd2d28f91689a640ac7abddfa029071696f38006d61b971"
+  },
+  "cases": [
+    {
+      "case": "full",
+      "expected": "compatible",
+      "actual": "compatible",
+      "status": 200,
+      "matches": true,
+      "seconds": 8.66590290000022,
+      "imageSha256": "72a273211c8e0485ce3c1cac9e917a507c7bb0374084ee12896e921db20a0d92"
+    },
+    {
+      "case": "grayscale",
+      "expected": "compatible",
+      "actual": "compatible",
+      "status": 200,
+      "matches": true,
+      "seconds": 8.150949399999263,
+      "imageSha256": "a7b43b0cdd478c56be743dc2ca59e069ab6d03f6ac3bfa15b46a97709adc698f"
+    },
+    {
+      "case": "without-branding",
+      "expected": "compatible",
+      "actual": "compatible",
+      "status": 200,
+      "matches": true,
+      "seconds": 8.489722600000277,
+      "imageSha256": "6962a9b062e33eecae7937d3b95141fffd7d472e54bad64455e298a5cc071e74"
+    },
+    {
+      "case": "header-only",
+      "expected": "partial",
+      "actual": "partial",
+      "status": 200,
+      "matches": true,
+      "seconds": 5.79398190000029,
+      "imageSha256": "ab641098ac9184bf5a6280ae2f16085657e5e49e72036287d52be745a5b52656"
+    },
+    {
+      "case": "table-only",
+      "expected": "partial",
+      "actual": "partial",
+      "status": 200,
+      "matches": true,
+      "seconds": 8.004793699999937,
+      "imageSha256": "77627ea3810048d0e4fe400f23d0990f7dc193a80e22645f965f16bc61cd0931"
+    },
+    {
+      "case": "no-grid",
+      "expected": "partial",
+      "actual": "partial",
+      "status": 200,
+      "matches": true,
+      "seconds": 4.081569299999501,
+      "imageSha256": "218f90dbe2c463ae73ff15aa153c5a12a705d7e3ad0f46c8d67ecf8eb9778de9"
+    },
+    {
+      "case": "blue-only",
+      "expected": "UNSUPPORTED_CAPTURE_LAYOUT",
+      "actual": "UNSUPPORTED_CAPTURE_LAYOUT",
+      "status": 422,
+      "matches": true,
+      "seconds": 1.7592695000003005,
+      "imageSha256": "4c9005f66db3850560400ba87299a78cb6bc656484f15f88ea6923921ab7a60c"
+    },
+    {
+      "case": "logo-only",
+      "expected": "UNSUPPORTED_CAPTURE_LAYOUT",
+      "actual": "UNSUPPORTED_CAPTURE_LAYOUT",
+      "status": 422,
+      "matches": true,
+      "seconds": 1.9543839999996635,
+      "imageSha256": "c7c896b1ff633578c69c48fda20d221e9ecfdff18f1e0f989531c5ee4c6c93d1"
+    },
+    {
+      "case": "landscape",
+      "expected": "UNSUPPORTED_CAPTURE_LAYOUT",
+      "actual": "UNSUPPORTED_CAPTURE_LAYOUT",
+      "status": 422,
+      "matches": true,
+      "seconds": 2.317588199999591,
+      "imageSha256": "61a29d04bfc8a2afaa2f57fd28686519ea7a55fbea65db9e139aa45fd968b5eb"
+    },
+    {
+      "case": "title-only",
+      "expected": "UNSUPPORTED_CAPTURE_LAYOUT",
+      "actual": "UNSUPPORTED_CAPTURE_LAYOUT",
+      "status": 422,
+      "matches": true,
+      "seconds": 2.1830313999998907,
+      "imageSha256": "e6cf7f61e80f9cf23f6ea08c048ce4d4f82d1fe6088131252fe468581f925121"
+    }
+  ]
+}

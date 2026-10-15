@@ -31,3 +31,5 @@ __pycache__/
 /experiments/**/*.pdiparams
 /experiments/**/*.pth
 /experiments/**/*.pt
+/apps/ocr/models/
+/apps/ocr/.venv/

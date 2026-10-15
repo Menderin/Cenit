@@ -172,6 +172,12 @@ jobs:
       - run: npm run test:integration
       - name: Install Playwright browser
         run: npm exec --no -- playwright install --with-deps chromium
+      - name: Test OCR image validation and candidate mapping
+        # No weights or inference; real OCR is measured separately on the notebook.
+        run: |
+          python3 -m venv "$RUNNER_TEMP/cenit-ocr-tests"
+          "$RUNNER_TEMP/cenit-ocr-tests/bin/pip" install --disable-pip-version-check -r apps/ocr/requirements.lock
+          PYTHONPATH=apps/ocr "$RUNNER_TEMP/cenit-ocr-tests/bin/python" -m unittest discover -s tests/ocr -v
       - run: npm run test:e2e
       - name: Build and verify delivery image
         run: |

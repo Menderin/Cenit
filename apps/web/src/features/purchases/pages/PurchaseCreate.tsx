@@ -72,7 +72,7 @@ export function PurchaseCreate() {
     </div>;
   }
   return <section className="purchase-records"><Link className="purchase-back-link" to="/administracion/compras"><ArrowLeftIcon size={13} aria-hidden="true" />Volver a solicitudes</Link>
-    <div className="purchase-page-heading"><div><h1>Nueva solicitud</h1><p>Los campos con * son obligatorios.</p></div>{incoming && <span className="purchase-origin-badge">Ejemplo de demostración · {purchaseExampleLabel(incoming.origin.type === 'contract_example' ? incoming.origin.exampleId : null)}</span>}</div>
+    <div className="purchase-page-heading"><div><h1>Nueva solicitud</h1><p>Los campos con * son obligatorios.</p></div>{incoming?.origin.type === 'image_capture' && <span className="purchase-origin-badge">Captura procesada y revisada</span>}{incoming?.origin.type === 'contract_example' && <span className="purchase-origin-badge">Ejemplo de demostración · {purchaseExampleLabel(incoming.origin.type === 'contract_example' ? incoming.origin.exampleId : null)}</span>}</div>
     <form ref={form} noValidate onSubmit={event => {
       event.preventDefault(); if (mutation.isPending) return;
       const input = { operationId: operationId.current, ...(incoming ? { origin: incoming.origin } : {}), ...draft }, errors = validateCreatePurchase(input);

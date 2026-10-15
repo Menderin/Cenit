@@ -105,6 +105,10 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 
 ### S3-HU04 — Recuperar automáticamente datos para su revisión
 
+**Continuidad de interfaz del 14 de octubre:** el líder autoriza la pantalla mínima «Subir captura», conectada al adaptador real, para seleccionar, comprobar formato, revisar/corregir y transferir al guardado. Admite capturas parciales reconocibles y rechaza imágenes sin estructura; ni logo ni color azul prueban autenticidad. El laboratorio sigue separado. Evidencia y criterios vigentes en [ADAPTADOR-CAPTURAS.md](ADAPTADOR-CAPTURAS.md). Revisión, Actions, integración, validación institucional y ensayo de VM siguen pendientes; las notas de pantalla pendiente siguientes son antecedentes.
+
+**HU04-T04, actualización del 14 de octubre:** adaptador real de capturas en notebook, endpoint administrativo, ocho columnas y procedencia firmada para guardado explícito. Evidencia, operación y pendientes en [ADAPTADOR-CAPTURAS.md](ADAPTADOR-CAPTURAS.md). Entrega técnica sujeta a revisión, Actions e integración; pantalla de captura de Gael y aceptación de exactitud institucional pendientes. La investigación histórica y el laboratorio de ejemplos no sustituyen estas comprobaciones.
+
 **HU04-T03, actualización del 12 de octubre:** contrato y pantalla ficticia de revisión implementados; [campos, schemas, límites y pendientes](EXTRACCION-COMPRAS.md). Sin OCR, ruta de extracción activa ni persistencia. HU04-T03 pendiente de revisión/integración; la historia no se considera completa hasta demostrar procesamiento real.
 
 **Alcance:** MVP requerido; captura PNG/JPEG con procesamiento local o en equipo propio elegida el 13 de octubre, sin acceso a Oracle. Víctor realiza procesamiento/API y Gael el frontend. OCR móvil recomendado provisionalmente tras investigación local; implementación y ensayo de VM pendientes.

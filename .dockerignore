@@ -10,6 +10,8 @@ playwright-report
 test-results
 tmp
 experiments
+apps/ocr
+tests/ocr
 Docs
 **/__pycache__
 *.log

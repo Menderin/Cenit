@@ -1,5 +1,7 @@
 # Batería OCR de compras
 
+Actualización del 14 de octubre: la nueva [batería de formato Oracle](ORACLE-FORMATO.md) reconstruye la captura de referencia con ocho columnas, cabecera compacta, controles y aprobaciones. Generar con `py -3 experiments/purchases/oracle_format.py`; imágenes en `tmp/ocr-oracle-format`. Las baterías históricas siguientes emplean plantillas simplificadas y no acreditan precisión sobre este formato.
+
 Este laboratorio corre en el notebook dentro de Podman Linux, sólo CPU, con una cuota de 1 CPU y límite de 1 GiB por variante. No usa PostgreSQL, API, frontend o VM. Los pesos son preentrenados e idénticos a los del primer ensayo; no hay entrenamiento.
 
 ## Organización

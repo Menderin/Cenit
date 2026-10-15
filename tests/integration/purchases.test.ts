@@ -17,6 +17,10 @@ import { PurchaseRepository } from '../../apps/api/src/modules/purchases/reposit
 import { purchaseDemoExamples, seedPurchaseDemo } from '../../db/seeds/purchases-demo.js';
 import { AuthRepository } from '../../apps/api/src/modules/auth/repositories/auth.js';
 import { AuthService } from '../../apps/api/src/modules/auth/services/auth.js';
+import { CaptureReceipts } from '../../apps/api/src/modules/purchases/services/capture-receipts.js';
+import { ExtractionService, httpExtractionProcessor } from '../../apps/api/src/modules/purchases/services/extractions.js';
+import { createReviewDraft, validateExtractionResponse } from '../../packages/contracts/src/purchases/index.js';
+import { extractionExamples } from '../../packages/contracts/src/purchases/examples.js';
 
 const suffix = randomBytes(6).toString('hex');
 const databases = [`cenit_purchase_test_${suffix}_empty`, `cenit_purchase_test_${suffix}_existing`];
@@ -34,6 +38,8 @@ let app: ReturnType<typeof buildAcademicApp>, repository: PurchaseRepository;
 const body = () => ({ ...structuredClone(manualPurchaseExample), operationId: randomUUID() });
 const historical = body();
 const historicalId = randomUUID();
+let captureNow = Date.now();
+const captureReceipts = new CaptureReceipts(randomBytes(32), () => captureNow);
 // The pre-origin format is a fixed array serialization, independent of origin.
 const historicalHash = createHash('sha256').update(JSON.stringify({ header: Object.keys(headerFields).map(key => historical.header[key as keyof typeof historical.header]), administrative: Object.keys(administrativeFields).map(key => historical.administrative[key as keyof typeof historical.administrative]), lines: historical.lines.map(line => Object.keys(lineFields).map(key => line[key as keyof typeof line])) })).digest('hex');
 const request = (method: 'GET' | 'POST', url: string, payload?: unknown, cookie = cookies.administrativo, suppliedOrigin: string | undefined = origin) => app.inject({ method, url, headers: { ...(cookie ? { cookie } : {}), ...(suppliedOrigin ? { origin: suppliedOrigin } : {}) }, ...(payload === undefined ? {} : { payload: payload as Record<string, unknown> }) });
@@ -67,7 +73,7 @@ beforeAll(async () => {
     finally { unlinkSync(file); }
   }
   repository = new PurchaseRepository(pools[0]!);
-  app = buildAcademicApp({ repository: new AcademicRepository(pools[0]!), purchases: repository, auth: { service: new AuthService(new AuthRepository(pools[0]!)), config: { allowedOrigins: [origin], cookieSecure: false } } });
+  app = buildAcademicApp({ captureReceipts, extraction: new ExtractionService(process.env.OCR_TEST_URL ? httpExtractionProcessor(process.env.OCR_TEST_URL) : async (image, name, mime) => { const result = structuredClone(extractionExamples[0]!.response); result.data.captureLayout = { status: 'compatible', signals: ['request_title', 'header_fields', 'line_section', 'eight_column_table'] }; result.data.input = { name, mimeType: mime as 'image/png', bytes: image.length, width: 1000, height: 700 }; return result; }, captureReceipts), repository: new AcademicRepository(pools[0]!), purchases: repository, auth: { service: new AuthService(new AuthRepository(pools[0]!)), config: { allowedOrigins: [origin], cookieSecure: false } } });
   await app.ready();
 });
 
@@ -355,4 +361,48 @@ describe('preparación explícita de compras ficticias', () => {
     await expect(seedPurchaseDemo(pool, actor)).rejects.toMatchObject({ code: 'OPERATION_CONFLICT' });
     expect(await repository.get(saved.id)).toEqual(saved);
   });
+});
+
+
+describe('capture provenance and explicit persistence', () => {
+  it('extracts without writes, persists reviewed values, verifies receipts and exact retries', async () => {
+    captureNow = Date.now();
+    const administrator = credentials.find(c => c.role === 'administrativo')!;
+    const login = await app.inject({ method: 'POST', url: '/api/v1/auth/login', headers: { origin }, payload: { email: administrator.email, password: administrator.password } });
+    expect(login.statusCode).toBe(200);
+    cookies.administrativo = String(login.headers['set-cookie']).split(';')[0]!;
+    const image = process.env.OCR_TEST_URL ? readFileSync('tmp/ocr-adapter-dev/fixtures/development-clear.png') : Buffer.from('fake');
+    const payload = Buffer.concat([Buffer.from('--capture\r\nContent-Disposition: form-data; name="file"; filename="fictional.png"\r\nContent-Type: image/png\r\n\r\n'), image, Buffer.from('\r\n--capture--\r\n')]);
+    const count = async () => (await pools[0]!.query('SELECT count(*)::int AS n FROM cenit.purchase_requests')).rows[0].n;
+    const before = await count();
+    const extraction = await app.inject({ method: 'POST', url: '/api/v1/purchases/extractions', headers: { cookie: cookies.administrativo, origin, 'content-type': 'multipart/form-data; boundary=capture' }, payload });
+    expect(extraction.statusCode).toBe(200);
+    captureNow = Date.now();
+    const candidates = extraction.json();
+    expect(validateExtractionResponse(candidates)).toEqual([]);
+    expect(await count()).toBe(before);
+    const draft = createReviewDraft(candidates);
+    const input = { ...draft, header: { ...draft.header, requestNumber: '000901', sentDate: '2026-10-14', description: 'HUMAN REVIEWED FICTIONAL DATA', totalAmount: '71000' }, operationId: randomUUID(), origin: candidates.data.origin };
+    const wrong = await request('POST', '/api/v1/purchases', { ...input, origin: { ...input.origin, extractionId: randomUUID() } });
+    expect(wrong.statusCode).toBe(400); expect(await count()).toBe(before);
+    const responses = await Promise.all([request('POST', '/api/v1/purchases', input), request('POST', '/api/v1/purchases', input)]);
+    expect(responses.map(r => r.statusCode).sort()).toEqual([200, 201]);
+    const saved = responses[0]!.json().data;
+    expect(saved.source).toBe('image_capture'); expect(saved.capture.extractionId).toBe(input.origin.extractionId);
+    expect(saved.header.description).toBe(input.header.description);
+    expect(saved).not.toHaveProperty('receipt');
+    expect(await count()).toBe(before+1);
+    expect((await request('POST', '/api/v1/purchases', { ...input, header: { ...input.header, totalAmount: '3' } })).statusCode).toBe(409);
+    captureNow += 7200001;
+    expect((await request('POST', '/api/v1/purchases', input)).statusCode).toBe(200);
+    expect((await request('POST', '/api/v1/purchases', { ...input, operationId: randomUUID() })).statusCode).toBe(400);
+    expect(await count()).toBe(before+1);
+    const actor = credentials.find(c => c.role === 'administrativo')!.id;
+    expect(() => captureReceipts.verify(input.origin, randomUUID(), true)).toThrow();
+    expect(() => captureReceipts.verify(input.origin, actor, true)).not.toThrow();
+    for (const sql of ["source='manual'", "example_id='recovered'", "extraction_id=NULL", "processor_version=NULL", "processed_at=NULL"]) {
+      await expect(pools[0]!.query(`UPDATE cenit.purchase_requests SET ${sql} WHERE id=$1`, [saved.id])).rejects.toMatchObject({ code: '23514' });
+    }
+    captureNow = Date.now();
+  }, 65000);
 });

@@ -1,5 +1,9 @@
 # Solicitudes de compra persistentes y validación local
 
+## Procedencia de capturas — 14 de octubre
+
+El alta admite ahora `origin.type=image_capture`, con referencia de extracción, versión, fecha y comprobante firmado ligado a la cuenta. El comprobante sólo acredita procesamiento y admite correcciones humanas; no representa aprobación Oracle. BD conserva `source`, `extraction_id`, `processor_version` y `processed_at`, nunca imagen, OCR completo ni firma. Migración aditiva `0008_purchase_capture_origin`; procedencias anteriores y hashes manuales/de ejemplos intactos. La validez de dos horas se exige para altas nuevas, conservando reintentos de operaciones ya guardadas. Listado/detalle identifican «Captura procesada y revisada». Preparación y contrato en [ADAPTADOR-CAPTURAS.md](ADAPTADOR-CAPTURAS.md). La pantalla mínima de captura conecta selección, OCR y revisión; extraer o continuar no crea registros, sólo el guardado explícito.
+
 ## Pulido administrativo — 14 de octubre
 
 Gael autorizó retirar los avisos repetidos de prototipo, muestra ilustrativa y preparación interna. El entorno se identifica con «Demostración» en la cabecera; la procedencia ficticia se conserva mediante etiquetas breves de ejemplo. El Home mantiene su muestra local y sus cálculos, sin acreditar conexión Oracle ni seguimiento institucional. Personal/bienes conservan sus rutas con «Módulo no disponible» y retorno a Inicio.

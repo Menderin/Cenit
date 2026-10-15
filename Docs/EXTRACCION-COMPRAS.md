@@ -1,5 +1,9 @@
 # HU04-T03 — Contrato de extracción de compras
 
+## Adaptador operativo local — 14 de octubre
+
+El endpoint administrativo `POST /api/v1/purchases/extractions` incorpora procesamiento real con PaddleOCR móvil ONNX en un contenedor auxiliar del notebook. La continuidad autorizada añade «Subir captura», selección/vista previa, extracción y revisión antes del formulario de guardado. Contrato ampliado con `captureLayout`, rechazo `UNSUPPORTED_CAPTURE_LAYOUT` y procedencia firmada `image_capture`. Reconoce estructura, sin acreditar autenticidad ni exigir color azul; admite parciales. Preparación, navegador y HTTP en [ADAPTADOR-CAPTURAS.md](ADAPTADOR-CAPTURAS.md). No modifica Oracle ni guarda al extraer. El laboratorio continúa siendo ficticio. Las notas siguientes sobre ausencia de pantalla/endpoint corresponden a etapas anteriores.
+
 Actualización del 14 de octubre: el equipo confirmó que no habrá acceso/API Oracle. La captura PNG/JPEG es la única vía de esta entrega. Se investigaron OCR ligero con anclas y modelos locales; evidencia y límites en [INVESTIGACION-EXTRACCION-COMPRAS.md](INVESTIGACION-EXTRACCION-COMPRAS.md). Los ensayos son procesamiento real aislado de imágenes ficticias: el laboratorio y la API de aplicación siguen sin extracción activa. SCRUM-45 debe implementar el adaptador, endpoint y procedencia real antes de conectar el frontend de Gael.
 
 ## Presentación de la revisión — 14 de octubre
