@@ -475,8 +475,8 @@ test('solicitudes persistentes: ingreso, varios ítems, recarga, detalle y valid
   const row = pending.getByRole('row').filter({ hasText: number });
   await expect(row.getByText('Sin dato', { exact: true })).toBeVisible();
   await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
-  await expect(page.getByRole('alertdialog')).toContainText('¿Confirmas la revisión de los datos registrados en Cenit?');
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Confirmar validación' }).click();
+  await expect(page.getByRole('alertdialog')).toContainText('La revisión de los datos quedará registrada en Cenit.');
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Validar registro' }).click();
   await expect(row).toHaveCount(0);
   const reviewed = page.getByRole('region', { name: 'Registros validados', exact: true });
   const reviewedRow = reviewed.getByRole('row').filter({ hasText: number });
@@ -563,7 +563,7 @@ test('laboratorio: transferir correcciones no guarda, y el reintento conserva op
   const row = pending.getByRole('row').filter({ hasText: number });
   await expect(row.getByText('Ejemplo de demostración', { exact: true })).toBeVisible();
   await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Confirmar validación' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Validar registro' }).click();
   const reviewed = page.getByRole('region', { name: 'Registros validados', exact: true }).getByRole('row').filter({ hasText: number });
   await expect(reviewed.getByText('Ejemplo de demostración', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Nueva solicitud' }).click();

@@ -35,7 +35,15 @@
 .admin-breadcrumb [aria-current] { color: #45454d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-icon-button { display: grid; place-items: center; flex: none; width: 36px; height: 36px; padding: 0; border: 1px solid transparent; border-radius: 7px; background: #fff; color: #62626c; cursor: pointer; box-shadow: var(--admin-shadow); }
 .admin-demo-tag { display: inline-flex; align-items: center; padding: 4px 7px; border: 1px solid var(--admin-line); border-radius: 5px; background: #fafafb; color: #686871; font-size: 11px; white-space: nowrap; }
-.admin-content { min-width: 0; padding: 28px 28px 40px; outline: none; }
+.admin-content { position: relative; min-width: 0; padding: 28px 28px 40px; outline: none; }
+.admin-content :is(input, textarea, select, summary, button, a) { scroll-margin-block: 20px; }
+@media (min-width: 761px) and (min-height: 561px) {
+  .admin-shell { height: calc(100svh - 32px); min-height: 0; overflow: hidden; }
+  .admin-sidebar { position: static; height: 100%; min-height: 0; }
+  .admin-main { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .admin-toolbar { flex: none; }
+  .admin-content { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-color: #c8c8d0 #fff; scrollbar-gutter: stable; }
+}
 .admin-content h1 { margin: 0 0 7px; font-size: 22px; font-weight: 550; letter-spacing: -.6px; line-height: 1.4; overflow-wrap: anywhere; }
 .admin-content h2 { margin: 0; font-size: 15px; font-weight: 550; line-height: 1.5; }
 .admin-content h3 { margin: 0 0 8px; font-size: 14px; font-weight: 500; }
@@ -78,6 +86,10 @@
   .admin-workspace button:not(:disabled):not(.admin-logout):not(.admin-icon-button):active, .admin-primary:not(:disabled):active, .admin-button:not(:disabled):active { scale: .96; }
 }
 @media (max-width: 1000px) { .dashboard-chart { grid-template-columns: 1fr; gap: 20px; } }
+@media (max-width: 760px), (max-height: 560px) {
+  .admin-toolbar { position: sticky; top: 0; z-index: 5; background: #fff; border-radius: 12px 12px 0 0; }
+  .admin-content :is(input, textarea, select, summary, button, a) { scroll-margin-top: 80px; }
+}
 @media (max-width: 760px) {
   .admin-workspace { padding: 8px; }
   .admin-shell { display: flex; flex-direction: column; min-height: calc(100svh - 16px); border-radius: 15px; }

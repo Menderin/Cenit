@@ -1,5 +1,7 @@
 # HU04-T03 — Contrato de extracción de compras
 
+Segunda iteración del 14 de octubre: cambiar/restablecer ejemplos con correcciones usa la confirmación contextual modal junto al selector/botón; las salidas comparten la misma guarda con origen explícito y fallback visible de cabecera para Atrás. Cancelar conserva valores/originales, transferir conserva operación/procedencia y no guarda. Detalle y evidencia en [COMPRAS.md](COMPRAS.md) y [REVISION-UX-2026-10-14.md](REVISION-UX-2026-10-14.md); no incorpora procesamiento real.
+
 ## Presentación de la revisión — 14 de octubre
 
 Por petición de Gael, el laboratorio conserva su ruta y un acceso secundario «Revisar ejemplo», con título «Revisar datos» y etiqueta «Ejemplo de demostración». Se retiran avisos extensos de implementación: no cambian origen, candidatos ni límites funcionales. El entorno administrativo conserva «Demostración» en la cabecera.

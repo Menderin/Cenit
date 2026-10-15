@@ -72,7 +72,7 @@ export function PurchaseCreate() {
       {problem && <p id={`${id}-error`} className="purchase-field-error">{problem.message}</p>}
     </div>;
   }
-  return <section className="purchase-records"><Link className="purchase-back-link" to={returnTo} onClick={event => event.currentTarget.focus({ preventScroll: true })}><ArrowLeftIcon size={13} aria-hidden="true" />Volver a solicitudes</Link>
+  return <section className="purchase-records"><Link className="purchase-back-link" to={returnTo} onClick={event => { if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); guard.request(() => navigate(returnTo), event.currentTarget); }}><ArrowLeftIcon size={13} aria-hidden="true" />Volver a solicitudes</Link>
     <div className="purchase-page-heading"><div><h1>Nueva solicitud</h1><p>Los campos con * son obligatorios.</p></div>{origin?.type === 'contract_example' && <span className="purchase-origin-badge">Ejemplo de demostración · {purchaseExampleLabel(origin.exampleId)}</span>}</div>
     <form ref={form} noValidate onSubmit={event => {
       event.preventDefault(); if (mutation.isPending) return;
@@ -92,7 +92,7 @@ export function PurchaseCreate() {
       {problems.length > 0 && <div className="purchase-error-summary" role="alert"><p>Revisa los campos antes de guardar.</p><ul>{problems.map((problem, index) => <li key={index}><strong>{purchaseProblemLabel(problem.path)}</strong>: {problem.message}</li>)}</ul></div>}
       {mutation.isError && <p role="alert">{mutation.error.message} El formulario conserva tus datos.</p>}
       <div className="purchase-form-footer"><button className="purchase-save" type="submit" disabled={mutation.isPending}><FloppyDiskIcon size={15} aria-hidden="true" />{mutation.isPending ? 'Guardando…' : 'Guardar solicitud'}</button>
-        <button type="button" disabled={mutation.isPending} onClick={event => { event.currentTarget.focus({ preventScroll: true }); guard.request(() => navigate(returnTo)); }}>Cancelar</button>{dirty && <span>Borrador sin guardar</span>}</div>
+        <button type="button" disabled={mutation.isPending} onClick={event => { event.currentTarget.focus({ preventScroll: true }); guard.request(() => navigate(returnTo), event.currentTarget); }}>Cancelar</button>{dirty && <span>Borrador sin guardar</span>}</div>
     </form>
   </section>;
 }

@@ -1,19 +1,11 @@
 /* Selected UI primitives share Cenit's existing light surfaces, typography and density. */
-.cenit-dialog, .cenit-popover, .cenit-notice, .cenit-toast { color: #29292f; font: 13px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; color-scheme: light; }
-.cenit-dialog *, .cenit-popover * { box-sizing: border-box; }
+.cenit-popover, .cenit-notice, .cenit-toast { color: #29292f; font: 13px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; color-scheme: light; }
+.cenit-confirm *, .cenit-popover * { box-sizing: border-box; }
 .cenit-ui-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 8px 12px; border: 1px solid #dcdce3; border-radius: 7px; color: #45454d; background: #fff; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color 150ms ease-out, opacity 150ms ease-out; }
 .cenit-ui-button--primary { border-color: #34343b; background: #34343b; color: #fff; }
 .cenit-ui-button:disabled { opacity: .5; cursor: default; }
-.cenit-dialog :is(button, a):focus-visible, .cenit-popover :is(button, select):focus-visible { outline: 2px solid #526bb5; outline-offset: 3px; }
-.cenit-dialog-overlay { position: fixed; inset: 0; z-index: 100; background: #252a3640; transition: opacity 150ms ease-out; }
-.cenit-dialog { position: fixed; z-index: 101; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(430px, calc(100vw - 32px)); max-height: calc(100svh - 32px); overflow-y: auto; overscroll-behavior: contain; padding: 24px; border: 1px solid transparent; border-radius: 14px; background: #fff; box-shadow: 0 0 0 1px #0000000f, 0 12px 30px #0000001a, 0 4px 10px #00000008; transition: opacity 300ms ease-out; }
-.cenit-dialog-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.cenit-dialog-heading > svg { flex: none; color: #9b7136; }
-.cenit-dialog h2 { margin: 0; font-size: 17px; font-weight: 550; line-height: 1.4; }
-.cenit-dialog p { margin: 0; color: #62626c; }
+.cenit-popover :is(button, select):focus-visible { outline: 2px solid #526bb5; outline-offset: 3px; }
 .cenit-dialog-note { margin-top: 12px !important; font-size: 12px; }
-.cenit-dialog .cenit-dialog-error { margin-top: 12px; color: #a44135; }
-.cenit-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
 .cenit-popover { z-index: 90; padding: 12px; border: 1px solid transparent; border-radius: 12px; background: #fff; max-width: calc(100vw - 32px); max-height: var(--radix-popover-content-available-height); overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 0 0 1px #0000000f, 0 8px 24px #00000014, 0 2px 6px #00000008; transition: opacity 300ms ease-out; }
 .cenit-date-field { position: relative; width: 100%; min-width: 0; }
 .cenit-date-field > input { padding-right: 42px !important; }
@@ -42,13 +34,13 @@
 .cenit-toast-title { font-size: 13px; font-weight: 550; }
 .cenit-toast-description { color: #62626c; font-size: 12px; }
 .cenit-toast-close { color: #62626c !important; background: #fff !important; padding: 0 !important; min-height: 20px; }
-.cenit-page-enter { animation: cenit-enter-opacity 300ms ease-out both; }
+.cenit-page-enter { animation: cenit-enter-opacity 150ms ease-out both; }
 .admin-nav-item, .academic-nav-item { transition: background-color 150ms ease-out, opacity 150ms ease-out; }
 .admin-sidebar, .academic-sidebar { transition: opacity 150ms ease-out; }
 .academic-detail { transition: opacity 300ms ease-out; }
 .academic-detail--closing { opacity: 0; transition-duration: 150ms; }
 .cenit-closing { opacity: 0; pointer-events: none; transition-duration: 150ms; }
-@starting-style { .cenit-dialog-overlay, .cenit-dialog, .cenit-popover, .academic-detail[open] { opacity: 0; } }
+@starting-style { .cenit-popover, .academic-detail[open] { opacity: 0; } }
 @keyframes cenit-enter-opacity { from { opacity: 0; } }
 @media (hover: hover) {
   .cenit-ui-button:hover:not(:disabled), .cenit-date-field .cenit-date-trigger:hover:not(:disabled) { background: #f5f5f8; }
@@ -57,19 +49,35 @@
   .cenit-calendar .rdp-selected .rdp-day_button:hover:not(:disabled) { background: #484850; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .cenit-page-enter { animation-name: cenit-enter-view; }
-  .cenit-dialog, .cenit-popover { transition-property: opacity, translate, filter; }
+  .cenit-popover { transition-property: opacity, translate, filter; }
   .academic-detail { transition-property: opacity, translate, filter; }
   .academic-detail--closing { translate: 0 -12px; filter: blur(4px); }
-  :is(.cenit-dialog, .cenit-popover).cenit-closing { translate: 0 -12px; filter: blur(4px); }
+  .cenit-popover.cenit-closing { translate: 0 -12px; filter: blur(4px); }
   @starting-style {
-    .cenit-dialog, .cenit-popover, .academic-detail[open] { translate: 0 12px; filter: blur(4px); }
+    .cenit-popover, .academic-detail[open] { translate: 0 12px; filter: blur(4px); }
     .admin-sidebar, .academic-sidebar { opacity: 0; }
   }
   .cenit-ui-button, .cenit-access__primary, .academic-button, .academic-icon-button { transition-property: scale, background-color, opacity; transition-duration: 150ms; transition-timing-function: ease-out; }
   .cenit-ui-button:not(:disabled):active, .cenit-access__primary:not(:disabled):active, .academic-button:not(:disabled):active, .academic-icon-button:not(:disabled):active { scale: .96; }
-  @keyframes cenit-enter-view { from { opacity: 0; translate: 0 12px; filter: blur(4px); } }
 }
 @media (prefers-reduced-motion: reduce) {
   [data-sonner-toaster] [data-sonner-toast], [data-sonner-toaster] [data-sonner-toast] * { transition-property: opacity !important; animation: none !important; }
+}
+
+.cenit-confirm-overlay { position: fixed; inset: 0; z-index: 100; background: #252a361f; pointer-events: auto; transition: opacity 150ms ease-out; }
+.cenit-confirm { z-index: 101; box-sizing: border-box; width: min(340px, calc(100vw - 32px)); max-height: var(--radix-popover-content-available-height); overflow-y: auto; overscroll-behavior: contain; padding: 18px; border: 1px solid transparent; border-radius: 12px; background: #fff; color: #29292f; font: 13px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; box-shadow: 0 0 0 1px #0000000f, 0 12px 30px #0000001a, 0 4px 10px #00000008; transition: opacity 150ms ease-out; }
+.cenit-confirm-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.cenit-confirm-heading > svg { flex: none; color: #7b613b; }
+.cenit-confirm h2 { margin: 0; color: #455d96; font-size: 15px; font-weight: 550; line-height: 1.4; overflow-wrap: anywhere; }
+.cenit-confirm p { margin: 0; color: #62626c; }
+.cenit-confirm .cenit-dialog-error { margin-top: 12px; padding: 8px 10px; border-radius: 6px; color: #9e3935; background: #fcf3f1; }
+.cenit-confirm-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.cenit-confirm :is(button, a):focus-visible { outline: 2px solid #526bb5; outline-offset: 3px; }
+.cenit-confirm-arrow { fill: #fff; }
+.cenit-confirm.cenit-closing { opacity: 0; }
+@starting-style { .cenit-confirm-overlay, .cenit-confirm { opacity: 0; } }
+@media (prefers-reduced-motion: no-preference) {
+  .cenit-confirm { transition-property: opacity, translate, filter; }
+  .cenit-confirm.cenit-closing { translate: 0 -12px; filter: blur(4px); }
+  @starting-style { .cenit-confirm { translate: 0 12px; filter: blur(4px); } }
 }

@@ -18,7 +18,7 @@ import { StatusNotice } from '../shared/components/StatusNotice.js';
 function AdministrativeArea() {
   const auth = useAuth(), guard = usePurchaseGuard();
   const session = auth.session!;
-  const logout = async () => { guard.request(() => { void auth.logout(); }); };
+  const logout = async (origin?: HTMLElement) => { guard.request(() => { void auth.logout(); }, origin ?? null); };
   return <AdministrativeLayout account={session.account} expiresAt={session.expiresAt} logout={logout}>
     <Routes>
       <Route path="/administracion" element={<Home />} />

@@ -12,8 +12,8 @@
 .purchase-review__origin { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 7px 12px; margin-top: 8px; color: #72727b; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .purchase-review__field-status { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .purchase-review__field-status > span { padding: 2px 6px; border-radius: 4px; background: #f3f3f6; color: var(--admin-muted); }
-.purchase-review__field-status > [data-status="invalid"], .purchase-review__field-status > [data-status="ambiguous"] { color: #6b5940; background: #f7f2e8; }
-.purchase-review__field-status > .purchase-review__changed { background: #edf5ef; color: #486c59; }
+.purchase-review__field-status > [data-status="invalid"], .purchase-review__field-status > [data-status="ambiguous"] { color: #7b613b; background: #fbf7ee; }
+.purchase-review__field-status > .purchase-review__changed { background: #fbf7ee; color: #7b613b; }
 .purchase-review__original { min-width: 0; max-width: 100%; }
 .purchase-review__original > summary { display: flex; align-items: center; gap: 4px; min-height: 24px; cursor: pointer; list-style: none; }
 .purchase-review__original > summary::-webkit-details-marker { display: none; }

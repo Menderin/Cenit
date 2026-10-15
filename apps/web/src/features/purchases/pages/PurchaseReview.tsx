@@ -60,11 +60,11 @@ export function PurchaseReview() {
     })}</div>;
   }
   return <section className="purchase-records purchase-review">
-    <Link className="purchase-back-link" to={returnTo} onClick={event => event.currentTarget.focus({ preventScroll: true })}><ArrowLeftIcon size={13} aria-hidden="true" />Volver a solicitudes</Link>
+    <Link className="purchase-back-link" to={returnTo} onClick={event => { if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); guard.request(() => navigate(returnTo), event.currentTarget); }}><ArrowLeftIcon size={13} aria-hidden="true" />Volver a solicitudes</Link>
     <div className="purchase-page-heading"><div><h1>Revisar datos</h1><p>Revisa y completa la información antes de continuar.</p></div><span className="purchase-origin-badge">Ejemplo de demostración</span></div>
     <div className="purchase-review__toolbar"><div><label htmlFor="review-example">Datos de ejemplo</label><select id="review-example" value={exampleId} onChange={event => {
       const next = event.target.value;
-      guard.request(() => select(next), { title: 'Cambiar ejemplo', description: 'Se descartarán tus correcciones y se cargarán los datos del otro ejemplo.', confirmLabel: 'Descartar y cambiar' });
+      guard.request(() => select(next), event.currentTarget, { title: 'Cambiar ejemplo', description: 'Se descartarán tus correcciones y se cargarán los datos del otro ejemplo.', confirmLabel: 'Descartar y cambiar' });
     }}>
       {extractionExamples.map(entry => <option key={entry.id} value={entry.id}>{purchaseExampleLabel(entry.id)}</option>)}
       <option value="failure">Fallo de procesamiento</option>
@@ -85,7 +85,7 @@ export function PurchaseReview() {
             snapshot.current = null;
             guard.leave(() => navigate('/administracion/compras/nueva', { state: { purchasesReturnTo: returnTo } }));
           }
-        }}>Continuar al formulario<ArrowRightIcon size={15} aria-hidden="true" /></button><button type="submit">Comprobar datos</button><button type="button" onClick={event => { event.currentTarget.focus({ preventScroll: true }); guard.request(() => select(exampleId), { title: 'Restablecer ejemplo', description: 'Se descartarán tus correcciones y se recuperarán los valores originales.', confirmLabel: 'Descartar y restablecer' }); }}>Restablecer ejemplo</button></div>
+        }}>Continuar al formulario<ArrowRightIcon size={15} aria-hidden="true" /></button><button type="submit">Comprobar datos</button><button type="button" onClick={event => { event.currentTarget.focus({ preventScroll: true }); guard.request(() => select(exampleId), event.currentTarget, { title: 'Restablecer ejemplo', description: 'Se descartarán tus correcciones y se recuperarán los valores originales.', confirmLabel: 'Descartar y restablecer' }); }}>Restablecer ejemplo</button></div>
         {checked && (problems.length ? <div className="purchase-error-summary" role="alert"><p>Revisa los campos indicados.</p><ul>{problems.map((problem, i) => <li key={i}><strong>{purchaseProblemLabel(problem.path)}</strong>: {problem.message}</li>)}</ul></div> : <p role="status">Formatos correctos. Puedes continuar y completar los campos obligatorios.</p>)}
       </form>
     </>}

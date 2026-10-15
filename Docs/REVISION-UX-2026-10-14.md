@@ -13,7 +13,43 @@ Plan autorizado por Gael el 14 de octubre de 2026. Primera rama: `fix/ux-flujos-
 
 Dependencias exactas: Radix AlertDialog 1.2.1 (foco/modal/teclado), Radix Popover 1.3.1 y DayPicker 10.0.2 (calendario), Sonner 2.0.8 (avisos). Composición seleccionada de shadcn adaptada a Cenit; no se instala su plantilla ni una biblioteca de animación. Versiones existentes se conservan, con un único lockfile. Referencias: [Calendar](https://ui.shadcn.com/docs/components/radix/calendar), [Sonner](https://sonner.emilkowal.ski/), [beforeunload](https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event) y skill local better-ui.
 
-## Verificación
+## Segunda iteración: confirmaciones contextuales y marco administrativo
+
+Investigación previa: `.local/cenit-review/CONTEXTUAL_UX_RESEARCH_2026-10-14.md`. Al iniciar, árbol limpio en `0480ce3`, `origin/develop` en `3fbd1b7`, PR #14 integrado y primera rama todavía sin PR/merge. Se continúa en `fix/ux-flujos-y-movimiento`, sin crear otra rama. Sesión de jornada sigue condicionada a demo e integración; esta iteración conserva dos horas y no modifica backend, contratos, migraciones, VM, Jira ni Drive.
+
+Se probó primero Validar registro en el recorrido real con PostgreSQL descartable: tarjeta anclada, foco Cancelar, Tab/Shift+Tab, rueda bloqueada, Escape/clic exterior y foco de retorno. Se corrigieron la composición de Portal (cada Portal requiere un hijo) y la cancelación explícita del velo antes de migrar la guarda compartida. Los controles pasan su origen; Atrás/origen oculto usan la ubicación de cabecera. No hay interceptación global de clics. ID/versión capturados, rechazo de ancla retirada, validación pendiente/conflicto, éxito tardío de otra identidad y foco tras desaparecer fila/acción se verifican con E2E.
+
+La comprobación del marco detectó un segundo factor: las etiquetas accesibles absolutas de tabla podían expandir el documento aun con el shell limitado. `admin-content` ahora contiene esos descendientes y controla el scroll vertical en escritorio; cabecera/sidebar quedan estables. Navegar reinicia el contenedor y enfoca el destino. Móvil/poca altura conservan desplazamiento natural y toolbar sticky. En WebKit móvil se reprodujo un campo parcialmente recortado después del foco nativo: un ajuste local revela únicamente controles que quedan ocultos, respetando los portales y la identidad vigente.
+
+Los filtros mantienen búsqueda explícita, fechas/códigos y páginas independientes. Ayuda inicial, mensaje neutral vacío/repetido y «Cambios por aplicar» viven junto a la barra en una región de estado. Comparar valores y páginas evita URL/historial/consultas repetidos; quitar filtros y reaplicar desde página 2 siguen siendo acciones válidas. Errores conservan Reintentar. Éxitos continúan en Sonner después del servidor, calendario sin velo y panel académico sin cambio funcional.
+
+Referencias primarias revisadas: [Radix Popover](https://www.radix-ui.com/primitives/docs/components/popover) para modal/Anchor/Portal/colisiones; [patrón modal W3C](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/) para bloqueo y foco. [Ant Design Popconfirm](https://ant.design/components/popconfirm/) sólo inspira el patrón visual; no se incorpora una dependencia. El mensaje de filtros sigue [W3C status messages](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html) y mantiene Aplicar disponible con explicación, según [GOV.UK botones](https://design-system.service.gov.uk/components/button/#disabled-buttons).
+
+Revisión better-ui, agrupada por causa (las severidades describen el problema corregido):
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| MEDIUM | `shared/components/ContextualConfirm.tsx:30`, `purchases/model/guard.tsx:54` | Decisión centrada genérica y separada de su origen | Tarjeta de 340 px, radio 12 px, ancla explícita, margen 16 px y velo suave; modal real | Contexto, bloqueo y foco coherentes |
+| MEDIUM | `app/administration.css:40`, `app/AdministrativeLayout.tsx:27` | Marco fuera de ventana y foco parcialmente recortado en WebKit móvil | Marco de ventana en escritorio, scroll principal y revelado acotado del control enfocado | Navegación visible y controles utilizables |
+| MEDIUM | `purchases/pages/Purchases.tsx:61` | Aplicar sin efecto añadía historial y no explicaba el estado | Comparación previa y feedback local, sin consultas nuevas | Una acción frecuente comunica su efecto |
+| MEDIUM | `shared/components/ui.css:37` | Blur/300 ms en toda la página al navegar | Opacidad/150 ms; expresividad limitada a paneles pequeños | Lectura estable en navegación frecuente |
+| LOW | `purchases/records.css`, `purchases/review.css` | Borradores y cambios con señales poco diferenciadas | Acentos pequeños de acción/atención/éxito; blanco y carbón conservados | Color con texto/función, sin teñir filas |
+
+Capturas privadas revisadas: `.local/cenit-review/contextual-qa`, en 1280×720, 1440×900, 1920×1080 y 390×844, más viewport 640×450 equivalente al espacio disponible con zoom 200% de 1280×900. Documento de escritorio igual a la altura de ventana y tarjeta dentro de márgenes en los cuatro tamaños; se conserva el scroll horizontal necesario de tablas. Movimiento reducido probado sin translate/blur; reproducción al 10% realizada mediante CDP, con fondo/página sin blur. No se utilizó el panel Animations.
+
+Contraste calculado desde estilos renderizados: filtros `#455d96/#f2f5fb` 5,90:1, borrador `#7b613b/#fbf7ee` 5,43:1, validado `#486c59/#edf5ef` 5,30:1, borde de entrada `#91919d` sobre blanco 3,12:1. Foco `#526bb5` conservado. Son comprobaciones de estas parejas, no auditoría completa de [WCAG contraste](https://www.w3.org/TR/WCAG22/#contrast-minimum).
+
+Verificación local de esta segunda iteración con Node 24.21.0/npm 11.19.0: tipos, lint, catálogo y build completos correctos; **78 unitarias, 93 integración PostgreSQL, 44 infraestructura, 65 Chromium y 65 WebKit instalado correctas**. Ocho recorridos nuevos en `tests/e2e/contextual-ux.spec.ts`; los anteriores conservan transferencia/origen/operación, errores, permisos, calendario y académico. La primera ejecución predeterminada de WebKit buscó `webkit-2370`, ausente en este Mac; la suite final usa `webkit-2336/pw_run.sh`, igual que la primera fase, mediante configuración privada. Se corrigió la suposición de foco por clic del test de Aplicar para probar el envío por teclado; la comprobación de campo recortado se mantuvo y motivó la corrección real del layout.
+
+Imagen candidata Linux/amd64 del workspace verificada con todas las aserciones del verificador vigente: runtime limitado, migrador separado/repetible, HTML/readiness, límites Nginx y recuperación de PostgreSQL. Se reutiliza el adaptador privado de Docker Desktop que copia byte a byte los mismos insumos al contenedor descartable; no cambia infraestructura/VM. El commit final se construye/identifica después del commit; la imagen candidata por sí sola no acredita publicación. Actions requiere push. Vite conserva aviso de chunk principal grande (aprox. 770 kB/229 kB gzip), sin medición de rendimiento nueva.
+
+Compras: SCRUM-49/46 (descarte/revisión/transferencia) y SCRUM-57/62 (filtros/detalle/validación local). Auth sólo entrega origen de logout a la guarda; no se cambian política, API ni cuentas. Académico mantiene su panel y semántica. Las tareas/historias siguen pendientes de aceptación/revisión/integración; no se cierran automáticamente. No se crearon compras en `cenit_demo`; todas las altas de QA pertenecen a bases descartables. Logs/capturas locales en `.local/cenit-review/contextual-*`.
+
+No verificado: lector de pantalla, Safari real, zoom nativo del navegador, teclado virtual/gestos en dispositivo físico y VM. El viewport reducido no acredita zoom nativo. P2 posteriores, sin implementar: barra de acciones para formularios extensos, retorno a posición del listado, ayudas de campos inciertos y vacíos con una acción pertinente.
+
+Approve — sólo para superficies/interacciones inspeccionadas; revisión independiente e integración del equipo pendientes.
+
+## Verificación de la primera fase (0480ce3)
 
 Node 24.21.0/npm 11.19.0: typecheck, lint, catálogo y build completos correctos; 78 unitarias, 93 integración PostgreSQL y 44 infraestructura correctas. Las pruebas de navegador usan runtime de producción y bases/roles descartables, sin añadir compras a cenit_demo. Nuevos recorridos en `tests/e2e/ux.spec.ts`: cancelación sin POST, atrás/logout/Escape, revisión/descarte, recuperación de origen/ítems/operación tras red fallida, expiración/otra cuenta, calendario por teclado/bisiesto/fecha API y guardado pendiente sin falso éxito. Los recorridos existentes cubren roles, filtros/totales/páginas, detalle, errores, transferencias, idempotencia y académico.
 
