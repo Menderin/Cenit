@@ -1,0 +1,11 @@
+FROM docker.io/library/node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv libgl1 libglib2.0-0 && rm -rf /var/lib/apt/lists/*
+COPY requirements.lock /tmp/requirements.lock
+RUN python3 -m venv /opt/ocr && /opt/ocr/bin/pip install --no-cache-dir -r /tmp/requirements.lock
+ENV PATH=/opt/ocr/bin:$PATH OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 PYTHONDONTWRITEBYTECODE=1 HOME=/tmp
+WORKDIR /worker
+COPY extractor.py server.py /worker/
+COPY models/ch_PP-OCRv5_det_mobile.onnx models/latin_PP-OCRv5_rec_mobile.onnx /models/
+USER 1000:1000
+EXPOSE 8090
+CMD ["python", "server.py"]

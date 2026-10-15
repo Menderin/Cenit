@@ -1,6 +1,7 @@
 # Cenit
 
 Pulido de flujos del 14 de octubre: Cancelar y descarte con diálogo, calendario en español, avisos Sonner y retorno al listado con filtros/páginas. La sesión mantiene dos horas; jornada se implementará después de la demo/integración. Cambios, evidencia y conciliación pendiente de Jira en [revisión de UX](Docs/REVISION-UX-2026-10-14.md).
+Capturas desde navegador, 14 de octubre: iniciar sesión como administrativo y abrir **Sistema de compra → Subir captura**, o `/administracion/compras/captura`. Permite elegir PNG/JPEG, ver la imagen, extraer, corregir y continuar al guardado explícito. OCR comprueba señales del formato de solicitud; admite parciales y no acredita autenticidad ni exige bordes azules. Preparación y prueba visual en [ADAPTADOR-CAPTURAS.md](Docs/ADAPTADOR-CAPTURAS.md). Reiniciar `npm run dev` tras actualizar el backend y mantener OCR iniciado con `podman compose --profile ocr up -d ocr`. El laboratorio separado conserva ejemplos y el ensayo de VM sigue pendiente; no se instala inferencia en la VM mediante este cambio.
 
 Actualización del 13 de octubre: el líder autoriza entregar la demo actual por HTTP en la VM, aunque malla y extracción real sigan pendientes. CI completo usa `Application` con lint, catálogo, build, integración, E2E contra producción y verificación de imagen. El marcador parcial fue retirado tras verificar estos checks localmente. La variable de publicación se habilita durante el primer ensayo supervisado, no mediante este cambio local. Procedimiento vigente: [primera entrega automática](deploy/PRIMER-DESPLIEGUE.md). Las menciones anteriores a bloqueo o ausencia de aplicación son antecedentes de preparación, no el estado técnico vigente.
 
@@ -136,6 +137,8 @@ Con el entorno local preparado, ejecutar `podman compose up -d db` y `npm run de
 La navegación lateral se recoge en móvil; «Mostrar navegación» permite abrir los cuatro destinos y el cierre de sesión. El formulario manual muestra primero sus cuatro mínimos y permite desplegar cada ítem; los errores abren el ítem y enfocan el primer campo inválido.
 
 La recuperación real se hará desde capturas mediante visión local implementada por Víctor, sin acceso a Oracle. El laboratorio actual sigue mostrando ejemplos; el endpoint y la procedencia de captura real están pendientes.
+
+La [investigación de extracción local](Docs/INVESTIGACION-EXTRACCION-COMPRAS.md) compara OCR real sobre capturas totalmente ficticias, con comandos reproducibles y evidencia. No forma parte de `npm run dev`, CI/CD ni del endpoint de guardado; sus dependencias se aíslan en un contenedor de investigación. Para reproducir la cuarta batería desde PowerShell, ejecutar `./experiments/purchases/run.ps1 -Round 4 -Split holdout -Repeats 2`; ver requisitos, resultados y límites en [experiments/purchases/README.md](experiments/purchases/README.md). Repetir esta batería no constituye una evaluación con muestras nuevas.
 
 El Home administrativo incluye únicamente indicadores y un gráfico con datos ficticios para revisar la propuesta con el cliente. No están conectados a Oracle ni permiten aprobar solicitudes.
 

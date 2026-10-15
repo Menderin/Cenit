@@ -14,7 +14,7 @@ import { createReadiness } from '../../apps/api/src/infrastructure/database/read
 
 const folder = resolve('db/migrations');
 const migrations = readMigrationFiles({ migrationsFolder: folder });
-const progress = migrations.at(-1)!;
+const progress = migrations[7]!;
 const adminUrl = process.env.ACADEMIC_TEST_ADMIN_URL_FILE ? readFileSync(process.env.ACADEMIC_TEST_ADMIN_URL_FILE, 'utf8').trim()
   : process.env.DATABASE_URL ?? (() => { const url = new URL('postgres://cenit_admin@127.0.0.1:55432/cenit_demo'); url.password = readFileSync('.local/secrets/postgres-password', 'utf8').trim(); return url.toString(); })();
 
@@ -23,7 +23,7 @@ for (const source of ['academic', 'purchases']) {
     process.env.APP_ENV = 'test';
     // These are the hash/timestamp already used by malla-interactiva, not a new migration.
     expect(progress.hash).toBe('06868cc13dd3edc627b138fb0055d0507953bab8b65d2b63c5e60933cbc1e493');
-    expect(progress.folderMillis).toBeGreaterThan(migrations.at(-2)!.folderMillis);
+    expect(progress.folderMillis).toBeGreaterThan(migrations[6]!.folderMillis);
     const suffix = randomBytes(6).toString('hex');
     const database = `cenit_branch_migration_${suffix}`, role = `branch_migrator_${suffix}`;
     const admin = createTestPool({ connectionString: adminUrl });
@@ -43,7 +43,7 @@ for (const source of ['academic', 'purchases']) {
       await admin.query(`CREATE DATABASE ${database}`);
       await provisioner.query(`CREATE SCHEMA cenit AUTHORIZATION ${role}; REVOKE CREATE ON SCHEMA public FROM PUBLIC`);
       await pool.query('CREATE TABLE cenit.__drizzle_migrations (id serial PRIMARY KEY, hash text NOT NULL, created_at bigint)');
-      const previous = source === 'academic' ? [...migrations.slice(0, 3), progress] : migrations.filter(migration => migration !== progress);
+      const previous = source === 'academic' ? [...migrations.slice(0, 3), progress] : migrations.slice(0, 7);
       for (const migration of previous) {
         for (const sql of migration.sql) if (sql.trim()) await pool.query(sql);
         await pool.query('INSERT INTO cenit.__drizzle_migrations(hash,created_at) VALUES($1,$2)', [migration.hash, source === 'academic' && migration === progress ? 1791853110098 : migration.folderMillis]);
@@ -57,8 +57,11 @@ for (const source of ['academic', 'purchases']) {
         await loadCatalog(pool, catalog, true);
         await seedAcademicDemo(pool, catalog.planId, catalog.version, [{ id: randomUUID(), accountId: student.id, name: student.name, rut: '20.123.456-5', attempts: [{ code: catalog.courses[0]!.code, attempt: { attemptNumber: 1, status: 'passed', grade: '5,2' } }] }]);
       } else {
-        const saved = await new PurchaseRepository(pool).create({ ...structuredClone(manualPurchaseExample), operationId: randomUUID() }, credentials.find(account => account.role === 'administrativo')!.id);
-        purchaseId = saved.record.id;
+        // Seed the historical shape, before capture columns exist; current writes use the new schema.
+        purchaseId = randomUUID();
+        await pool.query('INSERT INTO cenit.purchase_requests(id,operation_id,payload_hash,created_by,request_number,sent_date,description,total_amount) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',
+          [purchaseId, randomUUID(), 'a'.repeat(64), credentials.find(account => account.role === 'administrativo')!.id, manualPurchaseExample.header.requestNumber,
+            manualPurchaseExample.header.sentDate, manualPurchaseExample.header.description, manualPurchaseExample.header.totalAmount]);
       }
       const rowsBefore = await ledger();
       const accountsBefore = await accountFingerprint();

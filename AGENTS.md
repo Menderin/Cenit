@@ -1,10 +1,14 @@
 # Instrucciones para agentes de Cenit
 
+Actualización de extracción del 14 de octubre: adaptador OCR auxiliar del notebook, `POST /api/v1/purchases/extractions` y pantalla mínima en `/administracion/compras/captura`, autorizada posteriormente por el líder. No conecta Oracle. Leer [ADAPTADOR-CAPTURAS.md](Docs/ADAPTADOR-CAPTURAS.md) antes de modificar procesamiento, procedencia o interfaz. El endpoint requiere sesión administrativa y Origin; sin configuración OCR responde 503. Procesador v2 comprueba señales de formato y admite parciales, sin acreditar autenticidad ni exigir color azul. La precisión institucional, revisión/integración y ensayo de VM siguen pendientes. Las menciones anteriores a ausencia de endpoint/pantalla describen el laboratorio previo.
+
 Actualización del 13 de octubre: el líder autoriza entregar la demo actual por HTTP en la VM, aunque malla y extracción real sigan pendientes. CI completo usa `Application` con lint, catálogo, build, integración, E2E contra producción y verificación de imagen. El marcador parcial fue retirado tras verificar estos checks localmente. La variable de publicación se habilita durante el primer ensayo supervisado, no mediante este cambio local. Procedimiento vigente: [primera entrega automática](deploy/PRIMER-DESPLIEGUE.md). Las menciones anteriores a bloqueo o ausencia de aplicación son antecedentes de preparación, no el estado técnico vigente.
 
 Para build completo/servidor compilado/ensayo de imagen, leer [deploy/ENSAYO-LOCAL.md](deploy/ENSAYO-LOCAL.md). Ese ensayo no retira `academic-foundation`, no habilita releases ni acredita extracción/malla completa. No trasladar su excepción HTTP local a una instalación institucional por defecto.
 
 ## Aplicación y referencias
+
+- [Docs/INVESTIGACION-EXTRACCION-COMPRAS.md](Docs/INVESTIGACION-EXTRACCION-COMPRAS.md): investigación experimental de OCR local y regiones dinámicas. Oracle/API descartados por el equipo; no confundir el benchmark con un endpoint ni con extracción integrada.
 
 Estas instrucciones aplican a todo el repositorio. Antes de iniciar una tarea, leer [CONTRIBUTING.md](CONTRIBUTING.md). Antes de modificar código, leer además [AGENTS/SDD.md](AGENTS/SDD.md), [la guía de estructura](AGENTS/ESTRUCTURA.md) y las instrucciones adicionales de la carpeta afectada.
 
@@ -18,7 +22,7 @@ Estas instrucciones aplican a todo el repositorio. Antes de iniciar una tarea, l
 
 Ante una contradicción que afecte alcance, contratos o reglas de negocio, explicarla y solicitar una decisión. No inventar procesos institucionales ni afirmar que una funcionalidad existe sin verificarla.
 
-- [Docs/EXTRACCION-COMPRAS.md](Docs/EXTRACCION-COMPRAS.md): contrato de candidatos, límites de imagen futuros y laboratorio administrativo. Leer antes de modificar extracción/revisión. No hay OCR ni endpoint de extracción activo; los ejemplos no acreditan extracción real.
+- [Docs/EXTRACCION-COMPRAS.md](Docs/EXTRACCION-COMPRAS.md): contrato de candidatos, límites de imagen y laboratorio administrativo. Leer antes de modificar extracción/revisión y complementar con la guía del adaptador. Los ejemplos del laboratorio no acreditan extracción real.
 
 ## Alcance
 

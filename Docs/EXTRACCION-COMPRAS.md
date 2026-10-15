@@ -1,6 +1,12 @@
 # HU04-T03 — Contrato de extracción de compras
 
-Segunda iteración del 14 de octubre: cambiar/restablecer ejemplos con correcciones usa la confirmación contextual modal junto al selector/botón; las salidas comparten la misma guarda con origen explícito y fallback visible de cabecera para Atrás. Cancelar conserva valores/originales, transferir conserva operación/procedencia y no guarda. Detalle y evidencia en [COMPRAS.md](COMPRAS.md) y [REVISION-UX-2026-10-14.md](REVISION-UX-2026-10-14.md); no incorpora procesamiento real.
+Segunda iteración UX del 14 de octubre: cambiar/restablecer ejemplos con correcciones usa la confirmación contextual modal junto al selector/botón; las salidas comparten la misma guarda con origen explícito y fallback visible de cabecera para Atrás. Cancelar conserva valores/originales, transferir conserva operación/procedencia y no guarda. Detalle y evidencia en [COMPRAS.md](COMPRAS.md) y [REVISION-UX-2026-10-14.md](REVISION-UX-2026-10-14.md); esta iteración no modifica el adaptador de capturas descrito a continuación.
+
+## Adaptador operativo local — 14 de octubre
+
+El endpoint administrativo `POST /api/v1/purchases/extractions` incorpora procesamiento real con PaddleOCR móvil ONNX en un contenedor auxiliar del notebook. La continuidad autorizada añade «Subir captura», selección/vista previa, extracción y revisión antes del formulario de guardado. Contrato ampliado con `captureLayout`, rechazo `UNSUPPORTED_CAPTURE_LAYOUT` y procedencia firmada `image_capture`. Reconoce estructura, sin acreditar autenticidad ni exigir color azul; admite parciales. Preparación, navegador y HTTP en [ADAPTADOR-CAPTURAS.md](ADAPTADOR-CAPTURAS.md). No modifica Oracle ni guarda al extraer. El laboratorio continúa siendo ficticio. Las notas siguientes sobre ausencia de pantalla/endpoint corresponden a etapas anteriores.
+
+Investigación del 14 de octubre: el equipo confirmó que no habrá acceso/API Oracle y que las capturas PNG/JPEG son la vía de esta entrega. Se evaluaron OCR ligero con anclas y modelos locales; evidencia y límites en [INVESTIGACION-EXTRACCION-COMPRAS.md](INVESTIGACION-EXTRACCION-COMPRAS.md). Los ensayos aislados con imágenes ficticias informaron el adaptador operativo documentado arriba. La referencia a SCRUM-45 y a la ausencia de endpoint corresponde al estado anterior a esa integración.
 
 ## Presentación de la revisión — 14 de octubre
 
@@ -12,7 +18,7 @@ Revisión visual manual de escritorio/móvil y teclado; tests y verificación t�
 
 ## Decisión y recorrido de captura — 13 de octubre
 
-Gael confirmó que el equipo **no tendrá acceso a Oracle**. La recuperación se realizará desde una captura de pantalla de la orden de compra mediante un modelo de visión local o en un equipo propio. Víctor implementa el procesamiento/API; Gael realiza el frontend. Esta decisión sustituye la investigación entre API Oracle e imagen, conservando los campos y límites del contrato actual. El modelo, la máquina y su precisión siguen pendientes de comprobación.
+Gael confirmó que el equipo **no tendrá acceso a Oracle**. La recuperación se realizará desde una captura de pantalla de la orden de compra mediante un modelo de visión local o en un equipo propio. Víctor implementa el procesamiento/API; Gael realiza el frontend. Esta decisión sustituye la investigación entre API Oracle e imagen, conservando los campos y límites del contrato actual. La investigación del 14 de octubre recomienda provisionalmente PaddleOCR móvil vía ONNX a partir de capturas ficticias. La capacidad de la VM, el formato completo de Oracle y la exactitud aceptada por el cliente siguen pendientes de comprobación.
 
 El rediseño administrativo conserva el laboratorio ficticio en su ruta actual. No hay subida ni extracción real disponible. La interfaz de captura se conectará cuando Víctor entregue el endpoint y acuerde la procedencia de resultados reales; hoy el guardado sólo admite `manual` y `contract_example`.
 
@@ -90,7 +96,7 @@ Referencia: `Docs/modulo_compras/CENIT COMPRAS.pdf` y cabecera/captura aportadas
 
 Confirmado por el líder: una fila representa una solicitud completa; fecha corresponde a Enviado; códigos y campos inciertos se conservan como texto. Correspondencia Nº Documento ↔ número del título todavía provisional; conservar `oracleId` por separado. El remitente no sustituye al proveedor y la aprobación no implica pago. `lineUnit` no equivale a `unitCode`.
 
-Pendientes: significado de `bi`, ITEM, titular del RUT y situación de pago; fuente de los campos administrativos; herramienta OCR, tiempos, muestras autorizadas y evaluación de extracción. No inferir `SISTEMA DE COMPRA`, HONORARIOS/COTIZACIÓN o pago cuando la muestra no lo aporta. La API Oracle no está integrada.
+Pendientes: significado de `bi`, ITEM, titular del RUT y situación de pago; fuente de los campos administrativos, muestras reales autorizadas y criterio de exactitud aceptado por el cliente. No inferir `SISTEMA DE COMPRA`, HONORARIOS/COTIZACIÓN o pago cuando la muestra no lo aporta. La API Oracle no está integrada.
 
 ## Evidencia
 

@@ -1,5 +1,41 @@
 # Infraestructura de Cenit en la VM compartida
 
+## Reparar reinicios por el healthcheck de Quadlet
+
+El ensayo del 13 de octubre identificó reinicios con `Health.Log.Output` igual a
+`/bin/sh: 1: Syntax error: Unterminated quoted string`. La plantilla duplicaba el
+`node -e` de la imagen en `HealthCmd`; sus comillas no sobrevivían la generación
+de la unidad. Podman marcaba el contenedor como no saludable y `HealthOnFailure=kill`
+lo detenía aunque `/health/ready` respondiera correctamente entre reinicios.
+Se retiró ese override: la imagen conserva su `HEALTHCHECK`, y Quadlet conserva
+intervalo, timeout, reintentos y recuperación. Las 44 pruebas de infraestructura
+pasaron localmente; la comprobación operativa de estabilidad en la VM sigue pendiente.
+
+Para corregir una instalación afectada, sin cambiar imagen, cuentas ni BD, ejecutar
+como `adminc` después de comprobar que no hay despliegue en curso:
+
+```bash
+systemctl --user is-active cenit-cd.service
+# Si indica active, esperar a que termine antes de continuar.
+cp -p ~/.config/containers/systemd/cenit-app.container ~/.config/containers/systemd/cenit-app.container.before-health-fix
+sed -i '/^HealthCmd=/d' ~/.config/containers/systemd/cenit-app.container
+sed -i '/^HealthCmd=/d' ~/.local/share/cenit/cd/cenit-app.container.in
+sed -i '/^HealthCmd=/d' ~/Cenit/deploy/quadlet/cenit-app.container.in
+systemctl --user daemon-reload
+systemctl --user restart cenit-app.service
+systemctl --user restart cenit-nginx.service
+podman healthcheck run cenit-app
+podman inspect cenit-app --format '{{json .State.Health}}'
+curl --fail http://172.16.13.103:8081/health/ready
+systemctl --user show cenit-app.service -p NRestarts
+```
+
+El reinicio del proxy actualiza la resolución del contenedor de aplicación. Tras
+unos minutos, comprobar que el estado es `healthy` y `NRestarts` no aumenta;
+probar login/logout de los tres roles. Un login exitoso aislado no acredita
+estabilidad. Los accesos desde dominios adicionales requieren acordar y configurar
+su Origin exacto; no se autoriza un dominio sólo porque el proxy sirva la página.
+
 Actualización del 13 de octubre: el líder autoriza entregar la demo actual por HTTP en la VM, aunque malla y extracción real sigan pendientes. CI completo usa `Application` con lint, catálogo, build, integración, E2E contra producción y verificación de imagen. El marcador parcial fue retirado tras verificar estos checks localmente. La variable de publicación se habilita durante el primer ensayo supervisado, no mediante este cambio local. Procedimiento vigente: [primera entrega automática](PRIMER-DESPLIEGUE.md). Las menciones anteriores a bloqueo o ausencia de aplicación son antecedentes de preparación, no el estado técnico vigente.
 
 Actualización del 13 de octubre: el líder confirmó el ejecutor instalado con `DELIVERY_BRANCH = 'main'`, `Result=success` y `ExecMainStatus=0`. Esto acredita su actualización, no un despliegue. El build/servidor compilado se ensaya localmente según [ENSAYO-LOCAL.md](ENSAYO-LOCAL.md); publicación continúa bloqueada. Las menciones históricas al ejecutor `produccion` más abajo describen su estado anterior.

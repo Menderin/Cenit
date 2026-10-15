@@ -1,6 +1,6 @@
 import { Type, type Static } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
-import { ExtractionReviewDraftSchema, headerFields, validateReviewDraft, validCalendarDate, type ContractProblem } from './extraction.js';
+import { CaptureOriginSchema, CaptureMetadataSchema, ExtractionReviewDraftSchema, headerFields, validateReviewDraft, validCalendarDate, type ContractProblem } from './extraction.js';
 
 const object = <T extends Parameters<typeof Type.Object>[0]>(fields: T) => Type.Object(fields, { additionalProperties: false });
 const uuid = Type.String({ pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' });
@@ -12,7 +12,7 @@ export const PurchasePayloadSchema = object({
     description: headerFields.description, totalAmount: headerFields.totalAmount }),
 });
 export const PurchaseExampleIdSchema = Type.Union([Type.Literal('recovered'), Type.Literal('partial'), Type.Literal('ambiguous')]);
-export const PurchaseOriginSchema = Type.Union([object({ type: Type.Literal('manual') }), object({ type: Type.Literal('contract_example'), exampleId: PurchaseExampleIdSchema })]);
+export const PurchaseOriginSchema = Type.Union([object({ type: Type.Literal('manual') }), object({ type: Type.Literal('contract_example'), exampleId: PurchaseExampleIdSchema }), CaptureOriginSchema]);
 export type PurchaseOrigin = Static<typeof PurchaseOriginSchema>;
 export const CreatePurchaseSchema = object({ operationId: uuid, origin: Type.Optional(PurchaseOriginSchema), ...PurchasePayloadSchema.properties });
 export type PurchasePayload = Static<typeof PurchasePayloadSchema>;
@@ -30,7 +30,8 @@ export const PurchaseListQuerySchema = object({ ...PurchaseFiltersSchema.propert
   page: Type.Integer({ minimum: 1, maximum: 1000000 }), pageSize: Type.Integer({ minimum: 1, maximum: 100 }) });
 export type PurchaseListQuery = Static<typeof PurchaseListQuerySchema>;
 const actor = object({ id: uuid, name: Type.String({ minLength: 1, maxLength: 200 }) });
-export const PurchaseRecordSchema = object({ ...PurchasePayloadSchema.properties, id: uuid, source: Type.Union([Type.Literal('manual'), Type.Literal('contract_example')]), exampleId: Type.Union([PurchaseExampleIdSchema, Type.Null()]),
+export const PurchaseRecordSchema = object({ ...PurchasePayloadSchema.properties, id: uuid, source: Type.Union([Type.Literal('manual'), Type.Literal('contract_example'), Type.Literal('image_capture')]), exampleId: Type.Union([PurchaseExampleIdSchema, Type.Null()]),
+  capture: Type.Optional(Type.Union([CaptureMetadataSchema, Type.Null()])),
   reviewStatus: Type.Union([Type.Literal('pending'), Type.Literal('reviewed')]), version: Type.Integer({ minimum: 1 }),
   createdAt: stamp, createdBy: actor, reviewedAt: Type.Union([stamp, Type.Null()]), reviewedBy: Type.Union([actor, Type.Null()]) });
 export type PurchaseRecord = Static<typeof PurchaseRecordSchema>;
@@ -40,6 +41,7 @@ export const PurchaseListResponseSchema = object({ data: Type.Array(object({
   documentType: ExtractionReviewDraftSchema.properties.administrative.properties.documentType,
   reviewStatus: PurchaseRecordSchema.properties.reviewStatus, version: PurchaseRecordSchema.properties.version,
   source: PurchaseRecordSchema.properties.source, exampleId: PurchaseRecordSchema.properties.exampleId,
+  capture: PurchaseRecordSchema.properties.capture,
 })), pagination: object({ page: Type.Integer({ minimum: 1 }), pageSize: Type.Integer({ minimum: 1, maximum: 100 }), total: Type.Integer({ minimum: 0 }) }),
   totals: object({ currency: Type.Literal('CLP'), documentTotal: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }) }) });
 export type PurchaseListResponse = Static<typeof PurchaseListResponseSchema>;

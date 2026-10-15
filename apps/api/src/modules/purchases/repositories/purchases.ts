@@ -29,21 +29,25 @@ export class PurchaseRepository {
     const fields = (keys: string[], source: Record<string, unknown>) => Object.fromEntries(keys.map(key => [key, source[column(key)]]));
     return {
       header: { ...fields(headerKeys, row), sentDate: row.date_text }, administrative: fields(adminKeys, row),
-      lines: lines.rows.map(line => fields(lineKeys, line)), id: row.id, source: row.source, exampleId: row.example_id, reviewStatus: row.review_status, version: row.version,
+      lines: lines.rows.map(line => fields(lineKeys, line)), id: row.id, source: row.source, exampleId: row.example_id,
+      capture: row.source === 'image_capture' ? { type: 'image_capture', extractionId: row.extraction_id, processorVersion: row.processor_version, processedAt: row.processed_at.toISOString() } : null,
+      reviewStatus: row.review_status, version: row.version,
       createdAt: row.created_at.toISOString(), createdBy: { id: row.created_by, name: row.creator_name },
       reviewedAt: row.reviewed_at?.toISOString() ?? null, reviewedBy: row.reviewed_by ? { id: row.reviewed_by, name: row.reviewer_name } : null,
     } as PurchaseRecord;
   }
   async get(id: string) { return this.transaction(db => this.detail(db, id), true); }
-  async create(input: CreatePurchase, accountId: string): Promise<{ record: PurchaseRecord; created: boolean }> {
+  async create(input: CreatePurchase, accountId: string, authorizeNew: () => void = () => {}): Promise<{ record: PurchaseRecord; created: boolean }> {
     // Preserve the exact historical serialization for omitted/explicit manual origins.
     const content = canonical(input);
     const hash = createHash('sha256').update(input.origin?.type === 'contract_example'
-      ? JSON.stringify({ content, source: 'contract_example', exampleId: input.origin.exampleId }) : content).digest('hex');
+      ? JSON.stringify({ content, source: 'contract_example', exampleId: input.origin.exampleId }) : input.origin?.type === 'image_capture'
+        ? JSON.stringify({ content, source: 'image_capture', extractionId: input.origin.extractionId, processorVersion: input.origin.processorVersion, processedAt: input.origin.processedAt }) : content).digest('hex');
     return this.transaction(async db => {
       // Concurrent retries wait on the unique operation constraint, then read its committed result.
-      const keys = [...headerKeys, ...adminKeys, 'source', 'exampleId'];
-      const values = [...headerKeys.map(key => input.header[key as keyof typeof input.header]), ...adminKeys.map(key => input.administrative[key as keyof typeof input.administrative]), input.origin?.type ?? 'manual', input.origin?.type === 'contract_example' ? input.origin.exampleId : null];
+      const capture = input.origin?.type === 'image_capture' ? input.origin : null;
+      const keys = [...headerKeys, ...adminKeys, 'source', 'exampleId', 'extractionId', 'processorVersion', 'processedAt'];
+      const values = [...headerKeys.map(key => input.header[key as keyof typeof input.header]), ...adminKeys.map(key => input.administrative[key as keyof typeof input.administrative]), input.origin?.type ?? 'manual', input.origin?.type === 'contract_example' ? input.origin.exampleId : null, capture?.extractionId ?? null, capture?.processorVersion ?? null, capture?.processedAt ?? null];
       const id = randomUUID();
       const inserted = await db.query(`INSERT INTO cenit.purchase_requests(id,operation_id,payload_hash,created_by,${keys.map(column).join(',')})
         VALUES(${[id, input.operationId, hash, accountId, ...values].map((_, i) => `$${i + 1}`).join(',')}) ON CONFLICT(created_by,operation_id) DO NOTHING RETURNING id`, [id, input.operationId, hash, accountId, ...values]);
@@ -52,6 +56,7 @@ export class PurchaseRepository {
         if (existing.rows[0]?.payload_hash !== hash) throw new ApiError(409, 'OPERATION_CONFLICT', 'Esta operación ya se utilizó con otros datos.');
         return { record: (await this.detail(db, existing.rows[0].id))!, created: false };
       }
+      authorizeNew();
       for (const [position, line] of input.lines.entries()) {
         const fields = [randomUUID(), id, position + 1, ...lineKeys.map(key => line[key as keyof typeof line])];
         await db.query(`INSERT INTO cenit.purchase_request_lines(id,request_id,position,${lineKeys.map(column).join(',')}) VALUES(${fields.map((_, i) => `$${i + 1}`).join(',')})`, fields);
@@ -79,7 +84,8 @@ export class PurchaseRepository {
       const where = predicates.join(' AND ');
       // EXISTS preserves one row per request. Both statements share this transaction's snapshot.
       const count = await db.query(`SELECT count(*)::int AS total,coalesce(sum(p.total_amount),0)::text AS amount FROM cenit.purchase_requests p WHERE ${where}`, values);
-      const { rows } = await db.query(`SELECT p.id,p.request_number AS "requestNumber",p.sent_date::text AS "sentDate",p.description,p.document_type AS "documentType",p.review_status AS "reviewStatus",p.version,p.source,p.example_id AS "exampleId"
+      const { rows } = await db.query(`SELECT p.id,p.request_number AS "requestNumber",p.sent_date::text AS "sentDate",p.description,p.document_type AS "documentType",p.review_status AS "reviewStatus",p.version,p.source,p.example_id AS "exampleId",
+        CASE WHEN p.source='image_capture' THEN json_build_object('type','image_capture','extractionId',p.extraction_id,'processorVersion',p.processor_version,'processedAt',to_char(p.processed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) ELSE NULL END AS capture
         FROM cenit.purchase_requests p WHERE ${where} ORDER BY p.sent_date DESC,p.id DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`, [...values, query.pageSize, (query.page - 1) * query.pageSize]);
       return { data: rows, pagination: { page: query.page, pageSize: query.pageSize, total: count.rows[0].total }, totals: { currency: 'CLP', documentTotal: count.rows[0].amount } };
     }, true);

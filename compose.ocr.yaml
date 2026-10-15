@@ -1,0 +1,10 @@
+# Explicit notebook-only overlay: compose -f compose.yaml -f compose.ocr.yaml ...
+services:
+  app:
+    environment:
+      OCR_URL: http://ocr:8090
+      CAPTURE_RECEIPT_KEY_FILE: /run/secrets/capture-receipt-key
+    secrets: [capture-receipt-key]
+secrets:
+  capture-receipt-key:
+    file: ./.local/secrets/capture-receipt-key
