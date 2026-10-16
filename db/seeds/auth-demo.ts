@@ -9,11 +9,13 @@ import { AccountEmailSchema, AccountRoleSchema, type AccountRole } from '../../p
 import { createPool } from '../../apps/api/src/infrastructure/database/connection.js';
 import { hashPassword, verifyPassword } from '../../apps/api/src/modules/auth/services/password.js';
 
-const DemoCredentialsSchema = Type.Array(Type.Object({
+const DemoCredentialSchema = Type.Object({
   id: Type.String({ pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }),
   email: AccountEmailSchema, name: Type.String({ minLength: 1, maxLength: 200 }), role: AccountRoleSchema,
   password: Type.String({ minLength: 12, maxLength: 128 }),
-}, { additionalProperties: false }), { minItems: 3, maxItems: 3 });
+}, { additionalProperties: false });
+const DemoCredentialsSchema = Type.Array(DemoCredentialSchema, { minItems: 3, maxItems: 3 });
+export type DemoCredential = Static<typeof DemoCredentialSchema>;
 export type DemoCredentials = Static<typeof DemoCredentialsSchema>;
 export type DemoPasswords = Record<AccountRole, string>;
 export const demoPasswordKeys = { docente: 'CENIT_DEMO_DOCENTE_PASSWORD', estudiante: 'CENIT_DEMO_ESTUDIANTE_PASSWORD', administrativo: 'CENIT_DEMO_ADMINISTRATIVO_PASSWORD' } as const;
@@ -53,8 +55,17 @@ export function privateDemoCredentials(root: string, passwords?: DemoPasswords):
   return credentials;
 }
 export async function prepareDemoAccounts(pool: pg.Pool, credentials: DemoCredentials): Promise<void> {
-  if (!['demo', 'test'].includes(process.env.APP_ENV ?? '')) throw new Error('Preparación limitada a demo/pruebas.');
   validate(credentials);
+  await prepareAccounts(pool, credentials);
+}
+// Explicit private academic preparation; does not alter the original three login accounts.
+export async function prepareDemoStudentAccounts(pool: pg.Pool, credentials: DemoCredential[]): Promise<void> {
+  if (credentials.length !== 2 || credentials.some(c => !Value.Check(DemoCredentialSchema, c) || c.role !== 'estudiante' || !/^estudiante[23]@cenit\.invalid$/.test(c.email)) ||
+    new Set(credentials.map(c => c.id)).size !== 2 || new Set(credentials.map(c => c.email)).size !== 2) throw new Error('Las dos cuentas académicas ficticias son inconsistentes.');
+  await prepareAccounts(pool, credentials);
+}
+async function prepareAccounts(pool: pg.Pool, credentials: DemoCredential[]): Promise<void> {
+  if (!['demo', 'test'].includes(process.env.APP_ENV ?? '')) throw new Error('Preparación limitada a demo/pruebas.');
   const db = await pool.connect();
   try {
     await db.query('BEGIN');

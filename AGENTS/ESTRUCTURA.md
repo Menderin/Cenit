@@ -1,14 +1,29 @@
 # Guía para distribuir el código de Cenit
 
+Segunda iteración UX del 14 de octubre: `shared/components/ContextualConfirm.tsx` sustituye la confirmación centrada para validación y descarte mediante Radix Popover modal, ancla explícita y velo separado. `purchases/model/guard.tsx` conserva una sola guarda y resuelve el ancla visible de cabecera para Atrás/orígenes fuera de vista; los controles entregan su origen, sin listeners globales de clic. `AdministrativeLayout` reinicia el nuevo scroll principal; `administration.css` fija el marco sólo en escritorio con altura suficiente. `Purchases.tsx` compara filtros/páginas antes de navegar y anuncia cambios locales. `tests/e2e/contextual-ux.spec.ts` cubre estos comportamientos contra producción y PostgreSQL descartable. No cambia la organización de módulos ni los contratos de negocio.
+Captura desde navegador del 14 de octubre: `PurchaseCapture.tsx` conserva archivo, vista previa y candidatos sólo en estado local, sin caché/historial persistentes. `capture-file.ts` valida selección; el cliente de compras usa FormData y validadores compartidos. `PurchaseReviewEditor.tsx` contiene la revisión común al laboratorio y captura. OCR auxiliar comprueba señales de formato, sin usar color como prueba de autenticidad; pruebas de recorrido en `tests/e2e/capture.spec.ts` y regresión visual real en `tests/ocr/check_layout.py`. El ensayo real de navegador es explícito mediante `CENIT_E2E_REAL_OCR=1`; los mocks sólo acreditan estados de interfaz.
+
+Adaptador OCR del 14 de octubre: `apps/ocr` aloja exclusivamente inferencia auxiliar Python/ONNX, sin BD ni reglas de persistencia. API pública, validación compartida y firma permanecen en el módulo de compras de `apps/api`; `packages/contracts` conserva candidatos/procedencia. `tests/ocr` contiene generador ficticio, evaluador y pruebas aisladas; no se importan desde el procesador. `experiments` conserva investigación histórica. `compose.ocr.yaml` es un overlay explícito local, no una instalación de VM. Los pesos, temporales y reportes completos no se versionan. Leer [ADAPTADOR-CAPTURAS.md](../Docs/ADAPTADOR-CAPTURAS.md).
+
+Preparación administrativa del 14 de octubre: `db/seeds/purchases-demo.ts` define ocho solicitudes ficticias y el CLI explícito `purchases:prepare-demo`, limitado a la demo local. Reutiliza servicio/repositorio de compras para altas y revisión, con operaciones estables y sin cuentas nuevas, SQL de negocio duplicado ni semillas en desarrollo/migraciones/CD. `tests/integration/purchases.test.ts` verifica restricciones, conservación de contenido/revisiones, filtros y repetición contra bases descartables.
+
+Rediseño administrativo del 13 de octubre: `app/AdministrativeLayout.tsx` y `app/administration.css` componen sidebar, navegación responsive, cuenta y marco común para las páginas administrativas. Compras conserva sus páginas/componentes y los estilos `records.css`/`review.css`; `purchases/model/fields.ts` centraliza etiquetas y presentación exacta de CLP. No se añade un motor genérico de tablas/formularios ni dependencias. El router retira el placeholder académico obsoleto sin cambiar sesión/permisos. El diseño del futuro recorrido de capturas está documentado en EXTRACCION-COMPRAS.md; Víctor implementará la visión local y su contrato de procedencia.
+
 Actualización del 13 de octubre: el líder autoriza entregar la demo actual por HTTP en la VM, aunque malla y extracción real sigan pendientes. CI completo usa `Application` con lint, catálogo, build, integración, E2E contra producción y verificación de imagen. El marcador parcial fue retirado tras verificar estos checks localmente. La variable de publicación se habilita durante el primer ensayo supervisado, no mediante este cambio local. Procedimiento vigente: [primera entrega automática](../deploy/PRIMER-DESPLIEGUE.md). Las menciones anteriores a bloqueo o ausencia de aplicación son antecedentes de preparación, no el estado técnico vigente.
 
 Runtime compilado: `apps/api/src/runtime.ts` compone repositorios, salud y frontend de producción; `infrastructure/plugins/frontend.ts` sirve sólo `apps/web/dist` y separa fallback SPA de errores API/assets. `infrastructure/database/readiness.ts` verifica ledger y columnas del snapshot empaquetado, sin semillas. `tests/integration/runtime.test.ts` y el modo `test:e2e:production` verifican estas garantías. Procedimiento: [ENSAYO-LOCAL.md](../deploy/ENSAYO-LOCAL.md).
 
 Mapa revisado el 11 de octubre de 2026. Esta guía concreta la organización de la sección 4 del [SDD](SDD.md); no cambia stack, contratos ni alcance. Leer también [las instrucciones para agentes](../AGENTS.md) y [la guía de colaboración](../CONTRIBUTING.md). Si cambian responsabilidades o rutas, actualizar este mapa en el mismo PR.
 
-El repositorio contiene infraestructura, API/contratos académicos y [autenticación local](../Docs/AUTENTICACION.md), con login/logout visual integrado y destinos de área en construcción por rol: `/administracion` y `/academico`. `features/auth/components/AccessLayout.tsx` y `features/auth/access.css` contienen el marco de acceso; `app/App.tsx` compone los avisos de construcción. La lógica existente de sesión y los contratos siguen siendo compartidos. Los módulos de compras/malla aún no están implementados en esas pantallas. Consultar [el estado académico](../Docs/ACADEMICO.md): la identidad UUID está definida, pero migrar perfiles/progreso sigue siendo un entregable separado. Las carpetas se completan cuando una tarea necesita código real; no crear funciones vacías para ocuparlas.
+El repositorio contiene infraestructura, API/contratos académicos y [autenticación local](../Docs/AUTENTICACION.md). La rama `malla-interactiva` añade la primera vista de `/academico`; `/administracion` conserva el módulo de solicitudes persistentes y el laboratorio de ejemplos procedentes de develop. `features/auth/components/AccessLayout.tsx` y `features/auth/access.css` conservan el marco de acceso; `app/App.tsx` monta `features/academic/pages/Academic.tsx` únicamente para sesión académica. El layout/estilos propios viven en `features/academic/academic.css`, la lectura validada en `academic/api/academic.ts`, la agrupación en `academic/model/group-by-semester.ts` y el detalle modal nativo en `academic/components/CatalogDetails.tsx`. Se reutilizan sesión/transporte y QueryClient existentes. La nueva vista sigue pendiente de revisión/integración; perfiles/progreso y reglas completas mantienen los límites de [ACADEMICO.md](../Docs/ACADEMICO.md). Las carpetas se completan cuando una tarea necesita código real; no crear funciones vacías para ocuparlas.
 
 ## 1. Mapa de carpetas existentes
+
+La ampliación de avance añade `academic/components/StudentLookup.tsx` para búsqueda/selección docente y `academic/model/progress-presentation.ts` para etiquetas de estado; `CatalogDetails.tsx` presenta intentos y notas. `academic/api/academic.ts` valida también los contratos de estudiantes/progreso existentes. No se duplican login, endpoints ni modelos de persistencia en frontend.
+
+`packages/contracts/src/academic/rut.ts` comparte formato progresivo, clave compacta de búsqueda y validación módulo 11 entre interfaz, API y preparación explícita. La búsqueda docente admite prefijos; seis tarjetas por página en la interfaz, usando la paginación de API existente. `academic:prepare-demo -- --normalize-ruts` corrige sólo los RUT ficticios anteriores esperados sin sustituir cuentas/historiales; no vive en migraciones ni CD.
+
+`academic/model/course-label.ts` contiene los nombres breves de presentación de las tarjetas. Se eligen por nombre recibido, con fallback al original; no modifica catálogo/API ni nombres completos del detalle.
 
 ```text
 Cenit/
@@ -27,7 +42,7 @@ Cenit/
 │       │   └── academic/{routes,services,repositories}/
 │       └── infrastructure/{config,database,plugins}/
 ├── packages/contracts/src/{common,purchases,academic,auth}/
-├── db/{schema,migrations,seeds,pending}/
+├── db/{schema,migrations,seeds}/
 ├── catalogs/academic/
 ├── tests/{integration,e2e,infrastructure}/
 ├── deploy/
@@ -44,7 +59,9 @@ Cenit/
 
 Las llaves agrupan subcarpetas, no son nombres literales. No duplicar estas raíces con `front`, `back`, `bd`, `database` o `docs`; respetar `db` y `Docs`, también en Linux.
 
-`db/pending` contiene propuestas SQL con dependencias sin resolver; no se ejecutan desde el migrador ni se añaden automáticamente al journal. La propuesta académica depende de la tabla de cuentas revisada. Su uso en una base descartable de integración no acredita una migración de producción. TypeBox público vive en contratos; los schemas Drizzle y migraciones permanecen en `db`.
+El snapshot `db/migrations/meta/0007_snapshot.json` reúne compras y progreso académico para Drizzle/readiness. Los SQL anteriores se conservan, aunque ambas ramas usaron prefijo `0003`. El timestamp histórico académico se registra como alias en `meta/_legacy.json`; el journal le asigna uno posterior a compras para preservar la compatibilidad de la imagen anterior de compras. Ningún registro aplicado se reescribe. `tests/integration/migration-branches.test.ts` comprueba actualización desde cada historial sin perder datos. `playwright.production.config.ts` incluye auth/compras y académico contra el servidor compilado, reutilizando el harness existente.
+
+El historial académico de esta rama usa `db/schema/academic-progress.ts` y la migración `0003_academic_progress`, con FK a cuentas UUID de login; la plantilla pendiente con marcadores fue retirada. `db/seeds/academic-demo.ts` prepara perfiles de cuentas existentes; `academic-fixtures.ts` define datos ficticios y `prepare-academic-demo.ts` coordina preparación local explícita. Las dos cuentas de estudiante adicionales se preparan reutilizando auth; sus credenciales no viven en el repo. TypeBox público vive en contratos; los schemas Drizzle y migraciones permanecen en `db`. Revisión/integración de la rama no se acreditan con esta preparación local.
 
 ## 2. Frontend: `apps/web`
 
@@ -125,6 +142,8 @@ Datos de PostgreSQL viven en volúmenes; nunca en estas carpetas. Esquemas de ta
 
 ## 7. Pruebas
 
+Por petición del líder, los experimentos viven en la raíz `experiments/`, separados de las pruebas de aplicación. `experiments/purchases` contiene el entorno aislado, generadores ficticios y benchmarks de extracción OCR; `baseline` conserva el primer ensayo. Sus imágenes, pesos y salidas completas se generan en `tmp/ocr-research` y `tmp/ocr-battery`; sólo la evidencia resumida y las dependencias se versionan. No es código de producción ni una suite obligatoria de CI. Guía: [investigación de extracción](../Docs/INVESTIGACION-EXTRACCION-COMPRAS.md).
+
 | Ubicación | Qué verificar |
 | --- | --- |
 | Junto al código: `*.test.ts` / `*.test.tsx` | Reglas/transformaciones puras, helpers, componentes y contratos con Vitest |
@@ -197,4 +216,8 @@ Organización actual de compras: `pages/Purchases.tsx` lista; `PurchaseCreate.ts
 
 ## Filtros y agregados del listado
 
-Schemas/validación pura de filtros y respuesta total documental viven en `packages/contracts/src/purchases/records.ts`; ejemplos en `record-examples.ts`. Normalización PostgreSQL y columnas generadas en la migración 0006/esquema, sin exponer claves internas en contratos. El repositorio de compras parametriza filtros y consulta dentro de un snapshot; el servicio valida fechas/rangos y la ruta normaliza sólo `q`/paginación. `features/purchases/pages/Purchases.tsx` controla la barra común en memoria y compone tablas con páginas independientes; la capa HTTP construye querystrings mediante URLSearchParams. No incluir reglas ni consultas de compras en Home.
+Schemas/validación pura de filtros y respuesta total documental viven en `packages/contracts/src/purchases/records.ts`; ejemplos en `record-examples.ts`. Normalización PostgreSQL y columnas generadas en la migración 0006/esquema, sin exponer claves internas en contratos. El repositorio de compras parametriza filtros y consulta dentro de un snapshot; el servicio valida fechas/rangos y la ruta normaliza sólo `q`/paginación. `features/purchases/pages/Purchases.tsx` conserva filtros aplicados y páginas independientes en URL; el estado del destino de retorno conecta lista, detalle, alta y laboratorio; la capa HTTP construye querystrings mediante URLSearchParams. No incluir reglas ni consultas de compras en Home.
+
+## Guardas y pulido de flujos
+
+`features/purchases/model/guard.tsx` protege descartes y navegación; `drafts.tsx` conserva en memoria de la pestaña sólo durante fallos temporales de sesión; `location.ts` valida el retorno al listado. El proveedor de borradores vive fuera del árbol protegido, ligado a identidad y ruta, y nunca usa almacenamiento persistente. `shared/components` contiene ConfirmDialog, DateField y StatusNotice; `shared/lib/dates` convierte fechas civiles. `app/Notifications.tsx` compone Sonner con auth sin introducir dependencias de funcionalidades en shared. `shared/components/ui.css` reúne las superficies y el movimiento reutilizados. `tests/e2e/ux.spec.ts` complementa los recorridos existentes contra producción/PostgreSQL.

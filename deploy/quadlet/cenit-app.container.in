@@ -20,7 +20,7 @@ Environment=DATABASE_URL_FILE=/run/secrets/database-url
 Secret=cenit-app-database-url,type=mount,target=database-url,uid=1000,gid=1000,mode=0400
 NoNewPrivileges=true
 DropCapability=all
-HealthCmd=node -e "fetch('http://127.0.0.1:3000/health/ready',{signal:AbortSignal.timeout(4000)}).then(async r=>process.exit(r.ok&&(await r.json()).status==='ready'?0:1)).catch(()=>process.exit(1))"
+# Inherit the image HEALTHCHECK; re-quoting node -e in Quadlet breaks its shell command.
 HealthInterval=10s
 HealthTimeout=5s
 HealthRetries=6

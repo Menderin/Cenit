@@ -1,5 +1,41 @@
 # Infraestructura de Cenit en la VM compartida
 
+## Reparar reinicios por el healthcheck de Quadlet
+
+El ensayo del 13 de octubre identificó reinicios con `Health.Log.Output` igual a
+`/bin/sh: 1: Syntax error: Unterminated quoted string`. La plantilla duplicaba el
+`node -e` de la imagen en `HealthCmd`; sus comillas no sobrevivían la generación
+de la unidad. Podman marcaba el contenedor como no saludable y `HealthOnFailure=kill`
+lo detenía aunque `/health/ready` respondiera correctamente entre reinicios.
+Se retiró ese override: la imagen conserva su `HEALTHCHECK`, y Quadlet conserva
+intervalo, timeout, reintentos y recuperación. Las 44 pruebas de infraestructura
+pasaron localmente; la comprobación operativa de estabilidad en la VM sigue pendiente.
+
+Para corregir una instalación afectada, sin cambiar imagen, cuentas ni BD, ejecutar
+como `adminc` después de comprobar que no hay despliegue en curso:
+
+```bash
+systemctl --user is-active cenit-cd.service
+# Si indica active, esperar a que termine antes de continuar.
+cp -p ~/.config/containers/systemd/cenit-app.container ~/.config/containers/systemd/cenit-app.container.before-health-fix
+sed -i '/^HealthCmd=/d' ~/.config/containers/systemd/cenit-app.container
+sed -i '/^HealthCmd=/d' ~/.local/share/cenit/cd/cenit-app.container.in
+sed -i '/^HealthCmd=/d' ~/Cenit/deploy/quadlet/cenit-app.container.in
+systemctl --user daemon-reload
+systemctl --user restart cenit-app.service
+systemctl --user restart cenit-nginx.service
+podman healthcheck run cenit-app
+podman inspect cenit-app --format '{{json .State.Health}}'
+curl --fail http://172.16.13.103:8081/health/ready
+systemctl --user show cenit-app.service -p NRestarts
+```
+
+El reinicio del proxy actualiza la resolución del contenedor de aplicación. Tras
+unos minutos, comprobar que el estado es `healthy` y `NRestarts` no aumenta;
+probar login/logout de los tres roles. Un login exitoso aislado no acredita
+estabilidad. Los accesos desde dominios adicionales requieren acordar y configurar
+su Origin exacto; no se autoriza un dominio sólo porque el proxy sirva la página.
+
 Actualización del 13 de octubre: el líder autoriza entregar la demo actual por HTTP en la VM, aunque malla y extracción real sigan pendientes. CI completo usa `Application` con lint, catálogo, build, integración, E2E contra producción y verificación de imagen. El marcador parcial fue retirado tras verificar estos checks localmente. La variable de publicación se habilita durante el primer ensayo supervisado, no mediante este cambio local. Procedimiento vigente: [primera entrega automática](PRIMER-DESPLIEGUE.md). Las menciones anteriores a bloqueo o ausencia de aplicación son antecedentes de preparación, no el estado técnico vigente.
 
 Actualización del 13 de octubre: el líder confirmó el ejecutor instalado con `DELIVERY_BRANCH = 'main'`, `Result=success` y `ExecMainStatus=0`. Esto acredita su actualización, no un despliegue. El build/servidor compilado se ensaya localmente según [ENSAYO-LOCAL.md](ENSAYO-LOCAL.md); publicación continúa bloqueada. Las menciones históricas al ejecutor `produccion` más abajo describen su estado anterior.
@@ -89,6 +125,65 @@ Esperar TCP exitoso, `{ status: "ok", mode: "bootstrap" }` y la página temporal
 Cerrar SSH y comprobar nuevamente la URL desde Windows acredita que la sesión interactiva no es necesaria. El arranque tras reinicio está configurado mediante linger y Quadlet, pero sólo se acredita después de probarlo en una ventana acordada: no reiniciar ahora una VM compartida para comprobarlo.
 
 ## Archivos instalados y operación
+
+### Acceso web desde fuera de la universidad
+
+Revisión directa por SSH del 13 de octubre de 2026: `cenit-web-tunnel.service` ya estaba instalado, habilitado y activo bajo `adminc`. Ejecuta Cloudflare Quick Tunnel mediante HTTP/2 hacia `http://172.16.13.103:8081`. La URL HTTPS permite abrir Cenit desde un navegador sin instalar Tailscale; publica únicamente la entrada web de Cenit. No proporciona terminal/SSH.
+
+Se verificaron la página «Cenit en preparación» y `/health/proxy` con HTTP 200 a través del enlace HTTPS público de Cloudflare. La revisión posterior encontró Tailscale instalado/conectado en el Mac; por tanto, no se acredita un ensayo desde un cliente sin Tailscale. El Quick Tunnel publica la web para navegadores externos conforme al mecanismo documentado por Cloudflare. PostgreSQL y Nginx de Cenit estaban activos; `/health/ready` local devolvió 503, coherente con la ausencia de aplicación. Los servicios web/remoto estaban habilitados y `Linger=yes`; no se ensayó un reinicio de la VM. La inspección inicial no modificó servicios ni desplegó aplicación; la habilitación posterior de SSH se describe abajo.
+
+Consultar el enlace vigente dentro de SSH, sin sudo:
+
+```bash
+systemctl --user show cenit-web-tunnel.service -p ActiveState -p SubState -p NRestarts
+grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' "$HOME/.local/share/cenit/web-tunnel/tunnel.log" | tail -n 1
+```
+
+El último enlace del log puede pertenecer a una ejecución anterior: comprobar el estado y probar la URL antes de compartirla. [Quick Tunnel](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/) es temporal, no garantiza disponibilidad y cambia de hostname al recrearse. Para un enlace estable, configurar un túnel administrado con cuenta/dominio o evaluar [Tailscale Funnel](https://tailscale.com/docs/features/tailscale-funnel) en una instancia exclusiva de Cenit. Antes de conectar la aplicación, ajustar y verificar su origen HTTPS autorizado y cookies, conforme a [AUTENTICACION.md](../Docs/AUTENTICACION.md).
+
+También existe `cenit-remote.service`, una instancia separada de Tailscale con red en espacio de usuario, estado privado y socket `$XDG_RUNTIME_DIR/cenit-remote/tailscaled.sock`. En esta revisión estaba activa pero desconectada de su cuenta (`Logged out`), sin configuración Serve: no acredita acceso remoto por SSH. El Tailscale del host pertenece a otro proyecto y se conserva. No compartir la red universitaria ni modificar esa instancia para resolver el acceso de Cenit.
+
+Gael confirmó el 13 de octubre dos necesidades: web desde cualquier navegador con un futuro dominio de la U, y administración por SSH desde casa. Solicitud técnica propuesta para TI: «Subdominio público de Cenit con certificado HTTPS y proxy inverso institucional hacia `http://172.16.13.103:8081`, conservando rutas web/API y Host. La demo usa datos ficticios». El nombre y la configuración dependen de TI; DNS apuntando directamente a la IP privada no habilita acceso desde Internet. Si TI elige Cloudflare Tunnel, coordinar una zona admitida por la cuenta y sus registros/certificado: un subdominio aislado no acredita esa configuración. [Cloudflare documenta la integración DNS completa/parcial](https://developers.cloudflare.com/cloudflare-one/faq/cloudflare-tunnels-faq/); la [modalidad parcial requiere Business o Enterprise](https://developers.cloudflare.com/dns/zone-setups/partial-setup/). No modificar DNS institucional desde este checkout.
+
+Para SSH, vincular únicamente la instancia de Cenit a la cuenta del equipo mediante el enlace interactivo generado por este comando, dentro de la VM:
+
+```bash
+tailscale --socket="$XDG_RUNTIME_DIR/cenit-remote/tailscaled.sock" up --hostname=cenit-vm --accept-dns=false --accept-routes=false --ssh=false --timeout=15s
+```
+
+Después de completar el login, comprobar `status` y habilitar [Serve TCP](https://tailscale.com/docs/reference/tailscale-cli/serve) hacia el OpenSSH existente:
+
+```bash
+tailscale --socket="$XDG_RUNTIME_DIR/cenit-remote/tailscaled.sock" status
+tailscale --socket="$XDG_RUNTIME_DIR/cenit-remote/tailscaled.sock" serve --bg --tcp=22 tcp://127.0.0.1:22
+tailscale --socket="$XDG_RUNTIME_DIR/cenit-remote/tailscaled.sock" serve status
+```
+
+El acceso conserva la autenticación de OpenSSH. Los integrantes necesitan instalar/iniciar Tailscale una vez y recibir acceso al dispositivo mediante la consola de su propietario; no compartir contraseñas de Tailscale. Desde otro equipo conectado y autorizado, probar `ssh adminc@<IP-Tailscale-de-Cenit>` con la IP que devuelva `status`, comprobar la identidad de la VM y repetir desde una conexión externa. No usar la IP Tailscale del otro proyecto. No anunciar subredes ni exit node ni publicar SSH por el túnel web.
+
+Estado actualizado del 13 de octubre: Gael completó el login. `cenit-vm` obtuvo `100.116.229.120` y `cenit-vm.tail44b08c.ts.net`. Se habilitó Serve TCP `22 → 127.0.0.1:22`, sólo dentro de Tailscale. Desde el Mac de Gael se completó SSH a esa IP y se comprobó `vm-eic-202610-4G`, usuario `adminc` y servicios remoto/Nginx/PostgreSQL activos. La clave SSH se contrastó con la obtenida por el acceso institucional. Tailscale respondió mediante DERP; que no se establezca una ruta directa no impide SSH por relay. Las preferencias verificadas no aceptan rutas/DNS de Tailscale, no anuncian subredes ni tienen exit node. El reenvío se conservó al reiniciar exclusivamente `cenit-remote.service`.
+
+Con Tailscale conectado y acceso concedido, usar desde casa:
+
+```bash
+ssh adminc@100.116.229.120
+```
+
+Falta ensayar desde una conexión doméstica/móvil y tras reiniciar la VM; la prueba desde el Mac actual acredita el recorrido por Tailscale, no la red de casa. Para compañeros, el propietario puede [compartir sólo este dispositivo](https://tailscale.com/docs/features/sharing) con cada integrante en la consola Tailscale y verificar SSH desde sus equipos; no se enviaron invitaciones en esta sesión.
+
+#### Página web privada con Tailscale
+
+El 13 de octubre se agregó al Quadlet de Cenit `PublishPort=127.0.0.1:8081:8080`, conservando `172.16.13.103:8081`; ambos respondieron HTTP 200 desde la VM. Gael habilitó HTTPS certificates en la consola Tailscale, con Funnel desmarcado. La VM publica `https://cenit-vm.tail44b08c.ts.net` sólo al tailnet y el estado conserva Serve TCP `22 → 127.0.0.1:22`. Desde Safari conectado a Tailscale se abrió `/login` y se mostró el formulario de inicio de sesión. La carga inicial mostró un error temporal al comprobar la sesión; al pulsar «Reintentar» apareció el formulario.
+
+Comprobar el estado en la VM con:
+
+```bash
+tailscale --socket="$XDG_RUNTIME_DIR/cenit-remote/tailscaled.sock" serve --bg --https=443 http://127.0.0.1:8081
+tailscale --socket="$XDG_RUNTIME_DIR/cenit-remote/tailscaled.sock" serve status
+curl --max-time 5 -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8081/
+```
+
+Desde un dispositivo conectado y autorizado en el tailnet, abrir `https://cenit-vm.tail44b08c.ts.net`. El nombre del dispositivo queda publicado en el registro de certificados de Tailscale; Funnel sigue deshabilitado. Mantener ambas líneas `PublishPort` en esta plantilla y en la unidad instalada.
 
 - `~/.config/containers/systemd/`: Quadlets gestionados con prefijo Cenit.
 - `~/.local/share/cenit/nginx/default.conf`: configuración activa independiente del checkout.

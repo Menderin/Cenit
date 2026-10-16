@@ -1,76 +1,60 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft';
 import { usePurchaseTransfer } from '../model/transfer.js';
-import { createReviewDraft, validateReviewDraft, validateExtractionResponse, type ExtractionReviewDraft, type ExtractionCandidate, type ContractProblem } from '@cenit/contracts/purchases';
+import { useAuth } from '../../auth/model/session.js';
+import { usePurchaseDraft } from '../model/drafts.js';
+import { useGuardChanges, usePurchaseGuard } from '../model/guard.js';
+import { usePurchaseReturnTo } from '../model/location.js';
+import { createReviewDraft, validateExtractionResponse, type ExtractionReviewDraft } from '@cenit/contracts/purchases';
 import { extractionExamples, extractionErrorExamples } from '@cenit/contracts/purchases/examples';
-import { CandidateField } from '../components/CandidateField.js';
+import { emptyDraft, purchaseExampleLabel } from '../model/fields.js';
+import { PurchaseReviewEditor } from '../components/PurchaseReviewEditor.js';
+import '../records.css';
 import '../review.css';
 
-const labels: Record<string, string> = {
-  requestNumber: 'Nº Documento / solicitud', oracleId: 'ID de Oracle', sender: 'Remitente', recipient: 'Destinatario',
-  sentDate: 'Fecha de envío (YYYY-MM-DD)', sentTime: 'Hora de envío (HH:mm:ss)', description: 'Descripción',
-  totalAmount: 'Monto total (CLP)', taxAmount: 'Impuesto (CLP)', attachmentReference: 'Referencia textual de anexos',
-  provider: 'Proveedor', costCenter: 'Centro de costos', lineUnit: 'Unidad de línea (significado pendiente)', quantity: 'Cantidad',
-  price: 'Precio (CLP)', amount: 'Importe (CLP)', chargeAccount: 'Cuenta del cargo completa', universityCode: 'Código universidad',
-  campusCode: 'Código sede', unitCode: 'Código unidad', projectCode: 'Código proyecto', accountingCode: 'Código contable',
-  document: 'Documento', documentType: 'Tipo documento', bi: 'bi (significado pendiente)', rut: 'RUT (titular pendiente)',
-  unitName: 'Nombre de unidad', item: 'ITEM (significado pendiente)', paymentSituation: 'Situación de pago (significado pendiente)',
-};
 const first = extractionExamples[0];
 export function PurchaseReview() {
   const transfer = usePurchaseTransfer(), navigate = useNavigate();
-  const [exampleId, setExampleId] = useState<string>(first.id);
+  const snapshot = usePurchaseDraft(), guard = usePurchaseGuard(), returnTo = usePurchaseReturnTo();
+  const accountId = useAuth().session!.account.id;
+  const [restored] = useState(() => snapshot.current?.accountId === accountId && snapshot.current.kind === 'review' ? snapshot.current : null);
+  const [exampleId, setExampleId] = useState<string>(restored?.exampleId ?? first.id);
   const example = extractionExamples.find(entry => entry.id === exampleId);
   const original = example?.response;
-  const [draft, setDraft] = useState<ExtractionReviewDraft>(() => createReviewDraft(first.response));
-  const [problems, setProblems] = useState<ContractProblem[]>([]);
-  const [checked, setChecked] = useState(false);
+  const [draft, setDraft] = useState<ExtractionReviewDraft>(() => restored?.draft ?? createReviewDraft(first.response));
+  const dirty = !!original && JSON.stringify(draft) !== JSON.stringify(createReviewDraft(original));
+  useGuardChanges(dirty, false, () => { if (dirty) snapshot.current = null; });
+  useEffect(() => { snapshot.current = { kind: 'review', accountId, exampleId, draft }; }, [accountId, exampleId, draft, snapshot]);
   const invalidFixture = original ? validateExtractionResponse(original).length > 0 : false;
+
   function select(id: string) {
     const next = extractionExamples.find(entry => entry.id === id);
-    setExampleId(id); setProblems([]); setChecked(false);
-    if (next) setDraft(createReviewDraft(next.response));
-    else setDraft({ header: Object.fromEntries(Object.keys(draft.header).map(key => [key, null])), lines: [], administrative: Object.fromEntries(Object.keys(draft.administrative).map(key => [key, null])) } as unknown as ExtractionReviewDraft);
+    setExampleId(id);
+    setDraft(next ? createReviewDraft(next.response) : emptyDraft());
   }
-  function edit(group: 'header' | 'administrative' | 'lines', key: string, value: string | null, lineIndex = 0) {
-    setDraft(previous => group === 'lines' ? { ...previous, lines: previous.lines.map((line, i) => i === lineIndex ? { ...line, [key]: value } : line) } : { ...previous, [group]: { ...previous[group], [key]: value } });
-    setProblems([]); setChecked(false);
-  }
-  function fields(group: 'header' | 'administrative' | 'lines', candidates: Record<string, ExtractionCandidate>, values: Record<string, string | null>, lineIndex = 0) {
-    return <div className="purchase-review__grid">{Object.entries(candidates).map(([key, candidate]) => {
-      const path = group === 'lines' ? `/lines/${lineIndex}/${key}` : `/${group}/${key}`;
-      return <CandidateField key={key} id={`review-${group}-${lineIndex}-${key}`} label={labels[key] ?? key} candidate={candidate} value={values[key] ?? null} long={key === 'description'} error={problems.find(problem => problem.path === path)?.message} onChange={value => edit(group, key, value, lineIndex)} />;
-    })}</div>;
-  }
-  return <section className="purchase-review">
-    <h1>Sistema de compra</h1>
-    <h2>Revisión de candidatos de compra</h2>
-    <p className="purchase-review__notice">Ejemplos de contrato: no se ha realizado una extracción</p>
-    <p>Sin OCR ni carga de imágenes. Puedes transferir explícitamente el borrador al formulario; continuar no guarda datos. Se descarta al salir, expirar la sesión o recargar.</p>
-    <label htmlFor="review-example">Ejemplo de contrato</label>
-    <select id="review-example" value={exampleId} onChange={event => select(event.target.value)}>
-      {extractionExamples.map(entry => <option key={entry.id} value={entry.id}>{entry.label}</option>)}
+
+  return <section className="purchase-records purchase-review">
+    <Link className="purchase-back-link" to={returnTo} onClick={event => {
+      if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      guard.request(() => navigate(returnTo), event.currentTarget);
+    }}><ArrowLeftIcon size={13} aria-hidden="true" />Volver a solicitudes</Link>
+    <div className="purchase-page-heading"><div><h1>Revisar datos</h1><p>Revisa y completa la información antes de continuar.</p></div><span className="purchase-origin-badge">Ejemplo de demostración</span></div>
+    <div className="purchase-review__toolbar"><div><label htmlFor="review-example">Datos de ejemplo</label><select id="review-example" value={exampleId} onChange={event => {
+      const next = event.target.value;
+      guard.request(() => select(next), event.currentTarget, { title: 'Cambiar ejemplo', description: 'Se descartarán tus correcciones y se cargarán los datos del otro ejemplo.', confirmLabel: 'Descartar y cambiar' });
+    }}>
+      {extractionExamples.map(entry => <option key={entry.id} value={entry.id}>{purchaseExampleLabel(entry.id)}</option>)}
       <option value="failure">Fallo de procesamiento</option>
-    </select>
-    {!original ? <div role="alert"><p>Ejemplo de error: {extractionErrorExamples.find(entry => entry.body.error.code === 'EXTRACTION_NO_DATA')!.body.error.message}</p><p>No se ha procesado ninguna imagen. Selecciona otro ejemplo para continuar.</p></div> : invalidFixture ? <p role="alert">El ejemplo no cumple el contrato. No puede revisarse.</p> : <>
-      <p className="purchase-review__metadata">Fuente ficticia: {original.data.input.name}. Todo candidato requiere revisión humana. Fecha sin zona horaria institucional confirmada.</p>
-      {original.data.issues.length > 0 && <aside aria-label="Incidencias del ejemplo"><h3>Incidencias de la fuente</h3><ul>{original.data.issues.map((issue, i) => <li key={i}>{issue.path}: {issue.message}</li>)}</ul></aside>}
-      <form noValidate onSubmit={event => { event.preventDefault(); setProblems(validateReviewDraft(draft)); setChecked(true); }}>
-        <p className="purchase-review__explanation">Cada ítem es un producto o servicio de la misma solicitud. Este ejemplo ficticio tiene dos ítems; no son dos solicitudes distintas.</p>
-        <fieldset><legend>Cabecera de la solicitud</legend>{fields('header', original.data.header, draft.header)}</fieldset>
-        {original.data.lines.length === 0 && <p>No hay líneas recuperadas en este ejemplo.</p>}
-        {original.data.lines.map((line, i) => <fieldset key={i}><legend>Ítem de la solicitud {i + 1}</legend>{fields('lines', line, draft.lines[i]!, i)}</fieldset>)}
-        <fieldset><legend>Seguimiento administrativo</legend><p>Campos sin correspondencia confirmada: no se completan automáticamente.</p>{fields('administrative', original.data.administrative, draft.administrative)}</fieldset>
-        <div className="purchase-review__actions"><button type="submit">Validar borrador</button><button type="button" onClick={() => select(exampleId)}>Restablecer ejemplo</button></div>
-        <button type="button" onClick={() => {
-          const errors = validateReviewDraft(draft); setProblems(errors); setChecked(true);
-          if (!errors.length && example && !invalidFixture) {
-            transfer.put(draft, { type: 'contract_example', exampleId: example.id });
-            navigate('/administracion/compras/nueva');
-          }
-        }}>Continuar al formulario de guardado</button>
-        {checked && (problems.length ? <div role="alert"><p>El borrador contiene formatos inválidos.</p><ul>{problems.map((problem, i) => <li key={i}>{problem.path}: {problem.message}</li>)}</ul></div> : <p role="status">Estructura y formatos válidos. Puede haber campos ausentes; esto no acredita extracción suficiente ni habilita un guardado.</p>)}
-      </form>
-    </>}
+    </select></div>{original && <span className="purchase-review__metadata">Fuente: {original.data.input.name}</span>}</div>
+    {!original ? <div className="purchase-state" role="alert"><p>{extractionErrorExamples.find(entry => entry.body.error.code === 'EXTRACTION_NO_DATA')!.body.error.message}</p><p>Selecciona otro ejemplo para continuar.</p></div> : invalidFixture ? <p role="alert">No se pueden revisar estos datos. Selecciona otro ejemplo.</p> : <PurchaseReviewEditor key={exampleId} original={original} draft={draft} onChange={setDraft}
+      onReset={origin => guard.request(() => select(exampleId), origin, { title: 'Restablecer ejemplo', description: 'Se descartarán tus correcciones y se recuperarán los valores originales.', confirmLabel: 'Descartar y restablecer' })}
+      onContinue={values => {
+        if (!example || invalidFixture) return;
+        transfer.put(values, { type: 'contract_example', exampleId: example.id });
+        snapshot.current = null;
+        guard.leave(() => navigate('/administracion/compras/nueva', { state: { purchasesReturnTo: returnTo } }));
+      }} />}
   </section>;
 }

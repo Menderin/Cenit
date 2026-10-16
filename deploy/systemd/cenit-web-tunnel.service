@@ -1,0 +1,16 @@
+[Unit]
+Description=Cenit temporary public HTTPS tunnel (testing only)
+After=cenit-nginx.service
+
+[Service]
+Type=simple
+UMask=0077
+ExecStart=/usr/local/bin/cloudflared tunnel --config %h/.local/share/cenit/web-tunnel/config.yml --no-autoupdate --protocol http2 --metrics 127.0.0.1:0 --url http://172.16.13.103:8081
+StandardOutput=append:%h/.local/share/cenit/web-tunnel/tunnel.log
+StandardError=inherit
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

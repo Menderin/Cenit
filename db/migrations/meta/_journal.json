@@ -50,6 +50,20 @@
       "when": 1791864771891,
       "tag": "0006_purchase_search_keys",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791914183863,
+      "tag": "0003_academic_progress",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792018838601,
+      "tag": "0008_purchase_capture_origin",
+      "breakpoints": true
     }
   ]
 }

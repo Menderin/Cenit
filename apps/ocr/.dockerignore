@@ -1,0 +1,8 @@
+*
+!Containerfile
+!requirements.lock
+!extractor.py
+!server.py
+!models/
+!models/ch_PP-OCRv5_det_mobile.onnx
+!models/latin_PP-OCRv5_rec_mobile.onnx

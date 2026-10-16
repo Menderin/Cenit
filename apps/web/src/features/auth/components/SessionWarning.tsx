@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { StatusNotice } from '../../../shared/components/StatusNotice.js';
 
 const warningWindow = 5 * 60 * 1000;
-export function SessionWarning({ expiresAt, logout }: { expiresAt: string; logout: () => Promise<void> }) {
+export function SessionWarning({ expiresAt, logout }: { expiresAt: string; logout: (origin?: HTMLElement) => Promise<void> }) {
   const [minutes, setMinutes] = useState<number | null>(null);
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -17,8 +18,9 @@ export function SessionWarning({ expiresAt, logout }: { expiresAt: string; logou
     return () => clearTimeout(timer);
   }, [expiresAt]);
   if (minutes === null) return null;
-  return <aside className="mb-6 space-y-3 rounded border border-amber-500 bg-amber-50 p-4" aria-label="Aviso de vencimiento de sesión">
-    <p role="status">Tu sesión vencerá en {minutes} {minutes === 1 ? 'minuto' : 'minutos'}. Guarda tu trabajo antes de volver a iniciar sesión.</p>
-    <button className="cenit-access__primary" data-session-exit onClick={() => { void logout(); }}>Cerrar sesión ahora</button>
+  return <aside className="cenit-session-warning" aria-label="Aviso de vencimiento de sesión">
+    <StatusNotice kind="warning" title="La sesión está por vencer" message={`Tu sesión vencerá en ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}. Guarda tu trabajo antes de volver a iniciar sesión.`}>
+      <button className="cenit-ui-button" onClick={event => { event.currentTarget.focus({ preventScroll: true }); void logout(event.currentTarget); }}>Cerrar sesión ahora</button>
+    </StatusNotice>
   </aside>;
 }

@@ -29,8 +29,12 @@
       ],
       "@cenit/contracts/purchases/examples": [
         "../../packages/contracts/src/purchases/examples.ts"
+      ],
+      "@cenit/contracts/academic": [
+        "../../packages/contracts/src/academic/index.ts"
       ]
-    }
+    },
+    "resolveJsonModule": true
   },
   "include": [
     "src",

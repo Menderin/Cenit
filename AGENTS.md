@@ -1,10 +1,14 @@
 # Instrucciones para agentes de Cenit
 
+Actualización de extracción del 14 de octubre: adaptador OCR auxiliar del notebook, `POST /api/v1/purchases/extractions` y pantalla mínima en `/administracion/compras/captura`, autorizada posteriormente por el líder. No conecta Oracle. Leer [ADAPTADOR-CAPTURAS.md](Docs/ADAPTADOR-CAPTURAS.md) antes de modificar procesamiento, procedencia o interfaz. El endpoint requiere sesión administrativa y Origin; sin configuración OCR responde 503. Procesador v2 comprueba señales de formato y admite parciales, sin acreditar autenticidad ni exigir color azul. La precisión institucional, revisión/integración y ensayo de VM siguen pendientes. Las menciones anteriores a ausencia de endpoint/pantalla describen el laboratorio previo.
+
 Actualización del 13 de octubre: el líder autoriza entregar la demo actual por HTTP en la VM, aunque malla y extracción real sigan pendientes. CI completo usa `Application` con lint, catálogo, build, integración, E2E contra producción y verificación de imagen. El marcador parcial fue retirado tras verificar estos checks localmente. La variable de publicación se habilita durante el primer ensayo supervisado, no mediante este cambio local. Procedimiento vigente: [primera entrega automática](deploy/PRIMER-DESPLIEGUE.md). Las menciones anteriores a bloqueo o ausencia de aplicación son antecedentes de preparación, no el estado técnico vigente.
 
 Para build completo/servidor compilado/ensayo de imagen, leer [deploy/ENSAYO-LOCAL.md](deploy/ENSAYO-LOCAL.md). Ese ensayo no retira `academic-foundation`, no habilita releases ni acredita extracción/malla completa. No trasladar su excepción HTTP local a una instalación institucional por defecto.
 
 ## Aplicación y referencias
+
+- [Docs/INVESTIGACION-EXTRACCION-COMPRAS.md](Docs/INVESTIGACION-EXTRACCION-COMPRAS.md): investigación experimental de OCR local y regiones dinámicas. Oracle/API descartados por el equipo; no confundir el benchmark con un endpoint ni con extracción integrada.
 
 Estas instrucciones aplican a todo el repositorio. Antes de iniciar una tarea, leer [CONTRIBUTING.md](CONTRIBUTING.md). Antes de modificar código, leer además [AGENTS/SDD.md](AGENTS/SDD.md), [la guía de estructura](AGENTS/ESTRUCTURA.md) y las instrucciones adicionales de la carpeta afectada.
 
@@ -18,7 +22,7 @@ Estas instrucciones aplican a todo el repositorio. Antes de iniciar una tarea, l
 
 Ante una contradicción que afecte alcance, contratos o reglas de negocio, explicarla y solicitar una decisión. No inventar procesos institucionales ni afirmar que una funcionalidad existe sin verificarla.
 
-- [Docs/EXTRACCION-COMPRAS.md](Docs/EXTRACCION-COMPRAS.md): contrato de candidatos, límites de imagen futuros y laboratorio administrativo. Leer antes de modificar extracción/revisión. No hay OCR ni endpoint de extracción activo; los ejemplos no acreditan extracción real.
+- [Docs/EXTRACCION-COMPRAS.md](Docs/EXTRACCION-COMPRAS.md): contrato de candidatos, límites de imagen y laboratorio administrativo. Leer antes de modificar extracción/revisión y complementar con la guía del adaptador. Los ejemplos del laboratorio no acreditan extracción real.
 
 ## Alcance
 
@@ -33,6 +37,10 @@ No incorporar Banner, autenticación institucional, pagos, aprobaciones oficiale
 ## Convenciones técnicas
 
 Ampliación autorizada del 11 de octubre: estudiantes consultan su progreso persistido y docentes buscan a todos los estudiantes ficticios de Nutrición por nombre/RUT. Historial de intentos y notas, sin simulación ni edición pública. Imagen `Docs/Foto prerequisitos Nutricion.jpeg` prioritaria para nombres/SCT; plan 2027 confirmado por el equipo. Semántica de flechas y ausencia de requisitos sigue pendiente: mantener `pending`, nunca inferir AND/OR o `none`. Perfiles/historial preparados como propuesta fuera del journal hasta revisar la FK con HU01-T03; no crear usuarios ni credenciales duplicadas para desbloquearlos.
+
+Continuidad autorizada por Gael el 12 de octubre: estudiante actual con RUT y tres historiales ficticios consultables por docente. En `malla-interactiva`, migración aditiva `0003_academic_progress` con FK a `cenit.accounts.id` del login integrado; sustituye la propuesta con marcadores, sin alterar migraciones anteriores. Preparación local explícita `academic:prepare-demo`: conserva las tres cuentas originales y crea sólo dos estudiantes adicionales únicos, con claves en archivo privado. No duplica identidades ni rota credenciales, no ejecuta semillas desde dev/migraciones/CD. Implementación y ensayo local siguen pendientes de revisión e integración del equipo; `pending` curricular se conserva. Detalle en ACADEMICO.md.
+
+Sincronización autorizada por Gael el 13: integrar `develop` en `malla-interactiva`, conservando compras, malla y CI completo. El journal conserva las migraciones 0000–0006 de develop y añade el SQL académico intacto como entrada 7 con timestamp posterior. `meta/_legacy.json` conserva el timestamp/hash académico anterior como alias explícito; no renombrar ni editar esos SQL aplicados. El snapshot `0007` describe el esquema conjunto. Migrador/readiness verifican por timestamp y hash, sin exigir que un historial previo sea un prefijo del journal conjunto; historias desconocidas, alteradas o duplicadas se rechazan. Usar exclusivamente `deploy/migrate.cjs` para actualizar bases preparadas por cualquiera de las dos ramas. No ejecutar migraciones/preparación de demo como parte del merge. Detalle y evidencia en [ACADEMICO.md](Docs/ACADEMICO.md).
 
 La base npm inicializa API/contratos sin alterar frontend. El marcador `cenitStage: academic-foundation` permite CI en ramas de tarea `feat/`, `fix/`, `test/`, `docs/`, `codex/` e integración en `develop`, con pruebas académicas/auth obligatorias; no permite entrega en `main`. CI se dispara con push, no con un commit exclusivamente local, y se repite en PR hacia develop/main. Retirarlo al completar los tres workspaces y checks reales. Habilitar el publicador sólo al preparar el ensayo autorizado de demo, según la guía vigente. El servidor conecta sesión real de cuentas UUID a académico; sin sesión deniega acceso. No introducir identidades por headers ni fingir readiness. Login local con correo/contraseña, un rol por cuenta y sesión fija de dos horas fueron confirmados el 11 de octubre. Cuentas de demo exclusivamente mediante preparación explícita privada; nunca semillas en migraciones/CD. Pantallas y política de borradores pendientes.
 

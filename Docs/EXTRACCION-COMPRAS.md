@@ -1,5 +1,42 @@
 # HU04-T03 — Contrato de extracción de compras
 
+Segunda iteración UX del 14 de octubre: cambiar/restablecer ejemplos con correcciones usa la confirmación contextual modal junto al selector/botón; las salidas comparten la misma guarda con origen explícito y fallback visible de cabecera para Atrás. Cancelar conserva valores/originales, transferir conserva operación/procedencia y no guarda. Detalle y evidencia en [COMPRAS.md](COMPRAS.md) y [REVISION-UX-2026-10-14.md](REVISION-UX-2026-10-14.md); esta iteración no modifica el adaptador de capturas descrito a continuación.
+
+## Adaptador operativo local — 14 de octubre
+
+El endpoint administrativo `POST /api/v1/purchases/extractions` incorpora procesamiento real con PaddleOCR móvil ONNX en un contenedor auxiliar del notebook. La continuidad autorizada añade «Subir captura», selección/vista previa, extracción y revisión antes del formulario de guardado. Contrato ampliado con `captureLayout`, rechazo `UNSUPPORTED_CAPTURE_LAYOUT` y procedencia firmada `image_capture`. Reconoce estructura, sin acreditar autenticidad ni exigir color azul; admite parciales. Preparación, navegador y HTTP en [ADAPTADOR-CAPTURAS.md](ADAPTADOR-CAPTURAS.md). No modifica Oracle ni guarda al extraer. El laboratorio continúa siendo ficticio. Las notas siguientes sobre ausencia de pantalla/endpoint corresponden a etapas anteriores.
+
+Investigación del 14 de octubre: el equipo confirmó que no habrá acceso/API Oracle y que las capturas PNG/JPEG son la vía de esta entrega. Se evaluaron OCR ligero con anclas y modelos locales; evidencia y límites en [INVESTIGACION-EXTRACCION-COMPRAS.md](INVESTIGACION-EXTRACCION-COMPRAS.md). Los ensayos aislados con imágenes ficticias informaron el adaptador operativo documentado arriba. La referencia a SCRUM-45 y a la ausencia de endpoint corresponde al estado anterior a esa integración.
+
+## Presentación de la revisión — 14 de octubre
+
+Por petición de Gael, el laboratorio conserva su ruta y un acceso secundario «Revisar ejemplo», con título «Revisar datos» y etiqueta «Ejemplo de demostración». Se retiran avisos extensos de implementación: no cambian origen, candidatos ni límites funcionales. El entorno administrativo conserva «Demostración» en la cabecera.
+
+Los datos principales aparecen primero; complementarios, ítems y seguimiento se despliegan para consultar o corregir. Cada campo conserva estado de fuente, modificación, incidencia y errores; «Revisar original» permite consultar valor/texto originales intactos. Incidencias y resúmenes usan nombres de campos. «Continuar al formulario» transfiere en memoria sin guardar; «Comprobar datos» conserva la validación de formatos del contrato. No se añade subida, procesamiento, OCR ni procedencia real. Los textos anteriores sobre el aviso permanente corresponden al corte previo.
+
+Revisión visual manual de escritorio/móvil y teclado; tests y verificación técnica se posponen hasta la aceptación visual del usuario. No acreditar las comprobaciones anteriores para este nuevo marcado.
+
+## Decisión y recorrido de captura — 13 de octubre
+
+Gael confirmó que el equipo **no tendrá acceso a Oracle**. La recuperación se realizará desde una captura de pantalla de la orden de compra mediante un modelo de visión local o en un equipo propio. Víctor implementa el procesamiento/API; Gael realiza el frontend. Esta decisión sustituye la investigación entre API Oracle e imagen, conservando los campos y límites del contrato actual. La investigación del 14 de octubre recomienda provisionalmente PaddleOCR móvil vía ONNX a partir de capturas ficticias. La capacidad de la VM, el formato completo de Oracle y la exactitud aceptada por el cliente siguen pendientes de comprobación.
+
+El rediseño administrativo conserva el laboratorio ficticio en su ruta actual. No hay subida ni extracción real disponible. La interfaz de captura se conectará cuando Víctor entregue el endpoint y acuerde la procedencia de resultados reales; hoy el guardado sólo admite `manual` y `contract_example`.
+
+### Especificación visual para conectar el procesamiento
+
+| Estado | Presentación y acciones |
+| --- | --- |
+| Elegir captura | En el marco administrativo, título «Revisar captura», etiqueta «Captura de la orden de compra», selector PNG/JPEG y límites 5 MiB/20 MP. Vista previa con nombre y acción para cambiar imagen; campos aún vacíos |
+| Procesar | Acción «Extraer datos»; carga explícita sin porcentaje inventado. Conservar imagen y deshabilitar envío duplicado; no mostrar éxito ni guardar |
+| Revisar | Vista previa junto a cabecera/ítems en escritorio, encima en móvil. Cada campo muestra candidato, estado y original; ausencias siguen vacías. Ítems desplegables y una lista de incidencias |
+| Parcial | Mantener campos recuperados y mostrar faltantes/ambiguos junto al campo. Permitir corregir; no completar número, proveedor, monto o pago por inferencia |
+| Fallo | Mensaje del error público; conservar la captura para reintentar o reemplazar. No presentar un ejemplo precargado como resultado de visión |
+| Continuar | «Continuar al formulario de guardado» transfiere una copia revisada en memoria. El formulario exige los cuatro mínimos y guarda sólo mediante POST explícito; volver/cancelar no persiste |
+
+Tema claro y tratamiento de superficies/controles de las referencias Synapse; iconos Phosphor de imagen, extracción, aviso y continuidad con texto visible. Selección de archivo accesible con teclado; no es necesario añadir drag-and-drop. El borrador pertenece a la cuenta actual y se descarta al cerrar/expirar/cambiar sesión. La imagen temporal debe descartarse conforme al contrato, sin publicarla ni almacenarla como anexo.
+
+Para Víctor: usar la respuesta de candidatos existente y validar tanto schema como coherencia. Puede evaluar visión local con salida JSON Schema (por ejemplo, [Ollama](https://docs.ollama.com/capabilities/structured-outputs)); JSON válido no acredita lectura correcta. Probar capturas ficticias legibles, recortadas, con varios ítems, campos ausentes y valores ambiguos. No cargar inferencia dentro del runtime de 512 MiB sin medir capacidad. La integración real queda en SCRUM-41/45; el mockup/laboratorio no completa extracción.
+
 Fecha: 12 de octubre de 2026. Estado: contrato y laboratorio de ejemplos implementados; extracción real, revisión independiente e integración pendientes.
 
 ## Qué existe y cómo probarlo
@@ -8,7 +45,7 @@ Los contratos TypeBox están en `packages/contracts/src/purchases`; se consumen 
 
 Preparar el entorno como indica README, ejecutar `podman compose up -d db` y `npm run dev`, abrir `/login` e ingresar con la cuenta administrativa. El login lleva al Home `/administracion`. Abrir «Sistema de compra» en el navbar para llegar a `/administracion/compras`, y abrir el laboratorio `/administracion/compras/laboratorio`, donde se muestran ejemplos ficticios de contrato; elegir uno, editar campos, validar o restablecer. El aviso permanente distingue estos fixtures de una extracción real. Los docentes/estudiantes mantienen su destino académico.
 
-Los valores originales no cambian: las ediciones viven en un borrador separado, sólo en memoria. Vaciar un campo produce `null`; la interfaz marca modificaciones manuales. La validación comprueba estructura/formato, no integridad de una compra ni precisión de OCR. No hay botón de guardar. Al cerrar/expirar, cambiar de cuenta, abandonar el área protegida o recargar, se descarta el borrador. Recuperar foco vuelve a comprobar la sesión y puede desmontar la pantalla: también descarta el borrador. Esta conducta sólo corresponde al laboratorio ficticio, no resuelve la política futura de borradores de compras reales.
+Los valores originales no cambian: las ediciones viven en un borrador separado, sólo en memoria. Vaciar un campo produce `null`; la interfaz marca modificaciones manuales. La validación comprueba formato, no integridad de una compra ni precisión de OCR. No hay botón de guardar. Cerrar/expirar, otra cuenta, abandonar o recargar descartan el borrador. El pulido autorizado del 14 de octubre confirma cambios de ejemplo, restablecimiento y salidas si hay correcciones. Un fallo temporal de revalidación oculta la pantalla y conserva el borrador hasta verificar la misma cuenta; el vencimiento original continúa. No acredita extracción real ni recuperación tras expirar.
 
 ## Entrada futura acordada
 
@@ -59,7 +96,7 @@ Referencia: `Docs/modulo_compras/CENIT COMPRAS.pdf` y cabecera/captura aportadas
 
 Confirmado por el líder: una fila representa una solicitud completa; fecha corresponde a Enviado; códigos y campos inciertos se conservan como texto. Correspondencia Nº Documento ↔ número del título todavía provisional; conservar `oracleId` por separado. El remitente no sustituye al proveedor y la aprobación no implica pago. `lineUnit` no equivale a `unitCode`.
 
-Pendientes: significado de `bi`, ITEM, titular del RUT y situación de pago; fuente de los campos administrativos; herramienta OCR, tiempos, muestras autorizadas y evaluación de extracción. No inferir `SISTEMA DE COMPRA`, HONORARIOS/COTIZACIÓN o pago cuando la muestra no lo aporta. La API Oracle no está integrada.
+Pendientes: significado de `bi`, ITEM, titular del RUT y situación de pago; fuente de los campos administrativos, muestras reales autorizadas y criterio de exactitud aceptado por el cliente. No inferir `SISTEMA DE COMPRA`, HONORARIOS/COTIZACIÓN o pago cuando la muestra no lo aporta. La API Oracle no está integrada.
 
 ## Evidencia
 
