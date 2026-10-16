@@ -91,7 +91,7 @@ foreach ($researchEngine in @('tesseract','tesseract-upscale','rapid')) {
 py -3 experiments/purchases/baseline/summarize.py tmp/ocr-research tmp/ocr-research/summary.json
 ```
 
-Los pesos y las capturas generadas permanecen en `tmp`; no se versionan datos reales ni modelos. Comparar SHA-256 con `evidence.json` al repetir, no confiar sólo en el nombre del modelo. Las salidas completas permanecen locales; la evidencia resumida versionada conserva errores por campo, dependencias y hashes de fuentes/pesos. No sobrescribir evidencia histórica para ocultar un resultado peor.
+Los pesos y las capturas generadas para estos experimentos permanecen en `tmp`; no se versionan sus datos ni modelos. La rama de demo incluye únicamente los dos pesos de runtime descritos en [`apps/ocr/MODELS.md`](../apps/ocr/MODELS.md). Comparar SHA-256 con `evidence.json` al repetir, no confiar sólo en el nombre del modelo. Las salidas completas permanecen locales; la evidencia resumida versionada conserva errores por campo, dependencias y hashes de fuentes/pesos. No sobrescribir evidencia histórica para ocultar un resultado peor.
 
 ## Pendientes para VM e integración
 

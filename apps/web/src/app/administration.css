@@ -69,7 +69,7 @@
 .dashboard-chart { display: grid; grid-template-columns: minmax(220px, 260px) minmax(0, 1fr); gap: 24px; padding: 20px; border: 1px solid transparent; border-radius: 10px; background: #fff; box-shadow: var(--admin-shadow); }
 .dashboard-chart p { margin: 6px 0 0; color: var(--admin-muted); font-size: 12px; line-height: 1.5; }
 .dashboard-chart ul { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
-.dashboard-chart li { display: grid; grid-template-columns: 48px 1fr 90px; align-items: center; gap: 12px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.dashboard-chart li { display: grid; grid-template-columns: 76px 1fr 90px; align-items: center; gap: 12px; font-size: 12px; font-variant-numeric: tabular-nums; }
 .dashboard-chart-track { height: 12px; background: #f1f1f5; border-radius: 4px; overflow: hidden; }
 .dashboard-chart-track > span { display: block; height: 100%; background: #a5b4d8; border-radius: 4px; }
 .dashboard-chart-count { white-space: nowrap; color: #62626c; }
@@ -106,7 +106,7 @@
   .dashboard-kpis { grid-template-columns: 1fr; gap: 10px; }
   .dashboard-kpis > div { padding: 14px 16px; }
   .dashboard-chart { padding: 18px; }
-  .dashboard-chart li { grid-template-columns: 42px 1fr 82px; gap: 8px; font-size: 12px; }
+  .dashboard-chart li { grid-template-columns: 76px 1fr 82px; gap: 8px; font-size: 12px; }
   .admin-workspace input, .admin-workspace textarea, .admin-workspace select { font-size: 16px; }
   .admin-empty { min-height: 360px; padding-inline: 0; }
 }
