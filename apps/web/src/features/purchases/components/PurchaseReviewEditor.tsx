@@ -9,7 +9,7 @@ import { purchaseLabels, amountLabel, purchaseProblemLabel } from '../model/fiel
 const primary = new Set(['requestNumber', 'sentDate', 'totalAmount', 'description']);
 export function PurchaseReviewEditor({ original, draft, onChange, onContinue, onReset }: {
   original: ExtractionResponse; draft: ExtractionReviewDraft; onChange: (draft: ExtractionReviewDraft) => void;
-  onContinue: (draft: ExtractionReviewDraft) => void; onReset?: () => void;
+  onContinue: (draft: ExtractionReviewDraft) => void; onReset?: (origin: HTMLElement) => void;
 }) {
   const [problems, setProblems] = useState<ContractProblem[]>([]);
   const [checked, setChecked] = useState(false);
@@ -45,7 +45,7 @@ export function PurchaseReviewEditor({ original, draft, onChange, onContinue, on
         <div className="purchase-review__actions"><button className="purchase-save" type="button" onClick={() => {
           const errors = validateReviewDraft(draft); setProblems(errors); setChecked(true);
           if (!errors.length) onContinue(draft);
-        }}>Continuar al formulario<ArrowRightIcon size={15} aria-hidden="true" /></button><button type="submit">Comprobar datos</button>{onReset && <button type="button" onClick={() => { setProblems([]); setChecked(false); onReset(); }}>Restablecer ejemplo</button>}</div>
+        }}>Continuar al formulario<ArrowRightIcon size={15} aria-hidden="true" /></button><button type="submit">Comprobar datos</button>{onReset && <button type="button" onClick={event => { setProblems([]); setChecked(false); onReset(event.currentTarget); }}>Restablecer ejemplo</button>}</div>
         {checked && (problems.length ? <div className="purchase-error-summary" role="alert"><p>Revisa los campos indicados.</p><ul>{problems.map((problem, i) => <li key={i}><strong>{purchaseProblemLabel(problem.path)}</strong>: {problem.message}</li>)}</ul></div> : <p role="status">Formatos correctos. Puedes continuar y completar los campos obligatorios.</p>)}
       </form>
   </>;

@@ -13,6 +13,27 @@ import { Personnel } from '../features/administration/pages/Personnel.js';
 import { Assets } from '../features/administration/pages/Assets.js';
 import { AccessLayout } from '../features/auth/components/AccessLayout.js';
 import { Academic } from '../features/academic/pages/Academic.js';
+import { PurchaseGuardProvider, usePurchaseGuard } from '../features/purchases/model/guard.js';
+import { StatusNotice } from '../shared/components/StatusNotice.js';
+
+function AdministrativeArea() {
+  const auth = useAuth(), guard = usePurchaseGuard();
+  const session = auth.session!;
+  const logout = async (origin?: HTMLElement) => { guard.request(() => { void auth.logout(); }, origin ?? null); };
+  return <AdministrativeLayout account={session.account} expiresAt={session.expiresAt} logout={logout}>
+    <Routes>
+      <Route path="/administracion" element={<Home />} />
+      <Route path="/administracion/compras" element={<Purchases key={session.account.id} />} />
+      <Route path="/administracion/compras/nueva" element={<PurchaseCreate key={session.account.id} />} />
+      <Route path="/administracion/compras/laboratorio" element={<PurchaseReview key={session.account.id} />} />
+      <Route path="/administracion/compras/captura" element={<PurchaseCapture key={session.account.id} />} />
+      <Route path="/administracion/compras/:id" element={<PurchaseDetail key={session.account.id} />} />
+      <Route path="/administracion/personal" element={<Personnel />} />
+      <Route path="/administracion/bienes" element={<Assets />} />
+      <Route path="*" element={<Navigate to="/administracion" replace />} />
+    </Routes>
+  </AdministrativeLayout>;
+}
 
 export function App() {
   const auth = useAuth();
@@ -26,22 +47,12 @@ export function App() {
   </>;
   else if (auth.status === 'error' || auth.status === 'logout-error') content = <>
     <h1 id="access-title">No pudimos completar la operación</h1>
-    <p className="cenit-access__notice cenit-access__error" role="alert">{auth.message}</p>
+    <StatusNotice kind="error" title={auth.status === 'logout-error' ? 'Cierre sin confirmar' : 'Sesión sin comprobar'} message={auth.message} />
     <button className="cenit-access__primary" onClick={() => { void (auth.status === 'logout-error' ? auth.logout() : auth.refresh()); }}>Reintentar</button>
   </>;
   else if (!auth.session) content = <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Navigate to="/login" replace />} /></Routes>;
-  if (auth.status === 'authenticated' && auth.session?.account.role === 'administrativo') return <PurchaseTransferProvider key={auth.session.account.id}><AdministrativeLayout account={auth.session.account} expiresAt={auth.session.expiresAt} logout={auth.logout}>
-    <Routes>
-      <Route path="/administracion" element={<Home />} />
-      <Route path="/administracion/compras" element={<Purchases key={auth.session.account.id} />} />
-      <Route path="/administracion/compras/nueva" element={<PurchaseCreate key={auth.session.account.id} />} />
-      <Route path="/administracion/compras/laboratorio" element={<PurchaseReview key={auth.session.account.id} />} />
-      <Route path="/administracion/compras/captura" element={<PurchaseCapture key={auth.session.account.id} />} />
-      <Route path="/administracion/compras/:id" element={<PurchaseDetail key={auth.session.account.id} />} />
-      <Route path="/administracion/personal" element={<Personnel />} />
-      <Route path="/administracion/bienes" element={<Assets />} />
-      <Route path="*" element={<Navigate to="/administracion" replace />} />
-    </Routes>
-  </AdministrativeLayout></PurchaseTransferProvider>;
+  if (auth.status === 'authenticated' && auth.session?.account.role === 'administrativo') return <PurchaseTransferProvider key={auth.session.account.id}>
+    <PurchaseGuardProvider><AdministrativeArea /></PurchaseGuardProvider>
+  </PurchaseTransferProvider>;
   return <AccessLayout>{content}</AccessLayout>;
 }

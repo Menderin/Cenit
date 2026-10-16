@@ -26,6 +26,7 @@ export function Academic() {
   const [detail, setDetail] = useState<AcademicCourse | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   useEffect(() => { heading.current?.focus(); }, []);
+  useEffect(() => { document.title = 'Cenit · Malla curricular'; return () => { document.title = 'Cenit'; }; }, []);
   const plans = useQuery({ queryKey: ['academic', account.id, 'plans'], queryFn: ({ signal }) => getPlans(signal), retry: retryAcademicRead });
   const available = plans.data?.find(plan => plan.planId === 'nutricion-dietetica');
   const version = available?.versions.find(v => v.version === selectedVersion)?.version ?? available?.versions[0]?.version;
@@ -76,7 +77,7 @@ export function Academic() {
         </div>
       </aside>
       <div className="academic-main">
-        <header className="academic-toolbar">
+        <header className="academic-toolbar cenit-page-enter">
           <div className="academic-toolbar__title">
             <button type="button" className="academic-sidebar-toggle academic-icon-button" aria-label={sidebarCollapsed ? 'Mostrar navegación' : 'Ocultar navegación'} aria-expanded={!sidebarCollapsed} aria-controls="academic-navigation" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}><SidebarSimple size={18} weight="regular" aria-hidden="true" /></button>
             <div><h1 ref={heading} tabIndex={-1}>Malla curricular</h1><p className="academic-toolbar__subtitle">{plan?.name ?? 'Nutrición y Dietética'}{plan?.isExample && ' · Plan de ejemplo'}</p></div>

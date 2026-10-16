@@ -1,5 +1,7 @@
 # Catálogo y progreso académico
 
+Pulido del 14 de octubre: título «Cenit · Malla curricular», contención del scroll en el detalle y hover sólo con punteros compatibles. Apertura del panel en 300 ms; Escape/cierre en 150 ms con retorno de foco. Movimiento reducido usa opacidad. Logout/expiración ocultan datos inmediatamente. No cambia catálogo, búsqueda docente, historial, permisos ni `pending` curricular. Evidencia en [revisión de UX](REVISION-UX-2026-10-14.md).
+
 Base de backend del 11 de octubre de 2026 para HU09-T03 y la ampliación autorizada de perfiles/progreso. La sección de frontend registra la primera vista preparada el 12 de octubre en `malla-interactiva`, pendiente de revisión/integración. No se implementan simulación ni importación institucional. Leer junto al [SDD](../AGENTS/SDD.md) y las [fichas del sprint](HISTORIAS-USUARIO-INVEST.md).
 
 ## Fuentes y decisiones

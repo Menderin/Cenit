@@ -112,7 +112,7 @@ test('servicio caído permite reintentar; 401 limpia catálogo y detalle', async
   await page.route('**/api/v1/academic/plans', route => route.fulfill({ status: 401, json: { error: { code: 'AUTHENTICATION_REQUIRED', message: 'Debes iniciar sesión.', requestId: 'test' } } }));
   await page.reload();
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
+  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
   await expect(courses(page)).toHaveCount(0); await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
@@ -440,6 +440,7 @@ test('malla y detalle legibles al redimensionar sin overflow del documento', asy
     expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
     if (width === 1440) await page.screenshot({ path: testInfo.outputPath('detalle-1440.png') });
     await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(courses(page)).toHaveCount(52);
   }
 });

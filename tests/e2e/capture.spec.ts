@@ -120,13 +120,12 @@ test('captura: cambio de archivo cancela y descarta respuestas tardías; corrige
   await expect(page.getByRole('button', { name: 'Continuar al formulario', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Extraer datos', exact: true }).click();
   await page.getByRole('group', { name: 'Datos principales', exact: true }).getByLabel('Descripción', { exact: true }).fill('Borrador privado');
-  const dismissed = new Promise<void>(resolve => page.once('dialog', async dialog => { await dialog.dismiss(); resolve(); }));
   await page.getByRole('link', { name: 'Volver a solicitudes', exact: true }).click();
-  await dismissed;
+  const discardPrompt = page.getByRole('alertdialog', { name: 'Descartar cambios' });
+  await discardPrompt.getByRole('button', { name: 'Seguir editando', exact: true }).click();
   await expect(page).toHaveURL(/\/compras\/captura$/);
-  const accepted = new Promise<void>(resolve => page.once('dialog', async dialog => { await dialog.accept(); resolve(); }));
   await page.getByRole('link', { name: 'Volver a solicitudes', exact: true }).click();
-  await accepted;
+  await page.getByRole('alertdialog', { name: 'Descartar cambios' }).getByRole('button', { name: 'Descartar y salir', exact: true }).click();
   await expect(page).toHaveURL(/\/compras$/);
 });
 
