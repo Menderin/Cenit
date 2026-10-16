@@ -1,0 +1,7 @@
+@import "tailwindcss";
+@layer base {
+  body { @apply m-0 bg-slate-100 text-slate-900 font-sans; }
+  button { @apply rounded bg-slate-900 px-4 py-2 text-white cursor-pointer disabled:opacity-50 disabled:cursor-wait; }
+  input { @apply block w-full rounded border border-slate-400 bg-white px-3 py-2; }
+  button:focus-visible, input:focus-visible { @apply outline-2 outline-offset-2 outline-blue-600; }
+}

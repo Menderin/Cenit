@@ -1,0 +1,69 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791755866669,
+      "tag": "0000_academic_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791755866670,
+      "tag": "0001_academic_publication_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791759272450,
+      "tag": "0002_auth_accounts_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791862086679,
+      "tag": "0003_purchase_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791862823870,
+      "tag": "0004_purchase_finite_amounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791863686238,
+      "tag": "0005_purchase_example_origin",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791864771891,
+      "tag": "0006_purchase_search_keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791914183863,
+      "tag": "0003_academic_progress",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792018838601,
+      "tag": "0008_purchase_capture_origin",
+      "breakpoints": true
+    }
+  ]
+}

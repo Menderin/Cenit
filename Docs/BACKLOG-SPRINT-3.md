@@ -2,6 +2,10 @@
 
 Fecha: 10 de octubre de 2026. Estado: propuesta para estimar y revisar con el equipo. Sprint: 10–26 de octubre; demostración: jueves 15; cierre del build: miércoles 14. Ningún ítem se considera implementado o comprometido sólo por aparecer aquí.
 
+Actualización autorizada del 11 de octubre: además de HU09-T03 (catálogo/migración/contrato), se incorpora un entregable de perfiles e historial de intentos para consultar progreso propio y búsqueda docente por nombre/RUT. Persistencia de progreso ficticio, sin simulación ni edición pública. [Modelo, API y evidencia](ACADEMICO.md). La migración del catálogo y sus lecturas están verificadas localmente; revisión e integración pendientes. El vínculo real de cuentas/historial depende de HU01-T03 y no se despliega con el journal actual.
+
+Tareas de la ampliación: revisar FK y clave de cuenta con login; integrar perfil/adscripción/intentos en una nueva migración; preparar datos ficticios con cuentas existentes; conectar sesión real a lecturas propias/docentes; adaptar pantallas y ensayar el recorrido. La propuesta y pruebas de BD/API están preparadas; conexión de autenticación, consumidor frontend y migración de historial no deben marcarse terminados por esa evidencia.
+
 **Revisión vigente:** `Docs/HISTORIAS-USUARIO-INVEST.md` sustituye las fichas siguientes con descripción, criterios y tareas específicas. Última decisión del líder: login local confirmado; malla y prerrequisitos oficiales obligatorios; simulación fuera del MVP. HU11/HU12 son futuras. El contenido anterior conservado debajo es referencia histórica y no debe usarse para ampliar el compromiso ni duplicar tareas.
 
 ## Organización y alcance
@@ -10,7 +14,7 @@ Fecha: 10 de octubre de 2026. Estado: propuesta para estimar y revisar con el eq
 
 HU describe un resultado para un usuario. HT es un habilitador técnico, de diseño, investigación o documentación: se registra como tarea bajo su épica, no se disfraza de historia de negocio. Ambos requieren evidencia y estimación. El mockup, el endpoint y la migración son trabajo necesario para completar historias; por sí solos no prueban que el recorrido funcione.
 
-Se mantiene el monolito y el stack del SDD. Roles académicos: docente/estudiante; compras: administrativo. Login local con correo/contraseña es la propuesta de trabajo, con cuentas ficticias precargadas y Google posterior. No se añade registro público, recuperación de contraseña por correo, pagos, aprobación institucional, eliminación de compras ni los dos módulos administrativos futuros.
+Se mantiene el monolito y el stack del SDD. Roles académicos: docente/estudiante; compras: administrativo. Login local con correo/contraseña, un rol por cuenta y sesión fija de dos horas confirmados el 11 de octubre; preparación explícita de cuentas ficticias y Google posterior. HU01-T03/T04 y API de HU03 implementadas según [AUTENTICACION.md](AUTENTICACION.md), pendientes de revisión/PR; pantallas aún pendientes. No se añade registro público, recuperación de contraseña por correo, pagos, aprobación institucional, eliminación de compras ni los dos módulos administrativos futuros.
 
 Todos los HU siguientes pertenecen al alcance solicitado de la demo. La captura automática tiene vía pendiente y la simulación depende de reglas académicas aún no recibidas. No se convierte esa incertidumbre en promesa ni en reducción silenciosa del alcance. Estimar y contrastar capacidad antes de seleccionar el compromiso del sprint.
 
@@ -174,7 +178,7 @@ Los endpoints de compras/catálogos ya tienen base en el SDD; concretar los de a
 | ID | Habilitador | Criterios de aceptación |
 | --- | --- | --- |
 | S3-HT05 | Construir y verificar el artefacto | Imagen de producción sirve frontend/API; migrador separado, secretos por archivo, roles limitados y esquema `cenit`; cumple `deploy/CD-VM.md`. Health readiness acredita aplicación y BD, no sólo Nginx |
-| S3-HT06 | Publicar y desplegar automáticamente | CI con pruebas reales; promoción por PR a `produccion`, workflow/gates/manifiesto/digest según contrato. La VM sólo aplica releases verificadas; ensayo efectivo, sin `git pull` o builds manuales habituales |
+| S3-HT06 | Publicar y desplegar automáticamente | CI con pruebas reales; promoción por PR a `main`, workflow/gates/manifiesto/digest según contrato. La VM sólo aplica releases verificadas; ensayo efectivo, sin `git pull` o builds manuales habituales |
 | S3-HT07 | Ensayar recuperación y alternativa local | Evidencia de respaldo previo a migración, persistencia, fallo de entrega y recuperación de aplicación/proxy sin rollback automático de datos. Misma versión identificada disponible localmente; servicios Zableke/Jenkins intactos |
 
 Responsable Víctor, verificación Kevin. Dependen de S3-HT02 e historias integradas; primer ensayo VM martes 13. La infraestructura de preparación no acredita estas entregas.

@@ -1,0 +1,9 @@
+# Isolated research environment; never built or started by application CI/CD.
+FROM docker.io/library/node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng fonts-dejavu-core libgl1 libglib2.0-0 && rm -rf /var/lib/apt/lists/*
+COPY requirements.lock /tmp/requirements.lock
+RUN python3 -m venv /opt/research && /opt/research/bin/pip install --no-cache-dir -r /tmp/requirements.lock
+ENV PATH=/opt/research/bin:$PATH OMP_THREAD_LIMIT=1
+WORKDIR /research
+COPY . /research/
+CMD ["python", "battery.py", "--variant", "baseline", "--output", "/results"]

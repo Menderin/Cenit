@@ -11,6 +11,7 @@ import zipfile
 from github_read import API_ROOT, GitHubReadError, REPOSITORY
 
 WORKFLOW_PATH = '.github/workflows/release.yml'
+DELIVERY_BRANCH = 'main'
 MANIFEST_FILE = 'cenit-release.json'
 MANIFEST_KEYS = {
     'schemaVersion', 'repository', 'branch', 'commit', 'image', 'workflowRunId',
@@ -29,7 +30,7 @@ def require(condition, message):
 def validate_manifest(manifest):
     require(isinstance(manifest, dict) and set(manifest) == MANIFEST_KEYS, 'Manifiesto inválido.')
     require(type(manifest['schemaVersion']) is int and manifest['schemaVersion'] == 1, 'Versión de manifiesto inválida.')
-    require(manifest['repository'] == REPOSITORY and manifest['branch'] == 'produccion', 'Origen de entrega inválido.')
+    require(manifest['repository'] == REPOSITORY and manifest['branch'] == DELIVERY_BRANCH, 'Origen de entrega inválido.')
     require(isinstance(manifest['commit'], str) and SHA.fullmatch(manifest['commit']), 'Commit inválido.')
     require(isinstance(manifest['image'], str) and IMAGE.fullmatch(manifest['image']), 'Se requiere imagen Cenit por digest.')
     for key in ('workflowRunId', 'workflowRunAttempt', 'runNumber'):
@@ -40,7 +41,7 @@ def validate_manifest(manifest):
 
 def validate_run(run, workflow, commit, attempt):
     require(workflow.get('path') == WORKFLOW_PATH and run.get('workflow_id') == workflow.get('id'), 'Workflow de entrega incorrecto.')
-    require(run.get('event') == 'push' and run.get('head_branch') == 'produccion', 'La ejecución no es un push a produccion.')
+    require(run.get('event') == 'push' and run.get('head_branch') == DELIVERY_BRANCH, 'La ejecución no es un push a main.')
     require(run.get('head_sha') == commit and run.get('run_attempt') == attempt, 'Commit o intento no corresponde.')
     require(run.get('head_repository', {}).get('full_name') == REPOSITORY, 'Repositorio de ejecución incorrecto.')
     require(run.get('status') == 'completed' and run.get('conclusion') == 'success', 'La entrega aún no terminó con éxito.')
@@ -105,8 +106,8 @@ def approved_release(client):
     workflow = client.get('/actions/workflows/release.yml')
     run = client.get(f'/actions/runs/{run_id}')
     validate_run(run, workflow, commit, attempt)
-    comparison = client.get(f'/compare/{commit}...produccion')
-    require(comparison.get('status') in ('ahead', 'identical') and comparison.get('merge_base_commit', {}).get('sha') == commit, 'El commit no pertenece a la historia de produccion.')
+    comparison = client.get(f'/compare/{commit}...{DELIVERY_BRANCH}')
+    require(comparison.get('status') in ('ahead', 'identical') and comparison.get('merge_base_commit', {}).get('sha') == commit, 'El commit no pertenece a la historia de main.')
     jobs = client.get(f'/actions/runs/{run_id}/attempts/{attempt}/jobs?per_page=100')
     require(jobs.get('total_count', 101) <= 100, 'Demasiados jobs para verificar la entrega.')
     successful = {job.get('name') for job in jobs.get('jobs', []) if job.get('conclusion') == 'success'}
@@ -117,7 +118,7 @@ def approved_release(client):
     require(len(matches) == 1, 'Falta el artefacto inmutable de la entrega o expiró.')
     artifact = matches[0]
     source = artifact.get('workflow_run', {})
-    require(source.get('id') == run_id and source.get('head_sha') == commit and source.get('head_branch') == 'produccion', 'Artefacto de otro origen.')
+    require(source.get('id') == run_id and source.get('head_sha') == commit and source.get('head_branch') == DELIVERY_BRANCH, 'Artefacto de otro origen.')
     manifest = artifact_manifest(download_artifact(client, artifact.get('id')), artifact.get('digest'))
     require(manifest['commit'] == commit and manifest['workflowRunId'] == run_id
             and manifest['workflowRunAttempt'] == attempt and manifest['runNumber'] == run.get('run_number'), 'Manifiesto de otra ejecución.')

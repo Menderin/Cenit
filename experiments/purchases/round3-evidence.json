@@ -1,0 +1,1687 @@
+{
+  "date": "2026-10-14",
+  "environment": "Notebook / rootless Podman Linux CPU-only, 1 CPU / 1 GiB, sequential, network disabled",
+  "baselineEvidenceSha256": "f4ba42992d9ccee8c5799ccc6d6c833c10e64e4585b975529de5759ab85e7cd0",
+  "samePretrainedWeights": true,
+  "previousBatteryEvidenceSha256": "c3f19207c4c8444a410521105f0b416b7c70cdc1d4cf62dc07270befcc7c91b6",
+  "developmentExecutions": 12,
+  "holdoutExecutions": 48,
+  "sourceHashes": {
+    "dataset.py": "5329aff8dec10ecc1d5be89c9470c784347df030118b97f17cae4b9124604a9a",
+    "dataset_v3.py": "1f698179e443dc42e484a6bb7471800dd525200ae8ff7c1182fe294330fa5c13",
+    "pipeline.py": "c233182b85565cf37757537f2fcd2709768c2bef5816777bbad2f2df7e8d4181",
+    "pipeline_v3.py": "6082c6bc470331fedf620e809a37007c9da5316d69ba5d7aa8e3d37a6d6e2340",
+    "round3.py": "e3546bc4e927d5cb6971c5c5bb5b51672873d63f5f913c617e7e0542997e32db"
+  },
+  "fixtureHashes": {
+    "clear": "3375ef6bcd5ac6fd1622eacde69ba46c024269b23727fd4e3cb2e7286167f001",
+    "multiline": "29943251262766a0fcecf3255f709490f392da0a24ced603753fd4f52d5830d6",
+    "jpeg": "825c90392f12032584a7fb677b47e6f03ab4da6f0239456564a2f3bf20369f8a",
+    "zero": "82d4bbd7cebe8ab7c60fda948233e9944837a804028e96f632fec438a116f010",
+    "small": "7c5f1b0e4b58e19c5be17786f06e4f916cd0658ba19b8ccc38cdb52b4def115c",
+    "serif": "10b6ceca76e0cdda60d4bda1079072e6490d7e00b96814ad908af72d3b0c0294",
+    "margin": "0adab477a1b9f2136ab28718b07f448de5cf6e0a738a5f20c3adf55819b2743a",
+    "no-grid": "9b121f130a1c1a7c562398bbef70f4b454fe93cea86378014470bd45d9f7e400"
+  },
+  "variants": [
+    {
+      "variant": "baseline",
+      "runs": 16,
+      "samples": [
+        {
+          "case": "clear",
+          "visibleExact": 9,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 3.4319097869997677,
+          "maxSeconds": 3.6605988209994393,
+          "repeatable": true,
+          "issues": [
+            "TABLE_COLUMNS_MISSING"
+          ],
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "189000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "multiline",
+          "visibleExact": 29,
+          "visibleFields": 30,
+          "numericExact": 14,
+          "numericFields": 14,
+          "moneyExact": 6,
+          "moneyFields": 6,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 21,
+          "lineFields": 21,
+          "wrongNonNull": 1,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 4.231370076000076,
+          "maxSeconds": 4.511369431000276,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "12-Nov-2026 11:20:35",
+              "actual": "12-Nov-2026 11: 20: 35",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "jpeg",
+          "visibleExact": 13,
+          "visibleFields": 23,
+          "numericExact": 6,
+          "numericFields": 10,
+          "moneyExact": 2,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 7,
+          "headerFields": 9,
+          "lineExact": 6,
+          "lineFields": 14,
+          "wrongNonNull": 8,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 3.2916197834997547,
+          "maxSeconds": 3.3379498730000705,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "12-Nov-2026 11:20:35",
+              "actual": "12-Nov- 2026 11: 20:35",
+              "exact": false
+            },
+            {
+              "path": "header/totalAmount",
+              "expected": "495000 CLP",
+              "actual": "495000CLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": "EMPRESA FICTICIA NUMER0 1",
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": "270202/ 0000142 / 420405",
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": "3 63000",
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/1/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 2",
+              "actual": "EMPRESAFICTICIA NUMER0 2",
+              "exact": false
+            },
+            {
+              "path": "lines/1/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": "270202/ 0000142/ 420405",
+              "exact": false
+            },
+            {
+              "path": "lines/1/quantity",
+              "expected": "4",
+              "actual": "4 66000",
+              "exact": false
+            },
+            {
+              "path": "lines/1/price",
+              "expected": "66000",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "zero",
+          "visibleExact": 9,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 3.15606804250001,
+          "maxSeconds": 3.222994223000569,
+          "repeatable": true,
+          "issues": [
+            "TABLE_COLUMNS_MISSING"
+          ],
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "0",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "0",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "small",
+          "visibleExact": 13,
+          "visibleFields": 23,
+          "numericExact": 6,
+          "numericFields": 10,
+          "moneyExact": 2,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 7,
+          "headerFields": 9,
+          "lineExact": 6,
+          "lineFields": 14,
+          "wrongNonNull": 8,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 3.2391020425002353,
+          "maxSeconds": 3.2953351559999646,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "12-Nov-2026 11:20:35",
+              "actual": "12-Nov-2026 11: 20:35",
+              "exact": false
+            },
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "0CLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": "MATERIAL DE LABORATORIO PARA D0CENCIA 1",
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": "EMPRESA FICTICIA NUMER0 1",
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": "3 63000",
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/1/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 2",
+              "actual": "MATERIAL DE LABORATORIO PARA D0CENCIA 2",
+              "exact": false
+            },
+            {
+              "path": "lines/1/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 2",
+              "actual": "EMPRESA FICTICIA NUMER0 2",
+              "exact": false
+            },
+            {
+              "path": "lines/1/quantity",
+              "expected": "4",
+              "actual": "4 66000",
+              "exact": false
+            },
+            {
+              "path": "lines/1/price",
+              "expected": "66000",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "serif",
+          "visibleExact": 9,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 3.045078688999638,
+          "maxSeconds": 3.0456499399997483,
+          "repeatable": true,
+          "issues": [
+            "TABLE_COLUMNS_MISSING"
+          ],
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "189000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "margin",
+          "visibleExact": 22,
+          "visibleFields": 22,
+          "numericExact": 10,
+          "numericFields": 10,
+          "moneyExact": 4,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 8,
+          "lineExact": 14,
+          "lineFields": 14,
+          "wrongNonNull": 0,
+          "absencesCorrect": 1,
+          "absences": 1,
+          "rowsCorrect": true,
+          "medianSeconds": 4.387583734500367,
+          "maxSeconds": 4.860414452000441,
+          "repeatable": true,
+          "issues": [],
+          "failures": []
+        },
+        {
+          "case": "no-grid",
+          "visibleExact": 8,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 1,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 3.314181346499936,
+          "maxSeconds": 3.613550541999757,
+          "repeatable": true,
+          "issues": [
+            "TABLE_ROWS_UNRESOLVED"
+          ],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "12-Nov-2026 11:20:35",
+              "actual": "12-Nov- 2026 11:20:35",
+              "exact": false
+            },
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "189000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        }
+      ],
+      "visibleExact": 112,
+      "visibleFields": 162,
+      "moneyExact": 14,
+      "moneyFields": 26,
+      "moneyWrongNonNull": 0,
+      "moneyMissing": 12,
+      "medianSeconds": 3.2703124249997018,
+      "maxSeconds": 4.860414452000441,
+      "processPeakRssKiB": 780856,
+      "containerMemoryPeakBytes": 744374272,
+      "initializationSeconds": 0.016782702000455174,
+      "models": [
+        {
+          "name": "ch_PP-OCRv5_det_mobile.onnx",
+          "sha256": "4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae"
+        },
+        {
+          "name": "latin_PP-OCRv5_rec_mobile.onnx",
+          "sha256": "b20bd37c168a570f583afbc8cd7925603890efbcdc000a59e22c269d160b5f5a"
+        }
+      ]
+    },
+    {
+      "variant": "tight",
+      "runs": 16,
+      "samples": [
+        {
+          "case": "clear",
+          "visibleExact": 9,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 3.6929865914999027,
+          "maxSeconds": 4.021226118999948,
+          "repeatable": true,
+          "issues": [
+            "TABLE_COLUMNS_MISSING",
+            "ROW_SEGMENTATION_DISAGREEMENT"
+          ],
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "189000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "multiline",
+          "visibleExact": 29,
+          "visibleFields": 30,
+          "numericExact": 14,
+          "numericFields": 14,
+          "moneyExact": 6,
+          "moneyFields": 6,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 21,
+          "lineFields": 21,
+          "wrongNonNull": 1,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 4.789994502499667,
+          "maxSeconds": 4.939144532999308,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "12-Nov-2026 11:20:35",
+              "actual": "12-Nov-2026 11: 20: 35",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "jpeg",
+          "visibleExact": 13,
+          "visibleFields": 23,
+          "numericExact": 6,
+          "numericFields": 10,
+          "moneyExact": 2,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 7,
+          "headerFields": 9,
+          "lineExact": 6,
+          "lineFields": 14,
+          "wrongNonNull": 8,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 4.13097107349995,
+          "maxSeconds": 4.443243142999563,
+          "repeatable": true,
+          "issues": [
+            "ROW_SEGMENTATION_DISAGREEMENT"
+          ],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "12-Nov-2026 11:20:35",
+              "actual": "12-Nov- 2026 11: 20:35",
+              "exact": false
+            },
+            {
+              "path": "header/totalAmount",
+              "expected": "495000 CLP",
+              "actual": "495000CLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": "EMPRESA FICTICIA NUMER0 1",
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": "270202/ 0000142 / 420405",
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": "3 63000",
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/1/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 2",
+              "actual": "EMPRESAFICTICIA NUMER0 2",
+              "exact": false
+            },
+            {
+              "path": "lines/1/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": "270202/ 0000142/ 420405",
+              "exact": false
+            },
+            {
+              "path": "lines/1/quantity",
+              "expected": "4",
+              "actual": "4 66000",
+              "exact": false
+            },
+            {
+              "path": "lines/1/price",
+              "expected": "66000",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "zero",
+          "visibleExact": 9,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 3.1053945779999594,
+          "maxSeconds": 3.4419541819997903,
+          "repeatable": true,
+          "issues": [
+            "TABLE_COLUMNS_MISSING",
+            "ROW_SEGMENTATION_DISAGREEMENT"
+          ],
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "0",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "0",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "small",
+          "visibleExact": 13,
+          "visibleFields": 23,
+          "numericExact": 6,
+          "numericFields": 10,
+          "moneyExact": 2,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 7,
+          "headerFields": 9,
+          "lineExact": 6,
+          "lineFields": 14,
+          "wrongNonNull": 8,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 3.0914566855003613,
+          "maxSeconds": 3.1484613880002144,
+          "repeatable": true,
+          "issues": [
+            "CELL_RECHECK_UNAVAILABLE"
+          ],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "12-Nov-2026 11:20:35",
+              "actual": "12-Nov-2026 11: 20:35",
+              "exact": false
+            },
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "0CLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": "MATERIAL DE LABORATORIO PARA D0CENCIA 1",
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": "EMPRESA FICTICIA NUMER0 1",
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": "3 63000",
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/1/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 2",
+              "actual": "MATERIAL DE LABORATORIO PARA D0CENCIA 2",
+              "exact": false
+            },
+            {
+              "path": "lines/1/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 2",
+              "actual": "EMPRESA FICTICIA NUMER0 2",
+              "exact": false
+            },
+            {
+              "path": "lines/1/quantity",
+              "expected": "4",
+              "actual": "4 66000",
+              "exact": false
+            },
+            {
+              "path": "lines/1/price",
+              "expected": "66000",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "serif",
+          "visibleExact": 9,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 2.78716335550007,
+          "maxSeconds": 2.847281542000019,
+          "repeatable": true,
+          "issues": [
+            "TABLE_COLUMNS_MISSING",
+            "ROW_SEGMENTATION_DISAGREEMENT"
+          ],
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "189000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "margin",
+          "visibleExact": 22,
+          "visibleFields": 22,
+          "numericExact": 10,
+          "numericFields": 10,
+          "moneyExact": 4,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 8,
+          "lineExact": 14,
+          "lineFields": 14,
+          "wrongNonNull": 0,
+          "absencesCorrect": 1,
+          "absences": 1,
+          "rowsCorrect": true,
+          "medianSeconds": 3.6098534080001627,
+          "maxSeconds": 3.62274451400026,
+          "repeatable": true,
+          "issues": [],
+          "failures": []
+        },
+        {
+          "case": "no-grid",
+          "visibleExact": 8,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 1,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 2.743323840500125,
+          "maxSeconds": 2.7514722640007676,
+          "repeatable": true,
+          "issues": [
+            "TABLE_ROWS_UNRESOLVED",
+            "CELL_RECHECK_UNAVAILABLE"
+          ],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "12-Nov-2026 11:20:35",
+              "actual": "12-Nov- 2026 11:20:35",
+              "exact": false
+            },
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "189000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        }
+      ],
+      "visibleExact": 112,
+      "visibleFields": 162,
+      "moneyExact": 14,
+      "moneyFields": 26,
+      "moneyWrongNonNull": 0,
+      "moneyMissing": 12,
+      "medianSeconds": 3.403350622999824,
+      "maxSeconds": 4.939144532999308,
+      "processPeakRssKiB": 744684,
+      "containerMemoryPeakBytes": 705941504,
+      "initializationSeconds": 0.02032719199996791,
+      "models": [
+        {
+          "name": "ch_PP-OCRv5_det_mobile.onnx",
+          "sha256": "4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae"
+        },
+        {
+          "name": "latin_PP-OCRv5_rec_mobile.onnx",
+          "sha256": "b20bd37c168a570f583afbc8cd7925603890efbcdc000a59e22c269d160b5f5a"
+        }
+      ]
+    },
+    {
+      "variant": "consensus",
+      "runs": 16,
+      "samples": [
+        {
+          "case": "clear",
+          "visibleExact": 9,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 3.015984751999895,
+          "maxSeconds": 3.201025560999369,
+          "repeatable": true,
+          "issues": [
+            "TABLE_COLUMNS_MISSING",
+            "ROW_SEGMENTATION_DISAGREEMENT"
+          ],
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "189000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "multiline",
+          "visibleExact": 29,
+          "visibleFields": 30,
+          "numericExact": 14,
+          "numericFields": 14,
+          "moneyExact": 6,
+          "moneyFields": 6,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 21,
+          "lineFields": 21,
+          "wrongNonNull": 1,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 6.375025666999591,
+          "maxSeconds": 6.397034568999516,
+          "repeatable": true,
+          "issues": [],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "12-Nov-2026 11:20:35",
+              "actual": "12-Nov-2026 11: 20: 35",
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "jpeg",
+          "visibleExact": 11,
+          "visibleFields": 23,
+          "numericExact": 4,
+          "numericFields": 10,
+          "moneyExact": 0,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 4,
+          "headerExact": 7,
+          "headerFields": 9,
+          "lineExact": 4,
+          "lineFields": 14,
+          "wrongNonNull": 6,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 3.3712557664998712,
+          "maxSeconds": 3.4457776440003727,
+          "repeatable": true,
+          "issues": [
+            "ROW_SEGMENTATION_DISAGREEMENT",
+            "AMBIGUOUS_NUMERIC:0/quantity",
+            "AMBIGUOUS_NUMERIC:0/price",
+            "AMBIGUOUS_NUMERIC:0/amount",
+            "AMBIGUOUS_NUMERIC:1/quantity",
+            "AMBIGUOUS_NUMERIC:1/price",
+            "AMBIGUOUS_NUMERIC:1/amount"
+          ],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "12-Nov-2026 11:20:35",
+              "actual": "12-Nov- 2026 11: 20:35",
+              "exact": false
+            },
+            {
+              "path": "header/totalAmount",
+              "expected": "495000 CLP",
+              "actual": "495000CLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": "EMPRESA FICTICIA NUMER0 1",
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": "270202/ 0000142 / 420405",
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "189000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/1/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 2",
+              "actual": "EMPRESAFICTICIA NUMER0 2",
+              "exact": false
+            },
+            {
+              "path": "lines/1/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": "270202/ 0000142/ 420405",
+              "exact": false
+            },
+            {
+              "path": "lines/1/quantity",
+              "expected": "4",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/1/price",
+              "expected": "66000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/1/amount",
+              "expected": "264000",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "zero",
+          "visibleExact": 9,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 2.646402254500117,
+          "maxSeconds": 2.6715558750001946,
+          "repeatable": true,
+          "issues": [
+            "TABLE_COLUMNS_MISSING",
+            "ROW_SEGMENTATION_DISAGREEMENT"
+          ],
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "0",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "0",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "small",
+          "visibleExact": 11,
+          "visibleFields": 23,
+          "numericExact": 4,
+          "numericFields": 10,
+          "moneyExact": 0,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 4,
+          "headerExact": 7,
+          "headerFields": 9,
+          "lineExact": 4,
+          "lineFields": 14,
+          "wrongNonNull": 6,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "medianSeconds": 3.4772016840001925,
+          "maxSeconds": 3.9972852829996555,
+          "repeatable": true,
+          "issues": [
+            "CELL_RECHECK_UNAVAILABLE",
+            "AMBIGUOUS_NUMERIC:0/quantity",
+            "AMBIGUOUS_NUMERIC:0/price",
+            "AMBIGUOUS_NUMERIC:0/amount",
+            "AMBIGUOUS_NUMERIC:1/quantity",
+            "AMBIGUOUS_NUMERIC:1/price",
+            "AMBIGUOUS_NUMERIC:1/amount"
+          ],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "12-Nov-2026 11:20:35",
+              "actual": "12-Nov-2026 11: 20:35",
+              "exact": false
+            },
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "0CLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": "MATERIAL DE LABORATORIO PARA D0CENCIA 1",
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": "EMPRESA FICTICIA NUMER0 1",
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "189000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/1/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 2",
+              "actual": "MATERIAL DE LABORATORIO PARA D0CENCIA 2",
+              "exact": false
+            },
+            {
+              "path": "lines/1/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 2",
+              "actual": "EMPRESA FICTICIA NUMER0 2",
+              "exact": false
+            },
+            {
+              "path": "lines/1/quantity",
+              "expected": "4",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/1/price",
+              "expected": "66000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/1/amount",
+              "expected": "264000",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "serif",
+          "visibleExact": 9,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 9,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 3.2962111644997094,
+          "maxSeconds": 3.3162602739994327,
+          "repeatable": true,
+          "issues": [
+            "TABLE_COLUMNS_MISSING",
+            "ROW_SEGMENTATION_DISAGREEMENT"
+          ],
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "189000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        },
+        {
+          "case": "margin",
+          "visibleExact": 22,
+          "visibleFields": 22,
+          "numericExact": 10,
+          "numericFields": 10,
+          "moneyExact": 4,
+          "moneyFields": 4,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 0,
+          "headerExact": 8,
+          "headerFields": 8,
+          "lineExact": 14,
+          "lineFields": 14,
+          "wrongNonNull": 0,
+          "absencesCorrect": 1,
+          "absences": 1,
+          "rowsCorrect": true,
+          "medianSeconds": 5.396986005999679,
+          "maxSeconds": 5.48315225099941,
+          "repeatable": true,
+          "issues": [],
+          "failures": []
+        },
+        {
+          "case": "no-grid",
+          "visibleExact": 8,
+          "visibleFields": 16,
+          "numericExact": 2,
+          "numericFields": 6,
+          "moneyExact": 0,
+          "moneyFields": 2,
+          "moneyWrongNonNull": 0,
+          "moneyMissing": 2,
+          "headerExact": 8,
+          "headerFields": 9,
+          "lineExact": 0,
+          "lineFields": 7,
+          "wrongNonNull": 1,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "medianSeconds": 2.814077018000262,
+          "maxSeconds": 2.8547537720005494,
+          "repeatable": true,
+          "issues": [
+            "TABLE_ROWS_UNRESOLVED",
+            "CELL_RECHECK_UNAVAILABLE"
+          ],
+          "failures": [
+            {
+              "path": "header/sentDate",
+              "expected": "12-Nov-2026 11:20:35",
+              "actual": "12-Nov- 2026 11:20:35",
+              "exact": false
+            },
+            {
+              "path": "lines/0/description",
+              "expected": "MATERIAL DE LABORATORIO PARA DOCENCIA 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "EMPRESA FICTICIA NUMERO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270202 / 0000142 / 420405",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "3",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "63000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "189000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.03.270202.0000142.420405",
+              "actual": null,
+              "exact": false
+            }
+          ]
+        }
+      ],
+      "visibleExact": 108,
+      "visibleFields": 162,
+      "moneyExact": 10,
+      "moneyFields": 26,
+      "moneyWrongNonNull": 0,
+      "moneyMissing": 16,
+      "medianSeconds": 3.286447971999678,
+      "maxSeconds": 6.397034568999516,
+      "processPeakRssKiB": 636336,
+      "containerMemoryPeakBytes": 594812928,
+      "initializationSeconds": 0.020292084000175237,
+      "models": [
+        {
+          "name": "ch_PP-OCRv5_det_mobile.onnx",
+          "sha256": "4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae"
+        },
+        {
+          "name": "latin_PP-OCRv5_rec_mobile.onnx",
+          "sha256": "b20bd37c168a570f583afbc8cd7925603890efbcdc000a59e22c269d160b5f5a"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Synthetic held-out configurations, not independent customer screenshots",
+    "Raw text exact match for a subset of the public contract",
+    "Seven-column bordered tables only; no-grid is a deliberate unsupported case"
+  ]
+}

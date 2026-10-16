@@ -8,6 +8,7 @@ ContainerName=cenit-nginx
 Network=cenit.network
 Environment=NGINX_ENTRYPOINT_WORKER_PROCESSES_AUTOTUNE=1
 PublishPort=172.16.13.103:8081:8080
+PublishPort=127.0.0.1:8081:8080
 Volume=@STATE_DIR@/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro,Z
 Volume=@STATE_DIR@/html:/usr/share/nginx/html:ro,Z
 PodmanArgs=--memory=128m --cpus=0.5

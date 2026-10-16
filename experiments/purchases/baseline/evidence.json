@@ -1,0 +1,1125 @@
+{
+  "date": "2026-10-14",
+  "environment": "Podman Linux amd64, CPU-only, quota 1 CPU / 1 GiB per engine, sequential runs",
+  "limitations": [
+    "Synthetic template, not independent customer samples",
+    "Exact raw visible-text comparison, not all fields of the public extraction contract",
+    "No API, database, VM or production endpoint exercised"
+  ],
+  "sourceHashes": {
+    "fixtures.py": "7ba13e6b3a7d01530c3fb9f5dc82de6994312dc10bfd65a9a97cb4531bc64bd1",
+    "benchmark.py": "a6f002dcee001a939164b6283bfe542d38bf0f053bccaec4c27acbe2e7337047"
+  },
+  "engines": [
+    {
+      "engine": "tesseract",
+      "runs": 33,
+      "samples": [
+        {
+          "case": "single",
+          "medianSeconds": 0.9166877840002599,
+          "presentExact": 14,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "OCLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": "270101/0000000 / 410103",
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "multiple",
+          "medianSeconds": 0.9343569880002178,
+          "presentExact": 26,
+          "presentFields": 30,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "OCLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": "270101/0000000 / 410103",
+              "exact": false
+            },
+            {
+              "path": "lines/1/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": "270101/0000000 / 410103",
+              "exact": false
+            },
+            {
+              "path": "lines/2/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": "270101/0000000 / 410103",
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "long",
+          "medianSeconds": 0.8271735660000559,
+          "presentExact": 14,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "OCLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": "270101/0000000 / 410103",
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "zeros",
+          "medianSeconds": 0.7590318140000818,
+          "presentExact": 11,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/totalAmount",
+              "expected": "0 CLP",
+              "actual": "OCLP",
+              "exact": false
+            },
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "OCLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": "270101/0000000 / 410103",
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "0",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "0",
+              "actual": null,
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "missing",
+          "medianSeconds": 0.7713183860000754,
+          "presentExact": 13,
+          "presentFields": 15,
+          "absencesCorrect": 1,
+          "absences": 1,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "OCLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": "270101/0000000 / 410103",
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "jpeg",
+          "medianSeconds": 0.9255992170001264,
+          "presentExact": 14,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/oracleId",
+              "expected": "003254486",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "ocLP",
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "small",
+          "medianSeconds": 0.7840947190002225,
+          "presentExact": 3,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "failures": [
+            {
+              "path": "header/recipient",
+              "expected": "PERSONA DEMO DOS",
+              "actual": "PERSONA DEMO DOS.",
+              "exact": false
+            },
+            {
+              "path": "header/sentDate",
+              "expected": "08-Dic-2025 16:35:54",
+              "actual": "08.0 2025 16:35:58",
+              "exact": false
+            },
+            {
+              "path": "header/oracleId",
+              "expected": "003254486",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "header/totalAmount",
+              "expected": "440.000 CLP",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "header/attachmentReference",
+              "expected": "REFERENCIA FICTICIA",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/description",
+              "expected": "SERVICIO FICTICIO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "PROVEEDOR DEMO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "440000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "440000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.02.270101.0000000.410103",
+              "actual": null,
+              "exact": false
+            }
+          ],
+          "issues": [
+            "TABLE_COLUMNS_MISSING"
+          ],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "scaled",
+          "medianSeconds": 1.06417637200002,
+          "presentExact": 13,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/oracleId",
+              "expected": "003254486",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "O CLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": "270101 /0000000/410103",
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "margins",
+          "medianSeconds": 0.7576500340001076,
+          "presentExact": 14,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "OCLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": "270101/0000000 / 410103",
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "cropped",
+          "medianSeconds": 0.5712734640001145,
+          "presentExact": 0,
+          "presentFields": 7,
+          "absencesCorrect": 9,
+          "absences": 9,
+          "rowsCorrect": false,
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "SERVICIO FICTICIO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "PROVEEDOR DEMO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "440000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "440000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.02.270101.0000000.410103",
+              "actual": null,
+              "exact": false
+            }
+          ],
+          "issues": [
+            "TABLE_ANCHOR_MISSING"
+          ],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "blank",
+          "medianSeconds": 0.5674445360000391,
+          "presentExact": 0,
+          "presentFields": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [],
+          "issues": [
+            "TABLE_ANCHOR_MISSING"
+          ],
+          "errors": [],
+          "repeatable": true
+        }
+      ],
+      "medianSeconds": 0.7842999990002681,
+      "maxSeconds": 1.4432784100004028,
+      "loadedModelFiles": [],
+      "containerMemoryPeakBytes": 96944128,
+      "pythonPeakRssKiB": 94612,
+      "largestChildPeakRssKiB": 77408,
+      "initializationSecondsIncludingDownloads": 2.524000137782423e-06,
+      "dependencies": [
+        "certifi==2026.7.22",
+        "charset-normalizer==3.5.2",
+        "colorlog==6.12.0",
+        "flatbuffers==25.12.19",
+        "idna==3.20",
+        "numpy==2.4.6",
+        "omegaconf==2.4.0",
+        "onnxruntime==1.28.0",
+        "opencv-python-headless==5.0.0.93",
+        "packaging==26.3",
+        "pillow==12.3.0",
+        "protobuf==7.36.2",
+        "pyclipper==1.4.0",
+        "PyYAML==6.0.3",
+        "rapidocr==3.10.0",
+        "requests==2.34.2",
+        "shapely==2.2.0",
+        "six==1.17.0",
+        "tqdm==4.70.1",
+        "urllib3==2.8.0"
+      ],
+      "tesseractVersion": "tesseract 5.3.0"
+    },
+    {
+      "engine": "tesseract-upscale",
+      "runs": 33,
+      "samples": [
+        {
+          "case": "single",
+          "medianSeconds": 1.4432897579999917,
+          "presentExact": 15,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "O CLP",
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "multiple",
+          "medianSeconds": 1.5350843290002558,
+          "presentExact": 29,
+          "presentFields": 30,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "O CLP",
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "long",
+          "medianSeconds": 1.2305970029997297,
+          "presentExact": 15,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "O CLP",
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "zeros",
+          "medianSeconds": 1.4219985939998878,
+          "presentExact": 13,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/totalAmount",
+              "expected": "0 CLP",
+              "actual": "O CLP",
+              "exact": false
+            },
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "O CLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "0",
+              "actual": null,
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "missing",
+          "medianSeconds": 1.2373542390000694,
+          "presentExact": 14,
+          "presentFields": 15,
+          "absencesCorrect": 1,
+          "absences": 1,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "O CLP",
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "jpeg",
+          "medianSeconds": 1.293231071000264,
+          "presentExact": 8,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "failures": [
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "O CLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/description",
+              "expected": "SERVICIO FICTICIO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "PROVEEDOR DEMO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "440000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "440000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.02.270101.0000000.410103",
+              "actual": null,
+              "exact": false
+            }
+          ],
+          "issues": [
+            "TABLE_COLUMNS_MISSING"
+          ],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "small",
+          "medianSeconds": 0.9208685819999118,
+          "presentExact": 7,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "failures": [
+            {
+              "path": "header/totalAmount",
+              "expected": "440.000 CLP",
+              "actual": "440,000 CLP",
+              "exact": false
+            },
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "ocuP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/description",
+              "expected": "SERVICIO FICTICIO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "PROVEEDOR DEMO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "440000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "440000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.02.270101.0000000.410103",
+              "actual": null,
+              "exact": false
+            }
+          ],
+          "issues": [
+            "TABLE_ROWS_UNRESOLVED"
+          ],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "scaled",
+          "medianSeconds": 1.755973305000225,
+          "presentExact": 14,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "O CLP",
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": "270101 /0000000 /410103",
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "margins",
+          "medianSeconds": 1.3229774729998098,
+          "presentExact": 15,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "header/taxAmount",
+              "expected": "0 CLP",
+              "actual": "O CLP",
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "cropped",
+          "medianSeconds": 0.8919720790004249,
+          "presentExact": 7,
+          "presentFields": 7,
+          "absencesCorrect": 9,
+          "absences": 9,
+          "rowsCorrect": true,
+          "failures": [],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "blank",
+          "medianSeconds": 0.7211824460000571,
+          "presentExact": 0,
+          "presentFields": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [],
+          "issues": [
+            "TABLE_ANCHOR_MISSING"
+          ],
+          "errors": [],
+          "repeatable": true
+        }
+      ],
+      "medianSeconds": 1.293231071000264,
+      "maxSeconds": 1.8781357430002572,
+      "loadedModelFiles": [],
+      "containerMemoryPeakBytes": 205631488,
+      "pythonPeakRssKiB": 120404,
+      "largestChildPeakRssKiB": 127776,
+      "initializationSecondsIncludingDownloads": 3.0559999686374795e-06,
+      "dependencies": [
+        "certifi==2026.7.22",
+        "charset-normalizer==3.5.2",
+        "colorlog==6.12.0",
+        "flatbuffers==25.12.19",
+        "idna==3.20",
+        "numpy==2.4.6",
+        "omegaconf==2.4.0",
+        "onnxruntime==1.28.0",
+        "opencv-python-headless==5.0.0.93",
+        "packaging==26.3",
+        "pillow==12.3.0",
+        "protobuf==7.36.2",
+        "pyclipper==1.4.0",
+        "PyYAML==6.0.3",
+        "rapidocr==3.10.0",
+        "requests==2.34.2",
+        "shapely==2.2.0",
+        "six==1.17.0",
+        "tqdm==4.70.1",
+        "urllib3==2.8.0"
+      ],
+      "tesseractVersion": "tesseract 5.3.0"
+    },
+    {
+      "engine": "rapid",
+      "runs": 33,
+      "samples": [
+        {
+          "case": "single",
+          "medianSeconds": 3.222643138999956,
+          "presentExact": 16,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "multiple",
+          "medianSeconds": 3.346763428000031,
+          "presentExact": 30,
+          "presentFields": 30,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "long",
+          "medianSeconds": 3.3410089250000965,
+          "presentExact": 15,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "lines/0/quantity",
+              "expected": "1",
+              "actual": null,
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "zeros",
+          "medianSeconds": 3.0224460509998607,
+          "presentExact": 14,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [
+            {
+              "path": "lines/0/price",
+              "expected": "0",
+              "actual": "o",
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "0",
+              "actual": "o",
+              "exact": false
+            }
+          ],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "missing",
+          "medianSeconds": 2.5620897779999723,
+          "presentExact": 15,
+          "presentFields": 15,
+          "absencesCorrect": 1,
+          "absences": 1,
+          "rowsCorrect": true,
+          "failures": [],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "jpeg",
+          "medianSeconds": 3.0661032739999428,
+          "presentExact": 9,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "SERVICIO FICTICIO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "PROVEEDOR DEMO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "440000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "440000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.02.270101.0000000.410103",
+              "actual": null,
+              "exact": false
+            }
+          ],
+          "issues": [
+            "TABLE_COLUMNS_MISSING"
+          ],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "small",
+          "medianSeconds": 2.5424985379995633,
+          "presentExact": 9,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": false,
+          "failures": [
+            {
+              "path": "lines/0/description",
+              "expected": "SERVICIO FICTICIO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/provider",
+              "expected": "PROVEEDOR DEMO 1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/costCenter",
+              "expected": "270101 / 0000000 / 410103",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/quantity",
+              "expected": "1",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/price",
+              "expected": "440000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/amount",
+              "expected": "440000",
+              "actual": null,
+              "exact": false
+            },
+            {
+              "path": "lines/0/chargeAccount",
+              "expected": "01.02.270101.0000000.410103",
+              "actual": null,
+              "exact": false
+            }
+          ],
+          "issues": [
+            "TABLE_ROWS_UNRESOLVED"
+          ],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "scaled",
+          "medianSeconds": 3.363475123999706,
+          "presentExact": 16,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "margins",
+          "medianSeconds": 2.4645765799996298,
+          "presentExact": 16,
+          "presentFields": 16,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "cropped",
+          "medianSeconds": 2.108410926000033,
+          "presentExact": 7,
+          "presentFields": 7,
+          "absencesCorrect": 9,
+          "absences": 9,
+          "rowsCorrect": true,
+          "failures": [],
+          "issues": [],
+          "errors": [],
+          "repeatable": true
+        },
+        {
+          "case": "blank",
+          "medianSeconds": 0.5101086470003793,
+          "presentExact": 0,
+          "presentFields": 0,
+          "absencesCorrect": 0,
+          "absences": 0,
+          "rowsCorrect": true,
+          "failures": [],
+          "issues": [
+            "TABLE_ANCHOR_MISSING"
+          ],
+          "errors": [],
+          "repeatable": true
+        }
+      ],
+      "medianSeconds": 2.976787451999826,
+      "maxSeconds": 3.7368909599999824,
+      "loadedModelFiles": [
+        {
+          "file": "ch_PP-OCRv5_det_mobile.onnx",
+          "bytes": 4819576,
+          "sha256": "4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae"
+        },
+        {
+          "file": "ch_ppocr_mobile_v2.0_cls_mobile.onnx",
+          "bytes": 585532,
+          "sha256": "e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c"
+        },
+        {
+          "file": "latin_PP-OCRv5_rec_mobile.onnx",
+          "bytes": 7904513,
+          "sha256": "b20bd37c168a570f583afbc8cd7925603890efbcdc000a59e22c269d160b5f5a"
+        }
+      ],
+      "containerMemoryPeakBytes": 657948672,
+      "pythonPeakRssKiB": 699016,
+      "largestChildPeakRssKiB": 868,
+      "initializationSecondsIncludingDownloads": 0.7059888789999604,
+      "dependencies": [
+        "certifi==2026.7.22",
+        "charset-normalizer==3.5.2",
+        "colorlog==6.12.0",
+        "flatbuffers==25.12.19",
+        "idna==3.20",
+        "numpy==2.4.6",
+        "omegaconf==2.4.0",
+        "onnxruntime==1.28.0",
+        "opencv-python-headless==5.0.0.93",
+        "packaging==26.3",
+        "pillow==12.3.0",
+        "protobuf==7.36.2",
+        "pyclipper==1.4.0",
+        "PyYAML==6.0.3",
+        "rapidocr==3.10.0",
+        "requests==2.34.2",
+        "shapely==2.2.0",
+        "six==1.17.0",
+        "tqdm==4.70.1",
+        "urllib3==2.8.0"
+      ],
+      "tesseractVersion": "tesseract 5.3.0"
+    }
+  ]
+}

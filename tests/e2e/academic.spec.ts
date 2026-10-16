@@ -1,0 +1,446 @@
+import { test, expect } from '@playwright/test';
+import { login } from './support/browser.js';
+
+const courses = (page: import('@playwright/test').Page) => page.getByRole('button', { name: /^Ver asignatura:/ });
+async function chooseStudent(page: import('@playwright/test').Page, name: string) {
+  await expect(page.locator('.academic-students')).toBeVisible();
+  const change = page.getByRole('button', { name: /^Cambiar estudiante$/ });
+  if (await change.isVisible()) await change.click();
+  await page.locator('.academic-students__results').getByRole('button', { name: new RegExp(`^${name}`) }).click();
+}
+
+async function expectLatestGrade(page: import('@playwright/test').Page, grade: string) {
+  await page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true }).click();
+  await expect(page.getByRole('dialog').locator('.academic-facts').first().getByText(grade, { exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+}
+for (const role of ['docente', 'estudiante']) {
+  test(`catálogo PostgreSQL, recarga y trazabilidad de API: ${role}`, async ({ page }) => {
+    await login(page, role);
+    await expect(courses(page)).toHaveCount(52);
+    const internados = page.getByRole('region', { name: 'Semestres IX–X', exact: true });
+    await expect(internados.locator('button')).toHaveCount(4);
+    await expect(internados.getByRole('heading')).toHaveText('IX–X');
+    const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/2027-r1');
+    expect(response.status()).toBe(200);
+    const data = (await response.json()).data;
+    expect(data.courses).toHaveLength(52);
+    expect(data.courses.filter((course: { semester: number }) => course.semester === 9).reduce((sum: number, course: { credits: number }) => sum + course.credits, 0)).toBe(65);
+    expect(data.sources.map((source: { validationStatus: string }) => source.validationStatus)).toEqual(['teamReviewed', 'teamReviewed']);
+    await page.reload(); await expect(courses(page)).toHaveCount(52);
+  });
+}
+
+test('detalle con teclado, relaciones pendientes y ausencia desconocida', async ({ page }) => {
+  await login(page); await expect(courses(page)).toHaveCount(52);
+  const card = page.getByRole('button', { name: 'Ver asignatura: Inocuidad alimentaria', exact: true });
+  await card.focus(); await card.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Inocuidad alimentaria' });
+  await expect(dialog).toContainText('Relaciones entre asignaturas');
+  await expect(dialog).toContainText('No indican por sí solas los requisitos para inscribir la asignatura.');
+  await expect(dialog).not.toContainText('En revisión');
+  await expect(dialog).toContainText('Ciencia de los alimentos');
+  await expect(dialog.getByRole('button', { name: 'Cerrar detalle' })).toBeFocused();
+  await page.keyboard.press('Escape'); await expect(card).toBeFocused();
+  await expect(card).toHaveCSS('outline-color', 'rgb(83, 97, 118)');
+  await expect(card).toHaveCSS('outline-style', 'solid');
+  await expect(card).toHaveCSS('outline-offset', '-2px');
+  await card.click();
+  await page.getByRole('button', { name: 'Cerrar detalle' }).click();
+  await expect(card).toBeFocused();
+  await expect(card).toHaveCSS('outline-style', 'none');
+  await page.getByRole('button', { name: 'Ver asignatura: Form. general I (Formación general electiva I)', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('Todavía no hay información de prerrequisitos para esta asignatura.');
+  await expect(page.getByRole('dialog').getByText('Sin prerrequisitos.', { exact: true })).toHaveCount(0);
+});
+
+for (const role of ['estudiante', 'docente']) {
+  test(`detalle y malla sin recuadros de foco al usar mouse: ${role}`, async ({ page }) => {
+    await login(page, role); await expect(courses(page)).toHaveCount(52);
+    const card = courses(page).first();
+    const board = page.getByRole('region', { name: 'Asignaturas por semestre', exact: true });
+    await card.click();
+    await expect(page.getByRole('button', { name: 'Cerrar detalle' })).toHaveCSS('outline-style', 'none');
+    await page.getByRole('button', { name: 'Cerrar detalle' }).click();
+    await expect(card).toBeFocused();
+    // Pasar por teclado reproduce el foco que puede conservar el diálogo.
+    await card.focus(); await card.press('Enter'); await page.keyboard.press('Escape');
+    await card.click();
+    const close = page.getByRole('button', { name: 'Cerrar detalle' });
+    await expect(close).toHaveCSS('outline-style', 'none');
+    await close.click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await card.click();
+    const backdrop = await page.locator('.academic-semester__header').first().boundingBox();
+    await page.mouse.click(backdrop!.x + backdrop!.width / 2, backdrop!.y + backdrop!.height / 2);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(card).toBeFocused();
+    await expect(card).toHaveCSS('outline-style', 'none');
+    await page.mouse.click(backdrop!.x + backdrop!.width / 2, backdrop!.y + backdrop!.height / 2);
+    // Safari puede mantener :focus-visible, pero el mouse no debe dibujar el borde.
+    await expect(board).toHaveCSS('outline-style', 'none');
+    await board.focus(); await page.keyboard.press('ArrowRight');
+    await expect(board).toHaveCSS('outline-style', 'solid');
+    await page.mouse.click(backdrop!.x + backdrop!.width / 2, backdrop!.y + backdrop!.height / 2);
+    await expect(board).toHaveCSS('outline-style', 'none');
+  });
+}
+
+test('lista vacía válida y respuesta inválida no se sustituyen por datos fijos', async ({ page }) => {
+  await page.route('**/api/v1/academic/plans', route => route.fulfill({ json: { data: [] } }));
+  await login(page);
+  await expect(page.getByRole('heading', { name: 'La malla todavía no está disponible' })).toBeVisible();
+  await expect(courses(page)).toHaveCount(0);
+  await page.unroute('**/api/v1/academic/plans');
+  await page.route('**/api/v1/academic/plans/*/versions/*', route => route.fulfill({ json: { data: { courses: [] } } }));
+  await page.getByRole('button', { name: 'Volver a consultar' }).click();
+  await expect(page.getByRole('alert')).toHaveText('El servidor devolvió un catálogo inválido.');
+  await expect(courses(page)).toHaveCount(0);
+  await page.unroute('**/api/v1/academic/plans/*/versions/*');
+  await page.getByRole('button', { name: 'Reintentar' }).click();
+  await expect(courses(page)).toHaveCount(52);
+});
+
+test('servicio caído permite reintentar; 401 limpia catálogo y detalle', async ({ page }) => {
+  await page.route('**/api/v1/academic/plans', route => route.fulfill({ status: 503, json: { error: { code: 'SERVICE_UNAVAILABLE', message: 'El servicio no está disponible.', requestId: 'test' } } }));
+  await login(page);
+  await expect(page.getByRole('alert')).toHaveText('El servicio no está disponible.');
+  await page.unroute('**/api/v1/academic/plans');
+  await page.getByRole('button', { name: 'Reintentar' }).click();
+  await expect(courses(page)).toHaveCount(52);
+  await courses(page).first().click(); await expect(page.getByRole('dialog')).toBeVisible();
+  await page.route('**/api/v1/academic/plans', route => route.fulfill({ status: 401, json: { error: { code: 'AUTHENTICATION_REQUIRED', message: 'Debes iniciar sesión.', requestId: 'test' } } }));
+  await page.reload();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
+  await expect(courses(page)).toHaveCount(0); await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('administrativo y anónimo no obtienen el catálogo aunque entren directamente', async ({ page }) => {
+  expect((await page.request.get('/api/v1/academic/plans')).status()).toBe(401);
+  await login(page, 'administrativo');
+  await page.goto('/academico'); await expect(page).toHaveURL(/\/administracion$/);
+  expect((await page.request.get('/api/v1/academic/plans')).status()).toBe(403);
+  await expect(courses(page)).toHaveCount(0);
+});
+
+test('respuesta de catálogo tardía no reaparece tras logout y cambio de cuenta', async ({ page }) => {
+  let release: (() => void) | undefined;
+  await page.route('**/api/v1/academic/plans/*/versions/*', async route => {
+    const response = await route.fetch();
+    await new Promise<void>(resolve => { release = resolve; });
+    await route.fulfill({ response }).catch(() => {});
+  });
+  const account = await login(page);
+  await expect.poll(() => Boolean(release)).toBe(true);
+  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/); release!();
+  await expect(courses(page)).toHaveCount(0);
+  await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
+  await page.unroute('**/api/v1/academic/plans/*/versions/*');
+  await login(page, 'estudiante'); await expect(courses(page)).toHaveCount(52);
+});
+
+test('estudiante consulta RUT, estados e intentos propios y el docente ve el mismo historial', async ({ page }, testInfo) => {
+  await login(page, 'estudiante');
+  const context = page.getByRole('region', { name: 'Avance curricular', exact: true });
+  await expect(context).toContainText('20.123.456-5');
+  const first = page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true });
+  await expect(first).toContainText('Aprobada');
+  await expect(first).not.toContainText('5,2');
+  await expect(first.locator('.academic-course__name')).toHaveText('Cs. alimentos');
+  await expect(first).toHaveAccessibleDescription('Aprobada 7 SCT');
+  await first.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('heading', { name: 'Ciencia de los alimentos', exact: true })).toBeVisible();
+  await expect(dialog).toContainText('Historial de intentos');
+  await dialog.locator('summary').filter({ hasText: 'Historial de intentos' }).click();
+  await expect(dialog.getByRole('row')).toHaveCount(3);
+  await expect(dialog.getByRole('row').nth(1)).toContainText('Reprobada');
+  await expect(dialog.getByRole('row').nth(1)).toContainText('3,2');
+  await expect(dialog.getByRole('row').nth(2)).toContainText('5,2');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.screenshot({ path: testInfo.outputPath('historial-1440.png') });
+  await page.keyboard.press('Escape');
+  await page.reload(); await expect(first).toContainText('Aprobada');
+  const own = await page.request.get('/api/v1/academic/me/progress'); expect(own.status()).toBe(200);
+  const data = (await own.json()).data;
+  expect((await page.request.get(`/api/v1/academic/students/${data.student.id}/progress`)).status()).toBe(403);
+  expect((await page.request.get('/api/v1/academic/students')).status()).toBe(403);
+  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  await login(page);
+  await chooseStudent(page, 'Estudiante Demo');
+  await expect(context).toContainText('20.123.456-5');
+  const teacher = await page.request.get(`/api/v1/academic/students/${data.student.id}/progress`);
+  expect((await teacher.json()).data).toEqual(data);
+});
+
+test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezclar datos', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page);
+  const results = page.locator('.academic-students__results');
+  await expect(results).toBeVisible();
+  await expect(results.getByRole('button')).toHaveCount(3);
+  await page.screenshot({ path: testInfo.outputPath('busqueda-docente-1440.png') });
+  await page.getByLabel('RUT', { exact: true }).fill('211234563');
+  await expect(results.getByRole('button')).toHaveCount(1);
+  await results.getByRole('button', { name: /^Camila Demo/ }).click();
+  await expect(page.getByRole('region', { name: 'Avance curricular', exact: true })).toContainText('Camila Demo');
+  const first = page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true });
+  await expectLatestGrade(page, '6,5');
+  await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
+  await page.getByLabel('Nombre', { exact: true }).fill('Estudiante');
+  await expect(page.getByRole('status')).toContainText('No hay estudiantes que coincidan');
+  await expect(first).not.toContainText('Aprobada');
+  await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
+  await expect(results.getByRole('button')).toHaveCount(3);
+  await chooseStudent(page, 'Tomás Demo');
+  await expectLatestGrade(page, '6');
+  await chooseStudent(page, 'Estudiante Demo');
+  await expect(first).toContainText('Aprobada');
+  await expect(first).not.toContainText('5,2');
+  await expect(first.locator('.academic-course__name')).toHaveText('Cs. alimentos');
+  await expectLatestGrade(page, '5,2');
+  await page.getByRole('button', { name: 'Ver asignatura: Fund. biológicos (Fundamentos biológicos para la nutrición)', exact: true }).click();
+  await expect(page.getByRole('dialog').locator('.academic-facts').first()).toContainText('2,5');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Ver asignatura: Inglés 1', exact: true }).click();
+  await page.getByRole('dialog').locator('summary').filter({ hasText: 'Historial de intentos' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Sin intentos registrados');
+  await page.keyboard.press('Escape');
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1920, height: 1080 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await page.evaluate(() => { document.querySelector('.academic-content')!.scrollTop = 0; document.querySelector('.academic-board')!.scrollLeft = 0; });
+    await page.getByRole('heading', { name: 'Malla curricular', exact: true }).focus(); await page.mouse.move(0, 0);
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`avance-${viewport.width}.png`) });
+  }
+});
+
+test('un historial tardío no sustituye al estudiante seleccionado después', async ({ page }) => {
+  await login(page);
+  let release: (() => void) | undefined;
+  await page.route('**/api/v1/academic/students/10000000-0000-4000-8000-000000000003/progress', async route => {
+    const response = await route.fetch();
+    await new Promise<void>(resolve => { release = resolve; });
+    await route.fulfill({ response }).catch(() => {});
+  });
+  await chooseStudent(page, 'Tomás Demo');
+  await expect.poll(() => Boolean(release)).toBe(true);
+  await chooseStudent(page, 'Camila Demo');
+  const context = page.getByRole('region', { name: 'Avance curricular', exact: true });
+  await expect(context.locator('.academic-student-identity')).toContainText('Camila Demo');
+  release!();
+  await expect(context.locator('.academic-student-identity')).not.toContainText('Tomás Demo');
+  await expectLatestGrade(page, '6,5');
+});
+
+test('búsqueda automática por coincidencias y formato/verificación de RUT mientras se escribe', async ({ page }) => {
+  await login(page);
+  const results = page.locator('.academic-students__results');
+  const name = page.getByLabel('Nombre', { exact: true });
+  const rut = page.getByLabel('RUT', { exact: true });
+  await expect(results.getByRole('button')).toHaveCount(3);
+  await name.pressSequentially('cam');
+  await expect(results.getByRole('button')).toHaveCount(1);
+  await expect(results).toContainText('Camila Demo');
+  await name.fill('');
+  await rut.pressSequentially('21');
+  await expect(results.getByRole('button')).toHaveCount(1);
+  await expect(results).toContainText('Camila Demo');
+  await rut.pressSequentially('1234563');
+  await expect(rut).toHaveValue('21.123.456-3');
+  await expect(results.getByRole('button')).toHaveCount(1);
+  await rut.press('Backspace');
+  await expect(rut).toHaveValue('21.123.456');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await rut.press('4');
+  await expect(rut).toHaveValue('21.123.456-4');
+  await expect(page.getByRole('alert')).toContainText('módulo 11');
+  await expect(rut).toHaveAttribute('aria-invalid', 'true');
+  await expect(results).toHaveCount(0);
+  await rut.fill(' 21.123.456-3 ');
+  await expect(rut).toHaveValue('21.123.456-3');
+  await expect(results).toContainText('Camila Demo');
+  await name.fill('Tomás');
+  await expect(page.getByRole('status')).toContainText('No hay estudiantes que coincidan');
+  await rut.fill('');
+  await expect(results).toContainText('Tomás Demo');
+  await rut.fill('20000003k');
+  await expect(rut).toHaveValue('20.000.003-K');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await rut.fill('20123456x');
+  await expect(page.getByRole('alert')).toContainText('módulo 11');
+  await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
+  await expect(results.getByRole('button')).toHaveCount(3);
+  await rut.fill('20.123.456-5');
+  await rut.evaluate((input: HTMLInputElement) => input.setSelectionRange(1, 1));
+  await rut.press('Delete');
+  await expect(rut).toHaveValue('2.123.456-5');
+  expect(await rut.evaluate((input: HTMLInputElement) => input.selectionStart)).toBe(1);
+});
+
+test('una respuesta de búsqueda tardía no reemplaza las coincidencias actuales', async ({ page }) => {
+  await login(page);
+  let release: (() => void) | undefined;
+  await page.route('**/api/v1/academic/students?**', async route => {
+    if (new URL(route.request().url()).searchParams.get('name') !== 'Camila') return route.continue();
+    const response = await route.fetch();
+    await new Promise<void>(resolve => { release = resolve; });
+    await route.fulfill({ response }).catch(() => {});
+  });
+  await page.getByLabel('Nombre', { exact: true }).fill('Camila');
+  await expect.poll(() => Boolean(release)).toBe(true);
+  await page.getByLabel('Nombre', { exact: true }).fill('Tomás');
+  const results = page.locator('.academic-students__results');
+  await expect(results).toContainText('Tomás Demo');
+  release!();
+  await expect(results.getByRole('button')).toHaveCount(1);
+  await expect(results).not.toContainText('Camila Demo');
+});
+
+test('40 coincidencias se recorren en páginas de seis y un filtro nuevo vuelve a la primera', async ({ page }) => {
+  await page.route('**/api/v1/academic/students?**', async route => {
+    const search = new URL(route.request().url()).searchParams;
+    expect(search.get('pageSize')).toBe('6');
+    const current = Number(search.get('page'));
+    const total = search.has('name') ? 1 : 40;
+    const start = (current - 1) * 6;
+    const data = Array.from({ length: Math.min(6, total - start) }, (_, index) => ({ id: `10000000-0000-4000-8000-${String(start + index + 1).padStart(12, '0')}`, name: `Estudiante de prueba ${start + index + 1}`, rut: '20.123.456-5' }));
+    await route.fulfill({ json: { data, page: current, pageSize: 6, totalItems: total } });
+  });
+  await login(page);
+  const results = page.locator('.academic-students__results');
+  await expect(results.getByRole('button')).toHaveCount(6);
+  await expect(page.getByRole('status')).toContainText('40 estudiantes encontrados · Mostrando 1–6');
+  await expect(page.getByRole('button', { name: 'Anterior', exact: true })).toBeDisabled();
+  for (let current = 2; current <= 7; current++) {
+    await page.getByRole('button', { name: 'Siguiente', exact: true }).click();
+    await expect(page.locator('.academic-students__pagination')).toContainText(`Página ${current} de 7`);
+  }
+  await expect(results.getByRole('button')).toHaveCount(4);
+  await expect(page.getByRole('button', { name: 'Siguiente', exact: true })).toBeDisabled();
+  await page.getByLabel('Nombre', { exact: true }).fill('prueba');
+  await expect(results.getByRole('button')).toHaveCount(1);
+  await expect(results).toContainText('Estudiante de prueba 1');
+  await expect(page.locator('.academic-students__pagination')).toHaveCount(0);
+});
+
+test('historial ausente o inválido no se convierte a no cursado y permite reintentar', async ({ page }) => {
+  await page.route('**/api/v1/academic/me/progress', route => route.fulfill({ status: 404, json: { error: { code: 'NOT_FOUND', message: 'Perfil no encontrado.', requestId: 'test' } } }));
+  await login(page, 'estudiante');
+  await expect(page.getByRole('alert')).toContainText('perfil académico preparado');
+  await expect(courses(page)).toHaveCount(52);
+  await expect(page.locator('.academic-progress-badge')).toHaveCount(0);
+  await page.unroute('**/api/v1/academic/me/progress');
+  await page.route('**/api/v1/academic/me/progress', route => route.fulfill({ json: { data: { courses: [] } } }));
+  await page.getByRole('button', { name: 'Reintentar historial', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveText('El servidor devolvió un historial inválido.');
+  await expect(page.locator('.academic-progress-badge')).toHaveCount(0);
+  await page.unroute('**/api/v1/academic/me/progress');
+  await page.getByRole('button', { name: 'Reintentar historial', exact: true }).click();
+  await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
+});
+
+test('malla compacta conserva contexto, espacio de lectura y navegación plegable', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await login(page);
+  await expect(courses(page)).toHaveCount(52);
+  await expect(page.getByLabel('Nombre', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Buscar estudiante', exact: true })).toHaveCount(0);
+  await expect(page.getByText('Plan 2027', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Búsqueda automática por nombre o RUT.', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('Prerrequisitos en revisión', { exact: true })).toHaveCount(0);
+  expect((await page.getByLabel('Nombre', { exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(36);
+  await expect(page.locator('.academic-semester__header h2')).toHaveText(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX–X']);
+  await chooseStudent(page, 'Estudiante Demo');
+  await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
+  await page.getByRole('heading', { name: 'Malla curricular', exact: true }).focus();
+  await page.evaluate(() => { document.querySelector('.academic-content')!.scrollTop = 0; });
+  const density = await page.evaluate(() => {
+    const visibleBottom = document.querySelector('.academic-content')!.getBoundingClientRect().bottom;
+    const cards = [...document.querySelectorAll('.academic-semester:first-child .academic-course')].map(element => element.getBoundingClientRect());
+    return { first: cards[0]!.top, completeRows: cards.filter(card => card.bottom <= visibleBottom).length };
+  });
+  expect(density.first).toBeLessThan(230);
+  expect(density.completeRows).toBeGreaterThanOrEqual(6);
+  await page.getByRole('button', { name: 'Ocultar navegación', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: 'Área académica' })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Cerrar sesión', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: 'Área académica' })).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const allVisible = await courses(page).evaluateAll(elements => {
+    const viewport = document.querySelector('.academic-content')!.getBoundingClientRect();
+    return elements.every(element => { const card = element.getBoundingClientRect(); return card.top >= viewport.top && card.bottom <= viewport.bottom && card.left >= viewport.left && card.right <= viewport.right; });
+  });
+  expect(allVisible).toBe(true);
+});
+
+test('selector sólo con varias versiones y un historial no se aplica a otra versión', async ({ page }) => {
+  await page.route('**/api/v1/academic/plans', async route => {
+    const response = await route.fetch(); const body = await response.json();
+    body.data[0].versions.push({ version: '2027-r2', isExample: true });
+    await route.fulfill({ json: body });
+  });
+  await page.route('**/api/v1/academic/plans/nutricion-dietetica/versions/2027-r2', async route => {
+    const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/2027-r1');
+    const body = await response.json(); body.data.version = '2027-r2'; body.data.isExample = true;
+    await route.fulfill({ json: body });
+  });
+  await login(page, 'estudiante');
+  await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
+  await page.getByLabel('Versión del plan', { exact: true }).selectOption('2027-r2');
+  await expect(page.getByRole('status')).toContainText('El historial pertenece a la versión 2027-r1');
+  await expect(page.locator('.academic-progress-badge')).toHaveCount(0);
+  await page.getByLabel('Versión del plan', { exact: true }).selectOption('2027-r1');
+  await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
+});
+
+test('malla y detalle legibles al redimensionar sin overflow del documento', async ({ page }, testInfo) => {
+  const account = await login(page); await expect(courses(page)).toHaveCount(52);
+  await chooseStudent(page, 'Estudiante Demo');
+  await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
+  const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/2027-r1');
+  const names: string[] = (await response.json()).data.courses.map((course: { name: string }) => course.name);
+  for (const width of [1920, 1440, 1280, 1024, 768, 721, 720, 390, 320]) {
+    await page.setViewportSize({ width, height: 600 });
+    if (width <= 720) await expect(page.locator('.academic-mobile-account')).toContainText(account.name);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `overflow a ${width}px`).toBe(true);
+    const cards = await courses(page).evaluateAll(elements => elements.map(element => {
+      const bounds = element.getBoundingClientRect();
+      const label = element.querySelector('.academic-course__name')!;
+      const name = label.getBoundingClientRect();
+      const footer = element.querySelector('.academic-course__footer')!;
+      const metadata = footer.getBoundingClientRect();
+      return { width: bounds.width, height: bounds.height, nameFits: label.scrollHeight <= label.clientHeight + 1 && label.scrollWidth <= label.clientWidth && name.bottom <= metadata.top && name.right <= bounds.right, label: label.textContent!, accessibleName: element.getAttribute('aria-label')!, footerFits: footer.scrollWidth <= footer.clientWidth };
+    }));
+    expect(Math.max(...cards.map(card => card.width)) - Math.min(...cards.map(card => card.width)), `ancho uniforme a ${width}px`).toBeLessThan(1);
+    expect(Math.max(...cards.map(card => card.height)) - Math.min(...cards.map(card => card.height)), `alto uniforme a ${width}px`).toBeLessThan(1);
+    expect(cards.every(card => card.nameFits && card.accessibleName.includes(card.label) && names.some(name => card.accessibleName === `Ver asignatura: ${name}` || card.accessibleName.endsWith(` (${name})`))), `etiqueta breve legible y nombre completo accesible a ${width}px`).toBe(true);
+    expect(new Set(cards.map(card => card.label)).size, 'etiquetas distintas para los 52 ramos').toBe(52);
+    expect(cards.every(card => card.footerFits), `estado y SCT completos a ${width}px`).toBe(true);
+    if ([1920, 1440, 390].includes(width)) {
+      const height = width === 1920 ? 1080 : width === 1440 ? 900 : 844;
+      await page.setViewportSize({ width, height });
+      await expect(page.locator('.academic-shell')).toHaveCount(1);
+      await expect.poll(() => page.locator('.academic-shell').evaluate(element => Math.round(element.getBoundingClientRect().height))).toBe(height - (width <= 720 ? 20 : 32));
+      await page.evaluate(() => { document.querySelector('.academic-content')!.scrollTop = 0; document.querySelector('.academic-board')!.scrollLeft = 0; });
+      await page.getByRole('heading', { name: 'Malla curricular', exact: true }).focus();
+      await page.mouse.move(0, 0);
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      await page.screenshot({ path: testInfo.outputPath(`malla-${width}.png`) });
+      await page.setViewportSize({ width, height: 600 });
+    }
+    await page.getByRole('button', { name: 'Ver asignatura: Det. sociales y salud pública (Introducción a los determinantes sociales de la salud y salud pública)', exact: true }).click();
+    const dialog = page.getByRole('dialog'); await expect(dialog).toBeVisible();
+    const bounds = await dialog.boundingBox();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    if (width === 1440) await page.screenshot({ path: testInfo.outputPath('detalle-1440.png') });
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(courses(page)).toHaveCount(52);
+  }
+});

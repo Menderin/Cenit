@@ -2,9 +2,9 @@ name: Cenit CI
 
 on:
   pull_request:
-    branches: [main, produccion]
+    branches: [develop, main]
   push:
-    branches: [main, produccion]
+    branches: [develop, main, 'feat/**', 'fix/**', 'test/**', 'docs/**', 'codex/**']
   workflow_dispatch:
   workflow_call:
 
@@ -22,6 +22,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       app_ready: ${{ steps.check.outputs.app_ready }}
+      academic_ready: ${{ steps.check.outputs.academic_ready }}
+      web_ready: ${{ steps.check.outputs.web_ready }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -76,6 +78,57 @@ jobs:
         if: always()
         run: docker compose down
 
+  academic:
+    name: Academic foundation
+    needs: prerequisites
+    if: needs.prerequisites.outputs.academic_ready == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17.11-alpine3.24@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+        env:
+          POSTGRES_USER: cenit_test
+          POSTGRES_PASSWORD: ci-only-not-a-deployment-secret
+          POSTGRES_DB: cenit_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U cenit_test -d cenit_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      CI: 'true'
+      DATABASE_URL: postgres://cenit_test:ci-only-not-a-deployment-secret@127.0.0.1:5432/cenit_test
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: '.node-version'
+      - name: Install pinned npm
+        run: npm install --global npm@11.19.0
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run catalog:check
+      - run: npm run test:unit
+      - run: npm run build
+      - run: npm run test:integration
+      - name: Install browser for authentication checks
+        if: needs.prerequisites.outputs.web_ready == 'true'
+        run: npm exec --no -- playwright install --with-deps chromium
+      - name: Test real browser authentication
+        if: needs.prerequisites.outputs.web_ready == 'true'
+        run: npm run test:e2e:auth
+      - name: Test academic catalog in the browser
+        if: needs.prerequisites.outputs.web_ready == 'true'
+        run: npm run test:e2e:academic
+      - name: Test compiled monolith without Vite
+        run: npm run test:e2e:production
+      - name: Build and verify local candidate image
+        run: |
+          docker build --platform linux/amd64 --file Containerfile --build-arg "VCS_REF=$GITHUB_SHA" --tag cenit-candidate:verified .
+          python3 deploy/scripts/verify-image.py --image cenit-candidate:verified --revision "$GITHUB_SHA"
+
   application:
     name: Application
     needs: prerequisites
@@ -113,17 +166,28 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm run catalog:check
       - run: npm run test:unit
-      - run: npm run test:integration
       - run: npm run build
+      - run: npm run test:integration
       - name: Install Playwright browser
         run: npm exec --no -- playwright install --with-deps chromium
+      - name: Test OCR image validation and candidate mapping
+        # No weights or inference; real OCR is measured separately on the notebook.
+        run: |
+          python3 -m venv "$RUNNER_TEMP/cenit-ocr-tests"
+          "$RUNNER_TEMP/cenit-ocr-tests/bin/pip" install --disable-pip-version-check -r apps/ocr/requirements.lock
+          PYTHONPATH=apps/ocr "$RUNNER_TEMP/cenit-ocr-tests/bin/python" -m unittest discover -s tests/ocr -v
       - run: npm run test:e2e
+      - name: Build and verify delivery image
+        run: |
+          docker build --platform linux/amd64 --file Containerfile --build-arg "VCS_REF=$GITHUB_SHA" --tag cenit-candidate:verified .
+          python3 deploy/scripts/verify-image.py --image cenit-candidate:verified --revision "$GITHUB_SHA"
 
   required:
     name: CI required
     if: always()
-    needs: [prerequisites, infrastructure, application]
+    needs: [prerequisites, infrastructure, academic, application]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -133,10 +197,17 @@ jobs:
           INFRASTRUCTURE: ${{ needs.infrastructure.result }}
           APPLICATION: ${{ needs.application.result }}
           APP_READY: ${{ needs.prerequisites.outputs.app_ready }}
+          ACADEMIC_READY: ${{ needs.prerequisites.outputs.academic_ready }}
+          ACADEMIC: ${{ needs.academic.result }}
         run: |
           set -euo pipefail
           [[ "$PREREQUISITES" == success ]]
           [[ "$INFRASTRUCTURE" == success ]]
+          if [[ "$ACADEMIC_READY" == true ]]; then
+            [[ "$ACADEMIC" == success ]]
+          else
+            [[ "$ACADEMIC" == skipped ]]
+          fi
           if [[ "$APP_READY" == true ]]; then
             [[ "$APPLICATION" == success ]]
           else

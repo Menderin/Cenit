@@ -2,13 +2,13 @@ name: Cenit Release
 
 on:
   push:
-    branches: [produccion]
+    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: cenit-release-produccion
+  group: cenit-release-main
   cancel-in-progress: false
 
 jobs:
@@ -39,7 +39,7 @@ jobs:
         run: echo "DOCKER_CONFIG=$RUNNER_TEMP/cenit-registry" >> "$GITHUB_ENV"
       - name: Require complete application contract
         env:
-          TARGET_BRANCH: produccion
+          TARGET_BRANCH: main
         run: python3 deploy/scripts/check-ci-readiness.py
       - name: Build the exact commit for the VM
         run: |
@@ -53,7 +53,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          [[ "$GITHUB_REPOSITORY" == Menderin/Cenit && "$GITHUB_REF_NAME" == produccion ]]
+          [[ "$GITHUB_REPOSITORY" == Menderin/Cenit && "$GITHUB_REF_NAME" == main ]]
           # Reject a rerun for a commit already released before changing the registry.
           if gh release view "cenit-$GITHUB_SHA" >/dev/null 2>&1; then
             echo 'This commit already has a release; promote a new commit instead.'

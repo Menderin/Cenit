@@ -31,7 +31,7 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 3. Durante el envío se muestra el estado de la operación; un fallo de red permite reintentar sin afirmar acceso exitoso.
 4. El formulario tiene etiquetas y puede completarse con teclado; las credenciales no se exponen en respuestas, logs ni repositorio.
 
-**Decisión confirmada:** login local y cuentas preparadas por el equipo para representar roles. **Detalle por concretar:** credencial identificadora y preparación técnica de cuentas. No se requiere registro público ni se presupone envío de correos.
+**Decisión confirmada:** login local con correo/contraseña, un rol por cuenta y sesión de dos horas sin renovación automática; cuentas ficticias preparadas por el equipo, sin registro público ni envío de correos. Implementación de HU01-T03/T04 y API de HU03 en [AUTENTICACION.md](AUTENTICACION.md), pendiente de revisión/PR y pantallas para aceptación de la historia completa.
 
 **Revisión INVEST:** resultado valioso y comprobable; independiente de compras y catálogo académico. Tamaño/estimación pendientes de cerrar contrato local. Diseño de entrada negociable.
 
@@ -44,6 +44,8 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 | HU01-T05 — Interfaz de acceso administrativo | Construir el acceso administrativo con el diseño revisado e integrarlo con API | Estados reales de envío/fallo/éxito; acceso de cuenta administrativa probado; no usa éxito simulado |
 | HU01-T06 — Interfaz de acceso académico | Construir el acceso académico e integrar cuentas docente/estudiante | Ambas cuentas acceden al destino académico; estados accesibles; no se duplica la lógica de autenticación del servidor |
 | HU01-T07 — Verificación de login por módulo | Probar las entradas administrativa/académica con credenciales ficticias y fallos | Evidencia de éxito para los tres roles, credenciales incorrectas y error de red; criterios de historia comprobados sobre build |
+
+**Seguimiento HU01-T04 (11 de octubre):** autenticación implementada; corrección de CI preparada, pendiente de publicación/revisión independiente/merge. [PR #7](https://github.com/Menderin/Cenit/pull/7) cerrado sin merge por solicitud del líder, quien creará el próximo PR. El [CI por push](https://github.com/Menderin/Cenit/actions/runs/38184387908) del commit `66e8bd7245f5989a868b99fc74e0adc602cc203d` pasó, pero [CI del PR](https://github.com/Menderin/Cenit/actions/runs/38184816686) falló por cierre forzado de una conexión durante la limpieza de tests, aunque sus 55 pruebas pasaron. Corrección y evidencia en [AUTENTICACION.md](AUTENTICACION.md); falta CI remoto de la corrección. Application omitido por frontend/build completo pendiente. No marcar HU01 completa mientras falten interfaces/recorrido sobre build.
 
 ### S3-HU02 — Acceder únicamente a funciones autorizadas
 
@@ -83,7 +85,11 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 3. Con una sesión vencida se informa la necesidad de autenticar y no se confirma ni realiza un guardado automático.
 4. La conducta de borradores al expirar se acuerda antes de implementar; no pueden quedar expuestos a otra cuenta.
 
-**Pendientes:** duración de sesión, mecanismo de expiración y recuperación o descarte de borradores. No se asignan valores por defecto en esta historia.
+**Decisión del 11 de octubre:** duración fija de dos horas, comprobación en servidor y logout revocable; API implementada con reloj controlado en pruebas. **Pendientes:** recuperación/descarte de borradores, pantallas y limpieza de caché. No asumir política de borrador por implementar el backend.
+
+**Prueba mínima de interfaz del 11 de octubre:** acceso/salida y destinos aislados por rol implementados en frontend; limpieza de identidad/caché y aviso de invalidez comprobables en esas pantallas. Sin compras/malla ni borradores: HU03-T03/T04 y aceptación completa siguen pendientes de integración con módulos reales y política de borradores. Evidencia y comandos en [AUTENTICACION.md](AUTENTICACION.md).
+
+**Aviso previo acordado:** mostrar advertencia cinco minutos antes de vencer, tiempo restante y «Cerrar sesión ahora», sin renovar las dos horas ni guardar automáticamente. Es común a los tres roles; no decide conservación/descarte de borradores.
 
 **Revisión INVEST:** resultado verificable; contrato de sesión compartido con HU01. Si expiración/borradores impiden una entrega pequeña, dividir logout y recuperación de sesión en refinamiento, sin declararlos terminados juntos.
 
@@ -99,7 +105,13 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 
 ### S3-HU04 — Recuperar automáticamente datos para su revisión
 
-**Alcance:** MVP requerido; vía técnica pendiente.
+**Continuidad de interfaz del 14 de octubre:** el líder autoriza la pantalla mínima «Subir captura», conectada al adaptador real, para seleccionar, comprobar formato, revisar/corregir y transferir al guardado. Admite capturas parciales reconocibles y rechaza imágenes sin estructura; ni logo ni color azul prueban autenticidad. El laboratorio sigue separado. Evidencia y criterios vigentes en [ADAPTADOR-CAPTURAS.md](ADAPTADOR-CAPTURAS.md). Revisión, Actions, integración, validación institucional y ensayo de VM siguen pendientes; las notas de pantalla pendiente siguientes son antecedentes.
+
+**HU04-T04, actualización del 14 de octubre:** adaptador real de capturas en notebook, endpoint administrativo, ocho columnas y procedencia firmada para guardado explícito. Evidencia, operación y pendientes en [ADAPTADOR-CAPTURAS.md](ADAPTADOR-CAPTURAS.md). Entrega técnica sujeta a revisión, Actions e integración; pantalla de captura de Gael y aceptación de exactitud institucional pendientes. La investigación histórica y el laboratorio de ejemplos no sustituyen estas comprobaciones.
+
+**HU04-T03, actualización del 12 de octubre:** contrato y pantalla ficticia de revisión implementados; [campos, schemas, límites y pendientes](EXTRACCION-COMPRAS.md). Sin OCR, ruta de extracción activa ni persistencia. HU04-T03 pendiente de revisión/integración; la historia no se considera completa hasta demostrar procesamiento real.
+
+**Alcance:** MVP requerido; captura PNG/JPEG con procesamiento local o en equipo propio elegida el 13 de octubre, sin acceso a Oracle. Víctor realiza procesamiento/API y Gael el frontend. OCR móvil recomendado provisionalmente tras investigación local; implementación y ensayo de VM pendientes.
 
 **Descripción:** Como administrativo, quiero recuperar automáticamente los datos de una compra y revisarlos para reducir la transcripción y detectar errores antes de registrarla.
 
@@ -111,16 +123,16 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 4. Entrada inválida, procesamiento parcial o fallo tienen un estado comprensible; puedo corregir o reintentar.
 5. Formato, campos objetivo y tratamiento de la entrada tienen criterios acordados antes de acreditar extracción suficiente.
 
-**Pendientes externos y supuestos:** producto/API Oracle, acceso de prueba, muestras representativas, campos recuperables y aceptación de exactitud. OCR/visión es alternativa por investigar. No se exige construir ambas vías ni se selecciona una por suposición.
+**Decisión de captura del 13/10, confirmada por el líder el 14/10:** no habrá acceso a Oracle ni a su API. Capturas PNG/JPEG y procesamiento local/en equipo propio son la vía de esta entrega. Se autoriza comparar OCR ligero con visión generativa. Investigación y evidencia: [INVESTIGACION-EXTRACCION-COMPRAS.md](INVESTIGACION-EXTRACCION-COMPRAS.md). No se realizó ni se atribuye una consulta directa a TI desde esta tarea. Pendientes: muestras representativas del cliente, exactitud aceptada, ensayo de recursos en VM e integración del endpoint y procedencia de captura real de SCRUM-45 con el contrato de guardado.
 
 **Revisión INVEST:** valiosa/comprobable una vez fijado el conjunto de muestras/campos. Actualmente no es estimable ni de tamaño acreditado; necesita S3-HT03. El guardado está separado en HU05. Si es grande, dividir por una fuente/formato acordado, sin quitar automáticamente otros compromisos.
 
 | Tarea | Descripción | Criterios de aceptación de la tarea |
 | --- | --- | --- |
-| HU04-T01 — Investigación y decisión de captura | Coordinar consulta a TI sobre Oracle y explorar extracción desde imágenes ficticias; comparar evidencia | Documento con producto/API/acceso o ausencia de ellos, resultados de exploración y vía decidida o bloqueo; no promete conexión no disponible |
+| HU04-T01 — Investigación y decisión de captura | Registrar ausencia de acceso Oracle y comparar modelo/máquina de extracción local con capturas ficticias, recursos, calidad y tiempos | Evidencia reproducible por campo y muestra, tiempos, recursos, límites y fallos; vía decidida o bloqueo, sin prometer API ni acreditar el endpoint de SCRUM-45 |
 | HU04-T02 — Mockup de captura administrativa | Diseñar entrada según vía elegida, progreso, resultado parcial, revisión y error | Campos editables y ausencias visibles; extracción separada de guardar; no incluye interfaz académica |
 | HU04-T03 — Contrato de extracción | Definir campos candidatos, ausencias, errores y límites de entrada sin reutilizar el POST de guardado como extracción | Schemas y ejemplos validables; campos/límites acordados; no se inventan requisitos de precisión |
-| HU04-T04 — Adaptador de recuperación | Implementar la vía seleccionada y mapear resultado al contrato | Muestras ficticias procesadas realmente; fallos/ausencias no se convierten en datos válidos; acceso autorizado si es API |
+| HU04-T04 — Adaptador de recuperación | Víctor implementa visión local de capturas y mapea candidatos al contrato, con procedencia real coordinada | Capturas ficticias procesadas realmente; fallos/ausencias no se convierten en datos válidos; no accede a Oracle ni guarda al extraer |
 | HU04-T05 — Interfaz de revisión administrativa | Integrar entrada, progreso y corrección de datos candidatos | No persiste al extraer; conserva correcciones ante errores según contrato; ofrece continuidad a HU05 |
 | HU04-T06 — Verificación de extracción y revisión | Ejecutar muestras admitidas, parciales e inválidas y contrastar resultado esperado | Evidencia por campo/muestra según criterio acordado; errores visibles; ninguna compra creada sin confirmación |
 
@@ -134,22 +146,24 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 
 **Criterios de aceptación:**
 
-1. Con datos válidos y suma exacta de imputaciones, guardo la compra completa y recibo confirmación del servidor.
-2. Con campos inválidos o suma diferente del total, el servidor rechaza el registro sin persistir partes de él.
+1. Con cabecera e ítems válidos, guardo la copia completa y recibo confirmación del servidor; no se exige igualdad entre suma de ítems y total.
+2. Con campos inválidos, el servidor rechaza el registro sin persistir partes de él.
 3. Un reintento con la misma identidad de operación no crea otra compra; referencia textual y ceros se conservan.
 4. Tras reiniciar la aplicación, el registro sigue disponible en PostgreSQL; un fallo conserva el borrador sin mostrar éxito.
 
-**Base acordada:** campos, estados, formatos, idempotencia e imputaciones del SDD. La integración con HU04 completa el recorrido de captura; probar guardado no exige esperar a Oracle.
+**Base acordada (13 de octubre):** solicitudes e ítems, montos exactos, revisión local e idempotencia del contrato vigente. No crear imputaciones presupuestarias ni exigir suma sin validar esas reglas con el cliente. El laboratorio transfiere ejemplos ficticios revisados sin extraer ni guardar automáticamente; la extracción real continúa en HU04.
 
 **Revisión INVEST:** independiente del origen de datos mediante contrato de compra revisada; valor vertical verificable. Tamaño de transacción/idempotencia por estimar.
 
 | Tarea | Descripción | Criterios de aceptación de la tarea |
 | --- | --- | --- |
-| HU05-T01 — Mockup de confirmación administrativa | Diseñar formulario con documento, imputaciones, errores y confirmación | Campos corresponden al SDD; total/suma distinguibles; estados guardar/error/éxito definidos |
-| HU05-T02 — Esquema y migración de compras | Definir tablas, relaciones, montos exactos y restricciones de compra/imputaciones; separar semillas demo | Migración ejecutable sobre PostgreSQL de prueba; claves y restricciones comprobadas; no se versionan datos ni secretos |
-| HU05-T03 — Contrato y alta transaccional | Implementar validación, POST, suma exacta e idempotencia según SDD | Schemas de solicitud/respuesta; guardado atómico; reintento sin duplicación; ninguna compra parcial |
-| HU05-T04 — Formulario administrativo integrado | Conectar confirmación al servidor y conservar borrador ante fallo | Éxito sólo tras respuesta correcta; validación visible; datos candidatos de HU04 integrables por contrato |
-| HU05-T05 — Verificación de consistencia y persistencia | Probar datos válidos/invalidos, rollback, doble intento y reinicio de aplicación | Evidencia contra PostgreSQL; suma inválida no deja filas parciales; reintento no duplica; registro persiste |
+| HU05-T01 — Mockup de confirmación administrativa | Diseñar formulario con cabecera, ítems, errores y confirmación | Procedencia visible; estados guardar/error/éxito definidos |
+| HU05-T02 — Esquema y migración de compras | Definir solicitudes/ítems, relaciones, montos exactos y procedencia; separar semillas demo | Migración PostgreSQL vacía/existente; claves, montos y coherencia del origen comprobados; sin datos ni secretos versionados |
+| HU05-T03 — Contrato y alta transaccional | Validar cabecera/ítems y origen; POST atómico e idempotencia compatible | Schemas validables; ninguna copia parcial; reintentos manuales y de ejemplos sin duplicación; procedencia diferente genera conflicto |
+| HU05-T04 — Formulario administrativo integrado | Transferir valores revisados en memoria y confirmar guardado por servidor | Éxito sólo tras respuesta correcta; validación visible; conserva borrador/operación ante fallo; distingue ejemplo ficticio; salida/expiración descartan datos |
+| HU05-T05 — Verificación de consistencia y persistencia | Probar errores, rollback, reintentos concurrentes y reinicio real de API | Evidencia PostgreSQL; datos inválidos no dejan filas parciales; reintento no duplica; registro completo sigue disponible tras detener y arrancar el proceso |
+
+**Estado de HU05-T02/T03/T04:** implementadas y verificadas localmente, pendientes de revisión, CI e integración. Evidencia: [COMPRAS.md](COMPRAS.md#evidencia-del-cierre-técnico-de-hu05). La transferencia del laboratorio es ficticia y no completa extracción real de HU04.
 
 ### S3-HU06 — Encontrar compras mediante búsqueda y filtros
 
@@ -160,18 +174,22 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 **Criterios de aceptación:**
 
 1. Búsqueda y filtros acordados del SDD devuelven registros coincidentes con orden y paginación definidos.
-2. Filtros combinados de unidad/proyecto se aplican a la misma imputación, sin producir coincidencias falsas.
-3. Montos documentales e importes imputados filtrados están diferenciados y no duplican totales.
+2. Filtros combinados de código de unidad/proyecto se aplican al mismo ítem de la solicitud, sin producir coincidencias falsas.
+3. El total documental suma una vez cada solicitud del conjunto filtrado, independientemente de la página y del número de ítems; no representa pagos ni imputaciones.
 4. La tabla muestra carga, vacío y error comprensibles; permite abrir un registro existente.
 
-**Revisión INVEST:** puede implementarse con datos persistidos de prueba, independiente de captura y alta en interfaz. El conjunto de filtros/totales debe estimarse; dividir por resultados de búsqueda si excede el tamaño, mediante decisión del equipo.
+**Decisión confirmada para HU06:** búsqueda por número/descripción/proveedor, fecha de envío inclusiva y códigos textuales de unidad/proyecto; no UUID de catálogos. Una barra común filtra ambas tablas, con paginación y total documental propios. Importes imputados quedan fuera del modelo vigente; no calcularlos desde ítems. Contrato detallado en [COMPRAS.md](COMPRAS.md#hu06-búsqueda-filtros-y-total-documental).
+
+**Revisión INVEST:** comprobable con registros persistidos ficticios, independiente de captura y alta en interfaz; alcance de filtros confirmado por el líder.
 
 | Tarea | Descripción | Criterios de aceptación de la tarea |
 | --- | --- | --- |
 | HU06-T01 — Mockup de listado administrativo | Diseñar columnas, búsqueda, filtros, paginación, totales y estados | Campos/filtros trazables al SDD; totales etiquetados; navegación a detalle definida |
 | HU06-T02 — Endpoint y consultas de listado | Construir GET con filtros validados, orden, paginación y agregados consistentes | Consultas parametrizadas; schemas de respuesta; filtros correctos y cabeceras no duplicadas |
 | HU06-T03 — Tabla administrativa integrada | Implementar controles y resultados con consultas al servidor | Cambios de filtro/página muestran resultados correctos; estados vacío/error/carga visibles; no usa datos fijos |
-| HU06-T04 — Verificación de filtros y totales | Preparar registros ficticios y probar coincidencias/combinaciones/agregados | Caso documento 100000 e imputación coincidente 70000 diferencia ambos totales; filtros cruzados no producen falsos positivos |
+| HU06-T04 — Verificación de filtros y totales | Preparar registros ficticios y probar coincidencias/combinaciones/agregados | Ítems A/X y B/Y no coinciden con A/Y; varias líneas no duplican cabecera ni monto; suma considera todas las páginas y el mismo snapshot |
+
+**Estado de HU06-T02 y controles mínimos de HU06-T03:** implementados y verificados localmente, pendientes de revisión, CI e integración. Evidencia de contratos, consultas PostgreSQL concurrentes y recorridos reales de navegador en [COMPRAS.md](COMPRAS.md#evidencia-local-de-hu06). No acredita una aprobación del cliente ni una entrega integrada.
 
 ### S3-HU07 — Consultar una compra y sus imputaciones
 
@@ -223,6 +241,8 @@ Los mockups y las interfaces se desglosan por módulo administrativo y académic
 ## EP03 — Exploración y simulación curricular
 
 ### S3-HU09 — Visualizar la malla por semestre
+
+Ampliación autorizada el 11 de octubre: consultar progreso persistido por estudiante y permitir búsqueda docente de estudiantes ficticios de Nutrición. No es una simulación. Separar HU09-T03 (catálogo) del entregable de perfiles/historial, dependiente de HU01-T03 para su FK real. Esquema, contratos, pruebas y pendientes en [ACADEMICO.md](ACADEMICO.md); no considerar la pantalla ni autenticación terminadas por disponer del backend probado con identidad de test.
 
 **Alcance:** MVP.
 
@@ -359,7 +379,7 @@ Estas fichas son tareas bajo la épica, no nuevas historias de negocio. Fechas, 
 | `deploy/quadlet/*` | Revisar/reutilizar unidades existentes de DB, Nginx, red, volumen y plantilla de aplicación para VM | HT15; no reemplazar Quadlet por Compose en VM sólo por usar YAML local |
 | `Containerfile` — por crear | Definir build de producción de frontend/API y migrador, compatible con contrato de CD | HT05; es dependencia de imagen/app, no trabajo duplicado de HT15 |
 | `.github/workflows/ci.yml` — existente | Completar y verificar jobs de aplicación usando scripts/pruebas reales | HT14; infraestructura ya tiene workflow, no recrearlo como faltante |
-| `.github/workflows/release.yml` — por crear | Publicar imagen y manifiesto tras gates correctos sobre `produccion`, para ejecutor de VM | HT06; requiere aplicación, imagen y CI real |
+| `.github/workflows/release.yml` — preparado, ensayo pendiente | Publicar imagen y manifiesto tras gates correctos sobre `main`, para ejecutor de VM | HT06; requiere aplicación, imagen y CI real |
 | `README.md` y `deploy/README.md` | Registrar uso local, requisitos, comandos y diferencias con operación VM | HT15/HT11; documentación ejecutable verificada |
 
 Los nombres propuestos de Compose/configuración local se concretan al implementar; no se afirma que esos archivos ya existan. Workflows de Actions viven en `.github/workflows`, contenedores locales en Compose y servicios de VM en Quadlet: tienen funciones diferentes. Un workflow YAML por sí solo no levanta contenedores ni acredita CD.
@@ -388,7 +408,7 @@ Los nombres propuestos de Compose/configuración local se concretan al implement
 
 1. Ejecuta instalación reproducible, typecheck, lint, unitarias, integración contra PostgreSQL, build y E2E sobre build.
 2. El check `CI required` refleja las verificaciones aplicables; un fallo de aplicación impide autorizar entrega.
-3. Se acredita una ejecución correcta y una fallida controlada; no se admite omitir aplicación/pruebas para acreditar una entrega a `produccion`.
+3. Se acredita una ejecución correcta y una fallida controlada; no se admite omitir aplicación/pruebas para acreditar una entrega a `main`.
 4. Permisos y configuración del workflow son acotados, sin secretos expuestos ni credenciales de la VM en pruebas.
 
 **Dependencias:** HT02, HT08 y pruebas de historias. Implementar scripts/pruebas pertenece a HT08 y autores; conectarlos al runner pertenece aquí. No volver a crear desde cero el CI ya preparado sin necesidad.
@@ -407,13 +427,13 @@ Los nombres propuestos de Compose/configuración local se concretan al implement
 
 ### S3-HT06 — Implementar publicación y despliegue automático
 
-**Descripción:** Completar workflow de release para publicar imagen/manifiesto después de CI y promoción a `produccion`; conectar el productor con el ejecutor preparado en la VM.
+**Descripción:** Completar workflow de release para publicar imagen/manifiesto después de CI y promoción a `main`; conectar el productor con el ejecutor preparado en la VM.
 
 **Criterios de aceptación:**
 
 1. Publicación exige gates de aplicación correctos; nombres de jobs, artefacto y manifiesto respetan `deploy/CD-VM.md`.
 2. Imagen fijada por digest y procedencia verificable; el consumidor rechaza releases inválidas o sin validación requerida.
-3. El flujo PR a `main`, promoción por PR a `produccion`, CI/publicación y consulta de release en VM está documentado y ensayado.
+3. El flujo PR a `develop`, promoción por PR a `main`, CI/publicación y consulta de release en VM está documentado y ensayado.
 4. Una release válida produce un despliegue identificado sin builds o `git pull` manuales habituales en la VM; un fallo no se declara éxito.
 
 **Dependencias:** HT14, HT05 y acceso a VM; evidencia operativa compartida con HT07 sin contar el ensayo dos veces.
@@ -519,9 +539,9 @@ S3-HT03 queda desglosado en HU04-T01; S3-HT04 en HU10-T01. Diseño global S3-HT0
 
 | ID | Pendiente | Estado / historias afectadas |
 | --- | --- | --- |
-| Q01 | Identificador y preparación técnica de cuentas locales | Login local y cuentas preparadas por el equipo confirmados; sin registro público; HU01 |
-| Q02 | Duración de sesión y conducta de borradores al expirar | No respondido: la aclaración recibida explica el flujo, no una política de borrador; HU03 |
-| Q03 | API Oracle o imagen, muestras, campos y criterio de extracción suficiente | Investigación/contacto TI pendientes; HU04 |
+| Q01 | Identificador y preparación técnica de cuentas locales | Resuelto el 11 de octubre: correo/contraseña, un rol, comando de demo privado; sin registro público; HU01 |
+| Q02 | Duración de sesión y conducta de borradores al expirar | Dos horas fijas confirmadas; conducta de borradores/interfaz pendiente; HU03 |
+| Q03 | Capturas PNG/JPEG, muestras y criterio de extracción suficiente | API Oracle descartada; benchmark local ejecutado. Precisión institucional, recursos VM e integración pendientes; HU04 |
 | Q04 | Fuente oficial de prerrequisitos y versión del plan | Prerrequisitos obligatorios confirmados; Registro Curricular pendiente; HU10 |
 | Q05 | Esquema del catálogo académico | PostgreSQL confirmado; concretar tablas/relaciones/migraciones de HU09/HU10 |
 | Q06 | Roles, alcance y almacenamiento de simulación futura | Fuera del MVP; HU11/HU12 |
@@ -529,3 +549,9 @@ S3-HT03 queda desglosado en HU04-T01; S3-HT04 en HU10-T01. Diseño global S3-HT0
 | Q08 | Actualizar copia a partir del origen | Recuperar/reintentar y revisar cambios confirmado; disparador manual/automático, identidad y pertinencia pendientes; HU04/HU08 |
 
 Valoración actual: los resultados y criterios son más claros y las tareas son específicas por módulo. INVEST sigue pendiente en estimación/tamaño para todas y en independencia/viabilidad para las que dependen de fuente externa. Refinar esas dependencias antes de presentar el backlog como listo para compromiso.
+
+### Actualización del 13 de octubre: ingreso manual y revisión local
+
+Implementación de HU05-T02/T03/T04 y base de detalle HU07: dos tablas, alta transaccional idempotente, listados por revisión y detalle; campos mínimos número, fecha de envío, descripción general y total. «Validar registro» confirma revisión local y registra al administrativo, incluso si creó la copia; no aprueba en Oracle. Modelo vigente y adaptación de la propuesta antigua en [COMPRAS.md](COMPRAS.md). No se acreditan edición, búsqueda avanzada, sincronización ni extracción automática. Laboratorio separado; ingreso manual no sustituye HU04. Revisión independiente, integración y evidencia de Actions pendientes; no marcar completas las historias por implementación local.
+
+HU03: borrador manual confirmado sin persistencia; conservar ante errores/foco válido, avisar antes de abandonar, descartar al cerrar/expirar sin guardado automático. El comportamiento anterior del laboratorio permanece acotado a ejemplos.

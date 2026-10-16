@@ -42,7 +42,7 @@ Invoke-RestMethod 'http://127.0.0.1:8081/health/proxy'
 
 La respuesta esperada es `status: ok`, `mode: bootstrap`. Acredita el proxy temporal, no una aplicación disponible. Esperar que `db` y `proxy` estén saludables; consultar `podman compose logs db proxy` si fallan. Los puertos locales por defecto son `127.0.0.1:8081` para HTTP y `127.0.0.1:55432` para PostgreSQL; se pueden cambiar en `.env` para evitar conflictos.
 
-El preparador crea `.env` si falta y credenciales aleatorias en `.local/secrets`. Conserva contraseñas existentes al repetirse y rechaza formatos inesperados. `.env` y `.local` están excluidos de Git y del contexto de build. No copiar esos secretos a la VM ni subirlos a GitHub.
+El preparador crea `.env` si falta y credenciales aleatorias en `.local/secrets`. Conserva contraseñas existentes al repetirse y rechaza formatos inesperados. Además de `app-url`/`migrator-url` para contenedores, genera `app-local-url`/`migrator-local-url` para Windows/host con puerto CENIT_DB_PORT. `.env` y `.local` están excluidos de Git y del contexto de build. No copiar esos secretos a la VM ni subirlos a GitHub.
 
 La base `cenit_demo` usa un volumen persistente propio del proyecto `cenit-local`. Su primer inicio crea `cenit_admin`, `cenit_migrator` y `cenit_app`, con permisos separados y esquema `cenit`. El runtime no puede crear bases, roles ni objetos del esquema. El inicializador sólo corre en un volumen nuevo: cambiar un archivo de contraseña no actualiza una base existente.
 
@@ -56,18 +56,19 @@ No añadir `--volumes` para un apagado habitual. No reutilizar volúmenes de otr
 
 ## Contrato para incorporar la aplicación
 
-Todavía faltan los manifiestos npm, código de aplicación y migraciones de negocio. El perfil `application` y el `Containerfile` quedan preparados para estos requisitos:
+El monolito dispone de build completo, frontend servido por Fastify y readiness basado en migraciones/esquema. Para activar el perfil `application`, construir/verificar primero la imagen y seguir [ENSAYO-LOCAL.md](ENSAYO-LOCAL.md). `build:academic` conserva la compilación parcial. Las cuentas siguen siendo preparación explícita privada; CI/main y publicación mantienen su bloqueo de etapa parcial. El contrato de imagen exige:
 
 - Un solo `package-lock.json` y workspaces `apps/api`, `apps/web`, `packages/contracts`; npm 11.19.0 y scripts reales exigidos por CI.
 - `npm run build` genera `apps/api/dist/server.js`, `apps/web/dist/index.html` y `packages/contracts/dist`. Los exports de contratos deben apuntar a su código compilado.
 - API y frontend se sirven juntos por el puerto 3000; `/`, `/compras` y `/academico` devuelven HTML. El API acepta `DATABASE_URL_FILE` sin imprimir credenciales.
 - `pg` y `drizzle-orm` son dependencias de producción de `apps/api`. Migraciones Drizzle en `db/migrations`, incluido `meta/_journal.json`. `deploy/migrate.cjs` aplica migraciones como `cenit_migrator`, con historial en `cenit.__drizzle_migrations`; no ejecuta semillas ni `db push`.
+- El esquema `cenit` lo prepara infraestructura. El migrador utiliza el lector de Drizzle, transacción y lock con ledger compatible; no exige CREATE de base al rol. Rechaza cambios en migraciones ya aplicadas. Catálogo y estudiantes se cargan mediante operaciones de demo explícitas. En `malla-interactiva`, perfiles/historial usan la migración 0003 con FK a cuentas existentes; `academic:prepare-demo` prepara exclusivamente la base local tras migrar, según ACADEMICO.md. No se ejecuta desde CD ni habilita el perfil de aplicación.
 - `/health/ready` devuelve exactamente `{"status":"ready"}` con HTTP 200 cuando la base/esquema permiten operar; devuelve 503 si no están disponibles. El runtime usa `cenit_app`.
 
 Cuando esos requisitos estén implementados y probados:
 
 ```powershell
-podman compose --profile application up --build -d db migrate app
+podman compose --profile application up -d db migrate app
 podman compose --profile application ps -a
 ```
 
@@ -81,9 +82,9 @@ Si la aplicación no está disponible, conservar `bootstrap.conf`. No activar el
 
 ## CI y publicación
 
-CI comprueba scripts, tests de infraestructura, Compose y arranque del bootstrap con PostgreSQL/Nginx. Para una aplicación inicializada ejecuta typecheck, lint, unitarias, integración PostgreSQL, build y Playwright. La ausencia de aplicación bloquea `produccion`.
+CI comprueba scripts, tests de infraestructura, Compose y arranque del bootstrap con PostgreSQL/Nginx. Para una aplicación inicializada ejecuta typecheck, lint, unitarias, integración PostgreSQL, build y Playwright. La ausencia de aplicación bloquea `main`.
 
-`release.yml` reutiliza CI sobre el mismo commit de `produccion`, construye Linux/amd64 y verifica el artefacto con PostgreSQL, roles limitados, migrador repetible, rutas HTML y readiness ante caída de la BD. Sólo después publica en GHCR por digest y crea el manifiesto/release compatible con el ejecutor de la VM.
+`release.yml` reutiliza CI sobre el mismo commit de `main`, construye Linux/amd64 y verifica el artefacto con PostgreSQL, roles limitados, migrador repetible, rutas HTML y readiness ante caída de la BD. Sólo después publica en GHCR por digest y crea el manifiesto/release compatible con el ejecutor de la VM.
 
 La variable de repositorio `CENIT_RELEASE_ENABLED` debe permanecer ausente o distinta de `true` hasta completar aplicación, tests y preparar el primer ensayo supervisado en la VM. Para ese ensayo se habilita y se promueve un nuevo commit mediante PR; todavía deben acreditarse entrega exitosa y recuperación ante fallo antes de declarar CD operativo. No se configuró esa variable desde este checkout. El artifact ZIP se conserva 90 días, sujeto al límite de retención permitido por el repositorio; conserva exactamente `cenit-release.json`.
 

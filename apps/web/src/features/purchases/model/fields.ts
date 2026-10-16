@@ -1,0 +1,22 @@
+import { headerFields, lineFields, administrativeFields, type ExtractionReviewDraft } from '@cenit/contracts/purchases';
+export const purchaseLabels: Record<string, string> = {
+  requestNumber: 'Nº Documento / solicitud', oracleId: 'ID de Oracle', sender: 'Remitente', recipient: 'Destinatario',
+  sentDate: 'Fecha de envío', sentTime: 'Hora de envío', description: 'Descripción', totalAmount: 'Monto total (CLP)',
+  taxAmount: 'Impuesto (CLP)', attachmentReference: 'Referencia de anexos', provider: 'Proveedor', costCenter: 'Centro de costos',
+  lineUnit: 'Unidad de línea', quantity: 'Cantidad', price: 'Precio (CLP)', amount: 'Importe (CLP)', chargeAccount: 'Cuenta del cargo completa',
+  universityCode: 'Código universidad', campusCode: 'Código sede', unitCode: 'Código unidad', projectCode: 'Código proyecto', accountingCode: 'Código contable',
+  document: 'Documento', documentType: 'Tipo de documento', bi: 'BI', rut: 'RUT', unitName: 'Nombre de unidad', item: 'ITEM', paymentSituation: 'Situación de pago',
+};
+export function purchaseProblemLabel(path: string) {
+  const parts = path.split('/').filter(Boolean), field = parts.at(-1) ?? '';
+  const label = purchaseLabels[field] ?? (parts[0] === 'lines' ? 'Ítems de la solicitud' : 'Datos de la solicitud');
+  return parts[0] === 'lines' && /^\d+$/.test(parts[1] ?? '') ? `Ítem ${Number(parts[1]) + 1} · ${label}` : label;
+}
+const exampleLabels: Record<string, string> = { recovered: 'Completo', partial: 'Parcial', ambiguous: 'Por aclarar' };
+export const purchaseExampleLabel = (id: string | null) => exampleLabels[id ?? ''] ?? 'Ejemplo';
+export const emptyFields = (fields: Record<string, unknown>) => Object.fromEntries(Object.keys(fields).map(key => [key, null]));
+export const emptyLine = () => emptyFields(lineFields) as ExtractionReviewDraft['lines'][number];
+export const emptyDraft = (): ExtractionReviewDraft => ({ header: emptyFields(headerFields) as ExtractionReviewDraft['header'], lines: [], administrative: emptyFields(administrativeFields) as ExtractionReviewDraft['administrative'] });
+export const dateLabel = (date: string) => date.split('-').reverse().join('/');
+const currency = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+export const amountLabel = (value: string | null) => value === null ? 'Sin dato' : /^(0|[1-9]\d*)$/.test(value) ? currency.format(BigInt(value)) : value;
