@@ -6,7 +6,7 @@ Decisión del líder del 14 de octubre: primera entrega en el notebook; PaddleOC
 
 ## Probar desde el navegador
 
-Con OCR preparado, PostgreSQL levantado y `.env` configurado como se indica abajo, reiniciar `npm run dev` para cargar el backend actualizado. Abrir **http://127.0.0.1:5173/login**, ingresar como administrativo y abrir **Sistema de compra → Subir captura**. La ruta directa es `/administracion/compras/captura`.
+Para la presentación local en macOS, seguir [Levantar Cenit local para la presentación](LEVANTAR-DEMO-LOCAL.md) y abrir **http://127.0.0.1:8081/login**; ese recorrido usa el build compilado y mantiene una sola página abierta. En desarrollo, con OCR y PostgreSQL preparados, reiniciar `npm run dev` para cargar el backend actualizado y abrir **http://127.0.0.1:5173/login**. En ambos casos, ingresar como administrativo y abrir **Sistema de compra → Subir captura**; la ruta directa es `/administracion/compras/captura`.
 
 1. Pulsar «Seleccionar imagen» y elegir un PNG/JPEG ficticio. Generar las nuevas muestras con `py -3 experiments/purchases/oracle_format.py` y elegir `tmp/ocr-oracle-format/01-completa.png`. Reproducen la distribución de la referencia; véase la [batería de formato Oracle](../experiments/purchases/ORACLE-FORMATO.md). La plantilla anterior era simplificada y no acredita precisión en este formato. Aparecen nombre, dimensiones y vista previa; seleccionar no procesa ni guarda.
 2. Pulsar «Extraer datos». La API ejecuta OCR real y comprueba estructura; la pantalla informa «Formato compatible» o «Captura parcial: revisa los datos recuperados». Si el procesador está apagado, muestra un error y permite reintentar conservando la imagen.
@@ -44,6 +44,8 @@ Para repetir sólo estos seis recorridos, con OCR iniciado y capturas ficticias 
 
 ## Preparación explícita
 
+Para macOS con Docker Desktop, usar [Levantar Cenit local para la presentación](LEVANTAR-DEMO-LOCAL.md), que sirve el build compilado en `127.0.0.1:8081`, levanta PostgreSQL/OCR y conserva el volumen al reiniciar. En desarrollo, la API del host usa OCR en `127.0.0.1:8090` y debe reiniciarse para leer `.env`. La preparación PowerShell/Podman siguiente se mantiene para Windows. En ambos casos los modelos y la clave de procedencia se preparan explícitamente.
+
 Requiere Podman iniciado y Node/npm del repositorio. Los dos pesos preentrenados medidos deben estar disponibles localmente; el preparador verifica sus SHA-256 antes de copiarlos. Si faltan, realizar la preparación de pesos descrita en [la investigación](INVESTIGACION-EXTRACCION-COMPRAS.md); no se descargan durante una solicitud.
 
 Desde PowerShell en la raíz:
@@ -53,7 +55,7 @@ Desde PowerShell en la raíz:
 podman compose --profile ocr up -d ocr
 ```
 
-El preparador conserva o crea `.local/secrets/capture-receipt-key` (32 bytes aleatorios). No versionar ni compartir el archivo; cambiarlo invalida comprobantes pendientes. No modifica cuentas, imágenes de aplicación ni la VM. Los pesos se copian al directorio ignorado `apps/ocr/models`; sólo la imagen auxiliar los incluye.
+El preparador conserva o crea `.local/secrets/capture-receipt-key` (32 bytes aleatorios). No versionar ni compartir el archivo; cambiarlo invalida comprobantes pendientes. No modifica cuentas, imágenes de aplicación ni la VM. Habitualmente, los pesos se copian al directorio ignorado `apps/ocr/models` y sólo la imagen auxiliar los incluye. La integración de `presentacion-1-demo` conserva los dos pesos de runtime verificados para que el equipo pueda reconstruir la imagen; detalle y atribución en [MODELS.md](../apps/ocr/MODELS.md).
 
 Para desarrollo, añadir al `.env` privado:
 
