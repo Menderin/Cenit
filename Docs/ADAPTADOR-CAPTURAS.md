@@ -1,5 +1,7 @@
 # Adaptador local de capturas — HU04-T04
 
+Autorización de Gael del 17 de octubre: incluir el mismo procesador en Azure Chile Central con producción y staging. La restricción anterior al notebook queda sustituida para esta nueva instalación. Pesos, límites, precisión pendiente y contrato no cambian; el ensayo de memoria/tiempos en la VM sigue siendo obligatorio. Preparación y evidencia en [la guía Azure](../deploy/azure/README.md).
+
 Decisión del líder del 14 de octubre: primera entrega en el notebook; PaddleOCR PP-OCRv5 móvil Latin vía ONNX, sin entrenamiento, Oracle ni API institucional. El contenedor auxiliar no tiene BD. No instalarlo en la VM ni atribuirle capacidad de inferencia al runtime Node de 512 MiB. A petición posterior del líder se incorpora una interfaz mínima de captura y revisión; el equipo podrá seguir refinando su diseño.
 
 ## Probar desde el navegador

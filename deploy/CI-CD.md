@@ -1,5 +1,7 @@
 # CI/CD de Cenit
 
+Transición autorizada el 17 de octubre: [Azure Chile Central](azure/README.md) reemplaza el destino y el polling descritos aquí. El nuevo workflow prepara producción desde `main` y staging desde `develop`, ambos tras CI. Esta guía conserva el circuito anterior para recuperación/retirada; no acredita la puesta en servicio de Azure.
+
 Actualización del 13 de octubre: el líder autoriza entregar la demo actual por HTTP en la VM, aunque malla y extracción real sigan pendientes. CI completo usa `Application` con lint, catálogo, build, integración, E2E contra producción y verificación de imagen. El marcador parcial fue retirado tras verificar estos checks localmente. La variable de publicación se habilita durante el primer ensayo supervisado, no mediante este cambio local. Procedimiento vigente: [primera entrega automática](PRIMER-DESPLIEGUE.md). Las menciones anteriores a bloqueo o ausencia de aplicación son antecedentes de preparación, no el estado técnico vigente.
 
 El ensayo del monolito se documenta en [ENSAYO-LOCAL.md](ENSAYO-LOCAL.md). La etapa `academic-foundation` conserva el bloqueo de `main`, pero su job comprueba ahora build completo, navegador contra runtime compilado sin Vite y verificación de imagen. Los nombres de checks requeridos no cambian y la publicación permanece deshabilitada.

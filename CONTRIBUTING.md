@@ -1,5 +1,7 @@
 # Colaborar en Cenit
 
+Actualización autorizada por Gael del 17 de octubre: el destino preparado es Azure Chile Central. `develop` despliega sólo staging y `main` producción de la demostración tras CI. Este ajuste sustituye las referencias inferiores a VM/polling y a ausencia de publicación en develop; no modifica PR, revisión, protecciones ni responsables. Procedimiento y pendientes en [deploy/azure/README.md](deploy/azure/README.md).
+
 Estas reglas permiten trabajar en paralelo con cambios pequeños, revisión e integración frecuente. Aplican también al código generado por agentes. No acreditan funcionalidades implementadas ni resuelven supuestos pendientes.
 
 ## Referencias antes de empezar
