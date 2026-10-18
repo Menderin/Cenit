@@ -1,91 +1,122 @@
 name: Cenit Release
-
 on:
   push:
-    branches: [main]
-
+    branches: [main, develop]
 permissions:
   contents: read
-
 concurrency:
-  group: cenit-release-main
+  group: cenit-release-${{ github.ref_name }}
   cancel-in-progress: false
-
 jobs:
   ci:
     name: CI
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
-
   publish:
     name: Publish image
     needs: ci
-    # Keep publishing disabled until real application tests and first VM rehearsal are ready.
-    # Repository variable, not a secret. Missing variable means no release.
-    if: vars.CENIT_RELEASE_ENABLED == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 35
     permissions:
-      contents: write
+      contents: read
       packages: write
-    env:
-      IMAGE_REPOSITORY: ghcr.io/menderin/cenit
+    outputs:
+      app: ${{ steps.publish.outputs.app }}
+      ocr: ${{ steps.publish.outputs.ocr }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
         with:
           persist-credentials: false
       - name: Isolate registry credentials
         run: echo "DOCKER_CONFIG=$RUNNER_TEMP/cenit-registry" >> "$GITHUB_ENV"
-      - name: Require complete application contract
+      - name: Require complete application
         env:
-          TARGET_BRANCH: main
+          TARGET_BRANCH: ${{ github.ref_name }}
         run: python3 deploy/scripts/check-ci-readiness.py
-      - name: Build the exact commit for the VM
+      - name: Build and verify application image
         run: |
-          set -euo pipefail
           docker build --platform linux/amd64 --file Containerfile \
             --build-arg "VCS_REF=$GITHUB_SHA" --tag cenit-candidate:verified .
-      - name: Verify image before publishing
-        run: python3 deploy/scripts/verify-image.py --image cenit-candidate:verified --revision "$GITHUB_SHA"
-      - name: Publish immutable image and create manifest
+          python3 deploy/scripts/verify-image.py --image cenit-candidate:verified --revision "$GITHUB_SHA"
+      - name: Build OCR with verified weights
+        run: |
+          python3 deploy/azure/prepare-ocr-models.py
+          docker build --platform linux/amd64 --file apps/ocr/Containerfile \
+            --build-arg "VCS_REF=$GITHUB_SHA" --tag cenit-ocr:verified apps/ocr
+      - name: Test packaged OCR and real offline inference
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fonts-dejavu-core
+          docker run --rm --network none --memory 1g --cpus 1 \
+            -v "$PWD/tests/ocr:/tests:ro" --entrypoint python cenit-ocr:verified \
+            -m unittest discover -s /tests -v
+          docker run --rm --network none --memory 1g --cpus 1 \
+            -v "$PWD/tests/ocr:/tests:ro" -v /usr/share/fonts:/usr/share/fonts:ro \
+            --entrypoint python cenit-ocr:verified -c \
+            'import sys,tempfile,pathlib; sys.path.insert(0,"/tests"); from fixtures import generate; from extractor import extract,load_engine; sample=pathlib.Path(generate(tempfile.mkdtemp())[0]["path"]); result=extract(load_engine("/models"),sample.read_bytes(),sample.name,"image/png"); assert result["data"]["captureLayout"]["status"] in ("compatible","partial"); assert result["data"]["header"]["requestNumber"]["value"]; print("Real offline OCR passed")'
+      - name: Publish immutable image digests
+        id: publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          [[ "$GITHUB_REPOSITORY" == Menderin/Cenit && "$GITHUB_REF_NAME" == main ]]
-          # Reject a rerun for a commit already released before changing the registry.
-          if gh release view "cenit-$GITHUB_SHA" >/dev/null 2>&1; then
-            echo 'This commit already has a release; promote a new commit instead.'
-            exit 1
-          fi
+          [[ "$GITHUB_REPOSITORY" == Menderin/Cenit ]]
+          [[ "$GITHUB_REF_NAME" == main || "$GITHUB_REF_NAME" == develop ]]
           mkdir -p "$DOCKER_CONFIG"
           chmod 700 "$DOCKER_CONFIG"
           printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
-          tag="$IMAGE_REPOSITORY:sha-$GITHUB_SHA-$GITHUB_RUN_ATTEMPT"
-          docker tag cenit-candidate:verified "$tag"
-          docker push "$tag"
-          image=$(docker image inspect --format '{{index .RepoDigests 0}}' "$tag")
-          python3 deploy/scripts/make-release-manifest.py --image "$image" --output "$RUNNER_TEMP/cenit-manifest"
-      - name: Upload the manifest artifact
-        id: manifest
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: cenit-release-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/cenit-manifest/cenit-release.json
-          if-no-files-found: error
-          overwrite: false
-          archive: true
-          retention-days: 90
-      - name: Verify artifact digest and publish release pointer
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ARTIFACT_DIGEST: ${{ steps.manifest.outputs.artifact-digest }}
-        run: |
-          set -euo pipefail
-          [[ "$ARTIFACT_DIGEST" =~ ^(sha256:)?[0-9a-f]{64}$ ]]
-          gh release create "cenit-$GITHUB_SHA" --target "$GITHUB_SHA" \
-            --title "Cenit $GITHUB_SHA" --notes-file "$RUNNER_TEMP/release-pointer.json"
+          for pair in 'cenit-candidate:verified cenit app' 'cenit-ocr:verified cenit-ocr ocr'; do
+            read -r source repository output <<< "$pair"
+            tag="ghcr.io/menderin/$repository:sha-$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+            docker tag "$source" "$tag"
+            docker push "$tag"
+            image=$(docker image inspect --format '{{index .RepoDigests 0}}' "$tag")
+            echo "$output=$image" >> "$GITHUB_OUTPUT"
+          done
       - name: Remove registry session
         if: always()
         run: docker logout ghcr.io || true
+  deploy:
+    name: Deploy Azure
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Read public Azure identifiers
+        id: azure
+        run: |
+          python3 - <<'PY'
+          import json,os
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              for key,value in json.load(open('deploy/azure/config.json')).items():
+                  output.write(f'{key}={value}\n')
+          PY
+      - uses: azure/login@8216e11d8cd9b42fe925c852af8e76311ff067ac # v2
+        with:
+          client-id: ${{ steps.azure.outputs.clientId }}
+          tenant-id: ${{ steps.azure.outputs.tenantId }}
+          subscription-id: ${{ steps.azure.outputs.subscriptionId }}
+      - name: Deploy through the Azure VM agent
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CENIT_APP_IMAGE: ${{ needs.publish.outputs.app }}
+          CENIT_OCR_IMAGE: ${{ needs.publish.outputs.ocr }}
+        run: python3 deploy/azure/run-command.py
+      - name: Verify public HTTPS
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          origin=https://develop.cenit.dpdns.org
+          if [[ "$BRANCH" == main ]]; then origin=https://cenit.dpdns.org; fi
+          curl --fail --silent --retry 6 --retry-delay 10 --retry-all-errors --max-time 15 \
+            "$origin/health/ready" | python3 -c 'import json,sys; assert json.load(sys.stdin)=={"status":"ready"}'
+          echo "Cenit: $origin — commit $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"

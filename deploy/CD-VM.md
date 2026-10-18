@@ -1,5 +1,7 @@
 # Preparar el ejecutor de despliegue en la VM
 
+Transición del 17 de octubre: la preparación nueva usa [Azure y Run Command](azure/README.md). Este contrato de releases/polling queda como referencia del servidor anterior y no describe el nuevo workflow. Conservar su estado y datos hasta verificar la migración.
+
 Actualización del 13 de octubre: el líder autoriza entregar la demo actual por HTTP en la VM, aunque malla y extracción real sigan pendientes. CI completo usa `Application` con lint, catálogo, build, integración, E2E contra producción y verificación de imagen. El marcador parcial fue retirado tras verificar estos checks localmente. La variable de publicación se habilita durante el primer ensayo supervisado, no mediante este cambio local. Procedimiento vigente: [primera entrega automática](PRIMER-DESPLIEGUE.md). Las menciones anteriores a bloqueo o ausencia de aplicación son antecedentes de preparación, no el estado técnico vigente.
 
 El monitor de GitHub instalado anteriormente sólo observa. Este procedimiento instala el ejecutor `cenit-cd`, crea roles/secrets de aplicación y migración, y conserva el bootstrap hasta encontrar una release aprobada. No requiere reiniciar la VM, instalar Jenkins, abrir otro puerto ni cambiar servicios de Zableke.

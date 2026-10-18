@@ -1,5 +1,7 @@
 # Infraestructura de Cenit en la VM compartida
 
+Transición del 17 de octubre: Gael autorizó migrar a [Azure Chile Central](azure/README.md). Esta guía conserva la operación del servidor anterior durante el traslado. No detener sus servicios ni eliminar datos antes de comprobar respaldo, transferencia y recorridos en Azure.
+
 ## Reparar reinicios por el healthcheck de Quadlet
 
 El ensayo del 13 de octubre identificó reinicios con `Health.Log.Output` igual a
