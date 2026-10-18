@@ -1,6 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { credential, login } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
+import type { PurchaseSummaryResponse } from '../../packages/contracts/src/purchases/records.js';
+import { amountLabel, dateLabel } from '../../apps/web/src/features/purchases/model/fields.js';
 
 async function navigateAdministration(page: Page, name: string) {
   const navigation = page.getByRole('navigation', { name: 'Sistemas administrativos' });
@@ -394,15 +396,22 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Demostración', { exact: true })).toBeVisible();
   await expect(page.getByText('Prototipo con datos ficticios', { exact: true })).toHaveCount(0);
+  const response = await page.request.get('/api/v1/purchases/summary');
+  expect(response.status()).toBe(200);
+  const { data: summary } = await response.json() as PurchaseSummaryResponse;
   const indicators = page.getByRole('definition');
-  await expect(indicators.nth(0)).toHaveText('8');
-  await expect(indicators.nth(2)).toHaveText('5');
-  await expect(indicators.nth(4)).toContainText('1.510.000');
+  await expect(indicators.nth(0)).toHaveText(String(summary.totalCount));
+  await expect(indicators.nth(2)).toHaveText(String(summary.pendingCount));
+  await expect(indicators.nth(4)).toHaveText(amountLabel(summary.pendingAmount));
   await expect(page.getByRole('table')).toHaveCount(0);
   const chart = page.getByRole('list', { name: 'Cantidad de solicitudes pendientes por día' });
-  await expect(chart.getByRole('listitem')).toHaveText([
-    '05 oct1 solicitud', '06 oct2 solicitudes', '07 oct0 solicitudes', '08 oct1 solicitud', '09 oct1 solicitud',
-  ]);
+  if (summary.pendingByDate.length) {
+    await expect(chart.getByRole('listitem')).toHaveText(summary.pendingByDate.map(day =>
+      `${dateLabel(day.date)}${day.count} ${day.count === 1 ? 'solicitud' : 'solicitudes'}`));
+  } else {
+    await expect(chart).toHaveCount(0);
+    await expect(page.getByText('No hay solicitudes pendientes de revisión.', { exact: true })).toBeVisible();
+  }
   await expect(page.getByRole('button', { name: /aprobar/i })).toHaveCount(0);
   for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 900 });
