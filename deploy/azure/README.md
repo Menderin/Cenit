@@ -44,7 +44,7 @@ El archivo privado de parámetros contiene una clave SSH pública y una versión
 
 Tras revisión e integración por PR, un push a `develop`/`main` ejecuta CI completo del SHA integrado, construye/verifica la aplicación, descarga los dos pesos OCR con sus SHA-256 ya existentes, verifica inferencia real sin red y publica ambas imágenes por digest en GHCR. Un fallo impide desplegar.
 
-Azure Login usa OIDC con sujetos exactos `repo:Menderin/Cenit:ref:refs/heads/main` y `repo:Menderin/Cenit:ref:refs/heads/develop`. Los IDs públicos no requieren secretos Azure en GitHub. La identidad tiene Virtual Machine Contributor **sólo sobre esta VM**, no sobre la suscripción. Ese permiso permite ejecutar como root en el host compartido por ambos entornos: se confía en las dos ramas protegidas. No añadir federación para ramas de tarea ni PRs.
+Azure Login usa OIDC con sujetos exactos `repo:Menderin@167567835/Cenit@1340887682:ref:refs/heads/main` y `repo:Menderin@167567835/Cenit@1340887682:ref:refs/heads/develop`. Este repositorio usa el [formato inmutable de GitHub](https://docs.github.com/en/actions/reference/security/oidc#immutable-subject-claims), con IDs de propietario/repositorio verificados mediante la API y el token de la ejecución; el formato anterior basado sólo en nombres provoca `AADSTS700213`. Los IDs públicos no requieren secretos Azure en GitHub. La identidad tiene Virtual Machine Contributor **sólo sobre esta VM**, no sobre la suscripción. Ese permiso permite ejecutar como root en el host compartido por ambos entornos: se confía en las dos ramas protegidas. No añadir federación para ramas de tarea ni PRs.
 
 `run-command.py` vuelve a exigir repositorio/evento/rama y digests esperados. Envía el token efímero de GHCR como parámetro protegido del agente, nunca como parte del script. El host usa un directorio temporal de autenticación y lo elimina al terminar. No se guardan PAT ni claves Azure permanentes para las entregas.
 
@@ -70,4 +70,8 @@ Infraestructura creada: grupo `cenit-azure`, VM `cenit` B2als v2 en Chile Centra
 
 Presupuesto Azure `cenit-until-december`: USD 180 trimestrales para octubre-diciembre, avisos al correo de la cuenta en 50/80/100 % (USD 90/144/180). No es un corte automático. Los IDs públicos están en `config.json`.
 
-Pruebas locales: 46 pruebas de infraestructura correctas, sintaxis Bash/Python, Compose y ambos workflows con actionlint. Pendientes: entrega real por Actions tras revisión/integración, transferencia de cuentas/datos, DNS/HTTPS, OCR y recursos en la VM, recuperación y retiro del servidor anterior. Los checks locales no acreditan esos pasos.
+Pruebas locales: 46 pruebas de infraestructura correctas, sintaxis Bash/Python, Compose y ambos workflows con actionlint. DNS y certificados HTTPS comprobados para ambos dominios. PR #18 aprobado por Menderin e integrado en develop como `01548334e40dce6a4e1f3633bdca84984691d2ff`; su CI completo y publicación de ambas imágenes pasaron. El primer login Azure de Actions falló por la discrepancia del sujeto OIDC (`AADSTS700213`): Bicep y las credenciales de ambas ramas se corrigen al formato inmutable, sin ampliar roles ni ramas admitidas.
+
+El segundo intento superó Azure Login, descargó ambas imágenes y preparó PostgreSQL/migraciones, pero Docker rechazó el tmpfs del OCR: la lista YAML sin comillas separaba las opciones por sus comas. Se conserva como un único valor y CI añade una creación real del contenedor (sin inferencia) para detectar opciones Docker inválidas antes del despliegue.
+
+Pendientes: acreditar la entrega real por Actions después de esas correcciones, transferencia de cuentas/datos, OCR y recursos en la VM, recuperación y retiro del servidor anterior. Los checks locales no acreditan esos pasos.

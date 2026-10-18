@@ -60,12 +60,15 @@ jobs:
         env:
           CENIT_ENV: staging
           CENIT_APP_IMAGE: localhost/cenit-local:ci
-          CENIT_OCR_IMAGE: localhost/cenit-ocr:ci
+          # Container creation probes Docker options without running inference.
+          CENIT_OCR_IMAGE: docker.io/library/nginx:1.30.5-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94
           CENIT_ORIGIN: https://develop.cenit.dpdns.org
           CENIT_HTTP_PORT: '8082'
         run: |
           az bicep build --file deploy/azure/main.bicep --outfile "$RUNNER_TEMP/cenit-azure.json"
           docker compose --project-directory "$PWD" --file deploy/azure/compose.yaml config --quiet
+          trap 'docker compose --project-directory "$PWD" --file deploy/azure/compose.yaml --project-name cenit-azure-ci down' EXIT
+          docker compose --project-directory "$PWD" --file deploy/azure/compose.yaml --project-name cenit-azure-ci create ocr
       - name: Validate bootstrap Nginx
         run: |
           docker run --rm --network none \

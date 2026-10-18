@@ -96,7 +96,7 @@ resource federation 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedI
   name: branch
   properties: {
     issuer: 'https://token.actions.githubusercontent.com'
-    subject: 'repo:Menderin/Cenit:ref:refs/heads/${branch}'
+    subject: 'repo:Menderin@167567835/Cenit@1340887682:ref:refs/heads/${branch}'
     audiences: ['api://AzureADTokenExchange']
   }
 }]
