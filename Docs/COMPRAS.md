@@ -1,5 +1,15 @@
 # Solicitudes de compra persistentes y validación local
 
+## Inicio conectado con el listado — 17 de octubre
+
+Gael reportó que Inicio mostraba pendientes y montos mientras el listado de Azure estaba vacío. La pantalla todavía usaba ocho registros fijos de diseño. Se retira esa muestra y se añade GET /api/v1/purchases/summary, exclusivo de sesión administrativa. No escribe datos ni conecta Oracle.
+
+El contrato devuelve data.totalCount, pendingCount, currency=CLP, pendingAmount como texto entero exacto y pendingByDate con fecha/cantidad. Resume todas las cabeceras persistidas, sin filtros ni joins con ítems; dos consultas comparten una transacción de sólo lectura con snapshot repetible. Una base vacía devuelve cero y ninguna fecha.
+
+Inicio valida la respuesta con el contrato compartido y reutiliza la clave de consultas de compras: crear o validar invalida también el resumen. Volver a Inicio vuelve a consultar. Carga, error/reintento y ausencia de pendientes tienen estados propios, sin sustituir fallos por cifras ficticias ni convertir montos a Number. El listado conserva sus filtros explícitos.
+
+Esta corrección no añade eliminación ni cambia migraciones. Las notas inferiores sobre la muestra independiente describen versiones anteriores.
+
 Pulido autorizado del 14 de octubre en `fix/ux-flujos-y-movimiento`: Cancelar vuelve directamente si el formulario está vacío o los cambios se revirtieron; con contenido/ítems, confirma descarte. Navegación interna, atrás y logout comparten un guard, sin interceptar globalmente clics. Escape conserva datos y devuelve el foco. Mientras el servidor confirma un guardado, las salidas voluntarias quedan bloqueadas; recargar/cerrar conserva el aviso nativo. Cambiar/restablecer ejemplos confirma descarte de correcciones. Cancelar o transferir no hace POST; los reintentos conservan operación/procedencia.
 
 Fecha de envío y filtros usan Calendar/Popover (Radix y DayPicker, composición seleccionada de shadcn), español y entrada `dd/MM/aaaa`, con API `YYYY-MM-DD` sin convertir a UTC. Filtros aplicados y páginas independientes viven en la URL; detalle/alta/laboratorio reciben el destino de retorno. Aplicar/Limpiar reinician ambas páginas. Sonner confirma guardado/validación después del servidor; errores y problemas que requieren acción siguen visibles. Borradores se recuperan tras fallos temporales de sesión para la misma cuenta; logout/expiración siguen descartándolos. Home continúa como resumen ficticio independiente y habla de revisión. Evidencia y pendientes en [revisión de UX](REVISION-UX-2026-10-14.md).

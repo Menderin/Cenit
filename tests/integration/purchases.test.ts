@@ -7,7 +7,7 @@ import { mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { Value } from '@sinclair/typebox/value';
-import { PurchaseResponseSchema, PurchaseListResponseSchema, headerFields, lineFields, administrativeFields } from '../../packages/contracts/src/purchases/index.js';
+import { PurchaseResponseSchema, PurchaseListResponseSchema, PurchaseSummaryResponseSchema, headerFields, lineFields, administrativeFields } from '../../packages/contracts/src/purchases/index.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 import { createTestPool, closeTestPool } from './support/postgres.js';
 import { createDemoCredentials, prepareDemoAccounts } from '../../db/seeds/auth-demo.js';
@@ -104,6 +104,14 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
       const response = await app.inject({ method: 'POST', url: '/api/v1/auth/login', headers: { origin }, payload: { email: credential.email, password: credential.password } });
       expect(response.statusCode).toBe(200); cookies[credential.role] = String(response.headers['set-cookie']).split(';')[0]!;
     }
+  });
+  it('el resumen vacío no inventa solicitudes ni montos', async () => {
+    const response = await request('GET', '/api/v1/purchases/summary');
+    expect(response.statusCode).toBe(200);
+    expect(Value.Check(PurchaseSummaryResponseSchema, response.json())).toBe(true);
+    expect(response.json()).toEqual({ data: { totalCount: 0, pendingCount: 0, currency: 'CLP', pendingAmount: '0', pendingByDate: [] } });
+    expect((await request('GET', '/api/v1/purchases/summary', undefined, '')).statusCode).toBe(401);
+    for (const role of ['docente', 'estudiante']) expect((await request('GET', '/api/v1/purchases/summary', undefined, cookies[role])).statusCode).toBe(403);
   });
   it('sesión, roles y Origin se comprueban en todos los recursos', async () => {
     const routes: ['GET' | 'POST', string, unknown?][] = [['GET', '/api/v1/purchases?reviewStatus=pending'], ['POST', '/api/v1/purchases', body()], ['GET', `/api/v1/purchases/${randomUUID()}`], ['POST', `/api/v1/purchases/${randomUUID()}/validation`, { expectedVersion: 1 }]];
@@ -405,4 +413,27 @@ describe('capture provenance and explicit persistence', () => {
     }
     captureNow = Date.now();
   }, 65000);
+  it('resumen y listado comparten cabeceras, montos exactos y cambios de revisión', async () => {
+    const before = (await repository.summary()).data;
+    const pending = body(); pending.header.requestNumber = 'RESUMEN-EXACTO'; pending.header.totalAmount = '9007199254740993'; pending.header.sentDate = '2026-10-17';
+    const reviewed = body(); reviewed.header.requestNumber = 'RESUMEN-VALIDADO'; reviewed.header.totalAmount = '7'; reviewed.header.sentDate = pending.header.sentDate;
+    expect(pending.lines.length).toBeGreaterThan(1);
+    for (const input of [pending, reviewed]) expect((await request('POST', '/api/v1/purchases', input)).statusCode).toBe(201);
+    const saved = (await request('POST', '/api/v1/purchases', reviewed)).json().data;
+    const intermediate = (await request('GET', '/api/v1/purchases/summary')).json();
+    expect(Value.Check(PurchaseSummaryResponseSchema, intermediate)).toBe(true);
+    expect(intermediate.data.pendingCount).toBe(before.pendingCount + 2);
+    expect(intermediate.data.pendingAmount).toBe((BigInt(before.pendingAmount) + 9007199254741000n).toString());
+    expect((await request('POST', '/api/v1/purchases/' + saved.id + '/validation', { expectedVersion: 1 })).statusCode).toBe(200);
+    const result = (await request('GET', '/api/v1/purchases/summary')).json().data;
+    const days = new Map(before.pendingByDate.map(day => [day.date, day.count] as const));
+    days.set(pending.header.sentDate, (days.get(pending.header.sentDate) ?? 0) + 1);
+    expect(result).toEqual({ totalCount: before.totalCount + 2, pendingCount: before.pendingCount + 1, currency: 'CLP',
+      pendingAmount: (BigInt(before.pendingAmount) + 9007199254740993n).toString(),
+      pendingByDate: [...days.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, count]) => ({ date, count })) });
+    const list = (await request('GET', '/api/v1/purchases?reviewStatus=pending')).json();
+    expect(list.pagination.total).toBe(result.pendingCount);
+    expect(list.totals.documentTotal).toBe(result.pendingAmount);
+  });
+
 });

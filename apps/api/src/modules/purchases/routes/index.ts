@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { ErrorResponseSchema } from '@cenit/contracts';
-import { CreatePurchaseSchema, PurchaseListQuerySchema, PurchaseListResponseSchema, PurchaseParamsSchema, PurchaseResponseSchema, PurchaseValidationSchema, type CreatePurchase, type PurchaseListQuery } from '@cenit/contracts/purchases';
+import { CreatePurchaseSchema, PurchaseListQuerySchema, PurchaseListResponseSchema, PurchaseParamsSchema, PurchaseResponseSchema, PurchaseSummaryResponseSchema, PurchaseValidationSchema, type CreatePurchase, type PurchaseListQuery } from '@cenit/contracts/purchases';
 import type { Authenticate } from '../../auth/services/principal.js';
 import { ApiError } from '../../../infrastructure/errors.js';
 import type { PurchaseService } from '../services/purchases.js';
@@ -61,6 +61,7 @@ export async function purchaseRoutes(app: FastifyInstance, options: { service: P
       for (const key of ['page', 'pageSize']) if (typeof query[key] === 'string' && /^[1-9][0-9]*$/.test(query[key])) query[key] = Number(query[key]);
     },
   }, request => options.service.list(request.query));
+  app.get('/summary', { schema: { response: { 200: PurchaseSummaryResponseSchema, ...errors } }, onRequest: access }, () => options.service.summary());
   app.get<{ Params: { id: string } }>('/:id', { schema: { params: PurchaseParamsSchema, response: { 200: PurchaseResponseSchema, ...errors } }, onRequest: access }, request => options.service.get(request.params.id));
   app.post<{ Params: { id: string }; Body: { expectedVersion: number } }>('/:id/validation', { schema: { params: PurchaseParamsSchema, body: PurchaseValidationSchema, response: { 200: PurchaseResponseSchema, ...errors } }, onRequest: write }, request => options.service.validate(request.params.id, request.body.expectedVersion, actors.get(request)!));
 }

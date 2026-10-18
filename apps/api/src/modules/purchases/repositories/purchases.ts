@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
-import type { CreatePurchase, PurchaseRecord, PurchaseListQuery, PurchaseListResponse } from '@cenit/contracts/purchases';
+import type { CreatePurchase, PurchaseRecord, PurchaseListQuery, PurchaseListResponse, PurchaseSummaryResponse } from '@cenit/contracts/purchases';
 import { headerFields, lineFields, administrativeFields } from '@cenit/contracts/purchases';
 import { ApiError } from '../../../infrastructure/errors.js';
 
@@ -63,6 +63,16 @@ export class PurchaseRepository {
       }
       return { record: (await this.detail(db, id))!, created: true };
     });
+  }
+  async summary(): Promise<PurchaseSummaryResponse> {
+    return this.transaction(async db => {
+      // Both aggregates share a snapshot; request totals never join their item rows.
+      const totals = await db.query<{ totalCount: number; pendingCount: number; pendingAmount: string }>(
+        'SELECT count(*)::int AS "totalCount",count(*) FILTER (WHERE review_status=$1)::int AS "pendingCount",coalesce(sum(total_amount) FILTER (WHERE review_status=$1),0)::text AS "pendingAmount" FROM cenit.purchase_requests', ['pending']);
+      const days = await db.query<{ date: string; count: number }>(
+        'SELECT sent_date::text AS date,count(*)::int AS count FROM cenit.purchase_requests WHERE review_status=$1 GROUP BY sent_date ORDER BY sent_date', ['pending']);
+      return { data: { ...totals.rows[0]!, currency: 'CLP', pendingByDate: days.rows } };
+    }, true);
   }
   async list(query: PurchaseListQuery): Promise<PurchaseListResponse> {
     return this.transaction(async db => {

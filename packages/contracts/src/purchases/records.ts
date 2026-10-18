@@ -45,6 +45,12 @@ export const PurchaseListResponseSchema = object({ data: Type.Array(object({
 })), pagination: object({ page: Type.Integer({ minimum: 1 }), pageSize: Type.Integer({ minimum: 1, maximum: 100 }), total: Type.Integer({ minimum: 0 }) }),
   totals: object({ currency: Type.Literal('CLP'), documentTotal: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }) }) });
 export type PurchaseListResponse = Static<typeof PurchaseListResponseSchema>;
+export const PurchaseSummaryResponseSchema = object({ data: object({
+  totalCount: Type.Integer({ minimum: 0 }), pendingCount: Type.Integer({ minimum: 0 }),
+  currency: Type.Literal('CLP'), pendingAmount: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }),
+  pendingByDate: Type.Array(object({ date: headerFields.sentDate, count: Type.Integer({ minimum: 1 }) })),
+}) });
+export type PurchaseSummaryResponse = Static<typeof PurchaseSummaryResponseSchema>;
 export function validatePurchaseListQuery(input: unknown): ContractProblem[] {
   if (!Value.Check(PurchaseListQuerySchema, input)) return [...Value.Errors(PurchaseListQuerySchema, input)].map(error => ({ path: error.path, message: 'Revisa el formato o límite del filtro.' }));
   const problems: ContractProblem[] = [];

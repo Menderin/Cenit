@@ -16,6 +16,7 @@ export class PurchaseService {
       if (origin?.type === 'image_capture') this.receipts!.verify(origin, accountId);
     });
   }
+  summary() { return this.repository.summary(); }
   list(query: PurchaseListQuery) {
     if (validatePurchaseListQuery(query).length) throw new ApiError(400, 'INVALID_FILTER', 'Revisa las fechas y los filtros de búsqueda.');
     return this.repository.list(query);
