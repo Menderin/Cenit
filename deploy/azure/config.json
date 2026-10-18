@@ -1,0 +1,8 @@
+{
+  "clientId": "8d4c5807-2233-45e1-89f3-61b59b6237a1",
+  "location": "chilecentral",
+  "resourceGroup": "cenit-azure",
+  "subscriptionId": "cf3ca67f-590d-41ab-9ca9-e22406de4baa",
+  "tenantId": "598c95dd-ce56-4bf6-812e-546235fc5af3",
+  "vmName": "cenit"
+}

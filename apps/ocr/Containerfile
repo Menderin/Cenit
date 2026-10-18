@@ -6,6 +6,9 @@ ENV PATH=/opt/ocr/bin:$PATH OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 PYTHONDONTW
 WORKDIR /worker
 COPY extractor.py server.py /worker/
 COPY models/ch_PP-OCRv5_det_mobile.onnx models/latin_PP-OCRv5_rec_mobile.onnx /models/
+ARG VCS_REF
+LABEL org.opencontainers.image.source="https://github.com/Menderin/Cenit" \
+      org.opencontainers.image.revision=$VCS_REF
 USER 1000:1000
 EXPOSE 8090
 CMD ["python", "server.py"]

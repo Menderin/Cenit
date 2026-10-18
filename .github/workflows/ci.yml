@@ -49,13 +49,23 @@ jobs:
             bash -n "$script"
           done < <(find deploy -name '*.sh' -print0)
       - name: Compile Python utilities
-        run: python3 -m compileall -q deploy/scripts
+        run: python3 -m compileall -q deploy/scripts deploy/azure
       - name: Test application CI gate
         run: python3 -m unittest discover -s tests/infrastructure -v
       - name: Validate local Compose configuration
         run: |
           python3 deploy/scripts/setup-local.py
           docker compose --profile application config --quiet
+      - name: Validate Azure infrastructure and Compose
+        env:
+          CENIT_ENV: staging
+          CENIT_APP_IMAGE: localhost/cenit-local:ci
+          CENIT_OCR_IMAGE: localhost/cenit-ocr:ci
+          CENIT_ORIGIN: https://develop.cenit.dpdns.org
+          CENIT_HTTP_PORT: '8082'
+        run: |
+          az bicep build --file deploy/azure/main.bicep --outfile "$RUNNER_TEMP/cenit-azure.json"
+          docker compose --project-directory "$PWD" --file deploy/azure/compose.yaml config --quiet
       - name: Validate bootstrap Nginx
         run: |
           docker run --rm --network none \

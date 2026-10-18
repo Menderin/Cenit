@@ -124,6 +124,10 @@ Invoke-RestMethod 'http://127.0.0.1:8081/health/proxy'
 
 Se espera `status: ok`, `mode: bootstrap`. PostgreSQL persiste en un volumen propio; `podman compose down` conserva los datos. Los secretos generados en `.local` y la configuración `.env` no se versionan. Consultar [la guía local](deploy/LOCAL.md) para preparar la máquina Podman, resolver puertos y activar posteriormente la aplicación.
 
+## Despliegue Azure en preparación
+
+Gael autorizó el 17 de octubre migrar a Chile Central: `main` en `cenit.dpdns.org`, `develop` en `develop.cenit.dpdns.org` y OCR incluido, compartiendo una VM de 4 GiB. Infraestructura, costo estimado, CI/CD y transición segura en [deploy/azure/README.md](deploy/azure/README.md). La preparación no acredita todavía una entrega operativa ni el retiro de la VM anterior.
+
 ## Flujo vigente de ramas
 
 CI se ejecuta al hacer **push** en `feat/**`, `fix/**`, `test/**`, `docs/**`, `codex/**`, `develop` y `main`, además de PR hacia `develop`/`main`. Un commit local necesita `Push origin` para llegar a Actions; no hace falta abrir PR para probar la rama. Consultar la ejecución por rama/commit en la pestaña Actions.
