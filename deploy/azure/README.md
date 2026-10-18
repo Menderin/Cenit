@@ -72,4 +72,6 @@ Presupuesto Azure `cenit-until-december`: USD 180 trimestrales para octubre-dici
 
 Pruebas locales: 46 pruebas de infraestructura correctas, sintaxis Bash/Python, Compose y ambos workflows con actionlint. DNS y certificados HTTPS comprobados para ambos dominios. PR #18 aprobado por Menderin e integrado en develop como `01548334e40dce6a4e1f3633bdca84984691d2ff`; su CI completo y publicación de ambas imágenes pasaron. El primer login Azure de Actions falló por la discrepancia del sujeto OIDC (`AADSTS700213`): Bicep y las credenciales de ambas ramas se corrigen al formato inmutable, sin ampliar roles ni ramas admitidas.
 
-Pendientes: acreditar la entrega real por Actions después de esa corrección, transferencia de cuentas/datos, OCR y recursos en la VM, recuperación y retiro del servidor anterior. Los checks locales no acreditan esos pasos.
+El segundo intento superó Azure Login, descargó ambas imágenes y preparó PostgreSQL/migraciones, pero Docker rechazó el tmpfs del OCR: la lista YAML sin comillas separaba las opciones por sus comas. Se conserva como un único valor y CI añade una creación real del contenedor (sin inferencia) para detectar opciones Docker inválidas antes del despliegue.
+
+Pendientes: acreditar la entrega real por Actions después de esas correcciones, transferencia de cuentas/datos, OCR y recursos en la VM, recuperación y retiro del servidor anterior. Los checks locales no acreditan esos pasos.
