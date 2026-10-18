@@ -1,6 +1,12 @@
 # Cenit — Software Design Document (SDD)
 
+Integración del 18 de octubre: Gael solicita recuperar la versión presentada en presentacion-1-demo y conservar la infraestructura Azure actual. Se mantiene el contrato de resumen ya utilizado por esa demo (requests, pending, pendingAmount y days), junto a eliminación transaccional y búsqueda textual con pausa de 250 ms. Esta integración no modifica migraciones, cuentas ni datos; requiere CI y revisión del conjunto.
+
 Decisión de despliegue del 17 de octubre: Gael autoriza Azure Chile Central, producción desde `main`, staging desde `develop` y OCR en la misma VM económica, con USD 200 totales hasta diciembre. La nueva entrega se inicia en Actions con OIDC/agente Azure y sustituye el polling de la VM compartida. Contratos, revisión por PR y separación runtime/migrador se conservan. Arquitectura, costos, preparación y pendientes en [la guía Azure](../deploy/azure/README.md); las secciones de operación anteriores son antecedentes durante la transición.
+
+Ajuste de interfaz del 16 de octubre: búsqueda textual de compras en vivo con pausa de 250 ms; fechas/códigos se aplican explícitamente, conservando sus borradores. «Eliminar» queda sólo como ícono en el detalle, con confirmación. Detalle y verificación en [COMPRAS.md](../Docs/COMPRAS.md).
+
+Actualización del 16 de octubre: Gael autoriza Inicio conectado a compras persistentes y eliminación definitiva de copias pendientes/validadas desde la demo. `GET /api/v1/purchases/summary` agrega cabeceras y montos exactos; `DELETE /api/v1/purchases/:id` exige sesión administrativa, Origin y versión, con borrado transaccional de ítems/cabecera. Sustituye las restricciones históricas de muestra independiente y ausencia de eliminación. Contratos, límites y evidencia vigente en [COMPRAS.md](../Docs/COMPRAS.md#inicio-conectado-y-eliminación--16-de-octubre). No modifica Oracle ni estados institucionales.
 
 Segunda iteración visual del 14 de octubre: confirmaciones contextuales de validación/descarte con Radix Popover modal ya instalado, origen explícito, velo suave y bloqueo real; marco administrativo estable con scroll principal de contenido en escritorio; filtros sin historial/consultas redundantes y mensajes locales. La navegación frecuente conserva legibilidad con opacidad de 150 ms. Detalle vigente y evidencia en [COMPRAS.md](../Docs/COMPRAS.md) y [REVISION-UX-2026-10-14.md](../Docs/REVISION-UX-2026-10-14.md). Sin cambios de API, migraciones, jornada ni despliegue.
 

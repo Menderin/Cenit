@@ -1,8 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { credential, login } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
-import type { PurchaseSummaryResponse } from '../../packages/contracts/src/purchases/records.js';
-import { amountLabel, dateLabel } from '../../apps/web/src/features/purchases/model/fields.js';
 
 async function navigateAdministration(page: Page, name: string) {
   const navigation = page.getByRole('navigation', { name: 'Sistemas administrativos' });
@@ -85,10 +83,11 @@ test('avisa cinco minutos antes, actualiza el tiempo y vence sin renovación', a
   await login(page, 'administrativo');
   await expect(page.getByRole('complementary', { name: 'Aviso de vencimiento de sesión' })).toHaveCount(0);
   await page.clock.fastForward(6901000);
-  await expect(page.getByRole('status')).toHaveText('Tu sesión vencerá en 5 minutos. Guarda tu trabajo antes de volver a iniciar sesión.');
+  const warning = page.getByRole('complementary', { name: 'Aviso de vencimiento de sesión' });
+  await expect(warning.getByRole('status')).toHaveText('Tu sesión vencerá en 5 minutos. Guarda tu trabajo antes de volver a iniciar sesión.');
   await expect(page).toHaveURL(/\/administracion$/);
   await page.clock.fastForward(240000);
-  await expect(page.getByRole('status')).toHaveText('Tu sesión vencerá en 1 minuto. Guarda tu trabajo antes de volver a iniciar sesión.');
+  await expect(warning.getByRole('status')).toHaveText('Tu sesión vencerá en 1 minuto. Guarda tu trabajo antes de volver a iniciar sesión.');
   await page.clock.fastForward(60000);
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
@@ -396,22 +395,15 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Demostración', { exact: true })).toBeVisible();
   await expect(page.getByText('Prototipo con datos ficticios', { exact: true })).toHaveCount(0);
-  const response = await page.request.get('/api/v1/purchases/summary');
-  expect(response.status()).toBe(200);
-  const { data: summary } = await response.json() as PurchaseSummaryResponse;
   const indicators = page.getByRole('definition');
-  await expect(indicators.nth(0)).toHaveText(String(summary.totalCount));
-  await expect(indicators.nth(2)).toHaveText(String(summary.pendingCount));
-  await expect(indicators.nth(4)).toHaveText(amountLabel(summary.pendingAmount));
+  const summary = (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
+  await expect(indicators.nth(0)).toHaveText(String(summary.requests));
+  await expect(indicators.nth(2)).toHaveText(String(summary.pending));
+  await expect(indicators.nth(4)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.pendingAmount)));
   await expect(page.getByRole('table')).toHaveCount(0);
   const chart = page.getByRole('list', { name: 'Cantidad de solicitudes pendientes por día' });
-  if (summary.pendingByDate.length) {
-    await expect(chart.getByRole('listitem')).toHaveText(summary.pendingByDate.map(day =>
-      `${dateLabel(day.date)}${day.count} ${day.count === 1 ? 'solicitud' : 'solicitudes'}`));
-  } else {
-    await expect(chart).toHaveCount(0);
-    await expect(page.getByText('No hay solicitudes pendientes de revisión.', { exact: true })).toBeVisible();
-  }
+  if (summary.requests) await expect(chart.getByRole('listitem')).toHaveCount(summary.days.length);
+  else await expect(page.getByText('Aún no hay solicitudes registradas.')).toBeVisible();
   await expect(page.getByRole('button', { name: /aprobar/i })).toHaveCount(0);
   for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 900 });
@@ -489,8 +481,10 @@ test('solicitudes persistentes: ingreso, varios ítems, recarga, detalle y valid
   await expect(row).toHaveCount(0);
   const reviewed = page.getByRole('region', { name: 'Registros validados', exact: true });
   const reviewedRow = reviewed.getByRole('row').filter({ hasText: number });
-  await expect(reviewedRow).toHaveCount(1); await expect(reviewedRow.getByRole('button')).toHaveCount(0);
+  await expect(reviewedRow).toHaveCount(1); await expect(reviewedRow.getByRole('button', { name: 'Validar registro', exact: true })).toHaveCount(0);
+  await expect(reviewedRow.getByRole('button', { name: 'Eliminar', exact: true })).toHaveCount(0);
   await reviewedRow.getByRole('link', { name: 'Ver detalles' }).click();
+  await expect(page.getByRole('button', { name: 'Eliminar', exact: true })).toBeVisible();
   await expect(page.getByText(/Validado por/)).toBeVisible();
   await page.reload(); await expect(page.getByText('Validado', { exact: true })).toBeVisible();
 });
@@ -650,8 +644,7 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
   await expect(reviewed.getByText('Página 2', { exact: true })).toBeVisible();
   const search = page.getByLabel('Buscar solicitudes', { exact: true });
   await search.fill('clinica hu06');
-  await expect(pending.getByText('Página 2', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+  await expect(page).toHaveURL(/q=clinica\+hu06/);
   for (const table of [pending, reviewed]) {
     await expect(table.getByText('Página 1', { exact: true })).toBeVisible();
     await expect(table.getByText('1 registro', { exact: true })).toBeVisible();

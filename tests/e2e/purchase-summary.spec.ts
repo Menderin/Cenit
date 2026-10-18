@@ -26,16 +26,16 @@ test('Inicio coincide con compras y se actualiza al volver después de guardar y
   };
   await openRecord();
   await home();
-  await expect(card('Solicitudes')).toHaveText(String(before.totalCount + 1));
-  await expect(card('Pendientes de revisión')).toHaveText(String(before.pendingCount + 1));
+  await expect(card('Solicitudes')).toHaveText(String(before.requests + 1));
+  await expect(card('Pendientes de revisión')).toHaveText(String(before.pending + 1));
   await expect(card('Monto pendiente')).toHaveText(amountLabel((BigInt(before.pendingAmount) + BigInt(input.header.totalAmount)).toString()));
   const row = await openRecord();
   await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Validar registro', exact: true }).click();
   await expect(row).toHaveCount(0);
   await home();
-  await expect(card('Solicitudes')).toHaveText(String(before.totalCount + 1));
-  await expect(card('Pendientes de revisión')).toHaveText(String(before.pendingCount));
+  await expect(card('Solicitudes')).toHaveText(String(before.requests + 1));
+  await expect(card('Pendientes de revisión')).toHaveText(String(before.pending));
   await expect(card('Monto pendiente')).toHaveText(amountLabel(before.pendingAmount));
 });
 
@@ -44,7 +44,7 @@ test('Inicio muestra error y permite reintentar hasta un resumen vacío', async 
   await page.route('**/api/v1/purchases/summary', route => route.fulfill({
     status: unavailable ? 503 : 200, contentType: 'application/json',
     body: JSON.stringify(unavailable ? { error: { code: 'SERVICE_UNAVAILABLE', message: 'Resumen temporalmente no disponible.', requestId: crypto.randomUUID() } }
-      : { data: { totalCount: 0, pendingCount: 0, currency: 'CLP', pendingAmount: '0', pendingByDate: [] } }),
+      : { data: { requests: 0, pending: 0, currency: 'CLP', pendingAmount: '0', days: [] } }),
   }));
   await login(page, 'administrativo');
   await expect(page.getByRole('alert')).toContainText('Resumen temporalmente no disponible.');
@@ -52,6 +52,6 @@ test('Inicio muestra error y permite reintentar hasta un resumen vacío', async 
   unavailable = false;
   await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
   await expect(page.locator('.dashboard-kpis')).toBeVisible();
-  await expect(page.getByText('No hay solicitudes pendientes de revisión.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Aún no hay solicitudes registradas.', { exact: true })).toBeVisible();
   await expect(page.locator('.dashboard-kpis dd').filter({ hasText: /^0$/ })).toHaveCount(2);
 });

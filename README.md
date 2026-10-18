@@ -1,7 +1,9 @@
 # Cenit
 
+Integración de presentación del 18 de octubre: se recuperan Inicio conectado a PostgreSQL, búsqueda textual automática y eliminación desde detalle de `presentacion-1-demo`, conservando el despliegue Azure de `develop`/`main`. Contrato, comportamiento y verificación en [COMPRAS.md](Docs/COMPRAS.md). No se cargan cuentas ni compras al integrar o desplegar.
+
 Pulido de flujos del 14 de octubre: Cancelar y descarte con diálogo, calendario en español, avisos Sonner y retorno al listado con filtros/páginas. La sesión mantiene dos horas; jornada se implementará después de la demo/integración. Cambios, evidencia y conciliación pendiente de Jira en [revisión de UX](Docs/REVISION-UX-2026-10-14.md).
-Capturas desde navegador, 14 de octubre: iniciar sesión como administrativo y abrir **Sistema de compra → Subir captura**, o `/administracion/compras/captura`. Permite elegir PNG/JPEG, ver la imagen, extraer, corregir y continuar al guardado explícito. OCR comprueba señales del formato de solicitud; admite parciales y no acredita autenticidad ni exige bordes azules. Preparación y prueba visual en [ADAPTADOR-CAPTURAS.md](Docs/ADAPTADOR-CAPTURAS.md). Reiniciar `npm run dev` tras actualizar el backend y mantener OCR iniciado con `podman compose --profile ocr up -d ocr`. El laboratorio separado conserva ejemplos y el ensayo de VM sigue pendiente; no se instala inferencia en la VM mediante este cambio.
+Capturas desde navegador, 14 de octubre: iniciar sesión como administrativo y abrir **Sistema de compra → Subir captura**, o `/administracion/compras/captura`. Permite elegir PNG/JPEG, ver la imagen, extraer, corregir y continuar al guardado explícito. OCR comprueba señales del formato de solicitud; admite parciales y no acredita autenticidad ni exige bordes azules. Preparación y prueba visual en [ADAPTADOR-CAPTURAS.md](Docs/ADAPTADOR-CAPTURAS.md). Para arrancar la demo completa en macOS y Docker Desktop, sigue [Levantar Cenit local para la presentación](Docs/LEVANTAR-DEMO-LOCAL.md); en Windows, conserva los comandos Podman/PowerShell de esta guía. El ensayo de VM sigue pendiente; no se instala inferencia en la VM mediante este cambio.
 
 Actualización del 13 de octubre: el líder autoriza entregar la demo actual por HTTP en la VM, aunque malla y extracción real sigan pendientes. CI completo usa `Application` con lint, catálogo, build, integración, E2E contra producción y verificación de imagen. El marcador parcial fue retirado tras verificar estos checks localmente. La variable de publicación se habilita durante el primer ensayo supervisado, no mediante este cambio local. Procedimiento vigente: [primera entrega automática](deploy/PRIMER-DESPLIEGUE.md). Las menciones anteriores a bloqueo o ausencia de aplicación son antecedentes de preparación, no el estado técnico vigente.
 
@@ -53,11 +55,13 @@ La estructura completa y las reglas para ubicar código están en la sección 4 
 
 ## Estado de implementación
 
-Este checkout integra autenticación local, compras persistentes con revisión local y la malla de Nutrición por semestres, detalle, historial propio y búsqueda docente, conectados a PostgreSQL. Conserva Home ilustrativo y laboratorio separado de ejemplos de extracción; todavía no hay OCR ni interpretación oficial de prerrequisitos. CI completo verifica el monolito compilado, pruebas de ambos módulos e imagen; la integración de esta rama y el ensayo de entrega/recuperación en VM requieren revisión del equipo.
+Este checkout integra autenticación local, compras persistentes, un Inicio conectado a sus registros y búsqueda, detalle y eliminación de compras. Incluye una pantalla de captura con OCR auxiliar local para extraer candidatos y revisarlos antes de guardar; reconoce señales de formato, pero no acredita autenticidad ni precisión institucional. La malla de Nutrición incluye consulta por semestre, detalle, historial propio y búsqueda docente. La integración de esta rama y el ensayo de entrega/recuperación en VM requieren revisión del equipo.
 
 Para actualizar una base preparada en la antigua rama académica o en develop, usar `npm run db:migrate` con la credencial privada del migrador. Los tags originales de ambas ramas se conservan en el journal y se aplican sólo las migraciones faltantes; no restablecer la BD ni renombrar SQL aplicados. Detalle de compatibilidad en [ACADEMICO.md](Docs/ACADEMICO.md). `npm run test:e2e:production` verifica login, compras y malla juntos sobre el servidor compilado, después de `npm run build`.
 
-## Probar login en el navegador
+## Probar login en modo desarrollo
+
+Para la presentación en macOS, usa [Levantar Cenit local para la presentación](Docs/LEVANTAR-DEMO-LOCAL.md): deja una sola página en `http://127.0.0.1:8081`, servida por el build compilado, y conserva las cuentas y compras al reiniciar. Los comandos de desarrollo siguientes abren la API en `3000` y Vite en `5173`; úsalos para trabajar en el código y ciérralos antes de presentar.
 
 Requiere Node 24.21.0/npm 11.19.0, Python y Podman con proveedor Compose. Preparación inicial, desde la raíz (repetir migraciones cuando corresponda, no en cada arranque):
 

@@ -7,7 +7,7 @@ import { mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { Value } from '@sinclair/typebox/value';
-import { PurchaseResponseSchema, PurchaseListResponseSchema, PurchaseSummaryResponseSchema, headerFields, lineFields, administrativeFields } from '../../packages/contracts/src/purchases/index.js';
+import { PurchaseResponseSchema, PurchaseListResponseSchema, PurchaseSummaryResponseSchema, PurchaseDeletionResponseSchema, headerFields, lineFields, administrativeFields } from '../../packages/contracts/src/purchases/index.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 import { createTestPool, closeTestPool } from './support/postgres.js';
 import { createDemoCredentials, prepareDemoAccounts } from '../../db/seeds/auth-demo.js';
@@ -42,7 +42,7 @@ let captureNow = Date.now();
 const captureReceipts = new CaptureReceipts(randomBytes(32), () => captureNow);
 // The pre-origin format is a fixed array serialization, independent of origin.
 const historicalHash = createHash('sha256').update(JSON.stringify({ header: Object.keys(headerFields).map(key => historical.header[key as keyof typeof historical.header]), administrative: Object.keys(administrativeFields).map(key => historical.administrative[key as keyof typeof historical.administrative]), lines: historical.lines.map(line => Object.keys(lineFields).map(key => line[key as keyof typeof line])) })).digest('hex');
-const request = (method: 'GET' | 'POST', url: string, payload?: unknown, cookie = cookies.administrativo, suppliedOrigin: string | undefined = origin) => app.inject({ method, url, headers: { ...(cookie ? { cookie } : {}), ...(suppliedOrigin ? { origin: suppliedOrigin } : {}) }, ...(payload === undefined ? {} : { payload: payload as Record<string, unknown> }) });
+const request = (method: 'GET' | 'POST' | 'DELETE', url: string, payload?: unknown, cookie = cookies.administrativo, suppliedOrigin: string | undefined = origin) => app.inject({ method, url, headers: { ...(cookie ? { cookie } : {}), ...(suppliedOrigin ? { origin: suppliedOrigin } : {}) }, ...(payload === undefined ? {} : { payload: payload as Record<string, unknown> }) });
 beforeAll(async () => {
   process.env.APP_ENV = 'test';
   for (const [index, database] of databases.entries()) {
@@ -90,6 +90,7 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.purchase_requests')).rows[0].n).toBe(index === 0 ? 0 : 1);
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.accounts')).rows[0].n).toBe(index === 0 ? 0 : 3);
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.__drizzle_migrations')).rows[0].n).toBe(readMigrationFiles({ migrationsFolder: 'db/migrations' }).length);
+      if (index === 0) expect(await new PurchaseRepository(pool).summary()).toEqual({ data: { requests: 0, pending: 0, currency: 'CLP', pendingAmount: '0', days: [] } });
     }
     const previous = (await pools[1]!.query('SELECT source,example_id,payload_hash FROM cenit.purchase_requests WHERE id=$1', [historicalId])).rows[0];
     expect(previous).toEqual({ source: 'manual', example_id: null, payload_hash: historicalHash });
@@ -105,21 +106,14 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
       expect(response.statusCode).toBe(200); cookies[credential.role] = String(response.headers['set-cookie']).split(';')[0]!;
     }
   });
-  it('el resumen vacío no inventa solicitudes ni montos', async () => {
-    const response = await request('GET', '/api/v1/purchases/summary');
-    expect(response.statusCode).toBe(200);
-    expect(Value.Check(PurchaseSummaryResponseSchema, response.json())).toBe(true);
-    expect(response.json()).toEqual({ data: { totalCount: 0, pendingCount: 0, currency: 'CLP', pendingAmount: '0', pendingByDate: [] } });
-    expect((await request('GET', '/api/v1/purchases/summary', undefined, '')).statusCode).toBe(401);
-    for (const role of ['docente', 'estudiante']) expect((await request('GET', '/api/v1/purchases/summary', undefined, cookies[role])).statusCode).toBe(403);
-  });
   it('sesión, roles y Origin se comprueban en todos los recursos', async () => {
-    const routes: ['GET' | 'POST', string, unknown?][] = [['GET', '/api/v1/purchases?reviewStatus=pending'], ['POST', '/api/v1/purchases', body()], ['GET', `/api/v1/purchases/${randomUUID()}`], ['POST', `/api/v1/purchases/${randomUUID()}/validation`, { expectedVersion: 1 }]];
+    const routes: ['GET' | 'POST' | 'DELETE', string, unknown?][] = [['GET', '/api/v1/purchases?reviewStatus=pending'], ['GET', '/api/v1/purchases/summary'], ['DELETE', `/api/v1/purchases/${randomUUID()}`, { expectedVersion: 1 }], ['POST', '/api/v1/purchases', body()], ['GET', `/api/v1/purchases/${randomUUID()}`], ['POST', `/api/v1/purchases/${randomUUID()}/validation`, { expectedVersion: 1 }]];
     for (const [method, url, payload] of routes) {
       expect((await request(method, url, payload, '')).statusCode).toBe(401);
       for (const role of ['docente', 'estudiante']) expect((await request(method, url, payload, cookies[role])).statusCode).toBe(403);
     }
     expect((await request('POST', '/api/v1/purchases', body(), cookies.administrativo, 'http://invalid.example')).statusCode).toBe(403);
+    for (const suppliedOrigin of ['', 'http://invalid.example']) expect((await request('DELETE', `/api/v1/purchases/${randomUUID()}`, { expectedVersion: 1 }, cookies.administrativo, suppliedOrigin)).statusCode).toBe(403);
   });
   it('guarda una solicitud y varios proveedores sin perder ceros, montos ni opcionales', async () => {
     const input = body(), response = await request('POST', '/api/v1/purchases', input);
@@ -203,6 +197,56 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     const invalid = body(); invalid.header.sentDate = '2026-02-30';
     const response = await request('POST', '/api/v1/purchases', invalid);
     expect(response.statusCode).toBe(400); expect(response.body).not.toMatch(/SELECT|INSERT|stack|password_hash/); expect(response.json().error.requestId).toBeTruthy();
+  });
+  it('resumen persistente suma cabeceras una vez y refleja altas, revisión y eliminación con montos exactos', async () => {
+    expect(await new PurchaseRepository(pools[1]!).summary()).toMatchObject({ data: { requests: 1, pending: 1, pendingAmount: historical.header.totalAmount } });
+    const before = (await request('GET', '/api/v1/purchases/summary')).json().data;
+    const input = body(); input.header.sentDate = '2098-01-02'; input.header.totalAmount = '9'.repeat(255);
+    const saved = (await request('POST', '/api/v1/purchases', input)).json().data;
+    const summary = await request('GET', '/api/v1/purchases/summary');
+    expect(summary.statusCode).toBe(200); expect(Value.Check(PurchaseSummaryResponseSchema, summary.json())).toBe(true);
+    expect(summary.headers['cache-control']).toBe('no-store');
+    expect(summary.json().data).toMatchObject({ requests: before.requests + 1, pending: before.pending + 1, currency: 'CLP', pendingAmount: (BigInt(before.pendingAmount) + BigInt(input.header.totalAmount)).toString() });
+    expect(summary.json().data.days.at(-1)).toEqual({ date: '2098-01-02', count: 1 });
+    await request('POST', `/api/v1/purchases/${saved.id}/validation`, { expectedVersion: 1 });
+    const reviewed = (await request('GET', '/api/v1/purchases/summary')).json().data;
+    expect(reviewed).toMatchObject({ requests: before.requests + 1, pending: before.pending, pendingAmount: before.pendingAmount });
+    expect(reviewed.days.at(-1)).toEqual({ date: '2098-01-02', count: 0 });
+    expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: 2 })).statusCode).toBe(200);
+    expect((await request('GET', '/api/v1/purchases/summary')).json().data).toEqual(before);
+  });
+  it('elimina pendientes y validados con sus ítems, exige versión y rechaza formatos inválidos', async () => {
+    for (const reviewed of [false, true]) {
+      const saved = (await request('POST', '/api/v1/purchases', body())).json().data;
+      if (reviewed) await request('POST', `/api/v1/purchases/${saved.id}/validation`, { expectedVersion: 1 });
+      const version = reviewed ? 2 : 1;
+      for (const payload of [{}, { expectedVersion: 0 }, { expectedVersion: '1' }, { expectedVersion: version, role: 'administrativo' }]) {
+        expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, payload)).statusCode).toBe(400);
+      }
+      expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: reviewed ? 1 : 2 })).statusCode).toBe(409);
+      expect((await repository.get(saved.id))!.lines).toEqual(saved.lines);
+      const response = await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: version });
+      expect(response.statusCode).toBe(200); expect(Value.Check(PurchaseDeletionResponseSchema, response.json())).toBe(true);
+      expect(response.json()).toEqual({ data: { id: saved.id } });
+      expect((await request('GET', `/api/v1/purchases/${saved.id}`)).statusCode).toBe(404);
+      expect((await pools[0]!.query('SELECT count(*)::int AS n FROM cenit.purchase_request_lines WHERE request_id=$1', [saved.id])).rows[0].n).toBe(0);
+      expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: version })).statusCode).toBe(404);
+    }
+    expect((await request('DELETE', '/api/v1/purchases/invalid', { expectedVersion: 1 })).statusCode).toBe(400);
+  });
+  it('eliminación revierte ítems si falla la cabecera y serializa solicitudes concurrentes', async () => {
+    const saved = (await request('POST', '/api/v1/purchases', body())).json().data;
+    const client = await pools[0]!.connect();
+    const proxy = { query: (sql: string, values?: unknown[]) => {
+      if (sql.startsWith('DELETE FROM cenit.purchase_requests ')) throw new Error('failure-after-lines');
+      return client.query(sql, values);
+    }, release: () => client.release() } as unknown as PoolClient;
+    const failing = new PurchaseRepository({ connect: async () => proxy } as unknown as Pool);
+    await expect(failing.delete(saved.id, 1)).rejects.toThrow('failure-after-lines');
+    expect(await repository.get(saved.id)).toEqual(saved);
+    const responses = await Promise.all([request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: 1 }), request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: 1 })]);
+    expect(responses.map(response => response.statusCode).sort()).toEqual([200, 404]);
+    expect(await repository.get(saved.id)).toBeNull();
   });
   it('admite JSON grande sólo en alta y aplica límite combinado de 512 KiB', async () => {
     const input = body();
@@ -413,27 +457,4 @@ describe('capture provenance and explicit persistence', () => {
     }
     captureNow = Date.now();
   }, 65000);
-  it('resumen y listado comparten cabeceras, montos exactos y cambios de revisión', async () => {
-    const before = (await repository.summary()).data;
-    const pending = body(); pending.header.requestNumber = 'RESUMEN-EXACTO'; pending.header.totalAmount = '9007199254740993'; pending.header.sentDate = '2026-10-17';
-    const reviewed = body(); reviewed.header.requestNumber = 'RESUMEN-VALIDADO'; reviewed.header.totalAmount = '7'; reviewed.header.sentDate = pending.header.sentDate;
-    expect(pending.lines.length).toBeGreaterThan(1);
-    for (const input of [pending, reviewed]) expect((await request('POST', '/api/v1/purchases', input)).statusCode).toBe(201);
-    const saved = (await request('POST', '/api/v1/purchases', reviewed)).json().data;
-    const intermediate = (await request('GET', '/api/v1/purchases/summary')).json();
-    expect(Value.Check(PurchaseSummaryResponseSchema, intermediate)).toBe(true);
-    expect(intermediate.data.pendingCount).toBe(before.pendingCount + 2);
-    expect(intermediate.data.pendingAmount).toBe((BigInt(before.pendingAmount) + 9007199254741000n).toString());
-    expect((await request('POST', '/api/v1/purchases/' + saved.id + '/validation', { expectedVersion: 1 })).statusCode).toBe(200);
-    const result = (await request('GET', '/api/v1/purchases/summary')).json().data;
-    const days = new Map(before.pendingByDate.map(day => [day.date, day.count] as const));
-    days.set(pending.header.sentDate, (days.get(pending.header.sentDate) ?? 0) + 1);
-    expect(result).toEqual({ totalCount: before.totalCount + 2, pendingCount: before.pendingCount + 1, currency: 'CLP',
-      pendingAmount: (BigInt(before.pendingAmount) + 9007199254740993n).toString(),
-      pendingByDate: [...days.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, count]) => ({ date, count })) });
-    const list = (await request('GET', '/api/v1/purchases?reviewStatus=pending')).json();
-    expect(list.pagination.total).toBe(result.pendingCount);
-    expect(list.totals.documentTotal).toBe(result.pendingAmount);
-  });
-
 });

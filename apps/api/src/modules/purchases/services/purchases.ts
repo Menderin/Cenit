@@ -16,7 +16,6 @@ export class PurchaseService {
       if (origin?.type === 'image_capture') this.receipts!.verify(origin, accountId);
     });
   }
-  summary() { return this.repository.summary(); }
   list(query: PurchaseListQuery) {
     if (validatePurchaseListQuery(query).length) throw new ApiError(400, 'INVALID_FILTER', 'Revisa las fechas y los filtros de búsqueda.');
     return this.repository.list(query);
@@ -27,4 +26,6 @@ export class PurchaseService {
     return { data: record };
   }
   async validate(id: string, version: number, accountId: string) { return { data: await this.repository.validate(id, version, accountId) }; }
+  summary() { return this.repository.summary(); }
+  delete(id: string, version: number) { return this.repository.delete(id, version); }
 }

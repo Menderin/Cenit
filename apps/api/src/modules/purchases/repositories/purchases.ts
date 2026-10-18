@@ -37,6 +37,27 @@ export class PurchaseRepository {
     } as PurchaseRecord;
   }
   async get(id: string) { return this.transaction(db => this.detail(db, id), true); }
+  async summary(): Promise<PurchaseSummaryResponse> {
+    const { rows } = await this.pool.query<{ date: string; requests: number; pending: number; amount: string }>(`SELECT sent_date::text AS date,
+      count(*)::int AS requests, (count(*) FILTER (WHERE review_status='pending'))::int AS pending,
+      coalesce(sum(total_amount) FILTER (WHERE review_status='pending'),0)::text AS amount
+      FROM cenit.purchase_requests GROUP BY sent_date ORDER BY sent_date`);
+    return { data: {
+      requests: rows.reduce((total, row) => total + row.requests, 0), pending: rows.reduce((total, row) => total + row.pending, 0),
+      currency: 'CLP', pendingAmount: rows.reduce((total, row) => total + BigInt(row.amount), 0n).toString(),
+      days: rows.map(row => ({ date: row.date, count: row.pending })),
+    } };
+  }
+  async delete(id: string, expectedVersion: number) {
+    return this.transaction(async db => {
+      const result = await db.query('SELECT version FROM cenit.purchase_requests WHERE id=$1 FOR UPDATE', [id]);
+      if (!result.rows[0]) throw new ApiError(404, 'NOT_FOUND', 'Solicitud inexistente.');
+      if (result.rows[0].version !== expectedVersion) throw new ApiError(409, 'VERSION_CONFLICT', 'El registro cambió. Actualiza los datos antes de eliminarlo.');
+      await db.query('DELETE FROM cenit.purchase_request_lines WHERE request_id=$1', [id]);
+      await db.query('DELETE FROM cenit.purchase_requests WHERE id=$1', [id]);
+      return { data: { id } };
+    });
+  }
   async create(input: CreatePurchase, accountId: string, authorizeNew: () => void = () => {}): Promise<{ record: PurchaseRecord; created: boolean }> {
     // Preserve the exact historical serialization for omitted/explicit manual origins.
     const content = canonical(input);
@@ -63,16 +84,6 @@ export class PurchaseRepository {
       }
       return { record: (await this.detail(db, id))!, created: true };
     });
-  }
-  async summary(): Promise<PurchaseSummaryResponse> {
-    return this.transaction(async db => {
-      // Both aggregates share a snapshot; request totals never join their item rows.
-      const totals = await db.query<{ totalCount: number; pendingCount: number; pendingAmount: string }>(
-        'SELECT count(*)::int AS "totalCount",count(*) FILTER (WHERE review_status=$1)::int AS "pendingCount",coalesce(sum(total_amount) FILTER (WHERE review_status=$1),0)::text AS "pendingAmount" FROM cenit.purchase_requests', ['pending']);
-      const days = await db.query<{ date: string; count: number }>(
-        'SELECT sent_date::text AS date,count(*)::int AS count FROM cenit.purchase_requests WHERE review_status=$1 GROUP BY sent_date ORDER BY sent_date', ['pending']);
-      return { data: { ...totals.rows[0]!, currency: 'CLP', pendingByDate: days.rows } };
-    }, true);
   }
   async list(query: PurchaseListQuery): Promise<PurchaseListResponse> {
     return this.transaction(async db => {
