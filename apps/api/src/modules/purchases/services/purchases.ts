@@ -26,4 +26,6 @@ export class PurchaseService {
     return { data: record };
   }
   async validate(id: string, version: number, accountId: string) { return { data: await this.repository.validate(id, version, accountId) }; }
+  summary() { return this.repository.summary(); }
+  delete(id: string, version: number) { return this.repository.delete(id, version); }
 }
