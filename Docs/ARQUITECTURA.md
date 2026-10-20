@@ -128,6 +128,8 @@ Los códigos `NUT2027-001` a `NUT2027-052` son internos; `officialCode` permanec
 
 Todas las expresiones actuales son `pending`; se conservan 35 relaciones observadas con fuente e interpretación pendiente. Falta cotejar sus extremos y confirmar si las entradas múltiples son conjuntas o alternativas. La ausencia de flechas no confirma ausencia de requisitos. `none` exige confirmación expresa; `allOf`, `anyOf` y `unsupported` son formas de contrato, sin evaluación de habilitación ni simulación. Una corrección de contenido publicado necesita otra versión, no modificar silenciosamente la existente.
 
+La propuesta de presentación de SCRUM-72 reutiliza el detalle de la malla: requisito simple por nombre, «Todos los siguientes» y «Al menos uno de los siguientes» con listas, ausencia confirmada sólo ante `none`, y estados «Pendientes de confirmación» y «Regla no soportada» con su explicación recibida. Las relaciones observadas se muestran aparte y no sustituyen esas condiciones. El texto conserva el significado sin depender del color; el diálogo permite teclado y retorno de foco. Los seis ejemplos de revisión son ficticios, se identifican dentro del detalle y sólo se suministran en pruebas de navegador, sin publicarlos ni usarlos como reemplazo ante fallos. El diseño espera aprobación; completar SCRUM-75 requiere además la fuente revisada de Kevin (SCRUM-71) y la publicación versionada de Víctor (SCRUM-74). La [matriz de aceptación](PRUEBAS-Y-ACEPTACION.md#consulta-académica) contiene el recorrido reproducible y sus límites.
+
 | Consulta | Ruta |
 | --- | --- |
 | Planes disponibles | `GET /api/v1/academic/plans` |
