@@ -113,7 +113,7 @@ test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado 
   await expect(a).toHaveCSS('translate', '0px -2px');
   const highlightShadow = await a.evaluate(element => getComputedStyle(element, '::before').boxShadow);
   expect(highlightShadow).not.toBe('none');
-  expect(await page.locator('[data-course-code="D"]').evaluate(element => ({ opacity: Number(getComputedStyle(element, '::after').opacity), border: getComputedStyle(element, '::after').borderStyle }))).toEqual({ opacity: .75, border: 'dashed' });
+  expect(await page.locator('[data-course-code="D"]').evaluate(element => ({ opacity: Number(getComputedStyle(element, '::after').opacity), border: getComputedStyle(element, '::after').borderStyle }))).toEqual({ opacity: .85, border: 'dashed' });
   expect(await unrelated.evaluate(element => getComputedStyle(element, '::before').opacity)).toBe('0');
   await expect(a.locator('.academic-course__origin-ring')).toHaveCSS('opacity', '1');
   await expect(a.locator('.academic-course__origin-ring')).toHaveCSS('border-style', 'solid');
