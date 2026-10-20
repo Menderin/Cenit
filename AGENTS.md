@@ -1,105 +1,46 @@
-# Instrucciones para agentes de Cenit
+# Trabajo de agentes en Cenit
 
-Integración autorizada por Gael del 18 de octubre: recuperar presentacion-1-demo sobre develop conservando Azure. Compras mantiene el contrato de presentación requests/pending/pendingAmount/days, búsqueda textual de 250 ms y eliminación desde detalle. No ejecutar semillas ni migraciones como parte del merge. CI y revisión del resultado combinado son obligatorios.
+Cenit es un monolito modular para la Facultad de Medicina de la UCN. El proyecto contempla Compras, Personal, Bienes y consulta académica de Nutrición; el MVP actual se concentra en Compras y académico. El alcance completo y el funcionamiento vigente están en [Arquitectura](Docs/ARQUITECTURA.md).
 
-Corrección autorizada por Gael del 17 de octubre: Inicio consulta el resumen persistente de compras mediante GET /api/v1/purchases/summary. Los contadores, monto exacto y pendientes por fecha provienen de las mismas cabeceras que el listado; alta y validación invalidan su consulta. Sustituye las menciones históricas de Home ilustrativo independiente. Ver [COMPRAS.md](Docs/COMPRAS.md).
+## Antes de trabajar
 
-Decisión de Gael del 17 de octubre: migrar la demostración a Azure Chile Central, con USD 200 totales hasta diciembre, una VM económica de unos 4 GiB y OCR incluido. GitHub Actions entrega `main` en `cenit.dpdns.org` y `develop` como staging en `develop.cenit.dpdns.org`. Sustituye el destino/polling de la VM compartida, conservando PR, revisión, CI, migrador separado y datos. Preparación en `feat/azure-deploy`; leer [deploy/azure/README.md](deploy/azure/README.md). No afirmar que esté operativo ni retirar el servidor anterior antes de verificar transferencia y recorridos.
+- Leer [CONTRIBUTING.md](CONTRIBUTING.md), revisar Git y conservar el trabajo existente.
+- Consultar la tarea y sus asignaciones vigentes en Jira. Trabajar sólo en el alcance solicitado; registrar las dependencias ajenas sin asumir su implementación ni su cierre.
+- Antes de modificar una funcionalidad, leer su sección de Arquitectura y sus contratos/código. Para operaciones, consultar [entorno local](deploy/LOCAL.md), [Azure](deploy/azure/README.md) o [servidor anterior](deploy/README.md), según el destino.
+- Identificar resultado observable, archivos afectados y comprobaciones necesarias antes de editar. Explicar y consultar contradicciones que afecten alcance, permisos o reglas de negocio; continuar el trabajo independiente.
+- Usar los mismos prefijos del equipo (`feat/`, `fix/`, `test/`, `docs/`). No crear tickets, PR, merges, mensajes a compañeros o cambios de Jira sin autorización explícita.
 
-Ajuste de interfaz del 16 de octubre: búsqueda textual de compras en vivo con pausa de 250 ms; fechas/códigos se aplican explícitamente, conservando sus borradores. «Eliminar» queda sólo como ícono en el detalle, con confirmación. Detalle y verificación en [COMPRAS.md](Docs/COMPRAS.md).
+## Límites del producto
 
-Actualización del 16 de octubre, autorizada por Gael: Inicio consulta las compras persistidas mediante `GET /api/v1/purchases/summary`, con contadores, monto exacto y pendientes por fecha; alta/validación/eliminación refrescan el resumen al volver. La demo admite eliminar copias pendientes o validadas mediante `DELETE /api/v1/purchases/:id`, con sesión administrativa, Origin, versión esperada y borrado atómico de cabecera/ítems. La acción de eliminar aparece sólo en el detalle como ícono con nombre accesible y confirmación contextual. Sustituye las restricciones históricas de Home ilustrativo independiente y ausencia de eliminación; no modifica Oracle. Leer [COMPRAS.md](Docs/COMPRAS.md#inicio-conectado-y-eliminación--16-de-octubre).
+- Cenit recupera y conserva copias revisadas; no usa la API de Oracle ni modifica sus registros, pagos o aprobaciones.
+- La extracción produce candidatos para revisión humana y nunca guarda automáticamente. Los desconocidos quedan en `null`; no se inventan referencias ni valores institucionales.
+- Personal y Bienes requieren definición y validación antes de implementar; no añadirlos al sprint por estar nombrados en el Charter.
+- Mantener login local, un rol por cuenta y sesión fija de dos horas. No implementar políticas de jornada, permisos por objeto, retención o tratamiento de datos por iniciativa del agente.
+- Académico conserva `pending` mientras no haya reglas validadas. No deducir AND/OR ni `none` de flechas; no añadir simulación.
+- La demo y QA usan datos ficticios. La investigación o el acceso técnico no acreditan permiso para usar fuentes reales.
 
-Actualización de extracción del 14 de octubre: adaptador OCR auxiliar del notebook, `POST /api/v1/purchases/extractions` y pantalla mínima en `/administracion/compras/captura`, autorizada posteriormente por el líder. No conecta Oracle. Leer [ADAPTADOR-CAPTURAS.md](Docs/ADAPTADOR-CAPTURAS.md) antes de modificar procesamiento, procedencia o interfaz. El endpoint requiere sesión administrativa y Origin; sin configuración OCR responde 503. Procesador v2 comprueba señales de formato y admite parciales, sin acreditar autenticidad ni exigir color azul. La precisión institucional, revisión/integración y ensayo de VM siguen pendientes. Las menciones anteriores a ausencia de endpoint/pantalla describen el laboratorio previo.
+## Contratos que deben conservarse
 
-Actualización del 13 de octubre: el líder autoriza entregar la demo actual por HTTP en la VM, aunque malla y extracción real sigan pendientes. CI completo usa `Application` con lint, catálogo, build, integración, E2E contra producción y verificación de imagen. El marcador parcial fue retirado tras verificar estos checks localmente. La variable de publicación se habilita durante el primer ensayo supervisado, no mediante este cambio local. Procedimiento vigente: [primera entrega automática](deploy/PRIMER-DESPLIEGUE.md). Las menciones anteriores a bloqueo o ausencia de aplicación son antecedentes de preparación, no el estado técnico vigente.
+- Inicio consulta `GET /api/v1/purchases/summary` con `requests`, `pending`, `pendingAmount` y `days`; usa las mismas cabeceras del listado y se refresca tras altas, validación y eliminación.
+- Búsqueda textual de compras tras 250 ms; fechas/códigos se aplican explícitamente y conservan sus borradores. Unidad y proyecto coinciden en el mismo ítem.
+- Eliminar sólo desde el detalle, mediante ícono accesible y confirmación; sesión administrativa, Origin, versión esperada y transacción de cabecera/ítems.
+- Montos exactos como cadenas, identificadores textuales, guardado atómico y reintentos idempotentes. No imponer suma ítems=total ni sobrescribir conflictos silenciosamente.
+- Confirmar éxito sólo después del servidor; conservar borradores ante errores según el comportamiento vigente de sesión.
 
-Para build completo/servidor compilado/ensayo de imagen, leer [deploy/ENSAYO-LOCAL.md](deploy/ENSAYO-LOCAL.md). Ese ensayo no retira `academic-foundation`, no habilita releases ni acredita extracción/malla completa. No trasladar su excepción HTTP local a una instalación institucional por defecto.
+## Código, datos y verificación
 
-## Aplicación y referencias
+- Mantener React/Vite/TypeScript, React Router, TanStack Query, Tailwind y los componentes seleccionados; no sustituir el stack ni actualizar dependencias automáticamente.
+- API en Fastify, PostgreSQL y Drizzle. Compartir schemas públicos TypeBox, no modelos internos. Validar entradas/respuestas y permisos en servidor.
+- Código específico en su módulo de `apps/web` o `apps/api`; contratos en `packages/contracts`, esquema/migraciones en `db`. Extraer a `shared` sólo reutilización real. Usar npm workspaces y un único lockfile.
+- Respetar las versiones fijadas. No introducir dependencias o abstracciones sin justificar una necesidad concreta.
+- No editar ni renombrar SQL aplicado. Usar el migrador separado `deploy/migrate.cjs`; conservar journal y aliases legados por timestamp/hash. No ejecutar semillas, migraciones o resets como parte de un merge o de la entrega automática.
+- Para QA, usar los harness existentes y PostgreSQL exclusivo de pruebas. Avisar antes de ensayos que creen/migren/preparen bases descartables; no operar sobre bases reales ni sustituir PostgreSQL por SQLite para acreditar garantías.
+- [Pruebas y aceptación](Docs/PRUEBAS-Y-ACEPTACION.md) relaciona criterios y casos. Ejecutar las comprobaciones afectadas y distinguir resultados propios, evidencia histórica y pendientes; no crear tests redundantes.
+- No guardar secretos, datos de PostgreSQL, formularios completos, capturas privadas o reportes temporales en Git. No exponer trazas internas en el API.
+- Actualizar el documento existente cuando cambie el comportamiento. Mantener lenguaje comprensible para el equipo; no crear informes de cada sesión ni repetir decisiones en varios archivos.
 
-- [Docs/INVESTIGACION-EXTRACCION-COMPRAS.md](Docs/INVESTIGACION-EXTRACCION-COMPRAS.md): investigación experimental de OCR local y regiones dinámicas. Oracle/API descartados por el equipo; no confundir el benchmark con un endpoint ni con extracción integrada.
+## Entrega y operación
 
-Estas instrucciones aplican a todo el repositorio. Antes de iniciar una tarea, leer [CONTRIBUTING.md](CONTRIBUTING.md). Antes de modificar código, leer además [AGENTS/SDD.md](AGENTS/SDD.md), [la guía de estructura](AGENTS/ESTRUCTURA.md) y las instrucciones adicionales de la carpeta afectada.
+`develop` integra y entrega staging; `main` entrega producción de la demostración. Mantener PR, revisión independiente y CI sobre el SHA integrado. Las imágenes se verifican y fijan por digest; runtime y migrador usan secretos distintos. Las actualizaciones habituales se realizan mediante Actions/Azure, no con builds o `git pull` manuales en la VM.
 
-- `Docs/Guía de trabajo para el MVP de Cenit.pdf`: contexto y alcance de la demostración del 15 de octubre de 2026.
-- `AGENTS/SDD.md`: base técnica interna, contratos y pendientes del MVP. Distinguir decisiones de trabajo, supuestos de demo y validaciones del equipo o cliente.
-- [CONTRIBUTING.md](CONTRIBUTING.md): flujo de colaboración, ramas, PR, revisiones, coordinación de archivos compartidos y criterios de terminado. Aplicar estas reglas también al trabajo de agentes; no inventar tickets ni saltar revisión/CI.
-- [AGENTS/ESTRUCTURA.md](AGENTS/ESTRUCTURA.md): mapa de carpetas, responsabilidad de cada ubicación, límites de dependencia y criterios para colocar código/pruebas. Consultarlo antes de crear o mover archivos; actualizarlo si cambia la organización. No completar carpetas con código innecesario ni ampliar alcance para retirar `.gitkeep`.
-- `README.md`: instrucciones ejecutables; actualizarlo cuando cambie el arranque, configuración o verificación.
-- [Docs/ACADEMICO.md](Docs/ACADEMICO.md): esquema/contratos académicos implementados, trazabilidad y dependencias de login. Leerlo antes de modificar catálogo o progreso.
-- [Docs/AUTENTICACION.md](Docs/AUTENTICACION.md): contrato/modelo de cuentas, sesiones de dos horas, API y preparación privada de demo. Leer antes de modificar acceso o conectar interfaces.
-
-Ante una contradicción que afecte alcance, contratos o reglas de negocio, explicarla y solicitar una decisión. No inventar procesos institucionales ni afirmar que una funcionalidad existe sin verificarla.
-
-- [Docs/EXTRACCION-COMPRAS.md](Docs/EXTRACCION-COMPRAS.md): contrato de candidatos, límites de imagen y laboratorio administrativo. Leer antes de modificar extracción/revisión y complementar con la guía del adaptador. Los ejemplos del laboratorio no acreditan extracción real.
-
-## Alcance
-
-La aclaración más reciente define compras como recuperación y organización de registros ya cargados en Oracle, sustituyendo transcripción de pantallazos a Excel. Cenit no realiza compras ni modifica Oracle. Tabla consultable y registros conservados en Cenit confirmados; Google Sheets es opcional. Para actualizar copia, recuperar/reintentar y revisar cambios pertinentes; disparador manual o automático aún pendiente. No asumir edición manual libre ni implementación de contratos antiguos de PUT sin adaptar el flujo. Catálogo académico en PostgreSQL confirmado. Fichas y pendientes en `Docs/HISTORIAS-USUARIO-INVEST.md`; no resolver supuestos automáticamente. Las cuentas locales las prepara el equipo, sin registro público.
-
-Priorizar el registro persistente de compras y después la visualización de la malla de Nutrición. Usar datos ficticios en compras y mostrar que la aplicación es una demostración. Compras necesita alta, búsqueda, filtros, detalle y edición. La malla necesita catálogo versionado y prerrequisitos oficiales recibidos/verificados. El líder excluyó simulación y persistencia de simulaciones de este MVP; no implementarlas como compromiso del jueves.
-
-La aclaración del líder del 10 de octubre añade login y recuperación automática de datos de compras. Login local confirmado; Google queda para una iteración posterior. Definir detalles de cuenta y contrato de sesión antes de implementar. Roles `docente` y `estudiante` acceden a malla/prerrequisitos; `administrativo` gestiona compras sin acceso académico por defecto. Aplicar permisos en servidor y no aceptar asignación de rol desde el login. Mantener separación funcional en el monolito; los dos futuros módulos administrativos no forman parte del sprint actual. La fuente académica recibida es `Docs/malla-nutricion-y-dietetica-2027.pdf`; no inferir prerrequisitos ausentes del gráfico. Investigar captura desde API de Oracle o imagen mediante OCR/visión: aún no se contactó a los encargados ni se eligió mecanismo. Leer `Docs/PLANIFICACION-MVP.md` y fichas vigentes `Docs/HISTORIAS-USUARIO-INVEST.md`; supuestos pendientes no son requisitos aprobados. No sustituir automatización por transcripción manual sin decisión explícita.
-
-No incorporar Banner, autenticación institucional, pagos, aprobaciones oficiales, importación masiva ni otros procesos administrativos sin una ampliación explícita del alcance. Investigar Oracle no acredita autorización o acceso a sistemas reales. Revisión en Cenit, pago declarado y aprobación institucional son conceptos distintos.
-
-## Convenciones técnicas
-
-Ampliación autorizada del 11 de octubre: estudiantes consultan su progreso persistido y docentes buscan a todos los estudiantes ficticios de Nutrición por nombre/RUT. Historial de intentos y notas, sin simulación ni edición pública. Imagen `Docs/Foto prerequisitos Nutricion.jpeg` prioritaria para nombres/SCT; plan 2027 confirmado por el equipo. Semántica de flechas y ausencia de requisitos sigue pendiente: mantener `pending`, nunca inferir AND/OR o `none`. Perfiles/historial preparados como propuesta fuera del journal hasta revisar la FK con HU01-T03; no crear usuarios ni credenciales duplicadas para desbloquearlos.
-
-Continuidad autorizada por Gael el 12 de octubre: estudiante actual con RUT y tres historiales ficticios consultables por docente. En `malla-interactiva`, migración aditiva `0003_academic_progress` con FK a `cenit.accounts.id` del login integrado; sustituye la propuesta con marcadores, sin alterar migraciones anteriores. Preparación local explícita `academic:prepare-demo`: conserva las tres cuentas originales y crea sólo dos estudiantes adicionales únicos, con claves en archivo privado. No duplica identidades ni rota credenciales, no ejecuta semillas desde dev/migraciones/CD. Implementación y ensayo local siguen pendientes de revisión e integración del equipo; `pending` curricular se conserva. Detalle en ACADEMICO.md.
-
-Sincronización autorizada por Gael el 13: integrar `develop` en `malla-interactiva`, conservando compras, malla y CI completo. El journal conserva las migraciones 0000–0006 de develop y añade el SQL académico intacto como entrada 7 con timestamp posterior. `meta/_legacy.json` conserva el timestamp/hash académico anterior como alias explícito; no renombrar ni editar esos SQL aplicados. El snapshot `0007` describe el esquema conjunto. Migrador/readiness verifican por timestamp y hash, sin exigir que un historial previo sea un prefijo del journal conjunto; historias desconocidas, alteradas o duplicadas se rechazan. Usar exclusivamente `deploy/migrate.cjs` para actualizar bases preparadas por cualquiera de las dos ramas. No ejecutar migraciones/preparación de demo como parte del merge. Detalle y evidencia en [ACADEMICO.md](Docs/ACADEMICO.md).
-
-La base npm inicializa API/contratos sin alterar frontend. El marcador `cenitStage: academic-foundation` permite CI en ramas de tarea `feat/`, `fix/`, `test/`, `docs/`, `codex/` e integración en `develop`, con pruebas académicas/auth obligatorias; no permite entrega en `main`. CI se dispara con push, no con un commit exclusivamente local, y se repite en PR hacia develop/main. Retirarlo al completar los tres workspaces y checks reales. Habilitar el publicador sólo al preparar el ensayo autorizado de demo, según la guía vigente. El servidor conecta sesión real de cuentas UUID a académico; sin sesión deniega acceso. No introducir identidades por headers ni fingir readiness. Login local con correo/contraseña, un rol por cuenta y sesión fija de dos horas fueron confirmados el 11 de octubre. Cuentas de demo exclusivamente mediante preparación explícita privada; nunca semillas en migraciones/CD. Pantallas y política de borradores pendientes.
-
-- Conservar React, Vite, TypeScript, React Router, TanStack Query, Tailwind CSS y componentes seleccionados de shadcn/ui. No sustituir el stack del frontend por iniciativa del agente.
-- Usar como base técnica de trabajo Node.js 24 LTS con TypeScript, Fastify 5, API REST JSON, PostgreSQL 17, Drizzle y contratos TypeBox/JSON Schema. Este stack proviene de la guía; REST y las versiones son concreciones técnicas documentadas en el SDD. La ratificación del equipo sigue pendiente; no presentarla como realizada.
-- Mantener un monolito modular. Separar compras y académico; cada módulo controla sus reglas y acceso a datos. No añadir microservicios, GraphQL ni abstracciones genéricas sin una decisión documentada.
-- Seguir la organización mixta de la sección 4 del SDD: frontend en `apps/web`, backend en `apps/api`, esquema/migraciones/semillas en `db` y contratos públicos en `packages/contracts`. Agrupar el código específico por compras y académico; reservar `shared` para reutilización real. No duplicar estas raíces con carpetas `front`, `back` o `bd`.
-- Retirar el `.gitkeep` de una carpeta al añadir su primer archivo real. No versionar datos de PostgreSQL, volúmenes ni artefactos de ejecución.
-- Compartir contratos de API, no modelos internos de persistencia. Validar entradas en el servidor y definir esquemas de respuesta.
-- No introducir cambios incompatibles en contratos, migraciones o catálogo sin explicar su impacto y coordinar los consumidores afectados.
-- Usar consultas parametrizadas, montos exactos y transacciones. No guardar una compra parcialmente ni sobrescribir cambios concurrentes silenciosamente.
-- Usar npm workspaces y un único `package-lock.json`; ejecutar `npm ci` en CI y builds. Fijar versiones exactas compatibles al inicializar la base, incluida la versión de npm. El frontend conserva las versiones compatibles que acuerde su encargado; no actualizarlo automáticamente.
-- Implementar los nombres, formatos, errores, filtros y ejemplos de las secciones 10 a 16 del SDD. Los valores de demo allí definidos permiten avanzar; los pendientes institucionales no deben resolverse inventando información.
-- Los contratos son la fuente única para solicitudes y respuestas. Una modificación afecta API, frontend y verificaciones; actualizar esos consumidores en el mismo cambio o coordinar explícitamente la integración.
-
-## Trabajo del equipo
-
-Seguir [CONTRIBUTING.md](CONTRIBUTING.md) para coordinar tareas e integración. Leer también [historias vigentes](Docs/HISTORIAS-USUARIO-INVEST.md) y [planificación](Docs/PLANIFICACION-MVP.md) cuando la tarea dependa del alcance o de criterios del sprint. Para contenedores/despliegue, consultar [entorno local](deploy/LOCAL.md), [operación VM](deploy/README.md), [CI/CD](deploy/CI-CD.md) y [contrato de entrega](deploy/CD-VM.md) antes de modificar esos componentes. No duplicar decisiones técnicas en la guía de colaboración ni interpretar propuestas de calendario/capacidad como compromisos colectivos confirmados.
-
-1. Identificar el resultado observable, archivos afectados, dependencias y criterios de aceptación antes de editar.
-2. Hacer cambios pequeños y coherentes. Revisar el estado de Git y preservar trabajo ajeno; no revertir ni eliminar cambios de otros agentes.
-3. Si hay trabajo paralelo autorizado, acordar propiedad de archivos y contratos antes de editar. Evitar modificaciones simultáneas del mismo archivo.
-4. No introducir dependencias sin justificar qué necesidad concreta resuelven. Preferir las herramientas existentes.
-5. Verificar las reglas y recorridos afectados. No declarar pruebas exitosas si no se ejecutaron; informar bloqueos y limitaciones.
-6. Actualizar documentación cuando cambien decisiones o instrucciones ejecutables. Informar qué cambió, cómo se verificó y qué queda pendiente.
-7. El líder crea los pull requests. Los agentes preparan cambios y evidencia local; no crean PR ni hacen merge salvo instrucción explícita del líder.
-
-## Datos, interfaz y calidad
-
-- Mantener identificadores documentales como texto. No completar datos desconocidos con información inventada ni normalizar referencias silenciosamente.
-- Separar montos registrados del documento y montos imputados coincidentes con filtros; no duplicar totales por joins.
-- Confirmar guardado solamente tras éxito del servidor. Conservar borradores ante errores o conflictos.
-- Usar etiquetas visibles, navegación por teclado y estados comprensibles de carga, vacío y error. No depender exclusivamente del color.
-- No guardar credenciales en Git, registrar formularios completos ni devolver trazas internas al cliente.
-- Probar reglas con Vitest, transacciones y concurrencia contra PostgreSQL y recorridos esenciales con Playwright. No reemplazar PostgreSQL por SQLite para acreditar esas garantías.
-- Una entrega está terminada cuando satisface criterios, está integrada, revisada y funciona en el build de demostración. Una pantalla aislada no completa una historia.
-
-## Ejecución y entrega
-
-La presentación utiliza un build de producción. Preparar una imagen de aplicación y PostgreSQL persistente; verificar la VM y modalidad disponible de Podman antes de declarar un despliegue listo. Mantener una ejecución local ensayada de la misma versión. Las semillas y restablecimientos son exclusivos de demostración y pruebas, nunca una operación pública ni una acción sobre una base real.
-
-La infraestructura puede prepararse antes del build usando `deploy/scripts/bootstrap-vm.sh`: Nginx temporal y PostgreSQL rootless con Quadlet. Leer `deploy/README.md` antes de cambios de operación. No confundir `/health/proxy` en modo bootstrap con disponibilidad de la aplicación. Mantener secretos y estado en los directorios privados del usuario de la VM, imágenes fijadas por digest y servicios existentes de Zableke/Jenkins intactos.
-
-El usuario requiere despliegue automático después de superar CI e integrar cambios en la rama de entrega. No diseñar actualizaciones habituales mediante SSH, `git pull` o builds manuales en la VM. La propuesta de CI/CD, sus garantías y los pendientes están en la sección 18 del SDD; no afirmar que existe un pipeline hasta implementarlo y verificarlo.
-
-Usar `develop` como integración y `main` como rama de entrega; cambios mediante PR y CI. GitHub Actions ejecuta builds/pruebas fuera de la VM y ésta consultará releases aprobadas para desplegar. Leer `deploy/CI-CD.md`. No sustituir tests por scripts que siempre pasan ni habilitar releases mientras falte aplicación, validación del artefacto y conexión de CD.
-
-El contrato del ejecutor preparado está en `deploy/CD-VM.md`. Al implementar imagen/workflow respetar digest, procedencia verificable, nombres de gates/artefacto, `DATABASE_URL_FILE`, migrador separado y esquema `cenit`. No introducir credenciales administrativas en el runtime, semillas automáticas, rollback de datos ni prune global. La instalación local de archivos o un estado de espera no acreditan un despliegue real: ensayar entrega y recuperación en la VM antes de declararlo operativo.
-
-Transición de ramas del 11 de octubre: la antigua `produccion` deja de ser destino de CI/publicación. Mantener publicación deshabilitada hasta actualizar el ejecutor instalado en la VM para validar `main`; el cambio local de scripts no actualiza esa copia. Procedimiento y condiciones para retirar la rama antigua en `deploy/CI-CD.md`.
-
-- [Docs/COMPRAS.md](Docs/COMPRAS.md): persistencia manual, contratos/API, tablas y validación local. Leer antes de modificar guardado/listados/detalle/revisión de compras. Los mínimos y campos opcionales fueron acordados; no confundir validación local con aprobación Oracle. Laboratorio en `/administracion/compras/laboratorio`; Home sólo indicadores/gráfico ilustrativos.
+No retirar el servidor anterior antes de verificar respaldo, transferencia y recorridos; no tocar Zableke/Jenkins ni servicios ajenos. No borrar volúmenes, hacer prune global o restaurar datos automáticamente para recuperar una imagen. Un bootstrap, un workflow versionado o un timer en espera no acreditan una entrega operativa.

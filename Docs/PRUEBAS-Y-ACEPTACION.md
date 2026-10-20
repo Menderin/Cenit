@@ -72,7 +72,7 @@ Las pruebas usan datos ficticios. Las de integración y navegador crean y elimin
 
 Antes de integración y navegador, ejecutar el build. Configurar `ACADEMIC_TEST_ADMIN_URL_FILE` con el archivo privado de conexión al PostgreSQL de pruebas y evitar una variable `DATABASE_URL` heredada de otro entorno. Los recorridos de navegador comparten puerto y archivos temporales: ejecutar un solo harness a la vez.
 
-El ensayo real de OCR es optativo: requiere procesador y pesos disponibles, clave privada de procedencia y captura ficticia. Se habilita con `CENIT_E2E_REAL_OCR=1`; el comando es `npm run test:e2e -- tests/e2e/capture.spec.ts --grep 'captura real:'`. La configuración está descrita en la [guía de capturas](ADAPTADOR-CAPTURAS.md). Los restantes casos de captura usan respuestas controladas para comprobar la interfaz.
+El ensayo real de OCR es optativo: requiere procesador y pesos disponibles, clave privada de procedencia y captura ficticia. Se habilita con `CENIT_E2E_REAL_OCR=1`; el comando es `npm run test:e2e -- tests/e2e/capture.spec.ts --grep 'captura real:'`. La configuración está descrita en la [guía de capturas](ARQUITECTURA.md#capturas-y-ocr). Los restantes casos de captura usan respuestas controladas para comprobar la interfaz.
 
 Los ejemplos de contratos están separados en `packages/contracts/src`; el catálogo de prueba parte de `catalogs/academic` y las preparaciones ficticias viven en `db/seeds`. Los archivos de `tests/integration` y `tests/e2e` contienen la ejecución de los escenarios. Se reutilizan esas pruebas; no se mantienen copias separadas para esta matriz. Simulación académica y Google Sheets no forman parte de estos casos del MVP.
 

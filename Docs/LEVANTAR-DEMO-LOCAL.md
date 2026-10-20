@@ -28,13 +28,13 @@ CENIT_NGINX_CONFIG=./deploy/nginx/cenit.conf
 
 No copies `.env` ni `.local/secrets/auth-demo.json` al repositorio. El archivo con las cuentas se genera o valida durante la preparación privada descrita más abajo; no muestra las claves en la terminal.
 
-La versión integrada trae los dos modelos ONNX en `apps/ocr/models/`; comprueba las huellas antes de construir OCR. Si falta alguno, prepáralo siguiendo [ADAPTADOR-CAPTURAS.md](ADAPTADOR-CAPTURAS.md). La atribución y licencia de los pesos están en [MODELS.md](../apps/ocr/MODELS.md).
+La versión integrada trae los dos modelos ONNX en `apps/ocr/models/`; comprueba las huellas antes de construir OCR. Si falta alguno, prepáralo siguiendo [ADAPTADOR-CAPTURAS.md](ARQUITECTURA.md#capturas-y-ocr). La atribución y licencia de los pesos están en [MODELS.md](../apps/ocr/MODELS.md).
 
 ```sh
 shasum -a 256 apps/ocr/models/ch_PP-OCRv5_det_mobile.onnx apps/ocr/models/latin_PP-OCRv5_rec_mobile.onnx
 ```
 
-Los hashes esperados son `4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae` y `b20bd37c168a570f583afbc8cd7925603890efbcdc000a59e22c269d160b5f5a`. Si falta un modelo, sigue el procedimiento de pesos de [ADAPTADOR-CAPTURAS.md](ADAPTADOR-CAPTURAS.md); no se descarga al procesar una captura.
+Los hashes esperados son `4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae` y `b20bd37c168a570f583afbc8cd7925603890efbcdc000a59e22c269d160b5f5a`. Si falta un modelo, sigue el procedimiento de pesos de [ADAPTADOR-CAPTURAS.md](ARQUITECTURA.md#capturas-y-ocr); no se descarga al procesar una captura.
 
 Crea la clave privada de procedencia sólo si todavía no existe:
 

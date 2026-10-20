@@ -1,59 +1,37 @@
 # Colaborar en Cenit
 
-Actualización autorizada por Gael del 17 de octubre: el destino preparado es Azure Chile Central. `develop` despliega sólo staging y `main` producción de la demostración tras CI. Este ajuste sustituye las referencias inferiores a VM/polling y a ausencia de publicación en develop; no modifica PR, revisión, protecciones ni responsables. Procedimiento y pendientes en [deploy/azure/README.md](deploy/azure/README.md).
+El trabajo se organiza en tareas de Jira y cambios pequeños que otra persona pueda revisar. Estas reglas se aplican a todo el equipo y a los agentes que lo asisten.
 
-Estas reglas permiten trabajar en paralelo con cambios pequeños, revisión e integración frecuente. Aplican también al código generado por agentes. No acreditan funcionalidades implementadas ni resuelven supuestos pendientes.
+## Alcance y responsabilidades
 
-## Referencias antes de empezar
+El [documento de arquitectura](Docs/ARQUITECTURA.md) resume el alcance del Charter, el funcionamiento vigente y las decisiones técnicas. Jira contiene asignaciones y criterios de las tareas; las actas de revisión registran aceptación y observaciones de usuarios. Personal y Bienes pertenecen al proyecto completo, pero no se incorporan al MVP sin definir sus requisitos.
 
-- [AGENTS.md](AGENTS.md): instrucciones para agentes y límites del trabajo.
-- [SDD](AGENTS/SDD.md): arquitectura, contratos, versiones y decisiones técnicas de trabajo.
-- [Guía de estructura](AGENTS/ESTRUCTURA.md): ubicación de código/pruebas y responsabilidades por carpeta.
-- [Historias vigentes](Docs/HISTORIAS-USUARIO-INVEST.md): tareas, criterios de aceptación y supuestos pendientes.
-- [Planificación](Docs/PLANIFICACION-MVP.md): capacidad, responsabilidades e hito del MVP.
-- [README](README.md): arranque y documentación ejecutable.
+Antes de editar, revisar Git y conservar cambios ajenos. Trabajar en la tarea solicitada y comprobar sus dependencias sin asumir las responsabilidades de otras personas. Si una decisión pendiente bloquea una parte, registrarla y continuar con el trabajo independiente. Una dependencia no amplía el alcance autorizado.
 
-Para infraestructura, leer además [entorno local](deploy/LOCAL.md), [operación de la VM](deploy/README.md), [CI/CD](deploy/CI-CD.md) y [contrato de entrega](deploy/CD-VM.md). Si una tarea depende de un supuesto sin confirmar, identificarlo y consultar antes de implementar esa parte; continuar el trabajo independiente.
+## Ramas y commits
 
-## Ramas e integración
+Las ramas permanentes son `develop` para integración y staging, y `main` para producción de la demostración. Cada cambio entra mediante PR y CI; no se permiten push directo, force-push ni bypass de revisión en esas ramas.
 
-Conservar dos ramas permanentes: `develop` para integración y `main` para entrega. Los cambios entran mediante PR; no hacer push directo, force-push ni usar bypass para saltar revisión o CI. No crear ramas permanentes por integrante ni añadir otra rama permanente de entrega.
+Usar nombres descriptivos con el ticket real cuando corresponda:
 
-```text
-rama de tarea → PR + revisión + CI → develop
-develop → PR + revisión + CI → main → release verificada → VM
-```
+| Tipo de cambio | Prefijo |
+| --- | --- |
+| Funcionalidad | `feat/` |
+| Corrección | `fix/` |
+| Pruebas | `test/` |
+| Documentación | `docs/` |
 
-Crear una rama por cambio coherente, vinculada al ticket real del tablero. Una tarea grande puede requerir varios PR pequeños. Para trabajo humano usar `feat/<ticket>-descripcion`, `fix/`, `test/` o `docs/`; los agentes usan `codex/<ticket>-descripcion` salvo indicación explícita. No inventar tickets ni agrupar cambios ajenos a la tarea.
+La convención es la misma para personas y agentes. Una tarea puede requerir varios commits o PR pequeños; no inventar tickets ni agrupar cambios ajenos. Los archivos y documentos se nombran por su contenido, no por la sesión del agente.
 
-Después de hacer commit, usar **Push origin** para ejecutar CI en la rama de tarea, incluso antes de abrir el PR. GitHub Actions no ve commits que sólo existen localmente. CI se ejecuta en ramas `feat/`, `fix/`, `test/`, `docs/`, `codex/`, en `develop`/`main` y en PR hacia estas últimas. Revisar el resultado por commit en Actions; un check verde en una rama de tarea no sustituye revisión e integración del PR ni autoriza despliegue.
+Al iniciar una rama, partir de `develop` actualizado con avance rápido. Si hay trabajo local, conservarlo antes de cambiar de rama. Sincronizar con `origin/develop` antes de la revisión y después de cambios relevantes en contratos/migraciones; no reescribir una historia compartida. Resolver los conflictos en la rama de tarea y repetir las comprobaciones afectadas.
 
-Antes de comenzar, con el trabajo anterior guardado:
+Los commits describen el resultado, por ejemplo `fix: conservar el filtro al volver del detalle` o `docs: explicar la preparación del entorno local`. Después del commit, el push de la rama ejecuta CI; un commit sólo local no tiene comprobaciones remotas. CI se ejecuta en ramas de tarea y en PR hacia `develop`/`main`, y vuelve a comprobar el SHA integrado. Un CI correcto de una rama no sustituye la revisión del PR ni autoriza por sí solo una entrega.
 
-```bash
-git switch develop
-git pull --ff-only origin develop
-git switch -c feat/<ticket>-descripcion
-```
+## Revisión e integración
 
-Sustituir `<ticket>` y `descripcion` por valores reales. Sincronizar antes del PR y después de cambios relevantes en contratos o migraciones. Si no se domina rebase, usar en la rama de tarea:
+El PR describe problema y resultado, alcance, criterios satisfechos, verificación y pendientes. Incluir capturas cuando ayuden a revisar una interfaz. Un PR en borrador sirve para coordinar y no se considera listo para integrar.
 
-```bash
-git fetch origin
-git merge origin/develop
-```
-
-Resolver conflictos y repetir las comprobaciones afectadas antes de pedir revisión. Rebase es opcional para trabajo propio no compartido; no reescribir historia sobre la que otros estén trabajando. Eliminar la rama de tarea después del merge, conservando `develop` y `main`.
-
-## Pull requests y revisión
-
-Cada PR debe indicar ticket, resultado observable, alcance, criterios satisfechos, cómo se verificó y limitaciones o pendientes. Adjuntar capturas cuando ayuden a revisar la interfaz. Abrir un PR en borrador temprano si se necesita coordinar contratos o pedir ayuda; un borrador no está listo para integrar.
-
-Antes del merge deben pasar `CI required`, las comprobaciones aplicables y al menos una revisión de otro integrante. El autor no aprueba su propio PR. Si después de la revisión cambia el comportamiento, contrato, migración o validación, pedir revisión de esa modificación. El autor resuelve conflictos; el revisor comprueba el cambio y su evidencia, incluido código generado por IA.
-
-Víctor coordina integración y promoción a `main`. Sus propios PR también requieren revisión independiente. Para evitar bloqueos, acordar un sustituto disponible para integración; no eludir checks por ausencia del líder.
-
-Distribución de revisión según el cambio:
+Antes del merge deben pasar `CI required`, las comprobaciones aplicables y al menos una revisión independiente. El autor no aprueba su propio cambio. Si después de la revisión cambia comportamiento, contrato, migración o validación, se revisa esa modificación también. Estas condiciones incluyen código generado por agentes.
 
 | Área | Referencia de revisión |
 | --- | --- |
@@ -61,32 +39,26 @@ Distribución de revisión según el cambio:
 | Backend, contratos, datos e infraestructura | Víctor |
 | Pruebas, criterios, evidencias y documentación | Kevin |
 
-Esta distribución no exige que los tres revisen cada PR. Para cambios de su propio autor, elegir otro integrante con capacidad para comprobarlos; coordinar consumidores cuando se modifiquen contratos. Confirmar disponibilidad de Andrés e Ignacio antes de contar sus horas: asignarles tareas pequeñas con resultado comprobable y revisor identificado.
+El autor elige otro integrante con capacidad para revisar su propio trabajo. Confirmar disponibilidad antes de asignar esfuerzo a Andrés o Ignacio. Víctor coordina integración y promoción a `main`; sus cambios también necesitan revisión independiente. La ausencia de un revisor no autoriza a eludir los controles.
 
-Reservar diariamente un momento de revisión e integración durante la semana de entrega. Compartir avance, bloqueo y PR pendiente sin esperar a la reunión del sábado. Si una rama se prolonga, explicar la dependencia y buscar una integración parcial coherente que conserve el funcionamiento de `develop`.
+El líder crea los PR. Los agentes preparan cambios, commits y evidencia local; sólo publican, crean PR o integran cuando reciben una instrucción explícita. No cambian estados/asignaciones de Jira ni envían mensajes a compañeros sin esa autorización.
 
-## Código, contratos y archivos compartidos
+## Cambios de código y documentación
 
-Conservar el monolito modular y la estructura del SDD: frontend en `apps/web/src/features`, backend en `apps/api/src/modules`, persistencia en `db` y contratos públicos en `packages/contracts`. Compras y académico mantienen reglas y acceso a datos propios; no acceder a estructuras privadas del otro módulo.
+Mantener el monolito modular y la [organización del código](Docs/ARQUITECTURA.md#organización-del-código). Compras y académico controlan sus reglas y datos. Los contratos públicos son la referencia compartida entre API, frontend y verificaciones; una modificación requiere actualizar consumidores o coordinar explícitamente su integración.
 
-Definir el contrato antes de implementar consumidores en paralelo. Centralizar solicitudes/respuestas, validaciones y ejemplos; actualizar API, frontend y verificaciones en el mismo cambio o coordinar explícitamente la integración. Los ejemplos antiguos de CRUD no autorizan edición libre ni cambiar Oracle: compras recupera registros existentes y conserva su copia en Cenit.
+Antes de editar archivos compartidos —router, contratos, esquema/journal, estilos globales, manifiestos, lockfile, Containerfile, Compose o workflows— acordar propiedad cuando exista trabajo paralelo. No modificar simultáneamente el mismo archivo ni revertir trabajo de otro integrante.
 
-Antes de editar archivos compartidos como manifiestos, lockfile, router, contratos, esquema/migraciones, estilos globales, Containerfile, Compose o workflows, acordar quién los modifica y avisar a los consumidores. No editar simultáneamente el mismo archivo ni revertir trabajo ajeno.
+Usar las herramientas y versiones fijadas, un único lockfile y `npm ci` para instalar en CI/builds. Justificar dependencias nuevas. Sincronizar `develop` antes de generar una migración, conservar SQL aplicado y usar el migrador separado. Las semillas de demo no forman parte de migraciones ni de CD. Secretos en archivos privados; nunca en ejemplos, logs, capturas o PR.
 
-Usar npm workspaces y un único `package-lock.json`, con instalación `npm ci`. Respetar `.node-version`, npm y los digests documentados; justificar nuevas dependencias y coordinar versiones del frontend con su encargado. No añadir pnpm ni otro lockfile. Documentar configuración pública en `.env.example` o en la guía del entorno correspondiente; secretos en archivos privados fuera de Git, nunca en ejemplos, logs, capturas o PRs.
+La documentación describe cómo usar y mantener la versión actual, en lenguaje comprensible para personas. Cada comportamiento tiene una referencia principal. Al cambiarlo se actualiza esa sección, sin anteponer otra nota que contradiga el texto anterior. Git conserva el historial.
 
-Sincronizar `develop` antes de generar migraciones. Versionar SQL e historial Drizzle juntos; no modificar migraciones ya integradas/utilizadas. Crear una nueva para cambios posteriores y coordinar la secuencia si hay varias ramas. Probarla contra PostgreSQL y explicar compatibilidad con la versión anterior antes de promover. No aplicar semillas ni restablecimientos automáticamente en despliegues.
-
-Los agentes pueden resolver detalles de implementación dentro del alcance y convenciones aprobadas. Cambios de arquitectura, reglas de negocio, contratos incompatibles o dependencias requieren justificación y coordinación; registrar decisiones y no completar supuestos institucionales por su cuenta.
-
-Usar commits descriptivos, por ejemplo `fix(<ticket>): corregir validación de montos` o `docs(<ticket>): documentar arranque local`. Sustituir el marcador por el ticket real; evitar mensajes como `final2` o `ahora-si`.
+La arquitectura y los contratos resumidos pertenecen a [Arquitectura](Docs/ARQUITECTURA.md); los casos y resultados, a [Pruebas y aceptación](Docs/PRUEBAS-Y-ACEPTACION.md); los comandos de instalación/operación, a `deploy`. Un documento nuevo necesita una necesidad de consulta propia que no cubran los existentes. Los relatos de implementación, capturas locales y resultados detallados de una ejecución se registran en el PR, Jira o artefactos de CI; no se crean informes por sesión. Las decisiones duraderas conservan su motivo y los cambios de alcance se contrastan con el Charter y los responsables.
 
 ## Terminado y entrega
 
-Una tarea está terminada cuando cumple sus criterios, está revisada e integrada y tiene evidencia de las comprobaciones aplicables. Una historia de aplicación además debe funcionar en el recorrido completo y el build de demostración; una pantalla aislada, un mock o infraestructura en bootstrap no la completan. Para tareas documentales o de investigación, verificar su entregable y registrar dependencias sin exigir un build ajeno a su alcance.
+Una tarea está terminada cuando satisface sus criterios, tiene evidencia, fue revisada e integrada. Las historias de aplicación deben funcionar en el recorrido completo sobre el build de demostración. Para una tarea documental se revisa su entregable y sus referencias, sin exigir un build ajeno a su alcance. Una prueba técnica correcta no sustituye aceptación de usuarios.
 
-La demo es el jueves **15 de octubre de 2026**. El objetivo es tener un primer recorrido integrado y ensayar la VM el martes **13**; adelantar a ese día el cierre de funcionalidades es una propuesta para acordar con el equipo. El límite vigente de integración, correcciones y ensayo es el miércoles **14**. No añadir funcionalidades improvisadas el jueves ni presentar pendientes como resueltos.
+La entrega habitual es automática: `develop` despliega staging y `main` producción de la demostración, después de CI y verificación de imágenes del SHA integrado. El [procedimiento Azure](deploy/azure/README.md) describe sus controles y recuperación. No sustituirlo por SSH, `git pull`, builds manuales en la VM o releases para eludir gates.
 
-`develop` no publica entregas. El push integrado a `main` ejecuta CI sobre ese commit; el publicador verifica la imagen y crea una release `cenit-<SHA completo>` que el ejecutor de la VM valida antes de desplegar. No crear una release manual para eludir el circuito ni cambiar el tag esperado. Mantener publicación deshabilitada hasta completar aplicación/tests y preparar el primer ensayo supervisado, según la guía CI/CD.
-
-Conservar una ejecución local ensayada de la misma imagen/versión para contingencia. Antes de declarar CD operativo, comprobar entrega exitosa y recuperación ante fallo en la VM; el bootstrap y un timer esperando releases no acreditan ese ensayo. Registrar commit y digest de la versión presentada.
+Conservar una ejecución local comprobada de la misma versión como contingencia. Antes de declarar operación completa, verificar entrega y recuperación en el destino, registrar SHA/digests y mantener los datos. No retirar el servidor anterior sin transferencia y recorridos comprobados.
