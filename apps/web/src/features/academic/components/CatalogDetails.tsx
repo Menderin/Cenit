@@ -4,6 +4,7 @@ import type { AcademicCourse, AcademicPlan, Prerequisite } from '@cenit/contract
 import { semesterLabel } from '../model/group-by-semester.js';
 import { progressLabels, type CourseProgress } from '../model/progress-presentation.js';
 import type { Student } from './StudentLookup.js';
+import { courseRelations } from '../model/course-relations.js';
 
 function Rule({ rule, plan }: { rule: Prerequisite; plan: AcademicPlan }) {
   if (rule.kind === 'pending') return <><p>Pendientes de confirmación.</p><p className="academic-detail__explanation">{rule.description}</p></>;
@@ -28,6 +29,7 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
   }, [closing]);
   const incoming = plan.prerequisiteEdges.filter(edge => edge.toCode === course.code);
   const outgoing = plan.prerequisiteEdges.filter(edge => edge.fromCode === course.code);
+  const indirect = [...courseRelations(plan, course.code)].filter(([, relation]) => relation.depth > 1);
   const pending = course.prerequisites.kind === 'pending';
   return <dialog ref={ref} className={`academic-detail${closing ? ' academic-detail--closing' : ''}`} aria-labelledby="academic-detail-title" onClose={onClose}
     onCancel={event => { event.preventDefault(); setClosing(true); }} onTransitionEnd={event => { if (closing && event.target === event.currentTarget && event.propertyName === 'opacity') ref.current?.close(); }} onClick={event => {
@@ -53,6 +55,9 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
                 <span>{plan.courses.find(c => c.code === (group.from ? edge.fromCode : edge.toCode))?.name}</span>
               </li>)}</ul>
             </div>)}
+            {indirect.length > 0 && <div className="academic-relations"><h4>Más adelante en la cadena</h4><ul>{indirect.map(([code, relation]) => <li key={code}>
+              <span>{plan.courses.find(item => item.code === code)?.name}</span><span className="academic-relations__via">A través de {plan.courses.find(item => item.code === relation.via)?.name}</span>
+            </li>)}</ul></div>}
             {pending && incoming.length + outgoing.length === 0 && <p className="academic-detail__explanation">Todavía no hay información de prerrequisitos para esta asignatura.</p>}
           </section>
           {progress && student && <details className="academic-detail__section academic-disclosure">

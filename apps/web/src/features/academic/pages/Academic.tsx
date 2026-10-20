@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { NavLink } from 'react-router';
 import { BookOpen, CaretRight, GraduationCap, Info, SidebarSimple, SignOut, SquaresFour } from '@phosphor-icons/react';
-import type { AcademicCourse } from '@cenit/contracts/academic';
+import type { AcademicCourse, AcademicPlan } from '@cenit/contracts/academic';
 import { useAuth } from '../../auth/model/session.js';
 import { SessionWarning } from '../../auth/components/SessionWarning.js';
 import { HttpError } from '../../../shared/lib/http.js';
@@ -12,6 +12,7 @@ import { courseLabel } from '../model/course-label.js';
 import { CatalogDetails } from '../components/CatalogDetails.js';
 import { StudentLookup, type Student } from '../components/StudentLookup.js';
 import { progressLabels } from '../model/progress-presentation.js';
+import { courseRelations } from '../model/course-relations.js';
 import '../academic.css';
 
 export function Academic() {
@@ -25,6 +26,9 @@ export function Academic() {
   const [selectedVersion, setSelectedVersion] = useState('');
   const [detail, setDetail] = useState<AcademicCourse | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [relationPreview, setRelationPreview] = useState<{ plan: AcademicPlan; code: string } | null>(null);
+  const relationTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const cancelRelationTimer = () => clearTimeout(relationTimer.current);
   useEffect(() => { heading.current?.focus(); }, []);
   useEffect(() => { document.title = 'Cenit · Malla curricular'; return () => { document.title = 'Cenit'; }; }, []);
   const plans = useQuery({ queryKey: ['academic', account.id, 'plans'], queryFn: ({ signal }) => getPlans(signal), retry: retryAcademicRead });
@@ -35,6 +39,9 @@ export function Academic() {
     queryFn: ({ signal }) => getPlan(available!.planId, version!, signal), enabled: Boolean(available && version), retry: retryAcademicRead,
   });
   const plan = catalog.data;
+  useEffect(() => () => clearTimeout(relationTimer.current), [plan]);
+  const relationOrigin = detail?.code ?? (relationPreview?.plan === plan ? relationPreview?.code : undefined);
+  const relations = plan && relationOrigin ? courseRelations(plan, relationOrigin) : new Map();
   const hasStudent = account.role === 'estudiante' || selectedStudent !== null;
   const progress = useQuery({
     queryKey: ['academic', account.id, 'progress', account.role === 'estudiante' ? 'me' : selectedStudent?.id, version],
@@ -106,8 +113,10 @@ export function Academic() {
             </section>
             {boardOverflow && <div className="academic-board-meta"><span className="academic-scroll-hint">Desplaza para ver más <CaretRight size={12} aria-hidden="true" /></span></div>}
             <p id="academic-scroll-hint" className="academic-sr-only">Asignaturas por semestre. Abre una asignatura para consultar su nombre completo, historial y prerrequisitos. Usa las flechas del teclado para recorrer el tablero cuando no quepa completo.</p>
-            <div ref={board} className="academic-board" tabIndex={0} role="region" aria-label="Asignaturas por semestre" aria-describedby="academic-scroll-hint">
-              <div className="academic-columns" style={{ '--semester-count': groups.length } as CSSProperties}>
+            <div ref={board} className="academic-board" tabIndex={0} role="region" aria-label="Asignaturas por semestre" aria-describedby="academic-scroll-hint"
+              onPointerLeave={() => { cancelRelationTimer(); setRelationPreview(null); }} onKeyDown={event => { if (event.key === 'Escape') { cancelRelationTimer(); setRelationPreview(null); } }}
+              onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) { cancelRelationTimer(); setRelationPreview(null); } }}>
+              <div className={`academic-columns${relationOrigin ? ' academic-columns--relations' : ''}`} style={{ '--semester-count': groups.length } as CSSProperties}>
                 {groups.map(group => {
                   const title = semesterLabel(group.semester, group.semesterEnd);
                   return <section className="academic-semester" key={`${group.semester}-${group.semesterEnd}`} aria-label={title}>
@@ -115,13 +124,19 @@ export function Academic() {
                     <ul>{group.courses.map(course => {
                       const record = !progress.error ? courseProgress.get(course.code) : undefined;
                       const label = courseLabel(course.name);
-                      return <li key={course.code}><button className={`academic-course${record ? ` academic-course--${record.status}` : ''}`} type="button" aria-label={`Ver asignatura: ${label}${label !== course.name ? ` (${course.name})` : ''}`} aria-describedby={`academic-course-meta-${course.code}`} onClick={event => {
+                      const relation = course.code === relationOrigin ? 'origin' : relations.has(course.code) ? (relations.get(course.code)!.depth === 1 ? 'direct' : 'indirect') : undefined;
+                      return <li key={course.code}><button data-course-code={course.code} data-relation={relation} className={`academic-course${record ? ` academic-course--${record.status}` : ''}${relation ? ` academic-course--relation-${relation}` : ''}`} type="button" aria-label={`Ver asignatura: ${label}${label !== course.name ? ` (${course.name})` : ''}`} aria-describedby={`academic-course-meta-${course.code}`}
+                        onPointerEnter={event => { if (event.pointerType !== 'mouse') return; cancelRelationTimer(); relationTimer.current = setTimeout(() => setRelationPreview({ plan, code: course.code }), 120); }}
+                        onPointerLeave={cancelRelationTimer}
+                        onFocus={event => { if (!pointerFocus && event.currentTarget.matches(':focus-visible')) { cancelRelationTimer(); setRelationPreview({ plan, code: course.code }); } }} onClick={event => {
+                        cancelRelationTimer();
                         // Safari no enfoca botones al pulsarlos; el diálogo debe regresar al ramo.
                         event.currentTarget.focus({ preventScroll: true });
                         setDetail(course);
                       }}>
                         <span className="academic-course__name">{label}</span>
                         <span id={`academic-course-meta-${course.code}`} className="academic-course__footer">
+                          {relation && <span className="academic-sr-only">{relation === 'origin' ? 'Origen de la cadena' : relation === 'direct' ? 'Relación directa' : 'Relación indirecta'}. Relación de referencia.</span>}
                           {record && <span className={`academic-progress-badge academic-progress-badge--${record.status}`}>{progressLabels[record.status]}</span>}
                           <span>{course.credits === null ? 'SCT no informados' : `${new Intl.NumberFormat('es-CL', { maximumFractionDigits: 2 }).format(course.credits)} SCT`}</span>
                         </span>
@@ -131,6 +146,7 @@ export function Academic() {
                 })}
               </div>
             </div>
+            {relationOrigin && <div className="academic-relation-legend" aria-label="Relaciones resaltadas"><span className="academic-relation-key academic-relation-key--origin">Origen</span><span className="academic-relation-key academic-relation-key--direct">Directa</span><span className="academic-relation-key academic-relation-key--indirect">Indirecta</span><span>{plan.isExample ? 'Conexiones ficticias' : 'Relaciones por confirmar'}</span></div>}
           </>}
         </div>
       </div>

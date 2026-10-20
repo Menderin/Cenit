@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login } from './support/browser.js';
 import { prerequisiteCases, prerequisitePlan } from './support/prerequisites.js';
+import { relationPlan, relationProgress } from './support/academic-relations.js';
 
 const courses = (page: import('@playwright/test').Page) => page.getByRole('button', { name: /^Ver asignatura:/ });
 async function chooseStudent(page: import('@playwright/test').Page, name: string) {
@@ -15,6 +16,60 @@ async function expectLatestGrade(page: import('@playwright/test').Page, grade: s
   await expect(page.getByRole('dialog').locator('.academic-facts').first().getByText(grade, { exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
 }
+
+test('relaciones ficticias: respuesta de 120 ms, cadena visual, cancelación, teclado y detalle móvil', async ({ page }, testInfo) => {
+  await page.route('**/api/v1/academic/plans', route => route.fulfill({ json: { data: [{ planId: relationPlan.planId, name: relationPlan.name, versions: [{ version: relationPlan.version, isExample: true }] }] } }));
+  await page.route(`**/api/v1/academic/plans/*/versions/${relationPlan.version}`, route => route.fulfill({ json: { data: relationPlan } }));
+  await page.route('**/api/v1/academic/me/progress', route => route.fulfill({ json: { data: relationProgress } }));
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await login(page, 'estudiante');
+  const a = page.locator('[data-course-code="A"]'), b = page.locator('[data-course-code="B"]');
+  await expect(a).toBeVisible();
+  await expect(courses(page)).toHaveCount(50);
+  await expect(page.locator('.academic-progress-badge')).toHaveCount(50);
+  await expect(page.locator('.academic-semester__header h2')).toHaveText(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']);
+  await page.mouse.move(0, 0);
+  const unrelated = page.locator('[data-course-code="X"]');
+  const originalBackground = await unrelated.evaluate(element => getComputedStyle(element).backgroundImage);
+  await page.clock.install(); await page.clock.pauseAt(Date.now() + 1000);
+  await a.hover(); await page.clock.fastForward(119);
+  await expect(page.locator('[data-relation="origin"]')).toHaveCount(0);
+  await page.clock.fastForward(1);
+  await expect(a).toHaveAttribute('data-relation', 'origin');
+  await expect(page.locator('[data-relation="direct"]')).toHaveCount(2);
+  await expect(page.locator('[data-relation="indirect"]')).toHaveCount(8);
+  await expect(page.locator('.academic-columns svg')).toHaveCount(0);
+  await expect(unrelated).toHaveCSS('background-image', originalBackground);
+  expect(await a.evaluate(element => getComputedStyle(element, '::before').transitionDuration)).toBe('0.15s');
+  await page.screenshot({ path: testInfo.outputPath('cadena-ficticia-1920.png'), animations: 'disabled' });
+  expect(await a.evaluate(element => Number(getComputedStyle(element, '::before').opacity))).toBeGreaterThan(0);
+  expect(await a.evaluate(element => Number(getComputedStyle(element).scale))).toBeCloseTo(1.01);
+  expect(await unrelated.evaluate(element => getComputedStyle(element, '::before').opacity)).toBe('0');
+  await b.hover(); await page.clock.fastForward(119);
+  await expect(a).toHaveAttribute('data-relation', 'origin');
+  await page.clock.fastForward(1); await expect(b).toHaveAttribute('data-relation', 'origin');
+  await expect(page.locator('[data-course-code="A"]')).not.toHaveAttribute('data-relation');
+  await page.locator('[data-course-code="X"]').hover(); await page.clock.fastForward(50);
+  await page.mouse.move(0, 0); await page.clock.fastForward(2000);
+  await expect(page.locator('[data-relation]')).toHaveCount(0);
+  await page.clock.resume();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.getByRole('region', { name: 'Asignaturas por semestre', exact: true }).focus(); await page.keyboard.press('Tab');
+  await expect(a).toBeFocused(); await expect(a).toHaveAttribute('data-relation', 'origin');
+  expect(await a.evaluate(element => ({ transform: getComputedStyle(element).transform, scale: getComputedStyle(element).scale, translate: getComputedStyle(element).translate, transition: getComputedStyle(element, '::before').transitionProperty }))).toEqual({ transform: 'none', scale: 'none', translate: 'none', transition: 'opacity' });
+  await page.keyboard.press('Escape'); await expect(page.locator('[data-relation]')).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await a.dispatchEvent('pointerenter', { pointerType: 'touch' });
+  await expect(page.locator('[data-relation]')).toHaveCount(0);
+  await a.click();
+  const dialog = page.getByRole('dialog', { name: 'Bases de nutrición' });
+  await expect(dialog).toContainText('Más adelante en la cadena');
+  await expect(dialog).toContainText('Práctica integrada');
+  await expect(dialog).toContainText('A través de Evaluación nutricional');
+  await page.screenshot({ path: testInfo.outputPath('cadena-detalle-390.png'), animations: 'disabled' });
+  await page.keyboard.press('Escape'); await expect(a).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
 
 for (const role of ['docente', 'estudiante']) {
   test(`mockup de prerrequisitos ficticios: seis estados, teclado y móvil: ${role}`, async ({ page }, testInfo) => {
@@ -453,7 +508,8 @@ test('malla y detalle legibles al redimensionar sin overflow del documento', asy
       const name = label.getBoundingClientRect();
       const footer = element.querySelector('.academic-course__footer')!;
       const metadata = footer.getBoundingClientRect();
-      return { width: bounds.width, height: bounds.height, nameFits: label.scrollHeight <= label.clientHeight + 1 && label.scrollWidth <= label.clientWidth && name.bottom <= metadata.top && name.right <= bounds.right, label: label.textContent!, accessibleName: element.getAttribute('aria-label')!, footerFits: footer.scrollWidth <= footer.clientWidth };
+      const scale = Number.parseFloat(getComputedStyle(element).scale) || 1;
+      return { width: bounds.width / scale, height: bounds.height / scale, nameFits: label.scrollHeight <= label.clientHeight + 1 && label.scrollWidth <= label.clientWidth && name.bottom <= metadata.top && name.right <= bounds.right, label: label.textContent!, accessibleName: element.getAttribute('aria-label')!, footerFits: footer.scrollWidth <= footer.clientWidth };
     }));
     expect(Math.max(...cards.map(card => card.width)) - Math.min(...cards.map(card => card.width)), `ancho uniforme a ${width}px`).toBeLessThan(1);
     expect(Math.max(...cards.map(card => card.height)) - Math.min(...cards.map(card => card.height)), `alto uniforme a ${width}px`).toBeLessThan(1);
