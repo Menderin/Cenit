@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { NavLink } from 'react-router';
-import { BookOpen, CaretRight, GraduationCap, Info, SidebarSimple, SignOut, SquaresFour } from '@phosphor-icons/react';
+import { BookOpen, CaretLeft, CaretRight, GraduationCap, Info, SidebarSimple, SignOut, SquaresFour } from '@phosphor-icons/react';
 import type { AcademicCourse, AcademicPlan } from '@cenit/contracts/academic';
 import { useAuth } from '../../auth/model/session.js';
 import { SessionWarning } from '../../auth/components/SessionWarning.js';
@@ -20,9 +20,11 @@ export function Academic() {
   const account = auth.session!.account;
   const heading = useRef<HTMLHeadingElement>(null);
   const board = useRef<HTMLDivElement>(null);
+  const boardDrag = useRef<{ pointerId: number; startX: number; scrollLeft: number; dragged: boolean } | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [pointerFocus, setPointerFocus] = useState(false);
-  const [boardOverflow, setBoardOverflow] = useState(false);
+  const [boardScroll, setBoardScroll] = useState({ previous: false, next: false });
+  const [boardDragging, setBoardDragging] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState('');
   const [detail, setDetail] = useState<AcademicCourse | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -57,11 +59,16 @@ export function Academic() {
   useEffect(() => {
     const element = board.current;
     if (!element) return;
-    const update = () => setBoardOverflow(element.scrollWidth > element.clientWidth + 1);
+    const update = () => {
+      const previous = element.scrollLeft > 1;
+      const next = element.scrollLeft + element.clientWidth < element.scrollWidth - 1;
+      setBoardScroll(current => current.previous === previous && current.next === next ? current : { previous, next });
+    };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(element);
-    return () => observer.disconnect();
+    element.addEventListener('scroll', update, { passive: true });
+    return () => { observer.disconnect(); element.removeEventListener('scroll', update); };
   }, [plan]);
 
   return <main className={`academic-workspace${pointerFocus ? ' academic-workspace--pointer' : ''}`} onPointerDownCapture={() => setPointerFocus(true)} onKeyDownCapture={() => setPointerFocus(false)}>
@@ -102,6 +109,7 @@ export function Academic() {
           {error && <div className="academic-state"><Info size={24} aria-hidden="true" /><h2>{error instanceof HttpError && error.status === 403 ? 'Acceso no autorizado' : 'No pudimos cargar la malla'}</h2><p role="alert">{error.message}</p><button className="academic-button" type="button" onClick={() => { void (plans.error ? plans.refetch() : catalog.refetch()); }}>Reintentar</button></div>}
           {!loading && !error && !version && <div className="academic-state"><BookOpen size={28} weight="regular" aria-hidden="true" /><h2>La malla todavía no está disponible</h2><p>No hay una versión publicada de Nutrición y Dietética para consultar.</p><button className="academic-button" type="button" onClick={() => { void plans.refetch(); }}>Volver a consultar</button></div>}
           {!error && plan && <>
+            <div className="academic-board-context">
             <section className="academic-progress-context" aria-label="Avance curricular">
               {account.role === 'docente' && <StudentLookup accountId={account.id} selected={selectedStudent} onSelect={student => { setDetail(null); setSelectedStudent(student); }} />}
               {hasStudent && <>
@@ -111,10 +119,37 @@ export function Academic() {
               {!progress.error && progress.data && !matchingProgress && <p role="status">El historial pertenece a la versión {progress.data.plan.version}. Selecciona esa versión para consultarlo sobre la malla.</p>}
               </>}
             </section>
-            {boardOverflow && <div className="academic-board-meta"><span className="academic-scroll-hint">Desplaza para ver más <CaretRight size={12} aria-hidden="true" /></span></div>}
-            <p id="academic-scroll-hint" className="academic-sr-only">Asignaturas por semestre. Abre una asignatura para consultar su nombre completo, historial y prerrequisitos. Usa las flechas del teclado para recorrer el tablero cuando no quepa completo.</p>
-            <div ref={board} className="academic-board" tabIndex={0} role="region" aria-label="Asignaturas por semestre" aria-describedby="academic-scroll-hint"
-              onPointerLeave={() => setRelationPreview(null)} onKeyDown={event => { if (event.key === 'Escape') setRelationPreview(null); }}
+            {(boardScroll.previous || boardScroll.next) && <div className="academic-board-actions" role="group" aria-label="Navegación de semestres">
+              <span className="academic-board-hint">Arrastra para recorrer</span>
+              <button className="academic-icon-button" type="button" aria-label="Ver semestres anteriores" aria-controls="academic-semesters" disabled={!boardScroll.previous} onClick={() => board.current?.scrollBy({ left: -board.current.clientWidth * .8 })}><CaretLeft size={16} weight="regular" aria-hidden="true" /></button>
+              <button className="academic-icon-button" type="button" aria-label="Ver semestres siguientes" aria-controls="academic-semesters" disabled={!boardScroll.next} onClick={() => board.current?.scrollBy({ left: board.current.clientWidth * .8 })}><CaretRight size={16} weight="regular" aria-hidden="true" /></button>
+            </div>}
+            </div>
+            <p id="academic-scroll-hint" className="academic-sr-only">Asignaturas por semestre. Abre una asignatura para consultar su nombre completo, historial y prerrequisitos. Arrastra con el mouse o usa los controles de semestres y las flechas del teclado para recorrer el tablero cuando no quepa completo.</p>
+            <div ref={board} id="academic-semesters" className={`academic-board${boardScroll.previous || boardScroll.next ? ' academic-board--scrollable' : ''}${boardDragging ? ' academic-board--dragging' : ''}`} tabIndex={0} role="region" aria-label="Asignaturas por semestre" aria-describedby="academic-scroll-hint"
+              onPointerDown={event => {
+                boardDrag.current = null;
+                if (event.pointerType !== 'mouse' || event.button !== 0 || !(boardScroll.previous || boardScroll.next)) return;
+                boardDrag.current = { pointerId: event.pointerId, startX: event.clientX, scrollLeft: event.currentTarget.scrollLeft, dragged: false };
+              }}
+              onPointerMove={event => {
+                const drag = boardDrag.current;
+                if (!drag || drag.pointerId !== event.pointerId || event.buttons !== 1) return;
+                const distance = event.clientX - drag.startX;
+                if (!drag.dragged && Math.abs(distance) < 5) return;
+                if (!drag.dragged) {
+                  drag.dragged = true;
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  setBoardDragging(true); setRelationPreview(null);
+                }
+                event.preventDefault();
+                event.currentTarget.scrollTo({ left: drag.scrollLeft - distance, behavior: 'instant' });
+              }}
+              onPointerUp={() => { setBoardDragging(false); if (!boardDrag.current?.dragged) boardDrag.current = null; }}
+              onPointerCancel={() => { setBoardDragging(false); boardDrag.current = null; }}
+              onLostPointerCapture={() => setBoardDragging(false)} onDragStart={event => event.preventDefault()}
+              onClickCapture={event => { if (boardDrag.current?.dragged) { event.preventDefault(); event.stopPropagation(); boardDrag.current = null; } }}
+              onPointerLeave={() => { if (!boardDrag.current?.dragged) boardDrag.current = null; setRelationPreview(null); }} onKeyDown={event => { boardDrag.current = null; setBoardDragging(false); if (event.key === 'Escape') setRelationPreview(null); }}
               onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setRelationPreview(null); }}>
               <div className={`academic-columns${relationOrigin ? ' academic-columns--relations' : ''}`} style={{ '--semester-count': groups.length } as CSSProperties}>
                 {groups.map(group => {
@@ -127,7 +162,7 @@ export function Academic() {
                       const linked = relations.get(course.code);
                       const relation = course.code === relationOrigin ? 'origin' : linked ? (linked.depth === 1 ? 'direct' : 'indirect') : undefined;
                       return <li key={course.code}><button data-course-code={course.code} data-relation={relation} className={`academic-course${record ? ` academic-course--${record.status}` : ''}${relation ? ` academic-course--relation-${relation}` : ''}`} type="button" aria-label={`Ver asignatura: ${label}${label !== course.name ? ` (${course.name})` : ''}`} aria-describedby={`academic-course-meta-${course.code}`}
-                        onPointerEnter={event => { if (event.pointerType === 'mouse') showRelations(course.code); }}
+                        onPointerEnter={event => { if (event.pointerType === 'mouse' && !boardDrag.current?.dragged) showRelations(course.code); }}
                         onFocus={event => { if (!pointerFocus && event.currentTarget.matches(':focus-visible')) showRelations(course.code); }} onClick={event => {
                         // Safari no enfoca botones al pulsarlos; el diálogo debe regresar al ramo.
                         event.currentTarget.focus({ preventScroll: true });

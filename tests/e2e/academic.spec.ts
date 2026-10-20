@@ -17,6 +17,71 @@ async function expectLatestGrade(page: import('@playwright/test').Page, grade: s
   await page.keyboard.press('Escape');
 }
 
+test('diez semestres: navegación visible en portátil y recorrido móvil', async ({ page }, testInfo) => {
+  await page.route('**/api/v1/academic/plans', route => route.fulfill({ json: { data: [{ planId: relationPlan.planId, name: relationPlan.name, versions: [{ version: relationPlan.version, isExample: true }] }] } }));
+  await page.route(`**/api/v1/academic/plans/*/versions/${relationPlan.version}`, route => route.fulfill({ json: { data: relationPlan } }));
+  await page.route('**/api/v1/academic/me/progress', route => route.fulfill({ json: { data: relationProgress } }));
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await login(page, 'estudiante');
+  await expect(courses(page)).toHaveCount(50);
+  const board = page.getByRole('region', { name: 'Asignaturas por semestre', exact: true });
+  const previous = page.getByRole('button', { name: 'Ver semestres anteriores', exact: true });
+  const next = page.getByRole('button', { name: 'Ver semestres siguientes', exact: true });
+  const lastCourse = page.locator('[data-course-code="S10"]');
+  for (const width of [1280, 1440, 1470]) {
+    await page.setViewportSize({ width, height: 720 });
+    await expect(previous).toBeDisabled();
+    await expect(next).toBeEnabled();
+    await next.focus(); await next.press('Enter');
+    await expect(next).toBeDisabled();
+    await expect(lastCourse).toBeInViewport({ ratio: 1 });
+    if (width === 1470) await page.screenshot({ path: testInfo.outputPath('malla-portatil-semestre-x.png'), animations: 'disabled' });
+    await previous.focus(); await previous.press('Enter');
+    await expect(previous).toBeDisabled();
+    await expect(courses(page).first()).toBeInViewport({ ratio: 1 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  const firstBounds = (await courses(page).first().boundingBox())!;
+  const start = { x: firstBounds.x + firstBounds.width / 2, y: firstBounds.y + firstBounds.height / 2 };
+  await page.mouse.move(start.x, start.y); await page.mouse.down();
+  await page.mouse.move(start.x - 180, start.y, { steps: 12 });
+  await expect(board).toHaveCSS('cursor', 'grabbing');
+  await page.mouse.up();
+  await expect(board).toHaveCSS('cursor', 'grab');
+  await expect(next).toBeDisabled();
+  await expect(lastCourse).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const secondBounds = (await page.locator('[data-course-code="B"]').boundingBox())!;
+  await page.mouse.move(secondBounds.x + 20, secondBounds.y + 20); await page.mouse.down();
+  await page.mouse.move(secondBounds.x + 200, secondBounds.y + 20, { steps: 12 });
+  await page.mouse.up();
+  await expect(previous).toBeDisabled();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.mouse.move(start.x, start.y); await page.mouse.down();
+  await page.mouse.move(start.x + 3, start.y); await page.mouse.up();
+  await expect(page.getByRole('dialog', { name: 'Bases de nutrición', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(board).toHaveCSS('scroll-behavior', 'auto');
+  await next.click(); await expect(next).toBeDisabled();
+  await expect(lastCourse).toBeInViewport({ ratio: 1 });
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await expect(page.getByRole('group', { name: 'Navegación de semestres' })).toHaveCount(0);
+  await expect(courses(page).first()).toBeInViewport({ ratio: 1 });
+  await expect(lastCourse).toBeInViewport({ ratio: 1 });
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect(page.getByRole('group', { name: 'Navegación de semestres' })).toHaveCount(0);
+    await board.focus(); await lastCourse.focus();
+    await expect(lastCourse).toBeInViewport({ ratio: 1 });
+    await lastCourse.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Seminario final', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(lastCourse).toBeFocused();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});
+
 test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado y detalle móvil', async ({ page }, testInfo) => {
   let catalogReads = 0;
   await page.route('**/api/v1/academic/plans', route => route.fulfill({ json: { data: [{ planId: relationPlan.planId, name: relationPlan.name, versions: [{ version: relationPlan.version, isExample: true }] }] } }));
