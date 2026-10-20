@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { readCatalog } from '../../../../../../db/seeds/load-academic.js';
 import { validateCatalog } from './catalog.js';
 
@@ -71,5 +72,14 @@ describe('diagrama-r2: cotejo y aclaraciones del equipo', () => {
     expect(() => validateCatalog(broken)).toThrow();
     broken.courses[0]!.prerequisites = { kind: 'course', code: code(8) };
     expect(() => validateCatalog(broken)).toThrow();
+  });
+
+  it('Git conserva exactamente los bytes de las fuentes al preparar un checkout', () => {
+    for (const source of plan.sources) {
+      const reference = source.reference!;
+      const stored = execFileSync('git', ['hash-object', `--path=${reference}`, reference], { encoding: 'utf8' }).trim();
+      const original = execFileSync('git', ['hash-object', '--no-filters', reference], { encoding: 'utf8' }).trim();
+      expect(stored, `Conversión de Git sobre ${reference}: invalidaría el SHA-256 publicado`).toBe(original);
+    }
   });
 });
