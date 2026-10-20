@@ -4,11 +4,12 @@ import type { AcademicCourse, AcademicPlan, Prerequisite } from '@cenit/contract
 import { semesterLabel } from '../model/group-by-semester.js';
 import { progressLabels, type CourseProgress } from '../model/progress-presentation.js';
 import type { Student } from './StudentLookup.js';
+import { courseRelations } from '../model/course-relations.js';
 
 function Rule({ rule, plan }: { rule: Prerequisite; plan: AcademicPlan }) {
-  if (rule.kind === 'pending') return <p className="academic-detail__explanation">Requisitos aún no informados.</p>;
-  if (rule.kind === 'unsupported') return <p className="academic-detail__explanation">{rule.description}</p>;
-  if (rule.kind === 'none') return <p>Sin prerrequisitos.</p>;
+  if (rule.kind === 'pending') return <><p>Pendientes de confirmación.</p><p className="academic-detail__explanation">{rule.description}</p></>;
+  if (rule.kind === 'unsupported') return <><p>Regla no soportada.</p><p className="academic-detail__explanation">{rule.description}</p><p className="academic-detail__explanation">Esta condición no puede representarse con las reglas disponibles. No se interpreta como ausencia de prerrequisitos.</p></>;
+  if (rule.kind === 'none') return <p>Sin prerrequisitos. Ausencia confirmada en esta versión del plan.</p>;
   if (rule.kind === 'course') return <p>{plan.courses.find(c => c.code === rule.code)?.name ?? rule.code}</p>;
   return <><p>{rule.kind === 'allOf' ? 'Todos los siguientes:' : 'Al menos uno de los siguientes:'}</p><ul className="academic-rule">{rule.rules.map((child, index) => <li key={index}><Rule rule={child} plan={plan} /></li>)}</ul></>;
 }
@@ -28,6 +29,7 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
   }, [closing]);
   const incoming = plan.prerequisiteEdges.filter(edge => edge.toCode === course.code);
   const outgoing = plan.prerequisiteEdges.filter(edge => edge.fromCode === course.code);
+  const indirect = [...courseRelations(plan, course.code)].filter(([, relation]) => relation.depth > 1);
   const pending = course.prerequisites.kind === 'pending';
   return <dialog ref={ref} className={`academic-detail${closing ? ' academic-detail--closing' : ''}`} aria-labelledby="academic-detail-title" onClose={onClose}
     onCancel={event => { event.preventDefault(); setClosing(true); }} onTransitionEnd={event => { if (closing && event.target === event.currentTarget && event.propertyName === 'opacity') ref.current?.close(); }} onClick={event => {
@@ -44,14 +46,17 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
           </dl>
           {course.semester !== course.semesterEnd && <p className="academic-note">Rotaciones del intervalo {semesterLabel(course.semester, course.semesterEnd).replace('Semestres ', '')}, sin un orden asignado entre ellas.</p>}
           <section className="academic-detail__section" aria-labelledby="academic-rule-title">
-            <h3 id="academic-rule-title">{pending ? 'Relaciones entre asignaturas' : 'Prerrequisitos'}</h3>
-            {pending ? <p className="academic-detail__explanation">Relaciones de la malla de referencia. No indican por sí solas los requisitos para inscribir la asignatura.</p> : <Rule rule={course.prerequisites} plan={plan} />}
-            {!pending && (incoming.length + outgoing.length > 0) && <h4 className="academic-relations-title">Relaciones de la malla</h4>}
+            <h3 id="academic-rule-title">Prerrequisitos</h3>
+            <Rule rule={course.prerequisites} plan={plan} />
+            {(incoming.length + outgoing.length > 0) && <><h4 className="academic-relations-title">Relaciones entre asignaturas</h4><p className="academic-detail__explanation">Relaciones de la malla de referencia. No indican por sí solas los requisitos para inscribir la asignatura.</p></>}
             {[{ title: 'Hacia esta asignatura', edges: incoming, from: true }, { title: 'Desde esta asignatura', edges: outgoing, from: false }].map(group => group.edges.length > 0 && <div className="academic-relations" key={group.title}>
               <h4>{group.title}</h4><ul>{group.edges.map(edge => <li key={`${edge.fromCode}-${edge.toCode}`}>
                 <span>{plan.courses.find(c => c.code === (group.from ? edge.fromCode : edge.toCode))?.name}</span>
               </li>)}</ul>
             </div>)}
+            {indirect.length > 0 && <div className="academic-relations"><h4>Más adelante en la cadena</h4><ul>{indirect.map(([code, relation]) => <li key={code}>
+              <span>{plan.courses.find(item => item.code === code)?.name}</span><span className="academic-relations__via">A través de {plan.courses.find(item => item.code === relation.via)?.name}</span>
+            </li>)}</ul></div>}
             {pending && incoming.length + outgoing.length === 0 && <p className="academic-detail__explanation">Todavía no hay información de prerrequisitos para esta asignatura.</p>}
           </section>
           {progress && student && <details className="academic-detail__section academic-disclosure">
