@@ -2,6 +2,13 @@
 
 El destino de entrega actual es [Azure](azure/README.md). Esta guía conserva los procedimientos de la VM compartida mientras se verifica transferencia y recuperación. Su ejecutor consulta releases; no es el mecanismo utilizado por el workflow Azure.
 
+| Instalación | Entrada y operación |
+| --- | --- |
+| Azure vigente | Caddy/HTTPS, Docker Compose, `develop` y `main` mediante Actions y agente Azure; [diagnóstico y recuperación actuales](azure/README.md#diagnóstico-y-recuperación) |
+| VM compartida anterior | HTTP 8081, Podman rootless/Quadlet y timer de releases histórico; los comandos de esta página se ejecutan sólo allí |
+
+No copiar configuración de sesiones, secretos, redes o timers entre ambos destinos. Comprobar hostname/usuario y el entorno antes de usar un procedimiento. El polling antiguo no recibe las imágenes del workflow Azure vigente.
+
 Antes de retirar la instalación anterior, conservar un respaldo verificable, transferir las cuentas/datos necesarios, comprobar los recorridos y ensayar recuperación. No modificar Zableke, Jenkins, Tailscale del host ni servicios de otros proyectos. La entrada HTTP de Cenit es 8081; 8080 pertenece al Jenkins existente. El HTTP autorizado para esa demostración no fija la política de una instalación institucional.
 
 ## Revisar el estado
@@ -60,7 +67,7 @@ La imagen recibe `DATABASE_URL_FILE` con rol runtime; el migrador usa otra crede
 
 ## Preparación privada de cuentas de demostración
 
-La imagen runtime no lleva semillas ni tsx. La herramienta [prepare-demo-vm.sh](scripts/prepare-demo-vm.sh) admite una imagen de herramientas del mismo commit limpio que la aplicación instalada. Construir esa imagen fuera de la VM usando el target `build` del Containerfile; transferirla de forma privada y comprobar su SHA/etiquetas antes de ejecutar:
+La imagen runtime no lleva herramientas de creación de cuentas ni tsx. El cargador académico compilado es una operación separada; su presencia no prepara cuentas ni historiales. La herramienta [prepare-demo-vm.sh](scripts/prepare-demo-vm.sh) admite una imagen de herramientas del mismo commit limpio que la aplicación instalada. Construir esa imagen fuera de la VM usando el target `build` del Containerfile; transferirla de forma privada y comprobar su SHA/etiquetas antes de ejecutar:
 
 ```bash
 bash ~/Cenit/deploy/scripts/prepare-demo-vm.sh "localhost/cenit-demo-tools:<SHA instalado>"

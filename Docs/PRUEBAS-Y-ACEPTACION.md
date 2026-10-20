@@ -69,12 +69,12 @@ Las pruebas usan datos ficticios. Las de integración y navegador crean y elimin
 | --- | --- | --- |
 | Reglas y formatos | `npm run test:unit` | Validaciones, contratos y transformaciones sin comprobar persistencia real |
 | Integración PostgreSQL | `npm run test:integration` | API, permisos, transacciones, concurrencia y persistencia |
-| Compilar la aplicación | `npm run build` | Contratos, API y frontend que se usarán en los recorridos |
+| Compilar la aplicación | `npm run build` | Contratos, API, cargador operativo y frontend que se usarán en los recorridos |
 | Recorridos de navegador | `npm run test:e2e` | Aplicación compilada, login y recorridos administrativos/académicos |
 | Sólo académico | `npm run test:e2e -- tests/e2e/academic.spec.ts` | Recorridos académicos existentes |
 | Revisar el mockup de prerrequisitos | `npm run test:e2e -- tests/e2e/academic.spec.ts --grep 'fictici[oa]s' --output tmp/prerequisite-review/screenshots` | Seis estados y cadena ficticia, intención de hover, teclado, móvil y capturas fuera de Git |
 | Persistencia y filtros de compras | `npm run test:integration -- tests/integration/purchases.test.ts` | Casos para revisión independiente de SCRUM-53 y SCRUM-58 sobre PostgreSQL |
-| Catálogo | `npm run catalog:check` | Archivo del plan, referencias y reglas pendientes, sin publicarlo |
+| Catálogo | `npm run catalog:check` | Archivo del plan, fuentes/hashes, reglas interpretadas y pendientes, sin publicarlo |
 | Tipos y estilo de código | `npm run typecheck` y `npm run lint` | Consistencia de tipos y reglas de código |
 
 Antes de integración y navegador, ejecutar el build. Configurar `ACADEMIC_TEST_ADMIN_URL_FILE` con el archivo privado de conexión al PostgreSQL de pruebas y evitar una variable `DATABASE_URL` heredada de otro entorno. Los recorridos de navegador comparten puerto y archivos temporales: ejecutar un solo harness a la vez.
@@ -84,6 +84,16 @@ El ensayo real de OCR es optativo: requiere procesador y pesos disponibles, `OCR
 Los ejemplos de contratos están separados en `packages/contracts/src`; el catálogo de prueba parte de `catalogs/academic` y las preparaciones ficticias viven en `db/seeds`. Los archivos de `tests/integration` y `tests/e2e` contienen la ejecución de los escenarios. Se reutilizan esas pruebas; no se mantienen copias separadas para esta matriz. Simulación académica y Google Sheets no forman parte de estos casos del MVP.
 
 Para revisar el mockup, comparar las capturas `prerrequisito-<estado>-<ancho>.png` de ambos roles y registrar la aprobación u observaciones en SCRUM-72. El recorrido abre cada ejemplo desde la malla con Enter, consulta información del plan con Tab/Enter, cierra con Escape y comprueba el retorno de foco y la ausencia de desbordamiento. La evidencia de navegador no sustituye una prueba en dispositivo físico ni la aprobación del diseño para SCRUM-75.
+
+## Revisión de documentación y operación
+
+Para revisar cambios de arquitectura/operación, usar [SDD y componentes](ARQUITECTURA.md#componentes-y-límites), [configuración y arranque local](../deploy/LOCAL.md), [flujo de entrega](../deploy/azure/README.md#flujo-de-una-entrega-y-controles) y [diagnóstico/recuperación](../deploy/azure/README.md#diagnóstico-y-recuperación). El formato confirmado y el índice de consulta están en [README](../README.md).
+
+- Contrastar módulos, roles, rutas y estados con contratos y código; distinguir herramientas preparadas de operaciones comprobadas en un destino.
+- Comprobar enlaces/encabezados, diagramas, sintaxis Bash/PowerShell y Python embebido. Los ejemplos deben usar referencias privadas, sin contraseñas, cookies ni URLs PostgreSQL reales.
+- Reproducir comandos sin escritura cuando corresponda: versiones de herramientas, `npm run catalog:check` y el cargador compilado con `--check`. Para arranque completo, migraciones, integración o recuperación usar los entornos de prueba ya definidos y avisar antes de crear bases descartables.
+- Separar validación documental, evidencia previa y ensayos nuevos. La sintaxis correcta no acredita haber desplegado, restaurado una base o ejecutado OCR en Azure; un cambio sólo documental no exige repetir todos los recorridos de aplicación.
+- Registrar revisión independiente y resultados en el PR/incidencia. La entrega al cliente se revisa en el formato confirmado; no generar una segunda versión documental sin acordarla.
 
 ## Registro de ejecuciones
 

@@ -54,6 +54,59 @@ Estado, Compose, credenciales y backups viven en `/opt/cenit/production` o `/opt
 
 El workflow comprueba readiness por HTTPS al terminar. Sin DNS/certificado válido la entrega no se declara exitosa. Primera preparación de cuentas/catálogo o transferencia de datos: operación privada explícita separada, conservando identidades y credenciales; nunca incluirla en CD.
 
+### Flujo de una entrega y controles
+
+```mermaid
+flowchart TD
+    Rama["Rama de tarea"] --> PR["PR y revisión independiente"]
+    PR --> CI["ci.yml: tipos, lint, pruebas y build"]
+    CI --> Gate{"CI required correcto"}
+    Gate -->|No| Bloqueo["Corregir; no integrar ni desplegar"]
+    Gate -->|Sí| Merge["Líder integra en develop o main"]
+    Merge --> Release["release.yml: CI del SHA integrado"]
+    Release --> Imagenes["Construir y verificar API/web y OCR"]
+    Imagenes --> Registro["GHCR: dos imágenes por digest"]
+    Registro --> Identidad["OIDC y agente Azure"]
+    Identidad --> Lock["Lock del host y destino según rama"]
+    Lock --> Backup["Verificar imágenes y respaldo PostgreSQL"]
+    Backup --> Migrar["Migrador separado; sin semillas"]
+    Migrar --> Activar["Activar aplicación y comprobar readiness local"]
+    Activar --> Estado["Registrar current.json"]
+    Estado --> HTTPS["Comprobar readiness por HTTPS público"]
+    HTTPS --> Recorridos["Verificar recorridos y aceptación del incremento"]
+    Operador["Operador: carga de catálogo por separado"] -.-> Lock
+```
+
+`ci.yml` se ejecuta para PR hacia `develop`/`main`, pushes de las ramas configuradas y llamadas reutilizables. `CI required` reúne los resultados aplicables de Prerequisites, Infrastructure y Application; Academic foundation es una variante histórica condicionada por el verificador. Un job omitido sólo es válido si el gate lo permite; no equivale a una prueba ejecutada. La aplicación completa se comprueba con tipos, lint, unitarias, integración PostgreSQL, build, navegador compilado y verificación de imagen. La publicación añade el ensayo OCR real sin red con muestras ficticias.
+
+`release.yml` sólo despliega tras un push a una rama permanente: abrir o aprobar el PR no despliega. `develop` selecciona staging y `main` producción demo. El workflow actual no usa `CENIT_RELEASE_ENABLED`, GitHub Releases ni el timer del servidor anterior. Un éxito de CI en la rama de tarea no acredita la entrega del SHA integrado.
+
+El token de GHCR es temporal y protegido; Azure recibe identidad federada, no una contraseña guardada en el YAML. Los digests y el SHA permiten comprobar qué se probó/instaló. No se usa `latest`, no se hace `git pull` ni se compila en la VM. Una carga de catálogo o cuentas requiere su propia operación, aunque la aplicación ya esté saludable.
+
+### Configuración por entorno
+
+No copiar `.env` local a Azure. `deploy.sh` genera en cada directorio privado las variables de Compose y conserva los secretos existentes. Los valores públicos están en `config.json` y en el mapeo de `run-command.py`; las versiones de imágenes base, en `deploy/images.lock.json`.
+
+| Configuración | Staging | Producción demo |
+| --- | --- | --- |
+| `CENIT_ENV` | `staging` | `production` |
+| `CENIT_ORIGIN` / `AUTH_ALLOWED_ORIGINS` | `https://develop.cenit.dpdns.org` | `https://cenit.dpdns.org` |
+| `CENIT_HTTP_PORT` en loopback | `8082` | `8081` |
+| Directorio privado | `/opt/cenit/staging` | `/opt/cenit/production` |
+| `CENIT_APP_IMAGE`, `CENIT_OCR_IMAGE` | Digests verificados de la entrega de `develop` | Digests verificados de la entrega de `main` |
+| Runtime | `NODE_ENV=production`, `APP_ENV=demo`, `AUTH_COOKIE_SECURE=true`, puerto interno `3000` | Misma configuración de runtime; la base y los secretos son independientes |
+
+`APP_ENV=demo` identifica el producto de demostración; no obliga a usar HTTP ni contradice el nombre del entorno de producción. La configuración completa del runtime está en [Entorno local](../LOCAL.md#configuración-del-runtime-y-puertos), con sus diferencias por destino.
+
+| Referencia privada relativa al directorio del entorno | Consumidor |
+| --- | --- |
+| `.local/secrets/postgres-password`, `app-password`, `migrator-password` | Inicialización PostgreSQL; no se rotan por cambiar el archivo |
+| `.local/secrets/app-url` → `/run/secrets/app-url` | API con `cenit_app` |
+| `.local/secrets/migrator-url` → `/run/secrets/migrator-url` | Migrador y cargador de catálogo con `cenit_migrator` |
+| `.local/secrets/capture-receipt-key` | API para firmar procedencia; OCR no recibe este secreto ni acceso a la BD |
+
+Los archivos privados no se incluyen en Git, imágenes ni artefactos públicos. El runtime no recibe las claves ficticias de login para arrancar. Antes de usar una cuenta en un entorno nuevo, su preparación/transferencia debe comprobarse de forma explícita; el deploy no acredita que exista.
+
 ## Publicar el catálogo académico (operación explícita)
 
 Responsable: quien opera el despliegue Azure, con revisión del catálogo por el equipo académico/backend. La entrega instala el cargador compilado, `diagrama-r2` y sólo sus fuentes de imagen/cotejo en la misma imagen de aplicación. No necesita `tsx`, dependencias de desarrollo, clonar el repositorio ni compilar en la VM. El servicio `catalog` usa un perfil explícito y la credencial de `cenit_migrator`; no se ejecuta al arrancar la aplicación ni durante CD.
@@ -114,6 +167,64 @@ Resultado esperado: `diagrama-r2`, `published`, **52 asignaturas, 43 relaciones 
 Comprobación funcional: iniciar sesión como docente o estudiante en el entorno elegido y abrir `/academico`; pulsar «Volver a consultar» o recargar. Si ya estaba publicada `2027-r1`, seleccionar `diagrama-r2` en «Versión del plan»: la selección inicial no cambia automáticamente. Revisar Inocuidad, APS y Módulo integrador. La API autenticada `GET /api/v1/academic/plans` debe incluir la versión y `GET /api/v1/academic/plans/nutricion-dietetica/versions/diagrama-r2` debe devolver su contenido. Un administrativo no tiene acceso a estas consultas.
 
 La operación no crea usuarios, historiales ni adscripciones y no mueve los existentes. Si un estudiante tiene historial de otra versión aparecerá el aviso correspondiente; si no tiene historial, no se inventa uno para mostrar avance. El año oficial y la aceptación institucional de las reglas siguen pendientes. Para una versión futura, preparar y revisar sus archivos/fuentes en otra entrega; este procedimiento publica únicamente el catálogo empaquetado y verificado.
+
+## Diagnóstico y recuperación
+
+Responsable: operador del destino, con revisión backend/BD si hay migraciones o datos afectados. Usar Azure Run Command sobre la VM confirmada; conservar privados los logs y correlacionar errores de API mediante `X-Request-Id`, sin copiar formularios, cookies o credenciales a tickets. No compartir `.env` ni las URLs de conexión.
+
+### Inspección sin modificar datos
+
+Ejecutar este bloque completo desde RunShellScript en la VM confirmada. Elegir el entorno explícitamente; los comandos no detienen ni recrean servicios:
+
+```bash
+bash <<'DIAGNOSTICO'
+set -eu
+CENIT_TARGET=staging
+case "$CENIT_TARGET" in staging) CENIT_CHECK_PORT=8082;; production) CENIT_CHECK_PORT=8081;; *) exit 1;; esac
+cd "/opt/cenit/$CENIT_TARGET"
+dc() { docker compose --env-file .env -f compose.yaml "$@"; }
+python3 - <<'PY'
+import json
+from pathlib import Path
+current = json.loads(Path('current.json').read_text())
+print({key: current[key] for key in ('commit', 'runNumber', 'image', 'ocrImage')})
+print('migration-blocked:', Path('migration-blocked').exists())
+PY
+dc ps -a
+df -h /opt/cenit
+docker stats --no-stream
+systemctl --no-pager status docker caddy || true
+curl --max-time 5 -i "http://127.0.0.1:$CENIT_CHECK_PORT/health/live"
+curl --max-time 5 -i "http://127.0.0.1:$CENIT_CHECK_PORT/health/ready"
+DIAGNOSTICO
+```
+
+Si es la primera entrega y aún no existe `current.json`, revisar la ejecución fallida en Azure; no crear ese archivo manualmente. Para logs privados: `dc logs --tail 80 app db ocr` y `journalctl -u caddy -n 80 --no-pager`. Para comprobar OCR desde su propia red/proceso: `dc exec -T ocr python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8090/health/live', timeout=3).read().decode())"`. Los [health y sus límites](../LOCAL.md#comprobar-salud-sin-confundirla-con-aceptación) explican por qué readiness correcto no acredita OCR ni un catálogo cargado.
+
+| Síntoma | Diagnóstico y siguiente paso |
+| --- | --- |
+| CI o construcción fallidos | No se publica una nueva entrega. Corregir la rama y repetir CI; no instalar manualmente una imagen para eludirlo |
+| `AADSTS700213`, descarga GHCR o agente fallidos | Comprobar rama/sujeto OIDC, permisos acotados, digests y ejecución Azure. El estado de ARM por sí solo no acredita que el script haya terminado |
+| Readiness local 503 | Revisar PostgreSQL, ledger, permisos y columnas requeridas. No ejecutar semillas, modificar hashes ni recrear la base |
+| Readiness local 200 y HTTPS público falla | Revisar DNS, certificado, Caddy y loopback del entorno. El último paso HTTPS del workflow ocurre después de `current.json`; su fallo no dispara el rollback interno del script |
+| Login 401 / escritura 403 | Sesión ausente o credencial rechazada / rol u Origin no autorizado. Comprobar cuentas preparadas, origen exacto y cookie Secure sobre HTTPS. No confundir 504 con contraseña incorrecta |
+| 502/504, reinicios o lentitud | Revisar estado, logs, memoria, disco y procesos de ambos entornos antes de reiniciar. No aumentar recursos ni detener servicios ajenos sin decisión del operador |
+| Extracción 503 con compras disponibles | Revisar salud/capacidad de OCR, `OCR_URL`, clave y tiempo máximo. Reintentar de forma controlada; no reemplazar la respuesta por un ejemplo |
+| Malla vacía | Confirmar versión publicada mediante el API y ejecutar la carga explícita si falta. No migrar historiales ni crear alumnos para simular disponibilidad |
+
+### Recuperación de aplicación y migraciones
+
+1. Revisar Actions y el Run Command fallido, el SHA/digests, `current.json` y el estado de los contenedores. La entrega mantiene el lock `/run/lock/cenit-azure.lock`; no interrumpir ni competir con una migración en curso.
+2. Si falló la activación dentro de `deploy.sh`, revisar si su rutina recuperó `previous.env`/`previous.compose.yaml` y la aplicación anterior. Si no había configuración anterior, intenta detener los servicios nuevos. Es un intento de recuperación, no una garantía de disponibilidad ni una restauración de datos.
+3. Si existe `migration-blocked`, conservarlo. El responsable de BD debe contrastar ledger, hashes y resultado de la transacción con las migraciones empaquetadas. Sólo tras confirmar un estado coherente se retira explícitamente el marcador y se reintenta una entrega revisada. No editar SQL aplicado, journal o aliases para forzarla.
+4. Para volver a comportamiento anterior, preferir un cambio de reversión/corrección revisado que genere una nueva ejecución de Actions, con número posterior. Debe funcionar sobre la BD ya migrada: revertir código no revierte el esquema. Reejecutar un run antiguo puede ser rechazado por la protección de orden; no alterar `current.json` para evitarla.
+5. Tras recuperar, comprobar readiness local y HTTPS, login de los tres roles, compras conservadas, catálogo y OCR ficticio. Registrar el resultado en la revisión/incidencia con SHA/digests; no declararlo correcto sólo porque un contenedor está `running`.
+
+### Respaldo y pérdida de datos
+
+La entrega y la carga de catálogo crean dumps privados y comprueban su índice con `pg_restore --list`. Eso acredita un archivo legible, no un ensayo completo de restauración ni protección frente a perder la VM. Exportar un respaldo verificado fuera del host mediante el canal privado acordado; no incluirlo en el repositorio o en artefactos públicos.
+
+Una restauración de datos requiere acordar destino, punto de recuperación y tratamiento de escrituras posteriores. Debe ensayarse primero en PostgreSQL separado, revisar integridad/roles y recorridos, y autorizar cualquier intervención sobre la base de aplicación. No hay restaurador automático ni un ensayo completo en Azure acreditado aquí; tampoco un objetivo de recuperación temporal acordado. Mantener ese trabajo como pendiente del operador, sin inventar un RTO/RPO ni ofrecer un comando que sobrescriba producción.
 
 ## DNS y transición
 
