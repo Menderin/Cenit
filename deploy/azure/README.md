@@ -54,6 +54,67 @@ Estado, Compose, credenciales y backups viven en `/opt/cenit/production` o `/opt
 
 El workflow comprueba readiness por HTTPS al terminar. Sin DNS/certificado válido la entrega no se declara exitosa. Primera preparación de cuentas/catálogo o transferencia de datos: operación privada explícita separada, conservando identidades y credenciales; nunca incluirla en CD.
 
+## Publicar el catálogo académico (operación explícita)
+
+Responsable: quien opera el despliegue Azure, con revisión del catálogo por el equipo académico/backend. La entrega instala el cargador compilado, `diagrama-r2` y sólo sus fuentes de imagen/cotejo en la misma imagen de aplicación. No necesita `tsx`, dependencias de desarrollo, clonar el repositorio ni compilar en la VM. El servicio `catalog` usa un perfil explícito y la credencial de `cenit_migrator`; no se ejecuta al arrancar la aplicación ni durante CD.
+
+Primero integrar estos cambios y esperar la entrega correcta de `develop` para staging. Producción requiere su propia entrega revisada a `main` y una carga separada: las bases son independientes. Una imagen anterior no contiene este cargador; no improvisar INSERTs ni cambiar la credencial de la aplicación para resolverlo.
+
+En Azure Portal, abrir la VM confirmada en `config.json`, **Run command → RunShellScript** (ejecuta como root). También puede usarse el agente Azure con la CLI autenticada del operador; no habilitar SSH público. Ejecutar el siguiente bloque completo, comenzando con `staging`. Para producción cambiar únicamente `CENIT_TARGET=production`, después de revisar y autorizar ese destino.
+
+El bloque se serializa con las entregas, verifica la imagen instalada, comprueba el catálogo sin escribir, crea/verifica un respaldo y luego publica en una transacción. Si falta la herramienta o falla la verificación, se detiene antes de cargar. No imprime credenciales.
+
+```bash
+bash <<'CENIT_CATALOG'
+set -Eeuo pipefail
+umask 077
+CENIT_TARGET=staging
+[[ $EUID == 0 && $CENIT_TARGET =~ ^(staging|production)$ ]]
+exec 9>/run/lock/cenit-azure.lock
+flock -w 600 9
+cd "/opt/cenit/$CENIT_TARGET"
+[[ -f current.json && -f .env && -f compose.yaml && ! -f migration-blocked ]]
+dc() { docker compose --env-file .env -f compose.yaml "$@"; }
+
+# El proyecto y la imagen efectivos deben coincidir con la entrega instalada.
+dc --profile catalog config --format json > /run/cenit-catalog-config.json
+python3 - "$CENIT_TARGET" <<'PY'
+import json, sys
+from pathlib import Path
+config = json.loads(Path('/run/cenit-catalog-config.json').read_text())
+current = json.loads(Path('current.json').read_text())
+assert config['name'] == 'cenit-' + sys.argv[1], 'Proyecto incorrecto'
+assert config['services']['catalog']['image'] == current['image'], 'Imagen incorrecta'
+print('Destino:', sys.argv[1], 'Commit:', current['commit'], 'Imagen:', current['image'])
+PY
+rm /run/cenit-catalog-config.json
+dc config --quiet
+dc run --rm --no-deps --pull never catalog --check
+
+install -d -m 700 backups
+backup="backups/catalog-$(date -u +%Y%m%dT%H%M%SZ).dump"
+dc exec -T db pg_dump -U cenit_admin -d cenit_demo -Fc > "$backup.partial"
+dc exec -T db pg_restore --list < "$backup.partial" >/dev/null
+mv "$backup.partial" "$backup"
+printf 'Respaldo verificado: %s\n' "$backup"
+
+dc run --rm --no-deps --pull never catalog --publish
+dc exec -T db psql -U cenit_admin -d cenit_demo -v ON_ERROR_STOP=1 -c "
+SELECT v.version, v.status,
+ (SELECT count(*) FROM cenit.academic_courses c WHERE c.version_id=v.id) AS asignaturas,
+ (SELECT count(*) FROM cenit.academic_prerequisite_edges e WHERE e.version_id=v.id) AS relaciones,
+ (SELECT sum(credits) FROM cenit.academic_courses c WHERE c.version_id=v.id) AS sct
+FROM cenit.academic_versions v
+WHERE v.plan_id='nutricion-dietetica' AND v.version='diagrama-r2';"
+CENIT_CATALOG
+```
+
+Resultado esperado: `diagrama-r2`, `published`, **52 asignaturas, 43 relaciones y 305 SCT**. Repetir la carga del mismo contenido devuelve `unchanged`, sin duplicar. Una versión existente con contenido diferente se rechaza; no editar SQL, borrar versiones ni forzar sobrescrituras. Ante fallo, conservar el respaldo y revisar el estado; no restaurarlo automáticamente. El `--check` verifica estructura y hashes, no certifica aceptación institucional.
+
+Comprobación funcional: iniciar sesión como docente o estudiante en el entorno elegido y abrir `/academico`; pulsar «Volver a consultar» o recargar. Si ya estaba publicada `2027-r1`, seleccionar `diagrama-r2` en «Versión del plan»: la selección inicial no cambia automáticamente. Revisar Inocuidad, APS y Módulo integrador. La API autenticada `GET /api/v1/academic/plans` debe incluir la versión y `GET /api/v1/academic/plans/nutricion-dietetica/versions/diagrama-r2` debe devolver su contenido. Un administrativo no tiene acceso a estas consultas.
+
+La operación no crea usuarios, historiales ni adscripciones y no mueve los existentes. Si un estudiante tiene historial de otra versión aparecerá el aviso correspondiente; si no tiene historial, no se inventa uno para mostrar avance. El año oficial y la aceptación institucional de las reglas siguen pendientes. Para una versión futura, preparar y revisar sus archivos/fuentes en otra entrega; este procedimiento publica únicamente el catálogo empaquetado y verificado.
+
 ## DNS y transición
 
 En el editor DNS que administra la zona de DigitalPlat, crear dos registros **A** hacia la IPv4 fija confirmada por Azure: nombre `@` y nombre `develop`, TTL 300–3600. Conservar los NS existentes. No asumir que cambiar NS crea esos registros. Antes de modificar otros A/AAAA/CNAME, revisar cuáles existen; un AAAA anterior puede enviar clientes a otro servidor. Para HTTPS directo, ambos nombres deben resolver a la VM y permitir 80/443.

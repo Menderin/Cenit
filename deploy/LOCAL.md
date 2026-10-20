@@ -78,6 +78,8 @@ Para disponer de la malla y tres historiales ficticios:
 APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run academic:prepare-demo
 ```
 
+El catálogo predeterminado es `diagrama-r2`, basado en la imagen y el cotejo del equipo, sin año oficial confirmado. `npm run catalog:check` verifica sus fuentes antes de cargarlo. Si ya hay historiales adscritos a `2027-r1`, la preparación rechaza trasladarlos: para consultar la nueva versión, usar la carga explícita `APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run catalog:load` y el selector existente. Esta operación no altera historiales; no ejecutar sobre una base ajena a la demo local. El PDF retirado sólo es referencia histórica del catálogo anterior.
+
 El comando publica el catálogo de trabajo, conserva las tres cuentas originales y crea sólo dos estudiantes adicionales únicos. Repetirlo conserva identidades e intentos. Si una demo antigua tiene los RUT ficticios anteriores, la opción explícita `--normalize-ruts` corrige únicamente los valores anteriores esperados; no es una operación pública de edición de perfiles.
 
 Las compras de ejemplo son opcionales:

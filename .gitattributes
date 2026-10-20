@@ -11,3 +11,5 @@
 Containerfile text eol=lf
 # Migration checksums must be identical on Windows and Linux.
 db/migrations/*.sql text eol=lf
+# This review is a catalog source; its SHA must survive checkout on either OS.
+Docs/COTEJO-CATALOGO-ACADEMICO.md text eol=lf

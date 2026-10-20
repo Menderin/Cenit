@@ -68,14 +68,14 @@ async function main() {
   execFileSync(process.execPath, ['deploy/migrate.cjs'], { env: { ...process.env, DATABASE_URL_FILE: migrationFile }, stdio: 'pipe' });
   rmSync(migrationFile);
   const catalogPool = createTestPool({ connectionString: urlFor(migrator, migrationPassword) });
-  try { await loadCatalog(catalogPool, readCatalog('catalogs/academic/nutricion-2027-r1.json'), true); }
+  try { await loadCatalog(catalogPool, readCatalog('catalogs/academic/nutricion-diagrama-r2.json'), true); }
   finally { await closeTestPool(catalogPool); }
   pool = createTestPool({ connectionString: urlFor(runtime, runtimePassword) });
   const credentials = createDemoCredentials();
   await prepareDemoAccounts(pool, credentials);
   const additional = createAcademicDemoAccounts();
   await prepareDemoStudentAccounts(pool, additional);
-  const plan = readCatalog('catalogs/academic/nutricion-2027-r1.json');
+  const plan = readCatalog('catalogs/academic/nutricion-diagrama-r2.json');
   await seedAcademicDemo(pool, plan.planId, plan.version, academicDemoStudents([credentials.find(c => c.role === 'estudiante')!, ...additional], plan));
   writeFileSync(credentialsFile, JSON.stringify(credentials), { mode: 0o600 });
   if (process.env.CENIT_E2E_RUNTIME === 'production') {

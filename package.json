@@ -16,7 +16,8 @@
   "scripts": {
     "lint": "eslint . --max-warnings=0",
     "test:e2e": "node deploy/scripts/test-production.mjs",
-    "build": "npm run build --workspace @cenit/contracts && npm run build --workspace @cenit/api && npm run build --workspace @cenit/web",
+    "build": "npm run build --workspace @cenit/contracts && npm run build --workspace @cenit/api && npm run build:operations && npm run build --workspace @cenit/web",
+    "build:operations": "tsc -p deploy/tsconfig.operations.json",
     "start": "node apps/api/dist/server.js",
     "test:e2e:production": "node deploy/scripts/test-production.mjs",
     "typecheck": "tsc --noEmit && npm run typecheck --workspace @cenit/web",

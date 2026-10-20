@@ -198,7 +198,7 @@ for (const role of ['docente', 'estudiante']) {
     const internados = page.getByRole('region', { name: 'Semestres IX–X', exact: true });
     await expect(internados.locator('button')).toHaveCount(4);
     await expect(internados.getByRole('heading')).toHaveText('IX–X');
-    const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/2027-r1');
+    const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/diagrama-r2');
     expect(response.status()).toBe(200);
     const data = (await response.json()).data;
     expect(data.courses).toHaveLength(52);
@@ -217,6 +217,7 @@ test('detalle con teclado, relaciones pendientes y ausencia desconocida', async 
   await expect(dialog).toContainText('No indican por sí solas los requisitos para inscribir la asignatura.');
   await expect(dialog).not.toContainText('En revisión');
   await expect(dialog).toContainText('Ciencia de los alimentos');
+  await expect(dialog.locator('#academic-rule-title + p')).toHaveText('Ciencia de los alimentos');
   await expect(dialog.getByRole('button', { name: 'Cerrar detalle' })).toBeFocused();
   await page.keyboard.press('Escape'); await expect(card).toBeFocused();
   await expect(card).toHaveCSS('outline-color', 'rgb(83, 97, 118)');
@@ -231,6 +232,23 @@ test('detalle con teclado, relaciones pendientes y ausencia desconocida', async 
   await expect(page.getByRole('dialog').getByText('Sin prerrequisitos.', { exact: true })).toHaveCount(0);
 });
 
+test('diagrama-r2 presenta los conjuntos aclarados sin sustituirlos por relaciones', async ({ page }) => {
+  await login(page); await expect(courses(page)).toHaveCount(52);
+  for (const [code, required] of [
+    ['NUT2027-035', ['Dietética en el curso de vida', 'Modelo de intervención en salud']],
+    ['NUT2027-044', ['Proyecto de innovación y emprendimiento en nutrición y salud', 'Gestión estratégica de sistemas de alimentación', 'Nutrición clínica materno infanto juvenil']],
+    ['NUT2027-051', ['Proyecto de intervención comunitaria']],
+  ] as const) {
+    await page.locator(`[data-course-code="${code}"]`).click();
+    const rule = page.getByRole('dialog').locator('section').filter({ has: page.getByRole('heading', { name: 'Prerrequisitos', exact: true }) });
+    if (required.length > 1) await expect(rule).toContainText('Todos los siguientes:');
+    for (const course of required) await expect(rule).toContainText(course);
+    await expect(rule).not.toContainText('Pendientes de confirmación.');
+    await page.getByRole('button', { name: 'Cerrar detalle' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  }
+});
+
 for (const role of ['estudiante', 'docente']) {
   test(`detalle y malla sin recuadros de foco al usar mouse: ${role}`, async ({ page }) => {
     await login(page, role); await expect(courses(page)).toHaveCount(52);
@@ -242,6 +260,7 @@ for (const role of ['estudiante', 'docente']) {
     await expect(card).toBeFocused();
     // Pasar por teclado reproduce el foco que puede conservar el diálogo.
     await card.focus(); await card.press('Enter'); await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await card.click();
     const close = page.getByRole('button', { name: 'Cerrar detalle' });
     await expect(close).toHaveCSS('outline-style', 'none');
@@ -559,20 +578,20 @@ test('malla compacta conserva contexto, espacio de lectura y navegación plegabl
 test('selector sólo con varias versiones y un historial no se aplica a otra versión', async ({ page }) => {
   await page.route('**/api/v1/academic/plans', async route => {
     const response = await route.fetch(); const body = await response.json();
-    body.data[0].versions.push({ version: '2027-r2', isExample: true });
+    body.data[0].versions.push({ version: 'otra-version-ejemplo', isExample: true });
     await route.fulfill({ json: body });
   });
-  await page.route('**/api/v1/academic/plans/nutricion-dietetica/versions/2027-r2', async route => {
-    const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/2027-r1');
-    const body = await response.json(); body.data.version = '2027-r2'; body.data.isExample = true;
+  await page.route('**/api/v1/academic/plans/nutricion-dietetica/versions/otra-version-ejemplo', async route => {
+    const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/diagrama-r2');
+    const body = await response.json(); body.data.version = 'otra-version-ejemplo'; body.data.isExample = true;
     await route.fulfill({ json: body });
   });
   await login(page, 'estudiante');
   await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
-  await page.getByLabel('Versión del plan', { exact: true }).selectOption('2027-r2');
-  await expect(page.getByRole('status')).toContainText('El historial pertenece a la versión 2027-r1');
+  await page.getByLabel('Versión del plan', { exact: true }).selectOption('otra-version-ejemplo');
+  await expect(page.getByRole('status')).toContainText('El historial pertenece a la versión diagrama-r2');
   await expect(page.locator('.academic-progress-badge')).toHaveCount(0);
-  await page.getByLabel('Versión del plan', { exact: true }).selectOption('2027-r1');
+  await page.getByLabel('Versión del plan', { exact: true }).selectOption('diagrama-r2');
   await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
 });
 
@@ -580,7 +599,7 @@ test('malla y detalle legibles al redimensionar sin overflow del documento', asy
   const account = await login(page); await expect(courses(page)).toHaveCount(52);
   await chooseStudent(page, 'Estudiante Demo');
   await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
-  const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/2027-r1');
+  const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/diagrama-r2');
   const names: string[] = (await response.json()).data.courses.map((course: { name: string }) => course.name);
   for (const width of [1920, 1440, 1280, 1024, 768, 721, 720, 390, 320]) {
     await page.setViewportSize({ width, height: 600 });
