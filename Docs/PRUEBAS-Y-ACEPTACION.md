@@ -72,7 +72,7 @@ Las pruebas usan datos ficticios. Las de integración y navegador crean y elimin
 
 Antes de integración y navegador, ejecutar el build. Configurar `ACADEMIC_TEST_ADMIN_URL_FILE` con el archivo privado de conexión al PostgreSQL de pruebas y evitar una variable `DATABASE_URL` heredada de otro entorno. Los recorridos de navegador comparten puerto y archivos temporales: ejecutar un solo harness a la vez.
 
-El ensayo real de OCR es optativo: requiere procesador y pesos disponibles, clave privada de procedencia y captura ficticia. Se habilita con `CENIT_E2E_REAL_OCR=1`; el comando es `npm run test:e2e -- tests/e2e/capture.spec.ts --grep 'captura real:'`. La configuración está descrita en la [guía de capturas](ARQUITECTURA.md#capturas-y-ocr). Los restantes casos de captura usan respuestas controladas para comprobar la interfaz.
+El ensayo real de OCR es optativo: requiere procesador y pesos disponibles, `OCR_URL` y `CAPTURE_RECEIPT_KEY_FILE` configurados en la terminal del harness, y una captura ficticia en `tmp/ocr-layout-v2/full.png`. La [guía local](../deploy/LOCAL.md#ejecutar-el-build-de-demostración-con-ocr) explica la preparación del procesador y las muestras. Se habilita con `CENIT_E2E_REAL_OCR=1`; el comando es `npm run test:e2e -- tests/e2e/capture.spec.ts --grep 'captura real:'`. Los restantes casos de captura usan respuestas controladas para comprobar la interfaz.
 
 Los ejemplos de contratos están separados en `packages/contracts/src`; el catálogo de prueba parte de `catalogs/academic` y las preparaciones ficticias viven en `db/seeds`. Los archivos de `tests/integration` y `tests/e2e` contienen la ejecución de los escenarios. Se reutilizan esas pruebas; no se mantienen copias separadas para esta matriz. Simulación académica y Google Sheets no forman parte de estos casos del MVP.
 
@@ -87,7 +87,7 @@ Las comprobaciones siguientes corresponden al código de aplicación de `82452bd
 | OCR real, ejecutado por separado | 19/10/2026 | Un recorrido correcto, 38,2 s incluyendo preparación | Extracción, revisión, guardado y recarga de una captura ficticia; no es un benchmark de exactitud ni de rendimiento de la VM |
 | Build, tipos, lint y catálogo | 19/10/2026 | Correctos | El build conserva el aviso de un paquete web mayor de 500 kB |
 
-El primer intento local de integración encontró PostgreSQL detenido; se repitió en una instancia exclusiva de pruebas y pasó. La validación del catálogo se ejecutó con `node --import tsx db/seeds/load-academic.ts --check`, equivalente al script, para evitar una restricción de IPC de la terminal.
+La validación local del catálogo se ejecutó con `node --import tsx db/seeds/load-academic.ts --check`, equivalente al script, para evitar una restricción de IPC de la terminal.
 
 Para reproducir el ensayo OCR se utilizó una copia de `tmp/ocr-oracle-format/01-completa.png`, verificada contra su manifiesto, como `tmp/ocr-layout-v2/full.png`; SHA-256 `1285d05dbae17e0056c939831a03b77c705cf639fb12ca00c9a2f18f0355fd04`. El servicio usó la imagen local `sha256:8a858bc28fb9e5474b2c961cf533b10bbe51e987d4cc4c2584f450ba93b64391` con los fuentes OCR de la versión indicada montados en sólo lectura. Los recursos de prueba y sus secretos se retiraron al terminar.
 

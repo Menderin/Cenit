@@ -33,7 +33,7 @@ Cenit es un monolito modular para la Facultad de Medicina de la UCN. El proyecto
 - API en Fastify, PostgreSQL y Drizzle. Compartir schemas públicos TypeBox, no modelos internos. Validar entradas/respuestas y permisos en servidor.
 - Código específico en su módulo de `apps/web` o `apps/api`; contratos en `packages/contracts`, esquema/migraciones en `db`. Extraer a `shared` sólo reutilización real. Usar npm workspaces y un único lockfile.
 - Respetar las versiones fijadas. No introducir dependencias o abstracciones sin justificar una necesidad concreta.
-- No editar ni renombrar SQL aplicado. Usar el migrador separado `deploy/migrate.cjs`; conservar journal y aliases legados por timestamp/hash. No ejecutar semillas, migraciones o resets como parte de un merge o de la entrega automática.
+- No editar ni renombrar SQL aplicado. Usar el migrador separado `deploy/migrate.cjs`; conservar journal y aliases legados por timestamp/hash. No ejecutar migraciones como parte de un merge. La entrega usa su migrador separado y nunca ejecuta semillas ni resets.
 - Para QA, usar los harness existentes y PostgreSQL exclusivo de pruebas. Avisar antes de ensayos que creen/migren/preparen bases descartables; no operar sobre bases reales ni sustituir PostgreSQL por SQLite para acreditar garantías.
 - [Pruebas y aceptación](Docs/PRUEBAS-Y-ACEPTACION.md) relaciona criterios y casos. Ejecutar las comprobaciones afectadas y distinguir resultados propios, evidencia histórica y pendientes; no crear tests redundantes.
 - No guardar secretos, datos de PostgreSQL, formularios completos, capturas privadas o reportes temporales en Git. No exponer trazas internas en el API.
