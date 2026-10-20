@@ -18,8 +18,9 @@ async function expectLatestGrade(page: import('@playwright/test').Page, grade: s
 }
 
 test('relaciones ficticias: respuesta de 120 ms, cadena visual, cancelación, teclado y detalle móvil', async ({ page }, testInfo) => {
+  let catalogReads = 0;
   await page.route('**/api/v1/academic/plans', route => route.fulfill({ json: { data: [{ planId: relationPlan.planId, name: relationPlan.name, versions: [{ version: relationPlan.version, isExample: true }] }] } }));
-  await page.route(`**/api/v1/academic/plans/*/versions/${relationPlan.version}`, route => route.fulfill({ json: { data: relationPlan } }));
+  await page.route(`**/api/v1/academic/plans/*/versions/${relationPlan.version}`, route => { catalogReads++; return route.fulfill({ json: { data: relationPlan } }); });
   await page.route('**/api/v1/academic/me/progress', route => route.fulfill({ json: { data: relationProgress } }));
   await page.setViewportSize({ width: 1920, height: 1080 });
   await login(page, 'estudiante');
@@ -69,6 +70,7 @@ test('relaciones ficticias: respuesta de 120 ms, cadena visual, cancelación, te
   await page.screenshot({ path: testInfo.outputPath('cadena-detalle-390.png'), animations: 'disabled' });
   await page.keyboard.press('Escape'); await expect(a).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(catalogReads).toBe(1);
 });
 
 for (const role of ['docente', 'estudiante']) {

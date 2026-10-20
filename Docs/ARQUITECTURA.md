@@ -132,6 +132,8 @@ La propuesta de presentación de SCRUM-72 reutiliza el detalle de la malla: requ
 
 La malla permite explorar visualmente las conexiones hacia ramos posteriores: mantener el mouse 120 ms sobre una tarjeta resalta su cadena, acentuando el color propio y la sombra de las tarjetas con un fundido de 150 ms, conservando el color de todos los demás ramos, con bordes sólidos para enlaces directos y discontinuos para indirectos, sin flechas. Pasar brevemente por otra tarjeta conserva la cadena anterior; salir del tablero o pulsar Escape la limpia. Las transiciones son interrumpibles; un degradado más vivo conserva el color del estado del ramo y termina en su superficie clara original. Sin preferencia de movimiento reducido, los ramos relacionados aumentan un 1 % y se elevan 1 px durante 150 ms; con esa preferencia sólo se mantiene el fundido de color. El foco de teclado activa la misma vista sin espera y el clic/toque abre el detalle, que incluye las conexiones indirectas y su ramo intermedio. El resaltado sigue únicamente `prerequisiteEdges`, sin deducir AND/OR ni habilitación. La malla ficticia del mockup contiene 50 ramos en 10 semestres, con ramas y convergencias identificadas como ejemplo; sustituir esas conexiones corresponde al catálogo versionado cuando se validen las fuentes.
 
+El cálculo agrupa las conexiones por ramo para recorrer la cadena sin revisar todas las relaciones a cada paso. La pantalla reutiliza la cadena, los semestres y el historial mientras no cambien sus datos; volver a señalar el mismo ramo conserva el estado existente. El hover se resuelve localmente, sin nuevas consultas al API ni mediciones de posiciones del documento.
+
 | Consulta | Ruta |
 | --- | --- |
 | Planes disponibles | `GET /api/v1/academic/plans` |

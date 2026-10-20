@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { NavLink } from 'react-router';
 import { BookOpen, CaretRight, GraduationCap, Info, SidebarSimple, SignOut, SquaresFour } from '@phosphor-icons/react';
@@ -41,7 +41,10 @@ export function Academic() {
   const plan = catalog.data;
   useEffect(() => () => clearTimeout(relationTimer.current), [plan]);
   const relationOrigin = detail?.code ?? (relationPreview?.plan === plan ? relationPreview?.code : undefined);
-  const relations = plan && relationOrigin ? courseRelations(plan, relationOrigin) : new Map();
+  const relations = useMemo(() => plan && relationOrigin ? courseRelations(plan, relationOrigin) : new Map<string, { depth: number; via: string }>(), [plan, relationOrigin]);
+  function showRelations(code: string) {
+    if (plan) setRelationPreview(previous => previous?.plan === plan && previous.code === code ? previous : { plan, code });
+  }
   const hasStudent = account.role === 'estudiante' || selectedStudent !== null;
   const progress = useQuery({
     queryKey: ['academic', account.id, 'progress', account.role === 'estudiante' ? 'me' : selectedStudent?.id, version],
@@ -49,8 +52,8 @@ export function Academic() {
     enabled: Boolean(plan) && hasStudent, retry: retryAcademicRead,
   });
   const matchingProgress = progress.data?.plan.planId === plan?.planId && progress.data?.plan.version === plan?.version ? progress.data : undefined;
-  const courseProgress = new Map(matchingProgress?.courses.map(course => [course.code, course]));
-  const groups = plan ? groupBySemester(plan.courses) : [];
+  const courseProgress = useMemo(() => new Map(matchingProgress?.courses.map(course => [course.code, course])), [matchingProgress]);
+  const groups = useMemo(() => plan ? groupBySemester(plan.courses) : [], [plan]);
   const error = plans.error ?? catalog.error;
   const loading = plans.isPending || (Boolean(version) && catalog.isPending);
   const role = account.role === 'docente' ? 'Docente' : 'Estudiante';
@@ -124,11 +127,12 @@ export function Academic() {
                     <ul>{group.courses.map(course => {
                       const record = !progress.error ? courseProgress.get(course.code) : undefined;
                       const label = courseLabel(course.name);
-                      const relation = course.code === relationOrigin ? 'origin' : relations.has(course.code) ? (relations.get(course.code)!.depth === 1 ? 'direct' : 'indirect') : undefined;
+                      const linked = relations.get(course.code);
+                      const relation = course.code === relationOrigin ? 'origin' : linked ? (linked.depth === 1 ? 'direct' : 'indirect') : undefined;
                       return <li key={course.code}><button data-course-code={course.code} data-relation={relation} className={`academic-course${record ? ` academic-course--${record.status}` : ''}${relation ? ` academic-course--relation-${relation}` : ''}`} type="button" aria-label={`Ver asignatura: ${label}${label !== course.name ? ` (${course.name})` : ''}`} aria-describedby={`academic-course-meta-${course.code}`}
-                        onPointerEnter={event => { if (event.pointerType !== 'mouse') return; cancelRelationTimer(); relationTimer.current = setTimeout(() => setRelationPreview({ plan, code: course.code }), 120); }}
+                        onPointerEnter={event => { if (event.pointerType !== 'mouse') return; cancelRelationTimer(); relationTimer.current = setTimeout(() => showRelations(course.code), 120); }}
                         onPointerLeave={cancelRelationTimer}
-                        onFocus={event => { if (!pointerFocus && event.currentTarget.matches(':focus-visible')) { cancelRelationTimer(); setRelationPreview({ plan, code: course.code }); } }} onClick={event => {
+                        onFocus={event => { if (!pointerFocus && event.currentTarget.matches(':focus-visible')) { cancelRelationTimer(); showRelations(course.code); } }} onClick={event => {
                         cancelRelationTimer();
                         // Safari no enfoca botones al pulsarlos; el diálogo debe regresar al ramo.
                         event.currentTarget.focus({ preventScroll: true });
