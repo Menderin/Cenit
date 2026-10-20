@@ -17,7 +17,7 @@ async function expectLatestGrade(page: import('@playwright/test').Page, grade: s
   await page.keyboard.press('Escape');
 }
 
-test('relaciones ficticias: respuesta de 120 ms, cadena visual, cancelación, teclado y detalle móvil', async ({ page }, testInfo) => {
+test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado y detalle móvil', async ({ page }, testInfo) => {
   let catalogReads = 0;
   await page.route('**/api/v1/academic/plans', route => route.fulfill({ json: { data: [{ planId: relationPlan.planId, name: relationPlan.name, versions: [{ version: relationPlan.version, isExample: true }] }] } }));
   await page.route(`**/api/v1/academic/plans/*/versions/${relationPlan.version}`, route => { catalogReads++; return route.fulfill({ json: { data: relationPlan } }); });
@@ -33,28 +33,33 @@ test('relaciones ficticias: respuesta de 120 ms, cadena visual, cancelación, te
   const unrelated = page.locator('[data-course-code="X"]');
   const originalBackground = await unrelated.evaluate(element => getComputedStyle(element).backgroundImage);
   await page.clock.install(); await page.clock.pauseAt(Date.now() + 1000);
-  await a.hover(); await page.clock.fastForward(119);
-  await expect(page.locator('[data-relation="origin"]')).toHaveCount(0);
-  await page.clock.fastForward(1);
+  // El reloj detenido comprueba que la activación no depende de una espera.
+  await a.hover();
   await expect(a).toHaveAttribute('data-relation', 'origin');
   await expect(page.locator('[data-relation="direct"]')).toHaveCount(2);
   await expect(page.locator('[data-relation="indirect"]')).toHaveCount(8);
   await expect(page.locator('.academic-columns svg')).toHaveCount(0);
   await expect(unrelated).toHaveCSS('background-image', originalBackground);
-  expect(await a.evaluate(element => getComputedStyle(element, '::before').transitionDuration)).toBe('0.15s');
+  expect(await a.evaluate(element => getComputedStyle(element, '::before').transitionDuration)).toBe('0.3s');
+  expect(await a.evaluate(element => getComputedStyle(element).transitionProperty)).toBe('translate');
   await page.screenshot({ path: testInfo.outputPath('cadena-ficticia-1920.png'), animations: 'disabled' });
   expect(await a.evaluate(element => Number(getComputedStyle(element, '::before').opacity))).toBeGreaterThan(0);
-  expect(await a.evaluate(element => Number(getComputedStyle(element).scale))).toBeCloseTo(1.01);
+  await expect(a).toHaveCSS('scale', 'none');
+  await expect(a).toHaveCSS('translate', '0px -2px');
+  const highlightShadow = await a.evaluate(element => getComputedStyle(element, '::before').boxShadow);
+  expect(highlightShadow).not.toBe('none');
+  expect(await page.locator('[data-course-code="D"]').evaluate(element => ({ opacity: Number(getComputedStyle(element, '::after').opacity), border: getComputedStyle(element, '::after').borderStyle }))).toEqual({ opacity: .6, border: 'dashed' });
   expect(await unrelated.evaluate(element => getComputedStyle(element, '::before').opacity)).toBe('0');
-  await b.hover(); await page.clock.fastForward(119);
-  await expect(a).toHaveAttribute('data-relation', 'origin');
-  await page.clock.fastForward(1); await expect(b).toHaveAttribute('data-relation', 'origin');
+  await b.hover(); await expect(b).toHaveAttribute('data-relation', 'origin');
   await expect(page.locator('[data-course-code="A"]')).not.toHaveAttribute('data-relation');
-  await page.locator('[data-course-code="X"]').hover(); await page.clock.fastForward(50);
+  expect(await a.evaluate(element => getComputedStyle(element, '::before').boxShadow)).toBe(highlightShadow);
+  await page.locator('[data-course-code="X"]').hover();
+  await expect(unrelated).toHaveAttribute('data-relation', 'origin');
   await page.mouse.move(0, 0); await page.clock.fastForward(2000);
   await expect(page.locator('[data-relation]')).toHaveCount(0);
   await page.clock.resume();
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(a).toHaveCSS('transition-property', 'none');
   await page.getByRole('region', { name: 'Asignaturas por semestre', exact: true }).focus(); await page.keyboard.press('Tab');
   await expect(a).toBeFocused(); await expect(a).toHaveAttribute('data-relation', 'origin');
   expect(await a.evaluate(element => ({ transform: getComputedStyle(element).transform, scale: getComputedStyle(element).scale, translate: getComputedStyle(element).translate, transition: getComputedStyle(element, '::before').transitionProperty }))).toEqual({ transform: 'none', scale: 'none', translate: 'none', transition: 'opacity' });
