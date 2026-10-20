@@ -87,7 +87,7 @@ export function Academic() {
         <header className="academic-toolbar cenit-page-enter">
           <div className="academic-toolbar__title">
             <button type="button" className="academic-sidebar-toggle academic-icon-button" aria-label={sidebarCollapsed ? 'Mostrar navegación' : 'Ocultar navegación'} aria-expanded={!sidebarCollapsed} aria-controls="academic-navigation" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}><SidebarSimple size={18} weight="regular" aria-hidden="true" /></button>
-            <div><h1 ref={heading} tabIndex={-1}>Malla curricular</h1><p className="academic-toolbar__subtitle">{plan?.name ?? 'Nutrición y Dietética'}{plan?.isExample && ' · Plan de ejemplo'}</p></div>
+            <div><h1 ref={heading} tabIndex={-1}>Malla curricular</h1><p className="academic-toolbar__subtitle">{plan?.name ?? 'Nutrición y Dietética'}</p></div>
           </div>
           <div className="academic-toolbar__tools">
             {version && available!.versions.length > 1 && <label className="academic-version">Plan<select aria-label="Versión del plan" value={version} onChange={event => { setDetail(null); setSelectedVersion(event.target.value); }}>{available!.versions.map(v => <option value={v.version} key={v.version}>{v.version}</option>)}</select></label>}
@@ -133,6 +133,7 @@ export function Academic() {
                         event.currentTarget.focus({ preventScroll: true });
                         setDetail(course);
                       }}>
+                        <span className="academic-course__origin-ring" aria-hidden="true" />
                         <span className="academic-course__name">{label}</span>
                         <span id={`academic-course-meta-${course.code}`} className="academic-course__footer">
                           {relation && <span className="academic-sr-only">{relation === 'origin' ? 'Origen de la cadena' : relation === 'direct' ? 'Relación directa' : 'Relación indirecta'}. Relación de referencia.</span>}
@@ -145,7 +146,7 @@ export function Academic() {
                 })}
               </div>
             </div>
-            {relationOrigin && <div className="academic-relation-legend" aria-label="Relaciones resaltadas"><span className="academic-relation-key academic-relation-key--origin">Origen</span><span className="academic-relation-key academic-relation-key--direct">Directa</span><span className="academic-relation-key academic-relation-key--indirect">Indirecta</span><span>{plan.isExample ? 'Conexiones ficticias' : 'Relaciones por confirmar'}</span></div>}
+            {relationOrigin && <div className="academic-relation-legend" aria-label="Relaciones resaltadas"><span className="academic-relation-key academic-relation-key--origin">Origen</span><span className="academic-relation-key academic-relation-key--direct">Directa</span><span className="academic-relation-key academic-relation-key--indirect">Indirecta</span>{!plan.isExample && <span>Relaciones por confirmar</span>}</div>}
           </>}
         </div>
       </div>

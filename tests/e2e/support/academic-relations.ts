@@ -20,8 +20,8 @@ const edges = [
   ['R1', 'Y'], ['Y', 'R3'], ['R3', 'S4'], ['S4', 'S5'], ['S5', 'S6'], ['S6', 'S7'], ['S7', 'S8'], ['S8', 'S9'], ['S9', 'S10'],
 ] as const;
 export const relationPlan: AcademicPlan = {
-  ...planExample, name: 'Nutrición · malla ficticia de 10 semestres', version: 'relations-example',
-  courses: semesters.flatMap((courses, semester) => courses.map(([code, name], index) => ({ ...planExample.courses[0]!, code, name, semester: semester + 1, semesterEnd: semester + 1, credits: 6, displayOrder: semester * 5 + index + 1, prerequisites: { kind: 'pending', description: 'Conexiones ficticias para revisar la interacción.' } }))),
+  ...planExample, name: 'Nutrición y Dietética', version: 'relations-example',
+  courses: semesters.flatMap((courses, semester) => courses.map(([code, name], index) => ({ ...planExample.courses[0]!, code, name, semester: semester + 1, semesterEnd: semester + 1, credits: 6, displayOrder: semester * 5 + index + 1, prerequisites: { kind: 'pending', description: 'Los prerrequisitos de esta asignatura están pendientes de confirmación.' } }))),
   prerequisiteEdges: edges.map(([fromCode, toCode]) => ({ fromCode, toCode, sourceId: planExample.source.sourceId, interpretation: 'pending', note: 'Conexión ficticia del mockup.' })),
 };
 

@@ -39,7 +39,6 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
       <header className="academic-detail__bar"><span><BookOpen size={16} weight="regular" aria-hidden="true" />Asignatura</span><button type="button" className="academic-icon-button" aria-label="Cerrar detalle" autoFocus onClick={() => setClosing(true)}><X size={18} aria-hidden="true" /></button></header>
       <div className="academic-detail__body">
         <h2 id="academic-detail-title">{course.name}</h2>
-          {plan.isExample && <p className="academic-note">Ejemplo ficticio para revisar la presentación. No constituye una regla oficial.</p>}
           <dl className="academic-facts">
             <div><dt>Semestre</dt><dd>{semesterLabel(course.semester, course.semesterEnd).replace(/^Semestres? /, '')}</dd></div>
             <div><dt>Créditos SCT</dt><dd>{course.credits ?? 'No informados'}</dd></div>

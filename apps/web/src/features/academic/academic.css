@@ -54,22 +54,24 @@
 .academic-course__name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; max-height: 32.4px; font-size: 12px; line-height: 1.35; font-weight: 500; overflow-wrap: anywhere; }
 .academic-course__footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 15px; color: #536176; font-size: 10px; line-height: 1.5; }
 .academic-course__footer > :last-child { margin-left: auto; }
-.academic-course { --course-accent: #78baff; position: relative; isolation: isolate; transition: none; }
+.academic-course { --course-accent: #78baff; --course-stroke: color-mix(in srgb, var(--course-accent) 70%, #293343); position: relative; isolation: isolate; transition: none; }
 /* Las capas conservan borde, degradado y sombra también al salir: sólo cambia su opacidad. */
-.academic-course::before, .academic-course::after { content: ''; position: absolute; inset: -1px; z-index: -1; border: 1px solid var(--course-accent); border-radius: inherit; pointer-events: none; background: linear-gradient(145deg, var(--course-accent), var(--course-surface)); box-shadow: 0 4px 12px color-mix(in srgb, var(--course-accent) 32%, transparent); opacity: 0; transition: opacity 300ms ease-out; }
-.academic-course::after { border-style: dashed; }
+.academic-course::before, .academic-course::after { content: ''; position: absolute; inset: -1px; z-index: -1; border: 1.5px solid var(--course-stroke); border-radius: inherit; pointer-events: none; background: linear-gradient(145deg, color-mix(in srgb, var(--course-accent) 65%, var(--course-surface)), var(--course-surface)); box-shadow: 0 4px 12px color-mix(in srgb, var(--course-accent) 32%, transparent); opacity: 0; transition: opacity 300ms ease-out; }
+.academic-course::after { border-style: dashed; background: linear-gradient(145deg, color-mix(in srgb, var(--course-accent) 18%, var(--course-surface)), var(--course-surface)); box-shadow: 0 2px 6px color-mix(in srgb, var(--course-accent) 14%, transparent); }
+.academic-course__origin-ring { position: absolute; inset: -1px; border: 2px solid #637087; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity 300ms ease-out; }
 .academic-course--relation-origin::before { opacity: .9; }
-.academic-course--relation-direct::before { opacity: .75; }
-.academic-course--relation-indirect::after { opacity: .6; }
+.academic-course--relation-origin .academic-course__origin-ring { opacity: 1; }
+.academic-course--relation-direct::before { opacity: .85; }
+.academic-course--relation-indirect::after { opacity: .75; }
 @media (prefers-reduced-motion: no-preference) {
   .academic-course { transition: translate 300ms ease-out; }
   .academic-course[data-relation] { translate: 0 -2px; }
 }
-.academic-relation-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 8px; color: #62626c; font-size: 10px; }
+.academic-relation-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 10px; color: #53535e; font-size: 11px; }
 .academic-relation-key { display: inline-flex; align-items: center; gap: 5px; }
-.academic-relation-key::before { content: ''; width: 12px; height: 9px; border: 1px solid #536176; border-radius: 2px; }
-.academic-relation-key--origin::before { box-shadow: inset 0 0 0 1px #39465e; }
-.academic-relation-key--indirect::before { border-style: dashed; }
+.academic-relation-key::before { content: ''; box-sizing: border-box; width: 15px; height: 11px; border: 1.5px solid #78869b; border-radius: 3px; background: #dce6f5; }
+.academic-relation-key--origin::before { border: 2px solid #637087; }
+.academic-relation-key--indirect::before { border-style: dashed; background: #f3f7fc; }
 .academic-relations__via { display: block; margin-top: 4px; color: #686871; font-size: 10px; }
 .academic-state { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 70px 18px; text-align: center; color: #72727b; }
 .academic-state h2 { color: #35353d; font-size: 16px; font-weight: 500; }

@@ -48,8 +48,17 @@ test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado 
   await expect(a).toHaveCSS('translate', '0px -2px');
   const highlightShadow = await a.evaluate(element => getComputedStyle(element, '::before').boxShadow);
   expect(highlightShadow).not.toBe('none');
-  expect(await page.locator('[data-course-code="D"]').evaluate(element => ({ opacity: Number(getComputedStyle(element, '::after').opacity), border: getComputedStyle(element, '::after').borderStyle }))).toEqual({ opacity: .6, border: 'dashed' });
+  expect(await page.locator('[data-course-code="D"]').evaluate(element => ({ opacity: Number(getComputedStyle(element, '::after').opacity), border: getComputedStyle(element, '::after').borderStyle }))).toEqual({ opacity: .75, border: 'dashed' });
   expect(await unrelated.evaluate(element => getComputedStyle(element, '::before').opacity)).toBe('0');
+  await expect(a.locator('.academic-course__origin-ring')).toHaveCSS('opacity', '1');
+  await expect(a.locator('.academic-course__origin-ring')).toHaveCSS('border-style', 'solid');
+  await expect(a.locator('.academic-course__origin-ring')).toHaveCSS('border-width', '2px');
+  const directLayer = await b.evaluate(element => ({ border: getComputedStyle(element, '::before').borderStyle, width: getComputedStyle(element, '::before').borderWidth, fill: getComputedStyle(element, '::before').backgroundImage }));
+  expect(directLayer.border).toBe('solid'); expect(parseFloat(directLayer.width)).toBeGreaterThanOrEqual(1); expect(parseFloat(directLayer.width)).toBeLessThan(2);
+  expect(await b.evaluate(element => getComputedStyle(element, '::after').backgroundImage)).not.toBe(directLayer.fill);
+  await expect(page.getByLabel('Relaciones resaltadas')).toHaveText('OrigenDirectaIndirecta');
+  await expect(page.locator('.academic-toolbar__subtitle')).toHaveText(relationPlan.name);
+  await expect(page.locator('.academic-toolbar .academic-tag')).toHaveText('Demostración');
   await b.hover(); await expect(b).toHaveAttribute('data-relation', 'origin');
   await expect(page.locator('[data-course-code="A"]')).not.toHaveAttribute('data-relation');
   expect(await a.evaluate(element => getComputedStyle(element, '::before').boxShadow)).toBe(highlightShadow);
@@ -69,6 +78,8 @@ test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado 
   await expect(page.locator('[data-relation]')).toHaveCount(0);
   await a.click();
   const dialog = page.getByRole('dialog', { name: 'Bases de nutrición' });
+  await expect(dialog).not.toContainText('Ejemplo ficticio');
+  await expect(dialog).not.toContainText('Conexiones ficticias');
   await expect(dialog).toContainText('Más adelante en la cadena');
   await expect(dialog).toContainText('Práctica integrada');
   await expect(dialog).toContainText('A través de Evaluación nutricional');
@@ -83,14 +94,15 @@ for (const role of ['docente', 'estudiante']) {
     await page.route('**/api/v1/academic/plans', route => route.fulfill({ json: { data: [{ planId: prerequisitePlan.planId, name: prerequisitePlan.name, versions: [{ version: prerequisitePlan.version, isExample: true }] }] } }));
     await page.route(`**/api/v1/academic/plans/*/versions/${prerequisitePlan.version}`, route => route.fulfill({ json: { data: prerequisitePlan } }));
     await login(page, role);
-    await expect(page.locator('.academic-toolbar__subtitle')).toContainText('Plan de ejemplo');
+    await expect(page.locator('.academic-toolbar__subtitle')).toHaveText(prerequisitePlan.name);
+    await expect(page.locator('.academic-toolbar .academic-tag')).toHaveText('Demostración');
     for (const width of [1440, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       for (const example of prerequisiteCases) {
         const card = page.getByRole('button', { name: `Ver asignatura: ${example.name}`, exact: true });
         await card.focus(); await card.press('Enter');
         const dialog = page.getByRole('dialog', { name: example.name, exact: true });
-        await expect(dialog).toContainText('Ejemplo ficticio para revisar la presentación. No constituye una regla oficial.');
+        await expect(dialog).not.toContainText('Ejemplo ficticio para revisar la presentación.');
         await expect(dialog.getByRole('heading', { name: 'Prerrequisitos', exact: true })).toBeVisible();
         for (const text of example.text) await expect(dialog).toContainText(text);
         if (example.kind === 'pending' || example.kind === 'unsupported') await expect(dialog).not.toContainText('Sin prerrequisitos.');
