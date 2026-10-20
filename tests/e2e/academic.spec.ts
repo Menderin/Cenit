@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { login } from './support/browser.js';
+import { prerequisiteCases, prerequisitePlan } from './support/prerequisites.js';
 
 const courses = (page: import('@playwright/test').Page) => page.getByRole('button', { name: /^Ver asignatura:/ });
 async function chooseStudent(page: import('@playwright/test').Page, name: string) {
@@ -13,6 +14,43 @@ async function expectLatestGrade(page: import('@playwright/test').Page, grade: s
   await page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true }).click();
   await expect(page.getByRole('dialog').locator('.academic-facts').first().getByText(grade, { exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
+}
+
+for (const role of ['docente', 'estudiante']) {
+  test(`mockup de prerrequisitos ficticios: seis estados, teclado y móvil: ${role}`, async ({ page }, testInfo) => {
+    await page.route('**/api/v1/academic/plans', route => route.fulfill({ json: { data: [{ planId: prerequisitePlan.planId, name: prerequisitePlan.name, versions: [{ version: prerequisitePlan.version, isExample: true }] }] } }));
+    await page.route(`**/api/v1/academic/plans/*/versions/${prerequisitePlan.version}`, route => route.fulfill({ json: { data: prerequisitePlan } }));
+    await login(page, role);
+    await expect(page.locator('.academic-toolbar__subtitle')).toContainText('Plan de ejemplo');
+    for (const width of [1440, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const example of prerequisiteCases) {
+        const card = page.getByRole('button', { name: `Ver asignatura: ${example.name}`, exact: true });
+        await card.focus(); await card.press('Enter');
+        const dialog = page.getByRole('dialog', { name: example.name, exact: true });
+        await expect(dialog).toContainText('Ejemplo ficticio para revisar la presentación. No constituye una regla oficial.');
+        await expect(dialog.getByRole('heading', { name: 'Prerrequisitos', exact: true })).toBeVisible();
+        for (const text of example.text) await expect(dialog).toContainText(text);
+        if (example.kind === 'pending' || example.kind === 'unsupported') await expect(dialog).not.toContainText('Sin prerrequisitos.');
+        if (example.kind === 'allOf' || example.kind === 'anyOf') await expect(dialog.locator('.academic-rule > li')).toHaveCount(2);
+        const close = dialog.getByRole('button', { name: 'Cerrar detalle', exact: true });
+        await expect(close).toBeFocused();
+        await page.keyboard.press('Tab');
+        await expect(dialog.locator('summary').last()).toBeFocused();
+        await page.keyboard.press('Enter');
+        await expect(dialog.getByText(prerequisitePlan.version, { exact: true })).toBeVisible();
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('Shift+Tab'); await expect(close).toBeFocused();
+        expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+        const bounds = (await dialog.boundingBox())!;
+        expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+        await page.screenshot({ path: testInfo.outputPath(`prerrequisito-${example.kind}-${width}.png`), animations: 'disabled' });
+        await page.keyboard.press('Escape');
+        await expect(dialog).toHaveCount(0); await expect(card).toBeFocused();
+      }
+    }
+  });
 }
 for (const role of ['docente', 'estudiante']) {
   test(`catálogo PostgreSQL, recarga y trazabilidad de API: ${role}`, async ({ page }) => {

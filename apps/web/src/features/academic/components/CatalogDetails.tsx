@@ -6,9 +6,9 @@ import { progressLabels, type CourseProgress } from '../model/progress-presentat
 import type { Student } from './StudentLookup.js';
 
 function Rule({ rule, plan }: { rule: Prerequisite; plan: AcademicPlan }) {
-  if (rule.kind === 'pending') return <p className="academic-detail__explanation">Requisitos aún no informados.</p>;
-  if (rule.kind === 'unsupported') return <p className="academic-detail__explanation">{rule.description}</p>;
-  if (rule.kind === 'none') return <p>Sin prerrequisitos.</p>;
+  if (rule.kind === 'pending') return <><p>Pendientes de confirmación.</p><p className="academic-detail__explanation">{rule.description}</p></>;
+  if (rule.kind === 'unsupported') return <><p>Regla no soportada.</p><p className="academic-detail__explanation">{rule.description}</p><p className="academic-detail__explanation">Esta condición no puede representarse con las reglas disponibles. No se interpreta como ausencia de prerrequisitos.</p></>;
+  if (rule.kind === 'none') return <p>Sin prerrequisitos. Ausencia confirmada en esta versión del plan.</p>;
   if (rule.kind === 'course') return <p>{plan.courses.find(c => c.code === rule.code)?.name ?? rule.code}</p>;
   return <><p>{rule.kind === 'allOf' ? 'Todos los siguientes:' : 'Al menos uno de los siguientes:'}</p><ul className="academic-rule">{rule.rules.map((child, index) => <li key={index}><Rule rule={child} plan={plan} /></li>)}</ul></>;
 }
@@ -37,6 +37,7 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
       <header className="academic-detail__bar"><span><BookOpen size={16} weight="regular" aria-hidden="true" />Asignatura</span><button type="button" className="academic-icon-button" aria-label="Cerrar detalle" autoFocus onClick={() => setClosing(true)}><X size={18} aria-hidden="true" /></button></header>
       <div className="academic-detail__body">
         <h2 id="academic-detail-title">{course.name}</h2>
+          {plan.isExample && <p className="academic-note">Ejemplo ficticio para revisar la presentación. No constituye una regla oficial.</p>}
           <dl className="academic-facts">
             <div><dt>Semestre</dt><dd>{semesterLabel(course.semester, course.semesterEnd).replace(/^Semestres? /, '')}</dd></div>
             <div><dt>Créditos SCT</dt><dd>{course.credits ?? 'No informados'}</dd></div>
@@ -44,9 +45,9 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
           </dl>
           {course.semester !== course.semesterEnd && <p className="academic-note">Rotaciones del intervalo {semesterLabel(course.semester, course.semesterEnd).replace('Semestres ', '')}, sin un orden asignado entre ellas.</p>}
           <section className="academic-detail__section" aria-labelledby="academic-rule-title">
-            <h3 id="academic-rule-title">{pending ? 'Relaciones entre asignaturas' : 'Prerrequisitos'}</h3>
-            {pending ? <p className="academic-detail__explanation">Relaciones de la malla de referencia. No indican por sí solas los requisitos para inscribir la asignatura.</p> : <Rule rule={course.prerequisites} plan={plan} />}
-            {!pending && (incoming.length + outgoing.length > 0) && <h4 className="academic-relations-title">Relaciones de la malla</h4>}
+            <h3 id="academic-rule-title">Prerrequisitos</h3>
+            <Rule rule={course.prerequisites} plan={plan} />
+            {(incoming.length + outgoing.length > 0) && <><h4 className="academic-relations-title">Relaciones entre asignaturas</h4><p className="academic-detail__explanation">Relaciones de la malla de referencia. No indican por sí solas los requisitos para inscribir la asignatura.</p></>}
             {[{ title: 'Hacia esta asignatura', edges: incoming, from: true }, { title: 'Desde esta asignatura', edges: outgoing, from: false }].map(group => group.edges.length > 0 && <div className="academic-relations" key={group.title}>
               <h4>{group.title}</h4><ul>{group.edges.map(edge => <li key={`${edge.fromCode}-${edge.toCode}`}>
                 <span>{plan.courses.find(c => c.code === (group.from ? edge.fromCode : edge.toCode))?.name}</span>
