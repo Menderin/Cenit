@@ -1,6 +1,6 @@
-# Cenit en Azure — preparación del 17 de octubre de 2026
+# Operar Cenit en Azure
 
-Gael autorizó sustituir la VM compartida por Azure en **Chile Central**, conservar GitHub Actions y ejecutar también OCR. Presupuesto: **USD 200 en total hasta diciembre**, procurando ahorrar. Esta decisión sustituye el destino y el polling de la VM anterior; no cambia los contratos de la aplicación, las migraciones ni el flujo de revisión por PR.
+La demostración se entrega en Azure **Chile Central** mediante GitHub Actions, con aplicación, PostgreSQL y OCR. El presupuesto disponible es **USD 200 en total hasta diciembre de 2026**. Azure sustituye el destino y el polling de la VM anterior; conserva los contratos de la aplicación, el migrador separado y la revisión por PR.
 
 | Rama protegida | Entorno | Dirección |
 | --- | --- | --- |
@@ -11,7 +11,7 @@ Una sola B2als v2, Linux/amd64, 2 vCPU y 4 GiB; SSD estándar de 64 GiB e IPv4 f
 
 ## Costos consultados
 
-API oficial [Azure Retail Prices](https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices), USD, Chile Central, 17 de octubre:
+Referencia histórica de la API oficial [Azure Retail Prices](https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices), USD, Chile Central, consultada el 17 de octubre de 2026. Revisar precios y saldo antes de ampliar recursos:
 
 | Recurso | Precio consultado | Estimación para 730 h |
 | --- | --- | --- |
@@ -27,7 +27,7 @@ Los límites suman 3,25 GiB para los seis contenedores; los procesos normalmente
 
 `main.bicep` contiene red, NSG, IPv4, VM, identidad y federación. `cloud-init.yaml` prepara Docker Compose y Caddy desde paquetes Ubuntu. El script no instala runners de PR en la VM ni hace builds allí.
 
-Con Azure CLI autenticado exclusivamente en la cuenta de Gael indicada para esta tarea:
+Con Azure CLI autenticado en la cuenta y suscripción del proyecto, comprobar el destino antes de aprovisionar:
 
 ```bash
 az account show --query '{id:id,user:user.name}'
@@ -58,20 +58,20 @@ El workflow comprueba readiness por HTTPS al terminar. Sin DNS/certificado váli
 
 En el editor DNS que administra la zona de DigitalPlat, crear dos registros **A** hacia la IPv4 fija confirmada por Azure: nombre `@` y nombre `develop`, TTL 300–3600. Conservar los NS existentes. No asumir que cambiar NS crea esos registros. Antes de modificar otros A/AAAA/CNAME, revisar cuáles existen; un AAAA anterior puede enviar clientes a otro servidor. Para HTTPS directo, ambos nombres deben resolver a la VM y permitir 80/443.
 
-La rama de preparación es `feat/azure-deploy`; no despliega por sí misma. El líder crea/revisa los PR y promueve `develop` a `main`. No se omiten las protecciones para estrenar el servidor.
+Las ramas de tarea no despliegan. El líder crea los PR y promueve `develop` a `main`, con revisión independiente y CI.
 
 Antes de retirar la instalación anterior: obtener un respaldo, transferir/verificar cuentas y datos necesarios, comprobar login de los tres roles, búsqueda/guardado/revisión de compras, malla, OCR real, HTTPS y persistencia tras recrear contenedores/reiniciar. Ensayar recuperación de aplicación fallida. Registrar commit/digests, tiempos y memoria de OCR en Chile.
 
-Sólo después, detener los timers y servicios **de Cenit** en la VM compartida. Conservar respaldo y posibilidad de recuperación; no tocar Zableke, Jenkins, Tailscale del host ni borrar la base. Las guías [VM anterior](../README.md), [CI/CD anterior](../CI-CD.md) y [contrato anterior](../CD-VM.md) quedan como referencia de transición; su polling de releases no corresponde al nuevo workflow Azure.
+Sólo después, detener los timers y servicios **de Cenit** en la VM compartida. Conservar respaldo y posibilidad de recuperación; no tocar Zableke, Jenkins, Tailscale del host ni borrar la base. La [guía de la instalación anterior](../README.md) reúne sus procedimientos de transición; su polling de releases no corresponde al workflow Azure.
 
-## Evidencia y pendientes
+## Instalación y comprobaciones
 
-Infraestructura creada: grupo `cenit-azure`, VM `cenit` B2als v2 en Chile Central, IPv4 fija **57.156.63.4**, SSD de 64 GiB, identidad/OIDC para main y develop. Aprovisionamiento Bicep completado; la primera ejecución detectó la restricción de escrituras OIDC concurrentes y se corrigió con `@batchSize(1)`.
+La instalación registrada usa el grupo `cenit-azure`, VM `cenit` B2als v2 en Chile Central, IPv4 fija **57.156.63.4**, SSD de 64 GiB e identidad/OIDC para `main` y `develop`. Consultar `config.json` y Azure antes de intervenir: un valor documentado no sustituye comprobar el recurso vigente.
 
 Presupuesto Azure `cenit-until-december`: USD 180 trimestrales para octubre-diciembre, avisos al correo de la cuenta en 50/80/100 % (USD 90/144/180). No es un corte automático. Los IDs públicos están en `config.json`.
 
-Pruebas locales: 46 pruebas de infraestructura correctas, sintaxis Bash/Python, Compose y ambos workflows con actionlint. DNS y certificados HTTPS comprobados para ambos dominios. PR #18 aprobado por Menderin e integrado en develop como `01548334e40dce6a4e1f3633bdca84984691d2ff`; su CI completo y publicación de ambas imágenes pasaron. El primer login Azure de Actions falló por la discrepancia del sujeto OIDC (`AADSTS700213`): Bicep y las credenciales de ambas ramas se corrigen al formato inmutable, sin ampliar roles ni ramas admitidas.
+La integración del PR #22 en `develop`, commit `82452bd2fc45101b00eeeeadde833148511d8897`, tiene [CI correcto](https://github.com/Menderin/Cenit/actions/runs/39157939078) y [entrega correcta](https://github.com/Menderin/Cenit/actions/runs/39157939205) del 18 de octubre de 2026, incluida inferencia OCR sin red, despliegue y readiness HTTPS. Es evidencia de esa ejecución; no acredita por sí sola todos los recorridos con usuarios ni la recuperación de datos.
 
-El segundo intento superó Azure Login, descargó ambas imágenes y preparó PostgreSQL/migraciones, pero Docker rechazó el tmpfs del OCR: la lista YAML sin comillas separaba las opciones por sus comas. Se conserva como un único valor y CI añade una creación real del contenedor (sin inferencia) para detectar opciones Docker inválidas antes del despliegue.
+Al diagnosticar `AADSTS700213`, comparar el sujeto OIDC exacto de la rama con la federación; no ampliar roles ni admitir PRs para resolverlo. Bicep serializa las escrituras de federación con `@batchSize(1)`. Si Docker rechaza las opciones del tmpfs OCR, conservarlas como un único valor YAML entre comillas; CI comprueba la creación real del contenedor antes de entregar.
 
-Pendientes: acreditar la entrega real por Actions después de esas correcciones, transferencia de cuentas/datos, OCR y recursos en la VM, recuperación y retiro del servidor anterior. Los checks locales no acreditan esos pasos.
+Antes de dar por completada la transición, verificar transferencia de cuentas/datos, recorridos con los tres roles, OCR con carga y recursos compartidos, recuperación y retiro del servidor anterior. Registrar los resultados en la ejecución o revisión correspondiente; mantener esta guía centrada en el procedimiento vigente.
