@@ -1,14 +1,15 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { ErrorResponseSchema } from '@cenit/contracts';
-import { CreatePurchaseSchema, PurchaseListQuerySchema, PurchaseListResponseSchema, PurchaseParamsSchema, PurchaseResponseSchema, PurchaseValidationSchema, PurchaseDeletionSchema, PurchaseDeletionResponseSchema, PurchaseSummaryResponseSchema, type CreatePurchase, type PurchaseListQuery } from '@cenit/contracts/purchases';
+import { CreatePurchaseSchema, PurchaseListQuerySchema, PurchaseListResponseSchema, PurchaseParamsSchema, PurchaseResponseSchema, PurchaseValidationSchema, PurchaseDeletionSchema, PurchaseDeletionResponseSchema, PurchaseSummaryResponseSchema, PurchaseCapabilitiesResponseSchema, PurchaseSheetsQuerySchema, PurchaseSheetsResponseSchema, type PurchaseCapabilities, type CreatePurchase, type PurchaseListQuery } from '@cenit/contracts/purchases';
 import type { Authenticate } from '../../auth/services/principal.js';
 import { ApiError } from '../../../infrastructure/errors.js';
 import type { PurchaseService } from '../services/purchases.js';
 import multipart from '@fastify/multipart';
 import { EXTRACTION_LIMITS, ExtractionResponseSchema } from '@cenit/contracts/purchases';
+import type { PurchaseSheetsRepository } from '../repositories/sheets.js';
 import { ExtractionService } from '../services/extractions.js';
 
-export async function purchaseRoutes(app: FastifyInstance, options: { service: PurchaseService; authenticate: Authenticate; allowedOrigins: string[]; extraction?: ExtractionService }) {
+export async function purchaseRoutes(app: FastifyInstance, options: { service: PurchaseService; authenticate: Authenticate; allowedOrigins: string[]; capabilities: PurchaseCapabilities; sheets?: { repository: PurchaseSheetsRepository; spreadsheetId: string }; extraction?: ExtractionService }) {
   await app.register(multipart, { limits: { fileSize: EXTRACTION_LIMITS.maxBytes, files: 1, fields: 0, parts: 1, headerPairs: 30 } });
   const actors = new WeakMap<FastifyRequest, string>();
   const access = async (request: FastifyRequest) => {
@@ -22,6 +23,15 @@ export async function purchaseRoutes(app: FastifyInstance, options: { service: P
     if (!request.headers.origin || !options.allowedOrigins.includes(request.headers.origin)) throw new ApiError(403, 'FORBIDDEN', 'Origen no autorizado.');
   };
   const errors = Object.fromEntries([400, 401, 403, 404, 409, 413, 500, 503].map(status => [status, ErrorResponseSchema]));
+  app.get('/capabilities', { onRequest: access, schema: { response: { 200: PurchaseCapabilitiesResponseSchema, ...errors } } }, () => ({ data: options.capabilities }));
+  app.get<{ Querystring: { purchaseId?: string } }>('/sheets-sync', { onRequest: access,
+    schema: { querystring: PurchaseSheetsQuerySchema, response: { 200: PurchaseSheetsResponseSchema, ...errors } },
+  }, async request => {
+    if (!options.capabilities.sheetsSyncEnabled) return { data: { status: 'disabled', pending: 0, lastSyncedAt: null, url: null } };
+    if (!options.sheets) throw new ApiError(503, 'SERVICE_UNAVAILABLE', 'La sincronización no está disponible.');
+    if (request.query.purchaseId) await options.service.get(request.query.purchaseId);
+    return options.sheets.repository.status(options.sheets.spreadsheetId, request.query.purchaseId);
+  });
   app.get('/summary', { onRequest: access, schema: { response: { 200: PurchaseSummaryResponseSchema, ...errors } } }, () => options.service.summary());
   app.delete<{ Params: { id: string }; Body: { expectedVersion: number } }>('/:id', { onRequest: write,
     schema: { params: PurchaseParamsSchema, body: PurchaseDeletionSchema, response: { 200: PurchaseDeletionResponseSchema, ...errors } },

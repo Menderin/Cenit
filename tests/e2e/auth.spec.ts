@@ -40,7 +40,7 @@ for (const role of ['administrativo', 'docente', 'estudiante']) {
     await expect(page).toHaveURL(new RegExp(`${path}$`));
     await expect(page.getByRole('heading', { name: role === 'administrativo' ? 'Administración' : 'Malla curricular', exact: true })).toBeVisible();
     if (role !== 'administrativo') await expect(page.getByRole('region', { name: 'Asignaturas por semestre' })).toBeVisible();
-    else await expect(page.getByRole('link', { name: 'Ver solicitudes', exact: true })).toBeVisible();
+    else await expect(page.getByRole('link', { name: 'Ver registros', exact: true })).toBeVisible();
     await page.goto('/prototipo.html'); await expect(page).toHaveURL(new RegExp(`${path}$`));
     await page.goto('/compras'); await expect(page).toHaveURL(new RegExp(`${path}$`));
     await page.goto('/login'); await expect(page).toHaveURL(new RegExp(`${path}$`));
@@ -294,7 +294,7 @@ test('espacios añadidos a una contraseña se conservan y no autentican como la 
 
 async function openPurchases(page: Page) {
   await login(page, 'administrativo');
-  await navigateAdministration(page, 'Sistema de compra');
+  await navigateAdministration(page, 'Registro de compras');
   await expect(page).toHaveURL(/\/administracion\/compras$/);
   await page.getByRole('link', { name: 'Revisar ejemplo' }).click();
 }
@@ -417,14 +417,14 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
     await expect(page.getByText('Módulo no disponible', { exact: true })).toBeVisible();
     await page.reload(); await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
   }
-  await navigateAdministration(page, 'Sistema de compra');
+  await navigateAdministration(page, 'Registro de compras');
   await page.getByRole('link', { name: 'Revisar ejemplo' }).click();
   await page.getByLabel('Nº Documento / solicitud', { exact: true }).fill('navigation-draft');
   await navigateAdministration(page, 'Inicio');
   await page.getByRole('alertdialog').getByRole('button', { name: 'Descartar y salir' }).click();
   await expect(page).toHaveURL(/\/administracion$/);
   await expect(page.getByRole('button', { name: 'Mostrar navegación', exact: true })).toBeVisible();
-  await navigateAdministration(page, 'Sistema de compra');
+  await navigateAdministration(page, 'Registro de compras');
   await page.getByRole('link', { name: 'Revisar ejemplo' }).click();
   await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveValue('000125');
   await page.reload(); await expect(page.getByRole('heading', { name: 'Revisar datos', exact: true })).toBeVisible();
@@ -439,7 +439,7 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
 async function manualForm(page: Page, number: string) {
   await login(page, 'administrativo');
   await page.goto('/administracion/compras');
-  await page.getByRole('link', { name: 'Nueva solicitud' }).click();
+  await page.getByRole('link', { name: 'Registrar manualmente' }).click();
   await page.getByLabel('Nº Documento / solicitud *', { exact: true }).fill(number);
   await page.getByLabel('Fecha de envío *', { exact: true }).fill('2026-10-13');
   await page.getByLabel('Descripción *', { exact: true }).fill('Solicitud ficticia de prueba');
@@ -456,7 +456,7 @@ test('solicitudes persistentes: ingreso, varios ítems, recarga, detalle y valid
   await page.getByRole('button', { name: 'Agregar ítem', exact: true }).click();
   await page.getByLabel('Proveedor · ítem 2', { exact: true }).fill('Proveedor ficticio B');
   await page.getByLabel('Código proyecto · ítem 2', { exact: true }).fill('0000000');
-  await page.getByRole('button', { name: 'Guardar solicitud', exact: true }).click();
+  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page.getByRole('heading', { name: /^Solicitud / })).toBeVisible();
   await expect(page.getByText(number, { exact: true })).toBeVisible();
   await page.reload();
@@ -471,33 +471,33 @@ test('solicitudes persistentes: ingreso, varios ítems, recarga, detalle y valid
     await page.screenshot({ path: `tmp/purchase-detail-${width}.png` });
   }
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.getByRole('link', { name: 'Volver a solicitudes' }).click();
-  const pending = page.getByRole('region', { name: 'Pendientes de validación', exact: true });
+  await page.getByRole('link', { name: 'Volver al registro' }).click();
+  const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
   const row = pending.getByRole('row').filter({ hasText: number });
   await expect(row.getByText('Sin dato', { exact: true })).toBeVisible();
   await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
   await expect(page.getByRole('alertdialog')).toContainText('La revisión de los datos quedará registrada en Cenit.');
   await page.getByRole('alertdialog').getByRole('button', { name: 'Validar registro' }).click();
   await expect(row).toHaveCount(0);
-  const reviewed = page.getByRole('region', { name: 'Registros validados', exact: true });
+  const reviewed = page.getByRole('region', { name: 'Revisados en Cenit', exact: true });
   const reviewedRow = reviewed.getByRole('row').filter({ hasText: number });
   await expect(reviewedRow).toHaveCount(1); await expect(reviewedRow.getByRole('button', { name: 'Validar registro', exact: true })).toHaveCount(0);
   await expect(reviewedRow.getByRole('button', { name: 'Eliminar', exact: true })).toHaveCount(0);
   await reviewedRow.getByRole('link', { name: 'Ver detalles' }).click();
   await expect(page.getByRole('button', { name: 'Eliminar', exact: true })).toBeVisible();
-  await expect(page.getByText(/Validado por/)).toBeVisible();
-  await page.reload(); await expect(page.getByText('Validado', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Revisado en Cenit por/)).toBeVisible();
+  await page.reload(); await expect(page.getByText('Revisado en Cenit', { exact: true })).toBeVisible();
 });
 
 test('formulario manual: errores conservan datos, foco válido y navegación confirma descarte', async ({ page }) => {
   await manualForm(page, 'DRAFT-ERROR');
   await page.getByLabel('Fecha de envío *', { exact: true }).fill('');
-  await page.getByRole('button', { name: 'Guardar solicitud', exact: true }).click();
+  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page.getByLabel('Fecha de envío *', { exact: true })).toBeFocused();
   await expect(page.getByRole('alert')).toContainText('Fecha de envío');
   await page.getByLabel('Fecha de envío *', { exact: true }).fill('2026-10-13');
   await page.route('**/api/v1/purchases', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'browser-test' } }) }));
-  await page.getByRole('button', { name: 'Guardar solicitud', exact: true }).click();
+  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('El formulario conserva tus datos');
   const focusResponse = page.waitForResponse(response => response.url().endsWith('/api/v1/auth/session'));
   await page.evaluate(() => window.dispatchEvent(new Event('focus'))); await focusResponse;
@@ -536,12 +536,12 @@ test('laboratorio: transferir correcciones no guarda, y el reintento conserva op
   await page.getByLabel('Nº Documento / solicitud', { exact: true }).fill(number);
   await page.getByRole('group', { name: 'Datos principales', exact: true }).getByLabel('Descripción', { exact: true }).fill('Descripción revisada de ejemplo ficticio');
   await page.getByRole('button', { name: 'Continuar al formulario' }).click();
-  await expect(page.getByRole('heading', { name: 'Nueva solicitud' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Registrar compra' })).toBeVisible();
   await expect(page.locator('.purchase-origin-badge')).toHaveText('Ejemplo de demostración · Por aclarar');
   await expect(page.getByLabel('Monto total (CLP) *', { exact: true })).toHaveValue('');
   const list = await page.request.get('/api/v1/purchases?reviewStatus=pending&pageSize=100');
   expect((await list.json()).data.some((row: { requestNumber: string }) => row.requestNumber === number)).toBe(false);
-  await page.getByRole('button', { name: 'Guardar solicitud', exact: true }).click();
+  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page.getByText('Revisa los campos antes de guardar.')).toBeVisible();
   await page.getByLabel('Fecha de envío *', { exact: true }).fill('2027-01-01');
   await page.getByLabel('Monto total (CLP) *', { exact: true }).fill('200000');
@@ -550,27 +550,27 @@ test('laboratorio: transferir correcciones no guarda, y el reintento conserva op
     attempts.push(route.request().postDataJSON());
     await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'example-retry' } }) });
   });
-  await page.getByRole('button', { name: 'Guardar solicitud', exact: true }).click();
+  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('El formulario conserva tus datos');
   await expect(page.getByLabel('Descripción *', { exact: true })).toHaveValue('Descripción revisada de ejemplo ficticio');
   await page.unroute('**/api/v1/purchases');
   const retry = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/api/v1/purchases'));
-  await page.getByRole('button', { name: 'Guardar solicitud', exact: true }).click();
+  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   expect((await retry).postDataJSON()).toEqual(attempts[0]);
   expect(attempts[0]!.origin).toEqual({ type: 'contract_example', exampleId: 'ambiguous' });
   await expect(page.getByRole('heading', { name: /^Solicitud / })).toBeVisible();
   await expect(page.locator('.purchase-origin-badge')).toHaveText('Ejemplo de demostración · Por aclarar');
   await page.reload(); await expect(page.getByText(number, { exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Volver a solicitudes' }).click();
-  const pending = page.getByRole('region', { name: 'Pendientes de validación', exact: true });
+  await page.getByRole('link', { name: 'Volver al registro' }).click();
+  const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
   const row = pending.getByRole('row').filter({ hasText: number });
   await expect(row.getByText('Ejemplo de demostración', { exact: true })).toBeVisible();
   await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Validar registro' }).click();
-  const reviewed = page.getByRole('region', { name: 'Registros validados', exact: true }).getByRole('row').filter({ hasText: number });
+  const reviewed = page.getByRole('region', { name: 'Revisados en Cenit', exact: true }).getByRole('row').filter({ hasText: number });
   await expect(reviewed.getByText('Ejemplo de demostración', { exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Nueva solicitud' }).click();
-  await expect(page.getByRole('heading', { name: 'Nueva solicitud' })).toBeVisible();
+  await page.getByRole('link', { name: 'Registrar manualmente' }).click();
+  await expect(page.getByRole('heading', { name: 'Registrar compra' })).toBeVisible();
   await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveValue('');
 });
 
@@ -600,10 +600,10 @@ test('laboratorio: formato inválido bloquea transferencia, original intacto y b
   await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveValue('');
   await page.goto('/administracion/compras/laboratorio');
   await page.getByRole('button', { name: 'Continuar al formulario' }).click();
-  await expect(page.getByRole('heading', { name: 'Nueva solicitud' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Registrar compra' })).toBeVisible();
   await page.clock.fastForward(7201000);
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByText('Nueva solicitud')).toHaveCount(0);
+  await expect(page.getByText('Registrar compra')).toHaveCount(0);
   await page.clock.setSystemTime(new Date()); await page.goto('/administracion/compras/nueva');
   await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveValue('');
 });
@@ -627,15 +627,15 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
     }
   }
   await page.goto('/administracion/compras');
-  const pending = page.getByRole('region', { name: 'Pendientes de validación', exact: true });
-  const reviewed = page.getByRole('region', { name: 'Registros validados', exact: true });
+  const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
+  const reviewed = page.getByRole('region', { name: 'Revisados en Cenit', exact: true });
   await pending.getByRole('button', { name: 'Siguiente' }).click();
   await reviewed.getByRole('button', { name: 'Siguiente' }).click();
   await expect(pending.getByText('Página 2', { exact: true })).toBeVisible();
   await expect(reviewed.getByText('Página 2', { exact: true })).toBeVisible();
   const returnUrl = page.url();
   await pending.getByRole('link', { name: 'Ver detalles' }).first().click();
-  await page.getByRole('link', { name: 'Volver a solicitudes' }).click();
+  await page.getByRole('link', { name: 'Volver al registro' }).click();
   await expect(page).toHaveURL(returnUrl);
   await expect(pending.getByText('Página 2', { exact: true })).toBeVisible();
   await expect(reviewed.getByText('Página 2', { exact: true })).toBeVisible();
@@ -675,7 +675,7 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
   }
   await pending.getByRole('link', { name: 'Ver detalles' }).click();
   await expect(page.getByText(targets[0]!, { exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Volver a solicitudes' }).click();
+  await page.getByRole('link', { name: 'Volver al registro' }).click();
   await expect(search).toHaveValue('100%_\\');
   await expect(page.getByLabel('Enviado desde', { exact: true })).toHaveValue('01/02/2027');
   await expect(page.getByLabel('Código de proyecto', { exact: true })).toHaveValue('000X');
@@ -695,7 +695,7 @@ test('listado: validación, error/reintento, carga y filtros descartados al camb
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
   await page.route('**/api/v1/purchases?**', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'filter-error' } }) }));
   await search.fill('PRIVATE-FILTER'); await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
-  const pending = page.getByRole('region', { name: 'Pendientes de validación', exact: true });
+  const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
   await expect(pending.getByRole('alert')).toContainText('No disponible');
   await expect(pending.getByRole('table')).toHaveCount(0);
   await page.unroute('**/api/v1/purchases?**');
@@ -730,8 +730,8 @@ test('solicitudes: paginación independiente y vistas sin desbordamiento horizon
     expect(response.status()).toBe(201);
   }
   await page.goto('/administracion/compras');
-  const pending = page.getByRole('region', { name: 'Pendientes de validación', exact: true });
-  const reviewed = page.getByRole('region', { name: 'Registros validados', exact: true });
+  const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
+  const reviewed = page.getByRole('region', { name: 'Revisados en Cenit', exact: true });
   await pending.getByRole('button', { name: 'Siguiente' }).click();
   await expect(pending.getByText('Página 2', { exact: true })).toBeVisible();
   await expect(reviewed.getByText('Página 1', { exact: true })).toBeVisible();
@@ -740,7 +740,7 @@ test('solicitudes: paginación independiente y vistas sin desbordamiento horizon
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/purchases-list-${width}.png` });
   }
-  await page.getByRole('link', { name: 'Nueva solicitud' }).click();
+  await page.getByRole('link', { name: 'Registrar manualmente' }).click();
   for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 900 });
     await page.getByRole('button', { name: 'Agregar ítem', exact: true }).click();
@@ -757,7 +757,7 @@ test('ítems desplegables: errores abren el ítem y eliminar otro conserva valor
   await amount.fill('1,20');
   await items.nth(0).locator('summary').click();
   await expect(items.nth(0)).not.toHaveAttribute('open');
-  await page.getByRole('button', { name: 'Guardar solicitud', exact: true }).click();
+  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(items.nth(0)).toHaveAttribute('open');
   await expect(amount).toBeFocused();
   await expect(amount).toHaveValue('1,20');
@@ -777,13 +777,13 @@ test('ítems desplegables: errores abren el ítem y eliminar otro conserva valor
   await page.getByLabel('Importe (CLP) · ítem 1', { exact: true }).fill(maximumAmount);
   await page.setViewportSize({ width: 390, height: 900 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.getByRole('button', { name: 'Guardar solicitud', exact: true }).click();
+  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page.getByRole('heading', { name: /^Solicitud / })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.getByRole('link', { name: 'Volver a solicitudes', exact: true }).click();
+  await page.getByRole('link', { name: 'Volver al registro', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill('DISCLOSURE-DRAFT');
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
-  const pending = page.getByRole('region', { name: 'Pendientes de validación', exact: true });
+  const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
   await expect(pending.getByText('1 registro', { exact: true })).toBeVisible();
   await expect(pending.locator('.purchase-total strong')).toContainText('999.999');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

@@ -27,6 +27,15 @@ export const PurchaseSummaryResponseSchema = object({ data: object({
   days: Type.Array(object({ date: headerFields.sentDate, count: Type.Integer({ minimum: 0 }) })),
 }) });
 export type PurchaseSummaryResponse = Static<typeof PurchaseSummaryResponseSchema>;
+export const PurchaseCapabilitiesResponseSchema = object({ data: object({ secondReviewEnabled: Type.Boolean(), sheetsSyncEnabled: Type.Boolean() }) });
+export type PurchaseCapabilities = Static<typeof PurchaseCapabilitiesResponseSchema>['data'];
+export const PurchaseSheetsQuerySchema = object({ purchaseId: Type.Optional(uuid) });
+export const PurchaseSheetsResponseSchema = object({ data: object({
+  status: Type.Union([Type.Literal('disabled'), Type.Literal('pending'), Type.Literal('synced'), Type.Literal('error')]),
+  pending: Type.Integer({ minimum: 0 }), lastSyncedAt: Type.Union([stamp, Type.Null()]),
+  url: Type.Union([Type.String({ pattern: '^https://docs\\.google\\.com/spreadsheets/d/[a-zA-Z0-9_-]+/edit$' }), Type.Null()]),
+}) });
+export type PurchaseSheetsResponse = Static<typeof PurchaseSheetsResponseSchema>;
 export const PurchaseFiltersSchema = object({
   q: Type.Optional(Type.String({ minLength: 1, maxLength: 100, pattern: '\\S' })),
   dateFrom: Type.Optional(headerFields.sentDate), dateTo: Type.Optional(headerFields.sentDate),
@@ -34,7 +43,7 @@ export const PurchaseFiltersSchema = object({
   projectCode: Type.Optional(Type.String({ minLength: 1, maxLength: 255, pattern: '\\S' })),
 });
 export type PurchaseFilters = Static<typeof PurchaseFiltersSchema>;
-export const PurchaseListQuerySchema = object({ ...PurchaseFiltersSchema.properties, reviewStatus: Type.Union([Type.Literal('pending'), Type.Literal('reviewed')]),
+export const PurchaseListQuerySchema = object({ ...PurchaseFiltersSchema.properties, reviewStatus: Type.Union([Type.Literal('pending'), Type.Literal('reviewed'), Type.Literal('all')]),
   page: Type.Integer({ minimum: 1, maximum: 1000000 }), pageSize: Type.Integer({ minimum: 1, maximum: 100 }) });
 export type PurchaseListQuery = Static<typeof PurchaseListQuerySchema>;
 const actor = object({ id: uuid, name: Type.String({ minLength: 1, maxLength: 200 }) });

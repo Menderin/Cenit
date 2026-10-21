@@ -14,7 +14,7 @@ import { usePurchaseGuard } from '../features/purchases/model/guard.js';
 import './administration.css';
 const navigation = [
   { to: '/administracion', label: 'Inicio', end: true, icon: HouseIcon },
-  { to: '/administracion/compras', label: 'Sistema de compra', end: false, icon: ShoppingCartSimpleIcon },
+  { to: '/administracion/compras', label: 'Registro de compras', end: false, icon: ShoppingCartSimpleIcon },
   { to: '/administracion/personal', label: 'Sistema de personal', end: false, icon: UsersIcon },
   { to: '/administracion/bienes', label: 'Sistema de bienes', end: false, icon: PackageIcon },
 ];
@@ -42,10 +42,10 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
   }
   const [collapsed, setCollapsed] = useState(() => window.matchMedia('(max-width: 760px)').matches);
   const current = navigation.find(link => link.end ? location.pathname === link.to : location.pathname.startsWith(link.to));
-  const page = location.pathname === '/administracion/compras/nueva' ? 'Nueva solicitud'
+  const page = location.pathname === '/administracion/compras/nueva' ? 'Registrar compra'
     : location.pathname === '/administracion/compras/captura' ? 'Revisar captura'
     : location.pathname === '/administracion/compras/laboratorio' ? 'Revisar datos'
-    : location.pathname.startsWith('/administracion/compras/') ? 'Detalle de solicitud' : current?.label ?? 'Inicio';
+    : location.pathname.startsWith('/administracion/compras/') ? 'Detalle del registro' : current?.label ?? 'Inicio';
   useEffect(() => { document.title = `Cenit · ${page}`; return () => { document.title = 'Cenit'; }; }, [page]);
   useEffect(() => { main.current?.scrollTo(0, 0); window.scrollTo(0, 0); main.current?.focus({ preventScroll: true }); }, [location.pathname]);
   useEffect(() => { if (window.matchMedia('(max-width: 760px)').matches) setCollapsed(true); }, [location.pathname]);

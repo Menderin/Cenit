@@ -84,7 +84,7 @@ test('captura: revisión compartida, transferencia y guardado sólo al confirmar
   await expect(page).toHaveURL(/\/compras\/nueva$/);
   expect(saves).toBe(0);
   await expect(page.getByText('Captura procesada y revisada', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Guardar solicitud', exact: true }).click();
+  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/compras/${id}$`));
   expect(saves).toBe(1);
   await expect(page.getByText('Corrección humana de prueba', { exact: true }).first()).toBeVisible();
@@ -120,11 +120,11 @@ test('captura: cambio de archivo cancela y descarta respuestas tardías; corrige
   await expect(page.getByRole('button', { name: 'Continuar al formulario', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Extraer datos', exact: true }).click();
   await page.getByRole('group', { name: 'Datos principales', exact: true }).getByLabel('Descripción', { exact: true }).fill('Borrador privado');
-  await page.getByRole('link', { name: 'Volver a solicitudes', exact: true }).click();
+  await page.getByRole('link', { name: 'Volver al registro', exact: true }).click();
   const discardPrompt = page.getByRole('alertdialog', { name: 'Descartar cambios' });
   await discardPrompt.getByRole('button', { name: 'Seguir editando', exact: true }).click();
   await expect(page).toHaveURL(/\/compras\/captura$/);
-  await page.getByRole('link', { name: 'Volver a solicitudes', exact: true }).click();
+  await page.getByRole('link', { name: 'Volver al registro', exact: true }).click();
   await page.getByRole('alertdialog', { name: 'Descartar cambios' }).getByRole('button', { name: 'Descartar y salir', exact: true }).click();
   await expect(page).toHaveURL(/\/compras$/);
 });
@@ -159,7 +159,7 @@ test('captura real: subir, revisar, guardar y recargar mediante OCR del notebook
   await page.screenshot({ path: 'tmp/capture-real-desktop.png', fullPage: true });
   await page.getByRole('group', { name: 'Datos principales', exact: true }).getByLabel('Descripción', { exact: true }).fill('Captura ficticia revisada desde el navegador');
   await page.getByRole('button', { name: 'Continuar al formulario', exact: true }).click();
-  await page.getByRole('button', { name: 'Guardar solicitud', exact: true }).click();
+  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page).toHaveURL(/\/compras\/[0-9a-f-]{36}$/);
   await page.reload();
   await expect(page.locator('.purchase-detail-meta')).toContainText('Captura procesada y revisada');

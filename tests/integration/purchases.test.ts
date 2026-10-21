@@ -21,6 +21,9 @@ import { CaptureReceipts } from '../../apps/api/src/modules/purchases/services/c
 import { ExtractionService, httpExtractionProcessor } from '../../apps/api/src/modules/purchases/services/extractions.js';
 import { createReviewDraft, validateExtractionResponse } from '../../packages/contracts/src/purchases/index.js';
 import { extractionExamples } from '../../packages/contracts/src/purchases/examples.js';
+import { PurchaseSheetsRepository } from '../../apps/api/src/modules/purchases/repositories/sheets.js';
+import { GoogleSheetsWriter } from '../../apps/api/src/modules/purchases/services/sheets.js';
+import { FakeGoogleSheets } from '../support/google-sheets.js';
 
 const suffix = randomBytes(6).toString('hex');
 const databases = [`cenit_purchase_test_${suffix}_empty`, `cenit_purchase_test_${suffix}_existing`];
@@ -73,7 +76,7 @@ beforeAll(async () => {
     finally { unlinkSync(file); }
   }
   repository = new PurchaseRepository(pools[0]!);
-  app = buildAcademicApp({ captureReceipts, extraction: new ExtractionService(process.env.OCR_TEST_URL ? httpExtractionProcessor(process.env.OCR_TEST_URL) : async (image, name, mime) => { const result = structuredClone(extractionExamples[0]!.response); result.data.captureLayout = { status: 'compatible', signals: ['request_title', 'header_fields', 'line_section', 'eight_column_table'] }; result.data.input = { name, mimeType: mime as 'image/png', bytes: image.length, width: 1000, height: 700 }; return result; }, captureReceipts), repository: new AcademicRepository(pools[0]!), purchases: repository, auth: { service: new AuthService(new AuthRepository(pools[0]!)), config: { allowedOrigins: [origin], cookieSecure: false } } });
+  app = buildAcademicApp({ purchaseCapabilities: { secondReviewEnabled: true, sheetsSyncEnabled: false }, captureReceipts, extraction: new ExtractionService(process.env.OCR_TEST_URL ? httpExtractionProcessor(process.env.OCR_TEST_URL) : async (image, name, mime) => { const result = structuredClone(extractionExamples[0]!.response); result.data.captureLayout = { status: 'compatible', signals: ['request_title', 'header_fields', 'line_section', 'eight_column_table'] }; result.data.input = { name, mimeType: mime as 'image/png', bytes: image.length, width: 1000, height: 700 }; return result; }, captureReceipts), repository: new AcademicRepository(pools[0]!), purchases: repository, auth: { service: new AuthService(new AuthRepository(pools[0]!)), config: { allowedOrigins: [origin], cookieSecure: false } } });
   await app.ready();
 });
 
@@ -457,4 +460,97 @@ describe('capture provenance and explicit persistence', () => {
     }
     captureNow = Date.now();
   }, 65000);
+});
+
+describe('registro histórico y sincronización durable de Sheets', () => {
+  it('mantiene ambos estados en el listado conjunto y bloquea la segunda revisión desactivada', async () => {
+    const disabled = buildAcademicApp({ repository: new AcademicRepository(pools[0]!), purchases: repository,
+      auth: { service: new AuthService(new AuthRepository(pools[0]!)), config: { allowedOrigins: [origin], cookieSecure: false } } });
+    try {
+      const account = credentials.find(account => account.role === 'administrativo')!;
+      const login = await disabled.inject({ method: 'POST', url: '/api/v1/auth/login', headers: { origin }, payload: { email: account.email, password: account.password } });
+      expect(login.statusCode).toBe(200);
+      const cookie = String(login.headers['set-cookie']).split(';')[0]!;
+      expect((await disabled.inject('/api/v1/purchases/capabilities')).statusCode).toBe(401);
+      const capabilities = await disabled.inject({ url: '/api/v1/purchases/capabilities', headers: { cookie } });
+      expect(capabilities.json().data).toEqual({ secondReviewEnabled: false, sheetsSyncEnabled: false });
+      const actor = (await pools[0]!.query("SELECT id FROM cenit.accounts WHERE role='administrativo' LIMIT 1")).rows[0].id;
+      const prefix = 'REGISTRO-' + randomUUID();
+      const first = body(), second = body();
+      first.header.requestNumber = prefix + '-1'; second.header.requestNumber = prefix + '-2';
+      const a = await repository.create(first, actor), b = await repository.create(second, actor);
+      await repository.validate(b.record.id, 1, actor);
+      const response = await disabled.inject({ url: `/api/v1/purchases?reviewStatus=all&q=${prefix}`, headers: { cookie } });
+      expect(response.statusCode).toBe(200); expect(Value.Check(PurchaseListResponseSchema, response.json())).toBe(true);
+      expect(new Set(response.json().data.map((record: { reviewStatus: string }) => record.reviewStatus))).toEqual(new Set(['pending', 'reviewed']));
+      expect(response.json().pagination.total).toBe(2);
+      expect(response.json().totals.documentTotal).toBe((BigInt(first.header.totalAmount) + BigInt(second.header.totalAmount)).toString());
+      expect((await disabled.inject({ method: 'POST', url: `/api/v1/purchases/${a.record.id}/validation`, headers: { cookie, origin }, payload: { expectedVersion: 1 } })).statusCode).toBe(409);
+      expect((await repository.get(a.record.id))!.reviewStatus).toBe('pending');
+      expect((await disabled.inject({ url: '/api/v1/purchases/sheets-sync', headers: { cookie } })).json().data.status).toBe('disabled');
+      for (const role of ['docente', 'estudiante']) for (const path of ['capabilities', 'sheets-sync']) {
+        expect((await disabled.inject({ url: `/api/v1/purchases/${path}`, headers: { cookie: cookies[role] } })).statusCode).toBe(403);
+      }
+      const enabled = buildAcademicApp({ repository: new AcademicRepository(pools[0]!), purchases: repository,
+        purchaseCapabilities: { secondReviewEnabled: false, sheetsSyncEnabled: true },
+        sheets: { repository: new PurchaseSheetsRepository(pools[0]!, repository), spreadsheetId: 'fake_status_only' },
+        auth: { service: new AuthService(new AuthRepository(pools[0]!)), config: { allowedOrigins: [origin], cookieSecure: false } } });
+      try {
+        expect((await enabled.inject('/api/v1/purchases/sheets-sync')).statusCode).toBe(401);
+        const status = await enabled.inject({ url: `/api/v1/purchases/sheets-sync?purchaseId=${a.record.id}`, headers: { cookie } });
+        expect(status.statusCode).toBe(200); expect(status.json().data.status).toBe('pending');
+        expect((await enabled.inject({ url: '/api/v1/purchases/sheets-sync?purchaseId=invalid', headers: { cookie } })).statusCode).toBe(400);
+        expect((await enabled.inject({ url: `/api/v1/purchases/sheets-sync?purchaseId=${randomUUID()}`, headers: { cookie } })).statusCode).toBe(404);
+      } finally { await enabled.close(); }
+
+    } finally { await disabled.close(); }
+  });
+
+  it('conserva cola y filas tras fallos/reinicio, no duplica y sincroniza altas, revisión y bajas', async () => {
+    const pool = pools[0]!, target = 'fake_sheet_integration', actor = (await pool.query("SELECT id FROM cenit.accounts WHERE role='administrativo' LIMIT 1")).rows[0].id;
+    // Older fixtures are outside this remote-double scenario.
+    await pool.query(`INSERT INTO cenit.purchase_sheets_delivery(spreadsheet_id,purchase_id,synced_generation)
+      SELECT $1,purchase_id,generation FROM cenit.purchase_sheets_outbox`, [target]);
+    const input = body(); input.header.requestNumber = '000099'; input.header.totalAmount = '9'.repeat(255);
+    const saved = await repository.create(input, actor);
+    await repository.create(input, actor);
+    expect((await pool.query('SELECT generation FROM cenit.purchase_sheets_outbox WHERE purchase_id=$1', [saved.record.id])).rows[0].generation).toBe(1);
+    const queuedBefore = (await pool.query('SELECT count(*)::int AS n FROM cenit.purchase_sheets_outbox')).rows[0].n;
+    const invalid = body(); invalid.lines[0]!.amount = '-1';
+    await expect(repository.create(invalid, actor)).rejects.toThrow();
+    expect((await pool.query('SELECT count(*)::int AS n FROM cenit.purchase_sheets_outbox')).rows[0].n).toBe(queuedBefore);
+    const remote = new FakeGoogleSheets(), writer = new GoogleSheetsWriter(remote.call, 'fake@example.test');
+    let sync = new PurchaseSheetsRepository(pool, repository);
+    expect((await sync.status(target, saved.record.id)).data.status).toBe('pending');
+    remote.unavailable = true;
+    await sync.deliver(target, jobs => writer.send(jobs));
+    expect((await sync.status(target, saved.record.id)).data.status).toBe('error');
+    const assignment = (await pool.query('SELECT header_row,item_rows FROM cenit.purchase_sheets_delivery WHERE spreadsheet_id=$1 AND purchase_id=$2', [target, saved.record.id])).rows[0];
+    remote.unavailable = false; remote.loseNextResponse = true;
+    await pool.query('UPDATE cenit.purchase_sheets_delivery SET next_attempt_at=now() WHERE spreadsheet_id=$1', [target]);
+    await sync.deliver(target, jobs => writer.send(jobs));
+    expect((await sync.status(target, saved.record.id)).data.status).toBe('error');
+    // Recreate the worker/repository, retaining only PostgreSQL and remote state.
+    sync = new PurchaseSheetsRepository(pool, new PurchaseRepository(pool));
+    await pool.query('UPDATE cenit.purchase_sheets_delivery SET next_attempt_at=now() WHERE spreadsheet_id=$1', [target]);
+    await sync.deliver(target, jobs => writer.send(jobs));
+    expect((await sync.status(target, saved.record.id)).data.status).toBe('synced');
+    expect(remote.sheet('Compras').rows.size).toBe(2);
+    expect(remote.sheet('Ítems').rows.size).toBe(input.lines.length + 1);
+    await repository.validate(saved.record.id, 1, actor);
+    await sync.deliver(target, jobs => writer.send(jobs));
+    const headers = remote.sheet('Compras').rows.get(1)!;
+    expect(remote.sheet('Compras').rows.get(assignment.header_row)![headers.indexOf('Revisión local')]).toBe('reviewed');
+    // A newer mutation arriving while HTTP is in progress must remain pending.
+    await repository.delete(saved.record.id, 2);
+    await sync.deliver(target, async jobs => {
+      await writer.send(jobs);
+      await pool.query('UPDATE cenit.purchase_sheets_outbox SET generation=generation+1 WHERE purchase_id=$1', [saved.record.id]);
+    });
+    expect((await sync.status(target, saved.record.id)).data.status).toBe('pending');
+    await sync.deliver(target, jobs => writer.send(jobs));
+    expect((await sync.status(target, saved.record.id)).data.status).toBe('synced');
+    expect(remote.sheet('Compras').rows.get(assignment.header_row)!.every(value => value === '')).toBe(true);
+    for (const row of assignment.item_rows) expect(remote.sheet('Ítems').rows.get(row)!.every(value => value === '')).toBe(true);
+  });
 });

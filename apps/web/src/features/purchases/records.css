@@ -135,3 +135,8 @@
   .purchase-detail-heading__amount { text-align: left; max-width: 100%; }
   .purchase-detail-heading__amount > strong { font-size: 22px; }
 }
+
+.purchase-sync { margin: 18px 0; padding: 14px 16px; border: 1px solid var(--admin-line); border-radius: 8px; background: #fff; font-size: 12px; overflow-wrap: anywhere; }
+.purchase-sync > strong { color: var(--admin-ink); font-size: 13px; }
+.purchase-sync p { margin: 5px 0; color: var(--admin-muted); }
+.purchase-sync a { display: inline-block; margin-top: 5px; }

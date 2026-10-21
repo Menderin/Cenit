@@ -4,7 +4,7 @@ import { credential, login } from './support/browser.js';
 async function newForm(page: Page) {
   await login(page, 'administrativo');
   await page.goto('/administracion/compras');
-  await page.getByRole('link', { name: 'Nueva solicitud', exact: true }).click();
+  await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
 }
 const number = (page: Page) => page.getByLabel('Nº Documento / solicitud *', { exact: true });
 const date = (page: Page) => page.getByLabel('Fecha de envío *', { exact: true });
@@ -30,7 +30,7 @@ test('cancelar distingue vacío, cambios revertidos e ítems, sin enviar compras
   await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
   await expect(page).toHaveURL(/\/compras$/);
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
-  await page.getByRole('link', { name: 'Nueva solicitud', exact: true }).click();
+  await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
   await page.getByRole('button', { name: 'Agregar ítem', exact: true }).click();
   const cancel = page.getByRole('button', { name: 'Cancelar', exact: true });
   await cancel.click();
@@ -41,7 +41,7 @@ test('cancelar distingue vacío, cambios revertidos e ítems, sin enviar compras
   await expect(page.getByRole('button', { name: 'Eliminar ítem 1' })).toBeVisible();
   await cancel.click(); await dialog.getByRole('button', { name: 'Descartar y salir' }).click();
   await expect(page).toHaveURL(/\/compras$/);
-  await page.getByRole('link', { name: 'Nueva solicitud', exact: true }).click();
+  await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
   await expect(page.getByText('Borrador sin guardar', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Eliminar ítem 1' })).toHaveCount(0);
   expect(posts).toBe(0);
@@ -105,7 +105,7 @@ test('fallo temporal oculta y recupera misma cuenta, origen, ítems y operación
     attempts.push(route.request().postDataJSON());
     await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'ux-test' } }) });
   });
-  await page.getByRole('button', { name: 'Guardar solicitud' }).click();
+  await page.getByRole('button', { name: 'Guardar registro' }).click();
   await expect(page.getByRole('alert')).toContainText('El formulario conserva tus datos');
   await loseSessionCheck(page);
   await page.unroute('**/api/v1/auth/session'); await page.getByRole('button', { name: 'Reintentar' }).click();
@@ -113,7 +113,7 @@ test('fallo temporal oculta y recupera misma cuenta, origen, ítems y operación
   const item = page.locator('details').filter({ has: page.getByLabel('Proveedor · ítem 3', { exact: true }) }).first();
   await item.locator('summary').click();
   await expect(page.getByLabel('Proveedor · ítem 3', { exact: true })).toHaveValue('Proveedor ficticio conservado');
-  await page.getByRole('button', { name: 'Guardar solicitud' }).click();
+  await page.getByRole('button', { name: 'Guardar registro' }).click();
   await expect.poll(() => attempts.length).toBe(2); expect(attempts[1]).toEqual(attempts[0]);
 });
 
@@ -140,7 +140,7 @@ test('calendario en español funciona por teclado, valida bisiesto y envía fech
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await newForm(page); await complete(page, 'FECHA-CIVIL');
   await date(page).fill('29/02/2027');
-  await page.getByRole('button', { name: 'Guardar solicitud' }).click();
+  await page.getByRole('button', { name: 'Guardar registro' }).click();
   await expect(date(page)).toBeFocused(); await expect(date(page)).toHaveAttribute('aria-invalid', 'true');
   await date(page).fill('29/02/2028');
   const trigger = page.getByRole('button', { name: 'Abrir calendario: Fecha de envío', exact: true });
@@ -153,7 +153,7 @@ test('calendario en español funciona por teclado, valida bisiesto y envía fech
   await trigger.click(); await page.keyboard.press('Escape'); await expect(date(page)).toBeFocused();
   const request = page.waitForRequest(request => request.url().endsWith('/api/v1/purchases') && request.method() === 'POST');
   await page.route('**/api/v1/purchases', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'ux-date' } }) }));
-  await page.getByRole('button', { name: 'Guardar solicitud' }).click();
+  await page.getByRole('button', { name: 'Guardar registro' }).click();
   expect((await request).postDataJSON().header.sentDate).toBe('2028-02-28');
   await expect(date(page)).toHaveValue('28/02/2028');
 });
@@ -162,7 +162,7 @@ test('guardado pendiente bloquea cancelación y salida hasta confirmación del s
   await newForm(page); await complete(page, `PENDIENTE-${Date.now()}`);
   let release: (() => void) | undefined;
   await page.route('**/api/v1/purchases', async route => { await new Promise<void>(resolve => { release = resolve; }); await route.continue(); });
-  await page.getByRole('button', { name: 'Guardar solicitud' }).click();
+  await page.getByRole('button', { name: 'Guardar registro' }).click();
   await expect.poll(() => Boolean(release)).toBe(true);
   await expect(page.getByRole('button', { name: 'Cancelar', exact: true })).toBeDisabled();
   await page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link', { name: 'Inicio', exact: true }).click();
@@ -170,8 +170,8 @@ test('guardado pendiente bloquea cancelación y salida hasta confirmación del s
   await expect(dialog.getByRole('button')).toHaveCount(1);
   await dialog.getByRole('button', { name: 'Volver al formulario' }).click();
   await expect(page).toHaveURL(/\/nueva$/);
-  await expect(page.getByText('Solicitud guardada', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Registro guardado', { exact: true })).toHaveCount(0);
   release!();
   await expect(page.getByRole('heading', { name: /^Solicitud / })).toBeVisible();
-  await expect(page.getByText('Solicitud guardada', { exact: true })).toBeVisible();
+  await expect(page.getByText('Registro guardado', { exact: true })).toBeVisible();
 });

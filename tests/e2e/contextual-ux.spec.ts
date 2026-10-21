@@ -19,13 +19,13 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   const beforeDay = before.days.find((day: { date: string }) => day.date === '2026-10-16')?.count ?? 0;
   const chartCount = page.getByRole('list', { name: 'Cantidad de solicitudes pendientes por día' }).getByRole('listitem').filter({ hasText: '16/10/2026' }).locator('.dashboard-chart-count');
   const number = `HOME-${crypto.randomUUID().slice(0, 8)}`;
-  await page.getByRole('link', { name: 'Ver solicitudes', exact: true }).click();
-  await page.getByRole('link', { name: 'Nueva solicitud', exact: true }).click();
+  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
   await page.getByLabel('Nº Documento / solicitud *', { exact: true }).fill(number);
   await page.getByLabel('Fecha de envío *', { exact: true }).fill('16/10/2026');
   await page.getByLabel('Descripción *', { exact: true }).fill('Solicitud ficticia para revisar el resumen');
   await page.getByLabel('Monto total (CLP) *', { exact: true }).fill('12345');
-  await page.getByRole('button', { name: 'Guardar solicitud', exact: true }).click();
+  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page.getByRole('heading', { name: `Solicitud ${number}` })).toBeVisible();
   const id = new URL(page.url()).pathname.split('/').at(-1)!;
   await home();
@@ -38,7 +38,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
     await page.screenshot({ path: `tmp/admin-home-connected-${width}.png` });
   }
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.getByRole('link', { name: 'Ver solicitudes', exact: true }).click();
+  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(number);
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
   const row = pending(page).getByRole('row').filter({ hasText: number });
@@ -48,7 +48,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   await home(); await check(before.requests + 1, before.pending, before.pendingAmount);
   await expect(chartCount).toHaveText(`${beforeDay} ${beforeDay === 1 ? 'solicitud' : 'solicitudes'}`);
   // Delete a reviewed record through its detail; the filtered list is preserved on return.
-  await page.getByRole('link', { name: 'Ver solicitudes', exact: true }).click();
+  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(number);
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
   await page.getByRole('row').filter({ hasText: number }).getByRole('link', { name: 'Ver detalles' }).click();
@@ -63,7 +63,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   example.origin = { type: 'contract_example', exampleId: 'recovered' }; example.header.requestNumber = `${number}-PENDING`;
   const response = await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data: example });
   expect(response.status()).toBe(201);
-  await page.getByRole('link', { name: 'Ver solicitudes', exact: true }).click();
+  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(example.header.requestNumber);
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
   const exampleRow = pending(page).getByRole('row').filter({ hasText: example.header.requestNumber });
@@ -102,7 +102,7 @@ test('eliminar confirma, permite cancelar y conserva el registro ante conflicto 
   expect((await page.request.get(`/api/v1/purchases/${record.id}`)).status()).toBe(200);
   await expect(page.getByText('Registro eliminado', { exact: true })).toHaveCount(0);
   await dialog(page).getByRole('button', { name: 'Actualizar datos' }).click();
-  await expect(page.getByText('Validado', { exact: true })).toBeVisible();
+  await expect(page.getByText('Revisado en Cenit', { exact: true })).toBeVisible();
   await trigger.click();
   await dialog(page).getByRole('button', { name: 'Eliminar registro', exact: true }).click();
   await expect(page).toHaveURL(/\/compras\?q=CTX-/);
@@ -129,7 +129,7 @@ test('Inicio presenta carga y error con reintento sin mostrar cifras ficticias',
 });
 
 const dialog = (page: Page) => page.getByRole('alertdialog');
-const pending = (page: Page) => page.getByRole('region', { name: 'Pendientes de validación', exact: true });
+const pending = (page: Page) => page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
 const toolbar = (page: Page) => page.getByRole('button', { name: /^(Mostrar|Ocultar) navegación$/ });
 async function fixtures(page: Page, count = 8) {
   const prefix = `CTX-${crypto.randomUUID().slice(0, 8)}`;
@@ -206,13 +206,13 @@ test('validar espera servidor, conserva conflicto, evita duplicados y retorna fo
   });
   await dialog(page).getByRole('button', { name: 'Validar registro', exact: true }).click();
   await expect(pending(page).getByRole('row').filter({ hasText: record.number })).toHaveCount(0);
-  await expect(pending(page).getByRole('heading', { name: 'Pendientes de validación' })).toBeFocused();
+  await expect(pending(page).getByRole('heading', { name: 'Por revisar en Cenit' })).toBeFocused();
   await expect(page.getByText('Registro validado', { exact: true })).toBeVisible();
   expect(Number(await page.locator('body').getAttribute('data-confirm-exit-duration'))).toBeGreaterThanOrEqual(130);
   const detail = (await fixtures(page, 1))[0]!; await page.goto(`/administracion/compras/${detail.id}`);
   await page.getByRole('button', { name: 'Validar registro', exact: true }).click();
   await dialog(page).getByRole('button', { name: 'Validar registro', exact: true }).click();
-  await expect(page.getByText('Validado', { exact: true })).toBeVisible();
+  await expect(page.getByText('Revisado en Cenit', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: `Solicitud ${detail.number}` })).toBeFocused();
 });
 
@@ -236,7 +236,7 @@ test('sesión inválida desmonta la confirmación de inmediato e ignora éxito t
 
 test('descarte usa origen explícito, atrás usa cabecera visible y cerrar no deja acciones invisibles', async ({ page }) => {
   await login(page, 'administrativo'); await page.goto('/administracion/compras');
-  await page.getByRole('link', { name: 'Nueva solicitud', exact: true }).click();
+  await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
   await page.getByLabel('Nº Documento / solicitud *', { exact: true }).fill('BORRADOR-CONTEXTUAL');
   await page.getByRole('button', { name: 'Agregar ítem', exact: true }).click();
   await page.getByLabel('Proveedor · ítem 1', { exact: true }).fill('Proveedor ficticio');
@@ -257,7 +257,7 @@ test('descarte usa origen explícito, atrás usa cabecera visible y cerrar no de
 });
 
 test('filtros vacíos, repetidos y quitados dan feedback sin consultas ni historial redundantes', async ({ page }) => {
-  await login(page, 'administrativo'); await page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link', { name: 'Sistema de compra', exact: true }).click();
+  await login(page, 'administrativo'); await page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link', { name: 'Registro de compras', exact: true }).click();
   await expect(pending(page).getByRole('table')).toBeVisible();
   let queries = 0; page.on('request', r => { if (new URL(r.url()).pathname === '/api/v1/purchases') queries++; });
   const apply = page.getByRole('button', { name: 'Aplicar filtros', exact: true });
@@ -307,7 +307,7 @@ test('búsqueda en vivo agrupa escritura, reinicia páginas y conserva filtros s
   await page.clock.resume();
   await expect(page.getByText('Página 1', { exact: true })).toHaveCount(2);
   await expect(pending(page).getByText('1 registro', { exact: true })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Registros validados', exact: true }).getByText('1 registro', { exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Revisados en Cenit', exact: true }).getByText('1 registro', { exact: true })).toBeVisible();
   expect(queries).toHaveLength(2);
   for (const query of queries) { expect(query.searchParams.get('q')).toBe(prefix); expect(query.searchParams.has('dateTo')).toBe(false); expect(query.searchParams.has('unitCode')).toBe(false); }
   await expect(search).toBeFocused();
@@ -341,7 +341,7 @@ test('búsqueda en vivo descarta respuestas anteriores y conserva el filtro al v
   await expect(current).toBeVisible(); release!();
   await expect(pending(page).getByRole('row').filter({ hasText: records[0]!.number })).toHaveCount(0);
   await current.getByRole('link', { name: 'Ver detalles' }).click();
-  await page.getByRole('link', { name: 'Volver a solicitudes' }).click();
+  await page.getByRole('link', { name: 'Volver al registro' }).click();
   await expect(search).toHaveValue(records[1]!.number);
   await expect(current).toBeVisible();
   await page.reload(); await expect(search).toHaveValue(records[1]!.number);
@@ -377,7 +377,7 @@ test('marco y navegación permanecen visibles al desplazar listas/formularios, c
     expect(await page.locator('.admin-shell').evaluate(e => e.getBoundingClientRect().bottom)).toBeLessThanOrEqual(height - 15);
     expect(await page.locator('.purchase-table-scroll').first().evaluate(e => e.scrollHeight - e.clientHeight)).toBeLessThanOrEqual(1);
   }
-  await page.getByRole('link', { name: 'Nueva solicitud', exact: true }).click();
+  await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
   expect(await page.locator('#admin-content').evaluate(e => e.scrollTop)).toBe(0); await expect(page.locator('#admin-content')).toBeFocused();
   for (const [width, height] of [[1280, 720], [390, 844], [640, 450]] as const) {
     await page.setViewportSize({ width, height });
@@ -408,5 +408,5 @@ test('reapertura durante salida, ancla retirada y movimiento reducido conservan 
   await handle.evaluate(e => e.remove());
   await dialog(page).getByRole('button', { name: 'Validar registro', exact: true }).click();
   await expect(dialog(page)).toHaveCount(0); expect(posts).toBe(0);
-  await expect(pending(page).getByRole('heading', { name: 'Pendientes de validación' })).toBeFocused();
+  await expect(pending(page).getByRole('heading', { name: 'Por revisar en Cenit' })).toBeFocused();
 });

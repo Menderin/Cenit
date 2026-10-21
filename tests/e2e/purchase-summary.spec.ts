@@ -16,27 +16,27 @@ test('Inicio coincide con compras y se actualiza al volver después de guardar y
   const card = (label: string) => page.locator('.dashboard-kpis > div').filter({ has: page.locator('dt').filter({ hasText: new RegExp('^' + label + '$') }) }).locator('dd').first();
   const home = () => page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link', { name: 'Inicio', exact: true }).click();
   const openRecord = async () => {
-    await page.getByRole('link', { name: 'Ver solicitudes', exact: true }).click();
+    await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
     await page.getByLabel('Buscar solicitudes', { exact: true }).fill(input.header.requestNumber);
     await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
-    const pending = page.getByRole('region', { name: 'Pendientes de validación', exact: true });
+    const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
     const row = pending.getByRole('row').filter({ hasText: input.header.requestNumber });
     await expect(row).toBeVisible();
     return row;
   };
   await openRecord();
   await home();
-  await expect(card('Solicitudes')).toHaveText(String(before.requests + 1));
+  await expect(card('Registros guardados')).toHaveText(String(before.requests + 1));
   await expect(card('Pendientes de revisión')).toHaveText(String(before.pending + 1));
-  await expect(card('Monto pendiente')).toHaveText(amountLabel((BigInt(before.pendingAmount) + BigInt(input.header.totalAmount)).toString()));
+  await expect(card('Monto por revisar en Cenit')).toHaveText(amountLabel((BigInt(before.pendingAmount) + BigInt(input.header.totalAmount)).toString()));
   const row = await openRecord();
   await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Validar registro', exact: true }).click();
   await expect(row).toHaveCount(0);
   await home();
-  await expect(card('Solicitudes')).toHaveText(String(before.requests + 1));
+  await expect(card('Registros guardados')).toHaveText(String(before.requests + 1));
   await expect(card('Pendientes de revisión')).toHaveText(String(before.pending));
-  await expect(card('Monto pendiente')).toHaveText(amountLabel(before.pendingAmount));
+  await expect(card('Monto por revisar en Cenit')).toHaveText(amountLabel(before.pendingAmount));
 });
 
 test('Inicio muestra error y permite reintentar hasta un resumen vacío', async ({ page }) => {

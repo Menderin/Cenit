@@ -9,19 +9,21 @@ import { FlaskIcon } from '@phosphor-icons/react/dist/csr/Flask';
 import { useQuery } from '@tanstack/react-query';
 import { validatePurchaseListQuery, type PurchaseFilters, type ContractProblem } from '@cenit/contracts/purchases';
 import { listPurchases } from '../api/purchases.js';
+import { usePurchaseCapabilities } from '../model/capabilities.js';
+import { SheetsSyncStatus } from '../components/SheetsSyncStatus.js';
 import { ValidateRecord } from '../components/ValidateRecord.js';
 import { dateLabel, amountLabel } from '../model/fields.js';
 import { DateField } from '../../../shared/components/DateField.js';
 import '../records.css';
 
 function RequestTable({ state, title, filters, page, setPage, valid, searching, returnTo }: {
-  state: 'pending' | 'reviewed'; title: string; filters: PurchaseFilters; page: number; setPage: (page: number) => void; valid: boolean; searching: boolean; returnTo: string;
+  state: 'pending' | 'reviewed' | 'all'; title: string; filters: PurchaseFilters; page: number; setPage: (page: number) => void; valid: boolean; searching: boolean; returnTo: string;
 }) {
   const query = useQuery({ queryKey: ['purchases', 'list', state, filters, page], queryFn: ({ signal }) => listPurchases(state, page, signal, filters), enabled: valid && !searching });
   const data = query.data;
   const heading = useRef<HTMLHeadingElement>(null);
   return <section className="purchase-list" aria-label={title}>
-    <div className="purchase-list-heading"><h2 ref={heading} tabIndex={-1}>{title}</h2>{data && !query.isError && !searching && <><span className="purchase-count">{data.pagination.total} {data.pagination.total === 1 ? 'registro' : 'registros'}</span><span className="purchase-total">Total de solicitudes · CLP <strong>{amountLabel(data.totals.documentTotal)}</strong></span></>}</div>
+    <div className="purchase-list-heading"><h2 ref={heading} tabIndex={-1}>{title}</h2>{data && !query.isError && !searching && <><span className="purchase-count">{data.pagination.total} {data.pagination.total === 1 ? 'registro' : 'registros'}</span><span className="purchase-total">Total documental · CLP <strong>{amountLabel(data.totals.documentTotal)}</strong></span></>}</div>
     {searching ? <p className="purchase-state" role="status">Buscando solicitudes…</p> : !valid ? <p className="purchase-state">Corrige los filtros para consultar las solicitudes.</p> : query.isPending ? <p className="purchase-state" role="status">Cargando solicitudes…</p> : query.isError ? <div className="purchase-state" role="alert"><p>{query.error.message}</p><button onClick={() => { void query.refetch(); }}>Reintentar</button></div> : data && <>
       <div className="purchase-table-scroll" tabIndex={0} role="region" aria-label={`Tabla: ${title}`}><table>
         <caption className="purchase-sr-only">{title}</caption><thead><tr><th scope="col">Nº Solicitud</th><th scope="col">Fecha</th><th scope="col">Detalle</th><th scope="col">Tipo de documento</th><th scope="col">Acciones</th></tr></thead>
@@ -36,6 +38,7 @@ function RequestTable({ state, title, filters, page, setPage, valid, searching, 
   </section>;
 }
 export function Purchases() {
+  const { secondReviewEnabled } = usePurchaseCapabilities();
   const [params, setParams] = useSearchParams(), location = useLocation();
   const readInputs = () => ({ q: params.get('q') ?? '', dateFrom: params.get('dateFrom') ?? '', dateTo: params.get('dateTo') ?? '', unitCode: params.get('unitCode') ?? '', projectCode: params.get('projectCode') ?? '' });
   const [inputs, setInputs] = useState(readInputs);
@@ -69,7 +72,7 @@ export function Purchases() {
     const timer = window.setTimeout(() => {
       const next = new URLSearchParams(params);
       if (searchText) next.set('q', searchText); else next.delete('q');
-      next.delete('pendingPage'); next.delete('reviewedPage');
+      next.delete('pendingPage'); next.delete('reviewedPage'); next.delete('page');
       // Preserve unfinished date/code inputs when only the live search changes the URL.
       searchNavigation.current = next.toString();
       setParams(next, { replace: true });
@@ -80,19 +83,19 @@ export function Purchases() {
   function apply(next: PurchaseFilters) {
     setInputs({ q: next.q ?? '', dateFrom: next.dateFrom ?? '', dateTo: next.dateTo ?? '', unitCode: next.unitCode ?? '', projectCode: next.projectCode ?? '' });
     setProblems([]);
-    if (JSON.stringify(next) === filterKey && page('pending') === 1 && page('reviewed') === 1) {
+    if (JSON.stringify(next) === filterKey && page('pending') === 1 && page('reviewed') === 1 && page('all') === 1) {
       setFeedback(Object.keys(next).length ? 'Los filtros no han cambiado' : 'Ingresa al menos un filtro para acotar la búsqueda');
       return;
     }
     setFeedback('');
     setParams(new URLSearchParams(Object.entries(next).map(([key, value]) => [key, String(value)])));
   }
-  function page(state: 'pending' | 'reviewed') {
-    const value = Number(params.get(`${state}Page`) ?? 1);
+  function page(state: 'pending' | 'reviewed' | 'all') {
+    const value = Number(params.get(state === 'all' ? 'page' : `${state}Page`) ?? 1);
     return Number.isSafeInteger(value) && value > 0 ? value : 1;
   }
-  function setPage(state: 'pending' | 'reviewed', value: number) {
-    setParams(previous => { const next = new URLSearchParams(previous); if (value === 1) next.delete(`${state}Page`); else next.set(`${state}Page`, String(value)); return next; });
+  function setPage(state: 'pending' | 'reviewed' | 'all', value: number) {
+    setParams(previous => { const next = new URLSearchParams(previous); const key = state === 'all' ? 'page' : `${state}Page`; if (value === 1) next.delete(key); else next.set(key, String(value)); return next; });
   }
   function filterInput(field: keyof typeof inputs) {
     const id = `purchase-filter-${field}`, error = problems.find(problem => problem.path === `/${field}`);
@@ -105,7 +108,8 @@ export function Purchases() {
       {error && <p role="alert" className="purchase-field-error" id={`${id}-error`}>{error.message}</p>}
     </div>;
   }
-  return <section className="purchase-records"><div className="purchase-page-heading"><div><h1>Sistema de compra</h1><p>Solicitudes registradas</p></div><div className="purchase-heading-actions"><Link className="purchase-secondary-link" to="/administracion/compras/laboratorio" state={{ purchasesReturnTo: returnTo }}><FlaskIcon size={15} aria-hidden="true" />Revisar ejemplo</Link><Link className="admin-primary" to="/administracion/compras/captura" state={{ purchasesReturnTo: returnTo }}>Subir captura</Link><Link className="admin-primary" to="/administracion/compras/nueva" state={{ purchasesReturnTo: returnTo }}><PlusIcon size={16} aria-hidden="true" />Nueva solicitud</Link></div></div>
+  return <section className="purchase-records"><div className="purchase-page-heading"><div><h1>Registro de compras</h1><p>Conserva y consulta copias de compras aprobadas previamente en Oracle.</p></div><div className="purchase-heading-actions"><Link className="purchase-secondary-link" to="/administracion/compras/laboratorio" state={{ purchasesReturnTo: returnTo }}><FlaskIcon size={15} aria-hidden="true" />Revisar ejemplo</Link><Link className="admin-primary" to="/administracion/compras/captura" state={{ purchasesReturnTo: returnTo }}>Subir captura</Link><Link className="admin-primary" to="/administracion/compras/nueva" state={{ purchasesReturnTo: returnTo }}><PlusIcon size={16} aria-hidden="true" />Registrar manualmente</Link></div></div>
+    <SheetsSyncStatus />
     <form ref={form} className="purchase-filters" noValidate aria-label="Filtros de solicitudes" onSubmit={event => {
       event.preventDefault();
       const next = pendingFilters;
@@ -119,9 +123,9 @@ export function Purchases() {
       <div id="purchase-more-filters" className="purchase-filter-extra" hidden={!expanded}><div className="purchase-input-grid">{filterInput('unitCode')}{filterInput('projectCode')}</div><p>Unidad y proyecto del mismo ítem.</p></div>
       <div className="purchase-filter-actions"><button className="purchase-filter-toggle" type="button" aria-expanded={expanded} aria-controls="purchase-more-filters" onClick={() => setExpanded(value => !value)}>Más filtros<CaretDownIcon size={14} aria-hidden="true" />{(inputs.unitCode || inputs.projectCode) && <span className="purchase-filter-dot" aria-label="Hay códigos ingresados" />}</button><div><button type="submit"><FunnelSimpleIcon size={14} aria-hidden="true" />Aplicar filtros</button><button type="button" onClick={() => { apply({}); }}>Limpiar</button></div></div>
       <p className={`purchase-filter-feedback${unapplied && !searching ? ' purchase-filter-feedback--pending' : ''}`} role="status" aria-atomic="true">{searching ? 'Buscando solicitudes…' : unapplied ? 'Cambios por aplicar' : !problems.length ? feedback : ''}</p>
-      {Object.keys(filters).length > 0 && <p className="purchase-applied-filters">{Object.keys(filters).length} {Object.keys(filters).length === 1 ? 'filtro aplicado' : 'filtros aplicados'} · Pendientes y validados</p>}
+      {Object.keys(filters).length > 0 && <p className="purchase-applied-filters">{Object.keys(filters).length} {Object.keys(filters).length === 1 ? 'filtro aplicado' : 'filtros aplicados'}{secondReviewEnabled ? ' · Por revisar y revisados en Cenit' : ' · Todos los registros'}</p>}
     </form>
-    <RequestTable state="pending" title="Pendientes de validación" filters={filters} page={page('pending')} setPage={value => setPage('pending', value)} valid={valid} searching={searching} returnTo={returnTo} />
-    <RequestTable state="reviewed" title="Registros validados" filters={filters} page={page('reviewed')} setPage={value => setPage('reviewed', value)} valid={valid} searching={searching} returnTo={returnTo} />
+    {secondReviewEnabled ? <><RequestTable state="pending" title="Por revisar en Cenit" filters={filters} page={page('pending')} setPage={value => setPage('pending', value)} valid={valid} searching={searching} returnTo={returnTo} />
+    <RequestTable state="reviewed" title="Revisados en Cenit" filters={filters} page={page('reviewed')} setPage={value => setPage('reviewed', value)} valid={valid} searching={searching} returnTo={returnTo} /></> : <RequestTable state="all" title="Compras registradas" filters={filters} page={page('all')} setPage={value => setPage('all', value)} valid={valid} searching={searching} returnTo={returnTo} />}
   </section>;
 }

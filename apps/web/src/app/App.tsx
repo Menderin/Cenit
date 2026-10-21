@@ -15,6 +15,7 @@ import { AccessLayout } from '../features/auth/components/AccessLayout.js';
 import { Academic } from '../features/academic/pages/Academic.js';
 import { PurchaseGuardProvider, usePurchaseGuard } from '../features/purchases/model/guard.js';
 import { StatusNotice } from '../shared/components/StatusNotice.js';
+import { PurchaseCapabilitiesProvider } from '../features/purchases/model/capabilities.js';
 
 function AdministrativeArea() {
   const auth = useAuth(), guard = usePurchaseGuard();
@@ -52,7 +53,7 @@ export function App() {
   </>;
   else if (!auth.session) content = <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Navigate to="/login" replace />} /></Routes>;
   if (auth.status === 'authenticated' && auth.session?.account.role === 'administrativo') return <PurchaseTransferProvider key={auth.session.account.id}>
-    <PurchaseGuardProvider><AdministrativeArea /></PurchaseGuardProvider>
+    <PurchaseCapabilitiesProvider><PurchaseGuardProvider><AdministrativeArea /></PurchaseGuardProvider></PurchaseCapabilitiesProvider>
   </PurchaseTransferProvider>;
   return <AccessLayout>{content}</AccessLayout>;
 }

@@ -86,7 +86,7 @@ async function main() {
     DATABASE_URL_FILE: databaseFile, AUTH_COOKIE_SECURE: 'false',
     AUTH_ALLOWED_ORIGINS: 'http://127.0.0.1:5173,http://127.0.0.1:3000',
     CENIT_API_PROXY: 'http://127.0.0.1:3000' };
-  for (const key of ['OCR_URL', 'CAPTURE_RECEIPT_KEY_FILE']) if (local[key]) env[key] = local[key];
+  for (const key of ['OCR_URL', 'CAPTURE_RECEIPT_KEY_FILE', 'CENIT_PURCHASE_SECOND_REVIEW_ENABLED', 'CENIT_PURCHASE_SHEETS_SYNC_ENABLED', 'CENIT_PURCHASE_SHEETS_ID', 'CENIT_PURCHASE_SHEETS_KEY_FILE']) if (local[key]) env[key] = local[key];
   const passwordKeys = ['CENIT_DEMO_DOCENTE_PASSWORD', 'CENIT_DEMO_ESTUDIANTE_PASSWORD', 'CENIT_DEMO_ADMINISTRATIVO_PASSWORD'];
   const passwords = Object.fromEntries(passwordKeys.map(key => [key, local[key] ?? process.env[key] ?? '']));
   if (passwordKeys.some(key => passwords[key].length < 12 || passwords[key].length > 128)) throw new Error('Configura las tres CENIT_DEMO_*_PASSWORD en el .env privado (12–128 caracteres).');

@@ -75,7 +75,7 @@ export function PurchaseCapture() {
       if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       guard.request(() => navigate(returnTo), event.currentTarget);
-    }}><ArrowLeftIcon size={13} aria-hidden="true" />Volver a solicitudes</Link>
+    }}><ArrowLeftIcon size={13} aria-hidden="true" />Volver al registro</Link>
     <div className="purchase-page-heading"><div><h1>Revisar captura</h1><p>Sube una captura de la solicitud de compra y revisa los datos antes de guardarlos.</p></div><span className="purchase-origin-badge">Procesamiento local</span></div>
     <div className="capture-upload">
       <div><label htmlFor="capture-file"><ImageIcon size={18} aria-hidden="true" />Captura de la solicitud de compra</label><p id="capture-limits">PNG o JPEG · hasta 5 MiB y 20 megapíxeles.</p>

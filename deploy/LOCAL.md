@@ -86,7 +86,7 @@ Las compras de ejemplo son opcionales:
 APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run purchases:prepare-demo
 ```
 
-Prepara ocho solicitudes, inicialmente cinco pendientes y tres validadas. Repetir conserva contenido y revisiones, pero puede volver a crear un ejemplo eliminado; omitirlo si ya se tienen los registros que se usarán. Estos comandos están limitados a la demo local y no forman parte de CD.
+Prepara ocho copias ficticias, inicialmente cinco sin segunda revisión y tres revisadas. Esos estados se conservan aunque la presentación normal muestre un único registro histórico. Repetir conserva contenido y revisiones, pero puede volver a crear un ejemplo eliminado; omitirlo si ya se tienen los registros que se usarán. Estos comandos están limitados a la demo local y no forman parte de CD.
 
 ## Trabajar en desarrollo
 
@@ -139,7 +139,24 @@ Esperar `{"status":"ready"}` y HTTP 200 para login. Abrir [http://127.0.0.1:8081
 
 En los siguientes arranques se pueden reutilizar las imágenes, quitando `--build`. Reconstruirlas cuando cambie el código. El overlay `compose.ocr.yaml` conecta `app` con `http://ocr:8090` y monta la clave; sin él, la extracción no está configurada y devuelve 503.
 
-Para una captura ficticia, seguir la [preparación de muestras](../experiments/purchases/README.md#capturas-con-formato-de-referencia). En «Sistema de compra → Subir captura» elegir una imagen, extraer y revisar. Sólo «Guardar solicitud» conserva la copia.
+Para una captura ficticia, seguir la [preparación de muestras](../experiments/purchases/README.md#capturas-con-formato-de-referencia). En «Registro de compras → Subir captura» elegir una imagen, extraer y revisar. Sólo «Guardar registro» conserva la copia.
+
+## Conectar una planilla de pruebas
+
+Compras presenta un registro histórico por defecto. Para comprobar la segunda revisión opcional, configurar `CENIT_PURCHASE_SECOND_REVIEW_ENABLED=true`, reiniciar el API y recargar la web. Desactivarla no cambia estados, revisores ni versiones existentes. El servidor rechaza la validación posterior mientras esté apagada. Las pruebas antiguas activan expresamente esa opción; `purchase-register.spec.ts` cubre la presentación sin ella.
+
+La sincronización con Sheets empieza apagada. No usa las credenciales del plugin de Drive ni el login de Cenit. Para ensayar el conector real:
+
+1. Habilitar Google Sheets API en un proyecto de pruebas y preparar una cuenta de servicio con su credencial de servidor. No requiere delegación general sobre el dominio.
+2. Crear una planilla **dedicada de pruebas** y compartirla como editora sólo con la cuenta de servicio que escribirá. Usar cuentas autorizadas para la consulta. No seleccionar el histórico existente ni copiar datos reales para QA.
+3. Guardar el JSON privado como `.local/secrets/purchase-sheets-key.json`, fuera de Git y con acceso limitado al operador/proceso. En contenedores, asegurar que el UID de la aplicación puede leer el secreto montado sin exponer el directorio completo de secretos.
+4. Para `npm run dev`, configurar en `.env` `CENIT_PURCHASE_SHEETS_SYNC_ENABLED=true`, `CENIT_PURCHASE_SHEETS_ID` con el ID del archivo y `CENIT_PURCHASE_SHEETS_KEY_FILE` con esa ruta. Reiniciar y recargar.
+5. Para el build local en Compose, añadir `-f compose.sheets.yaml` a los archivos usados para **app**, conservando los overlays OCR que correspondan. Definir `CENIT_PURCHASE_SHEETS_ID` en `.env`; el overlay monta sólo la credencial de Sheets y activa la integración explícitamente. No usarlo al ejecutar el migrador, que no necesita Google.
+6. Guardar una copia ficticia con varios ítems y códigos con ceros, esperar «Sincronizado» y comprobar «Compras»/«Ítems». Ensayar una indisponibilidad y una baja confirmada. Las celdas vacías tras una baja son intencionales; no compactar ni ordenar físicamente las filas administradas. Usar vistas de filtro u otras pestañas.
+
+El estado se consulta también mediante `GET /api/v1/purchases/sheets-sync` con sesión administrativa; `purchaseId` limita la consulta a una copia existente. Mientras Google falle, el registro sigue guardado en Cenit y los reintentos continúan. Una cabecera cambiada, fila ajena o protección retirada requiere corregir la estructura antes del siguiente reintento. Apagar la flag detiene envíos; la cola se conserva para reactivarla.
+
+Esta configuración no modifica Azure ni activa integración en la planilla del cliente. Su activación allí debe incorporarse mediante la entrega versionada y secretos propios del entorno; el Compose Azure vigente deja Sheets apagado.
 
 ## Verificar el build o una imagen
 

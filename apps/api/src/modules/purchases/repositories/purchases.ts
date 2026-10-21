@@ -3,6 +3,7 @@ import type { Pool, PoolClient } from 'pg';
 import type { CreatePurchase, PurchaseRecord, PurchaseListQuery, PurchaseListResponse, PurchaseSummaryResponse } from '@cenit/contracts/purchases';
 import { headerFields, lineFields, administrativeFields } from '@cenit/contracts/purchases';
 import { ApiError } from '../../../infrastructure/errors.js';
+import { enqueuePurchaseSheets } from './sheets.js';
 
 // Column names come exclusively from the versioned contract, never request keys.
 const column = (key: string) => key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
@@ -55,6 +56,7 @@ export class PurchaseRepository {
       if (result.rows[0].version !== expectedVersion) throw new ApiError(409, 'VERSION_CONFLICT', 'El registro cambió. Actualiza los datos antes de eliminarlo.');
       await db.query('DELETE FROM cenit.purchase_request_lines WHERE request_id=$1', [id]);
       await db.query('DELETE FROM cenit.purchase_requests WHERE id=$1', [id]);
+      await enqueuePurchaseSheets(db, id);
       return { data: { id } };
     });
   }
@@ -82,14 +84,15 @@ export class PurchaseRepository {
         const fields = [randomUUID(), id, position + 1, ...lineKeys.map(key => line[key as keyof typeof line])];
         await db.query(`INSERT INTO cenit.purchase_request_lines(id,request_id,position,${lineKeys.map(column).join(',')}) VALUES(${fields.map((_, i) => `$${i + 1}`).join(',')})`, fields);
       }
+      await enqueuePurchaseSheets(db, id);
       return { record: (await this.detail(db, id))!, created: true };
     });
   }
   async list(query: PurchaseListQuery): Promise<PurchaseListResponse> {
     return this.transaction(async db => {
-      const values: unknown[] = [query.reviewStatus];
+      const values: unknown[] = [];
       const parameter = (value: unknown) => { values.push(value); return `$${values.length}`; };
-      const predicates = ['p.review_status=$1'];
+      const predicates = [query.reviewStatus === 'all' ? 'TRUE' : `p.review_status=${parameter(query.reviewStatus)}`];
       if (query.dateFrom) predicates.push(`p.sent_date >= ${parameter(query.dateFrom)}::date`);
       if (query.dateTo) predicates.push(`p.sent_date <= ${parameter(query.dateTo)}::date`);
       if (query.q) {
@@ -119,6 +122,7 @@ export class PurchaseRepository {
       if (row.review_status === 'reviewed') return (await this.detail(db, id))!;
       if (row.version !== expectedVersion) throw new ApiError(409, 'VERSION_CONFLICT', 'El registro cambió. Vuelve a consultar sus detalles.');
       await db.query("UPDATE cenit.purchase_requests SET review_status='reviewed',reviewed_by=$2,reviewed_at=clock_timestamp(),version=version+1 WHERE id=$1", [id, accountId]);
+      await enqueuePurchaseSheets(db, id);
       return (await this.detail(db, id))!;
     });
   }

@@ -39,7 +39,7 @@ export async function seedPurchaseDemo(pool: Pool, accountId: string) {
   if (!['demo', 'test'].includes(process.env.APP_ENV ?? '')) throw new Error('Preparación exclusiva de demo/pruebas.');
   const account = (await pool.query("SELECT id FROM cenit.accounts WHERE id=$1 AND role='administrativo' AND active", [accountId])).rows[0];
   if (!account) throw new Error('Se requiere una cuenta administrativa existente y activa.');
-  const service = new PurchaseService(new PurchaseRepository(pool));
+  const service = new PurchaseService(new PurchaseRepository(pool), undefined, { secondReviewEnabled: true, sheetsSyncEnabled: false });
   let created = 0;
   for (const { input, reviewed } of purchaseDemoExamples) {
     const result = await service.create(input, accountId);
