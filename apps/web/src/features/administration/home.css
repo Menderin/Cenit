@@ -61,3 +61,14 @@
 @media (max-width: 380px) {
   .dashboard-kpis, .dashboard-skeleton { grid-template-columns: minmax(0, 1fr); }
 }
+
+@media (min-width: 761px) and (max-height: 800px) {
+  .admin-content:has(.admin-home) { padding-block: 16px; }
+  .admin-home-heading { margin-bottom: 12px; }
+  .dashboard-kpis { margin-bottom: 12px; }
+  .dashboard-kpis > div { padding: 12px; }
+  .dashboard-activity, .dashboard-recent { padding: 12px; }
+  .dashboard-section-heading { margin-bottom: 8px; }
+  .dashboard-chart { min-height: 144px; }
+  .dashboard-review, .dashboard-activity .purchase-sync { margin-top: 8px; padding-top: 8px; }
+}

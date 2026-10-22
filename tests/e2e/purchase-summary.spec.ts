@@ -10,6 +10,7 @@ test('Inicio coincide con compras y se actualiza al volver después de guardar y
   const input = structuredClone(manualPurchaseExample);
   input.operationId = crypto.randomUUID();
   input.header.requestNumber = 'HOME-' + crypto.randomUUID().slice(0, 8);
+  input.header.sentDate = before.overview.registrationMonth + '-15';
   input.header.totalAmount = '9007199254740993';
   const saved = await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data: input });
   expect(saved.status()).toBe(201);
@@ -26,17 +27,17 @@ test('Inicio coincide con compras y se actualiza al volver después de guardar y
   };
   await openRecord();
   await home();
-  await expect(card('Compras este año')).toHaveText(String(before.overview.registeredThisYear + 1));
-  await expect(card('Monto registrado este mes')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisMonth) + BigInt(input.header.totalAmount)).toString()));
-  await expect(card('Compras este mes')).toHaveText(String(before.overview.registeredThisMonth + 1));
+  await expect(card('Compras con fecha documental este año')).toHaveText(String(before.overview.registeredThisYear + 1));
+  await expect(card('Monto documental este mes')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisMonth) + BigInt(input.header.totalAmount)).toString()));
+  await expect(card('Compras con fecha documental este mes')).toHaveText(String(before.overview.registeredThisMonth + 1));
   await expect(page.getByRole('region', { name: 'Segunda revisión' })).toContainText(String(before.pending + 1));
   const row = await openRecord();
   await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Validar registro', exact: true }).click();
   await expect(row).toHaveCount(0);
   await home();
-  await expect(card('Compras este año')).toHaveText(String(before.overview.registeredThisYear + 1));
-  await expect(card('Monto registrado este mes')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisMonth) + BigInt(input.header.totalAmount)).toString()));
+  await expect(card('Compras con fecha documental este año')).toHaveText(String(before.overview.registeredThisYear + 1));
+  await expect(card('Monto documental este mes')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisMonth) + BigInt(input.header.totalAmount)).toString()));
   await expect(page.getByRole('region', { name: 'Segunda revisión' })).toContainText(amountLabel(before.pendingAmount));
 });
 
@@ -81,6 +82,8 @@ test('Inicio reúne cinco altas e indicadores en una pantalla de escritorio y se
   await expect(page.locator('.dashboard-kpis > div').nth(0).locator('dd').first()).toHaveText('48');
   await expect(page.locator('.dashboard-kpis > div').nth(2).locator('dd').first()).toHaveText(amountLabel('3520000'));
   const graph = page.locator('.dashboard-chart .recharts-surface');
+  // Recharts gives pointer hover priority over keyboard interaction.
+  await page.mouse.move(0, 0);
   await graph.focus();
   await expect(page.locator('.dashboard-chart-tooltip')).toContainText('23/09/2026');
   await expect(page.locator('.dashboard-chart-tooltip')).toContainText('0 compras incorporadas');
@@ -97,7 +100,7 @@ test('Inicio reúne cinco altas e indicadores en una pantalla de escritorio y se
     await expect(page.locator('.dashboard-recent li').last()).toBeInViewport();
   }
   await page.setViewportSize({ width: 320, height: 740 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.locator('.dashboard-recent li').last().scrollIntoViewIfNeeded();
   await expect(page.locator('.dashboard-recent li').last()).toBeInViewport();
 });

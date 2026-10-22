@@ -10,8 +10,8 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
     await page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link', { name: 'Inicio', exact: true }).click();
   };
   const summary = async () => (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
-  const check = async (requests: number, pendingCount: number, amount: string) => {
-    await expect(page.locator('.dashboard-kpis dd').first()).toHaveText(String(requests));
+  const check = async (yearRequests: number, pendingCount: number, amount: string) => {
+    await expect(page.locator('.dashboard-kpis dd').first()).toHaveText(String(yearRequests));
     const review = page.getByRole('region', { name: 'Segunda revisión' });
     await expect(review).toContainText(String(pendingCount));
     await expect(review).toContainText(amountLabel(amount));
@@ -19,23 +19,23 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   const before = await summary();
   const today = before.overview.registrationDays.at(-1);
   const beforeDay = today.count;
-  const chartCount = page.getByRole('list', { name: 'Compras incorporadas por día' }).getByRole('listitem').last();
+  const chartCount = page.getByRole('list', { name: 'Detalle de compras incorporadas por día' }).getByRole('listitem').last();
   const number = `HOME-${crypto.randomUUID().slice(0, 8)}`;
   await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
   await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
   await page.getByLabel('Nº Documento / solicitud *', { exact: true }).fill(number);
-  await page.getByLabel('Fecha de envío *', { exact: true }).fill('16/10/2026');
+  await page.getByLabel('Fecha de envío *', { exact: true }).fill(dateLabel(before.overview.registrationMonth + '-15'));
   await page.getByLabel('Descripción *', { exact: true }).fill('Solicitud ficticia para revisar el resumen');
   await page.getByLabel('Monto total (CLP) *', { exact: true }).fill('12345');
   await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page.getByRole('heading', { name: `Solicitud ${number}` })).toBeVisible();
   const id = new URL(page.url()).pathname.split('/').at(-1)!;
   await home();
-  await check(before.requests + 1, before.pending + 1, (BigInt(before.pendingAmount) + 12345n).toString());
+  await check(before.overview.registeredThisYear + 1, before.pending + 1, (BigInt(before.pendingAmount) + 12345n).toString());
   await expect(chartCount).toHaveText(`${dateLabel(today.date)}: ${beforeDay + 1} ${beforeDay + 1 === 1 ? 'compra' : 'compras'}`);
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 900 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     await expect(page.locator('.cenit-page-enter')).toHaveCSS('opacity', '1');
     await page.screenshot({ path: `tmp/admin-home-connected-${width}.png` });
   }
@@ -47,7 +47,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
   await dialog(page).getByRole('button', { name: 'Validar registro', exact: true }).click();
   await expect(row).toHaveCount(0);
-  await home(); await check(before.requests + 1, before.pending, before.pendingAmount);
+  await home(); await check(before.overview.registeredThisYear + 1, before.pending, before.pendingAmount);
   await expect(chartCount).toHaveText(`${dateLabel(today.date)}: ${beforeDay + 1} ${beforeDay + 1 === 1 ? 'compra' : 'compras'}`);
   // Delete a reviewed record through its detail; the filtered list is preserved on return.
   await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
@@ -59,7 +59,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   await dialog(page).getByRole('button', { name: 'Eliminar registro', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/compras\\?q=${number}$`));
   expect((await page.request.get(`/api/v1/purchases/${id}`)).status()).toBe(404);
-  await home(); await check(before.requests, before.pending, before.pendingAmount);
+  await home(); await check(before.overview.registeredThisYear, before.pending, before.pendingAmount);
   // Pending examples also require opening the detail before deleting.
   const example = structuredClone(manualPurchaseExample); example.operationId = crypto.randomUUID();
   example.origin = { type: 'contract_example', exampleId: 'recovered' }; example.header.requestNumber = `${number}-PENDING`;
@@ -77,8 +77,8 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   await dialog(page).getByRole('button', { name: 'Eliminar registro', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/compras\\?q=${example.header.requestNumber}$`));
   await expect(exampleRow).toHaveCount(0);
-  await home(); await check(before.requests, before.pending, before.pendingAmount);
-  await page.reload(); await check(before.requests, before.pending, before.pendingAmount);
+  await home(); await check(before.overview.registeredThisYear, before.pending, before.pendingAmount);
+  await page.reload(); await check(before.overview.registeredThisYear, before.pending, before.pendingAmount);
 });
 
 test('eliminar confirma, permite cancelar y conserva el registro ante conflicto hasta actualizar', async ({ page }) => {
@@ -127,7 +127,7 @@ test('Inicio presenta carga y error con reintento sin mostrar cifras ficticias',
   await expect(page.getByRole('definition')).toHaveCount(0);
   await page.unroute('**/api/v1/purchases/summary');
   await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
-  await expect(page.getByRole('definition')).toHaveCount(8);
+  await expect(page.getByRole('definition')).toHaveCount(6);
 });
 
 const dialog = (page: Page) => page.getByRole('alertdialog');

@@ -402,12 +402,12 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await expect(indicators.nth(2)).toHaveText(String(summary.overview.registeredThisMonth));
   await expect(indicators.nth(4)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.overview.documentTotalThisMonth)));
   await expect(page.getByRole('table')).toHaveCount(0);
-  const chart = page.getByRole('list', { name: 'Compras incorporadas por día' });
+  const chart = page.getByRole('list', { name: 'Detalle de compras incorporadas por día' });
   await expect(chart.getByRole('listitem')).toHaveCount(30);
   await expect(page.getByRole('button', { name: /aprobar/i })).toHaveCount(0);
   for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 900 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/admin-home-${width}.png` });
   }
   for (const [name, path] of [['Sistema de personal', 'personal'], ['Sistema de bienes', 'bienes']] as const) {
@@ -443,7 +443,7 @@ async function manualForm(page: Page, number: string) {
   await page.goto('/administracion/compras');
   await page.getByRole('link', { name: 'Registrar manualmente' }).click();
   await page.getByLabel('Nº Documento / solicitud *', { exact: true }).fill(number);
-  await page.getByLabel('Fecha de envío *', { exact: true }).fill('2026-10-13');
+  await page.getByLabel('Fecha de envío *', { exact: true }).fill('13/10/2026');
   await page.getByLabel('Descripción *', { exact: true }).fill('Solicitud ficticia de prueba');
   await page.getByLabel('Monto total (CLP) *', { exact: true }).fill('200000');
 }
@@ -497,7 +497,7 @@ test('formulario manual: errores conservan datos, foco válido y navegación con
   await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page.getByLabel('Fecha de envío *', { exact: true })).toBeFocused();
   await expect(page.getByRole('alert')).toContainText('Fecha de envío');
-  await page.getByLabel('Fecha de envío *', { exact: true }).fill('2026-10-13');
+  await page.getByLabel('Fecha de envío *', { exact: true }).fill('13/10/2026');
   await page.route('**/api/v1/purchases', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'browser-test' } }) }));
   await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('El formulario conserva tus datos');
@@ -545,7 +545,7 @@ test('laboratorio: transferir correcciones no guarda, y el reintento conserva op
   expect((await list.json()).data.some((row: { requestNumber: string }) => row.requestNumber === number)).toBe(false);
   await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page.getByText('Completa o corrige los campos indicados.')).toBeVisible();
-  await page.getByLabel('Fecha de envío *', { exact: true }).fill('2027-01-01');
+  await page.getByLabel('Fecha de envío *', { exact: true }).fill('01/01/' + new Intl.DateTimeFormat('en', { timeZone: 'America/Santiago', year: 'numeric' }).format(new Date()));
   await page.getByLabel('Monto total (CLP) *', { exact: true }).fill('200000');
   const attempts: Record<string, unknown>[] = [];
   await page.route('**/api/v1/purchases', async route => {
@@ -683,7 +683,9 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
   await expect(page.getByText(targets[0]!, { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Volver al registro' }).click();
   await expect(search).toHaveValue('100%_\\');
-  await expect(datePicker).toHaveValue('01/02/2027');
+  await expect(datePicker).toHaveValue('01');
+  await expect(page.getByLabel('Fecha de envío, mes', { exact: true })).toHaveValue('02');
+  await expect(page.getByLabel('Fecha de envío, año', { exact: true })).toHaveValue('2027');
   await expect(page.getByLabel('Código de proyecto', { exact: true })).toHaveValue('000X');
   await search.fill('no coincidence');
   await expect(pending.getByText('0 registros', { exact: true })).toBeVisible();
@@ -696,10 +698,14 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
 
 test('listado: validación, error/reintento, carga y filtros descartados al cambiar sesión', async ({ page }) => {
   await login(page, 'administrativo'); await page.goto('/administracion/compras');
+  const fixture = structuredClone(manualPurchaseExample); fixture.operationId = crypto.randomUUID();
+  fixture.header.requestNumber = 'RETRY-' + crypto.randomUUID();
+  fixture.header.sentDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date());
+  expect((await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data: fixture })).status()).toBe(201);
   const search = page.getByLabel('Buscar solicitudes', { exact: true });
   await page.goto('/administracion/compras?dateFrom=2026-10-14&dateTo=2026-10-13');
   await expect(page.getByText('Corrige los filtros para consultar las compras.', { exact: true }).first()).toBeVisible();
-  await page.getByRole('button', { name: /^Quitar filtro: Fecha de envío/ }).click();
+  await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
   await expect(page).toHaveURL(/\/compras$/);
   await page.route('**/api/v1/purchases?**', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'filter-error' } }) }));
   await search.fill('PRIVATE-FILTER');

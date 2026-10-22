@@ -85,16 +85,16 @@ test('historial de 800 compras: períodos, orden, páginas acotadas y tamaño co
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await filtersButton.click();
   await expect(filterPanel).toBeVisible();
+  const openingTransitions = await filterPanel.evaluate(element => element.getAnimations().map(animation => ({
+    property: (animation as CSSTransition).transitionProperty,
+    duration: animation.effect?.getComputedTiming().duration,
+  })));
   await page.waitForTimeout(50);
   const firstHeadingTop = await resultsHeading.evaluate(element => element.getBoundingClientRect().top);
   await page.waitForTimeout(50);
   const secondHeadingTop = await resultsHeading.evaluate(element => element.getBoundingClientRect().top);
   expect(firstHeadingTop).toBeGreaterThan(initialHeadingTop);
   expect(secondHeadingTop).toBeGreaterThan(firstHeadingTop);
-  const openingTransitions = await filterPanel.evaluate(element => element.getAnimations().map(animation => ({
-    property: (animation as CSSTransition).transitionProperty,
-    duration: animation.effect?.getComputedTiming().duration,
-  })));
   expect(openingTransitions).toContainEqual({ property: 'opacity', duration: 150 });
   expect(openingTransitions).toContainEqual({ property: 'grid-template-rows', duration: 150 });
   await filterPanel.evaluate(async element => { await Promise.all(element.getAnimations().map(animation => animation.finished)); });
@@ -229,13 +229,15 @@ test('fechas segmentadas: placeholders, errores, rangos y calendarios coherentes
   const clear = page.getByRole('button', { name: 'Limpiar', exact: true });
   const queries: string[] = [];
   const fillDate = async (dayInput: typeof exact, monthInput: typeof exactMonth, yearInput: typeof exactYear, digits: string) => {
-    await dayInput.fill(digits.slice(0, 2)); await monthInput.fill(digits.slice(2, 4)); await yearInput.fill(digits.slice(4));
+    await dayInput.fill(''); await monthInput.fill(''); await yearInput.fill(digits.slice(4));
+    await monthInput.fill(digits.slice(2, 4)); await dayInput.fill(digits.slice(0, 2));
   };
   page.on('request', request => { if (new URL(request.url()).pathname === '/api/v1/purchases') queries.push(request.url()); });
   await expect(exact).toBeEnabled();
   await expect(clear).toBeDisabled();
   const searchWidth = (await page.getByLabel('Buscar solicitudes', { exact: true }).boundingBox())!.width;
   const dateControl = page.locator('.purchase-input--exact-date .cenit-date-input--segmented');
+  await page.locator('#purchase-more-filters').evaluate(async element => { await Promise.all(element.getAnimations().map(animation => animation.finished)); });
   const dateBox = (await dateControl.boundingBox())!;
   await page.mouse.click(dateBox.x + dateBox.width - 52, dateBox.y + dateBox.height / 2);
   await expect(exact).toBeFocused();
@@ -280,6 +282,8 @@ test('fechas segmentadas: placeholders, errores, rangos y calendarios coherentes
   await exactYear.fill('2024'); await exact.fill('29');
   await expect(page).toHaveURL(/dateFrom=2024-02-29&dateTo=2024-02-29/);
 
+  await expect(page.getByText('Actualizando resultados…', { exact: true })).toHaveCount(0);
+  const rangeQueryCount = queries.length;
   await fillDate(from, fromMonth, fromYear, '30102026');
   await expect(from).toHaveValue('30'); await expect(fromMonth).toHaveValue('10'); await expect(fromYear).toHaveValue('2026');
   await expect(exact).toHaveValue('');
@@ -288,7 +292,7 @@ test('fechas segmentadas: placeholders, errores, rangos y calendarios coherentes
   await expect(page.locator('.purchase-input--date-range [role="alert"]')).toContainText('El mes');
   await toYear.fill('2026'); await expect(toYear).toHaveValue('2026');
   await expect(to).toHaveAttribute('aria-invalid', 'true');
-  await page.waitForTimeout(350); expect(page.url()).toBe(applied); expect(queries.length).toBe(count);
+  await page.waitForTimeout(350); expect(page.url()).toBe(applied); expect(queries.length).toBe(rangeQueryCount);
   await fillDate(to, toMonth, toYear, '29102026');
   await expect(page.locator('.purchase-input--date-range [role="alert"]')).toBeVisible();
   await page.waitForTimeout(350); expect(page.url()).toBe(applied);
