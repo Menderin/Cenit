@@ -57,6 +57,7 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
   const page = location.pathname === '/administracion/compras/nueva' ? 'Registrar compra'
     : location.pathname === '/administracion/compras/captura' ? 'Registrar desde captura'
     : location.pathname === '/administracion/compras/laboratorio' ? 'Revisar datos'
+    : /\/administracion\/compras\/[^/]+\/editar$/.test(location.pathname) ? 'Editar compra'
     : location.pathname.startsWith('/administracion/compras/') ? 'Detalle del registro' : current?.label ?? 'Inicio';
   useEffect(() => { document.title = `Cenit · ${page}`; return () => { document.title = 'Cenit'; }; }, [page]);
   useEffect(() => {

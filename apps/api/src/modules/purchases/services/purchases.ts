@@ -1,4 +1,4 @@
-import { validateCreatePurchase, validatePurchaseListQuery, type CreatePurchase, type PurchaseListQuery } from '@cenit/contracts/purchases';
+import { validateCreatePurchase, validatePurchasePayload, validatePurchaseListQuery, type CreatePurchase, type PurchaseListQuery, type UpdatePurchase } from '@cenit/contracts/purchases';
 import { ApiError } from '../../../infrastructure/errors.js';
 import { PurchaseRepository } from '../repositories/purchases.js';
 import type { CaptureReceipts } from './capture-receipts.js';
@@ -17,6 +17,11 @@ export class PurchaseService {
     return this.repository.create(input, accountId, () => {
       if (origin?.type === 'image_capture') this.receipts!.verify(origin, accountId);
     });
+  }
+  update(id: string, input: UpdatePurchase) {
+    const { expectedVersion, ...payload } = input;
+    if (validatePurchasePayload(payload).length) throw new ApiError(400, 'VALIDATION_ERROR', 'Revisa los formatos y los cuatro campos obligatorios.');
+    return this.repository.update(id, payload, expectedVersion);
   }
   list(query: PurchaseListQuery) {
     if (validatePurchaseListQuery(query).length) throw new ApiError(400, 'INVALID_FILTER', 'Revisa las fechas y los filtros de búsqueda.');

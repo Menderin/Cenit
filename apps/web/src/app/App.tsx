@@ -6,6 +6,7 @@ import { PurchaseCapture } from '../features/purchases/pages/PurchaseCapture.js'
 import { Purchases } from '../features/purchases/pages/Purchases.js';
 import { PurchaseCreate } from '../features/purchases/pages/PurchaseCreate.js';
 import { PurchaseDetail } from '../features/purchases/pages/PurchaseDetail.js';
+import { PurchaseEdit } from '../features/purchases/pages/PurchaseEdit.js';
 import { PurchaseTransferProvider } from '../features/purchases/model/transfer.js';
 import { AdministrativeLayout } from './AdministrativeLayout.js';
 import { Home } from '../features/administration/pages/Home.js';
@@ -28,6 +29,7 @@ function AdministrativeArea() {
       <Route path="/administracion/compras/nueva" element={<PurchaseCreate key={session.account.id} />} />
       <Route path="/administracion/compras/laboratorio" element={<PurchaseReview key={session.account.id} />} />
       <Route path="/administracion/compras/captura" element={<PurchaseCapture key={session.account.id} />} />
+      <Route path="/administracion/compras/:id/editar" element={<PurchaseEdit key={session.account.id} />} />
       <Route path="/administracion/compras/:id" element={<PurchaseDetail key={session.account.id} />} />
       <Route path="/administracion/personal" element={<Personnel />} />
       <Route path="/administracion/bienes" element={<Assets />} />

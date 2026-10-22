@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { ErrorResponseSchema } from '@cenit/contracts';
-import { CreatePurchaseSchema, PurchaseListQuerySchema, PurchaseListResponseSchema, PurchaseParamsSchema, PurchaseResponseSchema, PurchaseValidationSchema, PurchaseDeletionSchema, PurchaseDeletionResponseSchema, PurchaseSummaryResponseSchema, PurchaseCapabilitiesResponseSchema, PurchaseSheetsQuerySchema, PurchaseSheetsResponseSchema, type PurchaseCapabilities, type CreatePurchase, type PurchaseListQuery } from '@cenit/contracts/purchases';
+import { CreatePurchaseSchema, PurchaseListQuerySchema, PurchaseListResponseSchema, PurchaseParamsSchema, PurchaseResponseSchema, PurchaseValidationSchema, PurchaseDeletionSchema, PurchaseDeletionResponseSchema, PurchaseSummaryResponseSchema, PurchaseCapabilitiesResponseSchema, PurchaseSheetsQuerySchema, PurchaseSheetsResponseSchema, UpdatePurchaseSchema, type PurchaseCapabilities, type CreatePurchase, type PurchaseListQuery, type UpdatePurchase } from '@cenit/contracts/purchases';
 import type { Authenticate } from '../../auth/services/principal.js';
 import { ApiError } from '../../../infrastructure/errors.js';
 import type { PurchaseService } from '../services/purchases.js';
@@ -36,6 +36,9 @@ export async function purchaseRoutes(app: FastifyInstance, options: { service: P
   app.delete<{ Params: { id: string }; Body: { expectedVersion: number } }>('/:id', { onRequest: write,
     schema: { params: PurchaseParamsSchema, body: PurchaseDeletionSchema, response: { 200: PurchaseDeletionResponseSchema, ...errors } },
   }, request => options.service.delete(request.params.id, request.body.expectedVersion));
+  app.put<{ Params: { id: string }; Body: UpdatePurchase }>('/:id', { bodyLimit: 512 * 1024, onRequest: write,
+    schema: { params: PurchaseParamsSchema, body: UpdatePurchaseSchema, response: { 200: PurchaseResponseSchema, ...errors } },
+  }, request => options.service.update(request.params.id, request.body));
   app.post('/extractions', { onRequest: write, schema: { response: { 200: ExtractionResponseSchema, ...errors, 415: ErrorResponseSchema, 422: ErrorResponseSchema } } }, async (request, reply) => {
     if (!request.isMultipart()) throw new ApiError(400, 'VALIDATION_ERROR', 'Envía un único archivo PNG/JPEG en el campo file.');
     const controller = new AbortController();

@@ -19,6 +19,8 @@ export type PurchasePayload = Static<typeof PurchasePayloadSchema>;
 export type CreatePurchase = Static<typeof CreatePurchaseSchema>;
 export const PurchaseParamsSchema = object({ id: uuid });
 export const PurchaseValidationSchema = object({ expectedVersion: Type.Integer({ minimum: 1, maximum: 2147483647 }) });
+export const UpdatePurchaseSchema = object({ expectedVersion: PurchaseValidationSchema.properties.expectedVersion, ...PurchasePayloadSchema.properties });
+export type UpdatePurchase = Static<typeof UpdatePurchaseSchema>;
 export const PurchaseDeletionSchema = PurchaseValidationSchema;
 export const PurchaseDeletionResponseSchema = object({ data: object({ id: uuid }) });
 export const PurchaseSummaryResponseSchema = object({ data: object({
@@ -94,7 +96,15 @@ export function validateCreatePurchase(input: unknown): ContractProblem[] {
       : /\/(totalAmount|taxAmount|price|amount)$/.test(error.path) ? 'Escribe un monto entero sin puntos, comas ni signos.'
       : error.path.endsWith('/sentDate') ? 'Escribe una fecha válida en formato dd/mm/aaaa.' : 'Revisa el formato o el límite de este campo.',
   }));
-  const problems = validateReviewDraft({ header: input.header, lines: input.lines, administrative: input.administrative });
+  return validatePurchasePayload({ header: input.header, lines: input.lines, administrative: input.administrative });
+}
+export function validatePurchasePayload(input: unknown): ContractProblem[] {
+  if (!Value.Check(PurchasePayloadSchema, input)) return [...Value.Errors(PurchasePayloadSchema, input)].map(error => ({ path: error.path,
+    message: error.value === null || error.value === '' || error.value === undefined ? 'Completa este campo obligatorio.'
+      : /\/(totalAmount|taxAmount|price|amount)$/.test(error.path) ? 'Escribe un monto entero sin puntos, comas ni signos.'
+      : error.path.endsWith('/sentDate') ? 'Escribe una fecha válida en formato dd/mm/aaaa.' : 'Revisa el formato o el límite de este campo.',
+  }));
+  const problems = validateReviewDraft(input);
   // PostgreSQL date has no year zero; reject it before reaching persistence.
   if (input.header.sentDate.startsWith('0000-')) problems.push({ path: '/header/sentDate', message: 'El año debe ser mayor que cero.' });
   return problems;

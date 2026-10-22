@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
-import type { CreatePurchase, PurchaseRecord, PurchaseListQuery, PurchaseListResponse, PurchaseSummaryResponse } from '@cenit/contracts/purchases';
+import type { CreatePurchase, PurchasePayload, PurchaseRecord, PurchaseListQuery, PurchaseListResponse, PurchaseSummaryResponse } from '@cenit/contracts/purchases';
 import { headerFields, lineFields, administrativeFields } from '@cenit/contracts/purchases';
 import { ApiError } from '../../../infrastructure/errors.js';
 import { enqueuePurchaseSheets } from './sheets.js';
@@ -8,7 +8,7 @@ import { enqueuePurchaseSheets } from './sheets.js';
 // Column names come exclusively from the versioned contract, never request keys.
 const column = (key: string) => key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 const headerKeys = Object.keys(headerFields), adminKeys = Object.keys(administrativeFields), lineKeys = Object.keys(lineFields);
-const canonical = (input: CreatePurchase) => JSON.stringify({
+const canonical = (input: PurchasePayload) => JSON.stringify({
   header: headerKeys.map(key => input.header[key as keyof typeof input.header]),
   administrative: adminKeys.map(key => input.administrative[key as keyof typeof input.administrative]),
   lines: input.lines.map(line => lineKeys.map(key => line[key as keyof typeof line])),
@@ -80,6 +80,37 @@ export class PurchaseRepository {
       await db.query('DELETE FROM cenit.purchase_requests WHERE id=$1', [id]);
       await enqueuePurchaseSheets(db, id);
       return { data: { id } };
+    });
+  }
+  async update(id: string, input: PurchasePayload, expectedVersion: number): Promise<{ data: PurchaseRecord }> {
+    return this.transaction(async db => {
+      const current = await db.query('SELECT version,source FROM cenit.purchase_requests WHERE id=$1 FOR UPDATE', [id]);
+      const row = current.rows[0];
+      if (!row) throw new ApiError(404, 'NOT_FOUND', 'Solicitud inexistente.');
+      if (row.source === 'contract_example') throw new ApiError(409, 'EXAMPLE_READ_ONLY', 'Los ejemplos de demostración no se pueden editar.');
+      if (row.version !== expectedVersion) {
+        if (row.version > expectedVersion) {
+          const latest = await this.detail(db, id);
+          if (latest && canonical(latest) === canonical(input)) return { data: latest };
+        }
+        throw new ApiError(409, 'VERSION_CONFLICT', 'El registro cambió. Actualiza los datos antes de guardar.');
+      }
+
+      const values = [...headerKeys.map(key => input.header[key as keyof typeof input.header]), ...adminKeys.map(key => input.administrative[key as keyof typeof input.administrative])];
+      const fields = [...headerKeys, ...adminKeys];
+      const assignments = fields.map((key, index) => `${column(key)}=$${index + 2}`);
+      const expectedVersionParam = values.length + 2;
+      const changed = await db.query(`UPDATE cenit.purchase_requests SET ${assignments.join(',')},review_status='pending',reviewed_by=NULL,reviewed_at=NULL,version=version+1
+        WHERE id=$1 AND version=$${expectedVersionParam} RETURNING id`, [id, ...values, expectedVersion]);
+      if (!changed.rowCount) throw new ApiError(409, 'VERSION_CONFLICT', 'El registro cambió. Actualiza los datos antes de guardar.');
+
+      await db.query('DELETE FROM cenit.purchase_request_lines WHERE request_id=$1', [id]);
+      for (const [position, line] of input.lines.entries()) {
+        const lineValues = [randomUUID(), id, position + 1, ...lineKeys.map(key => line[key as keyof typeof line])];
+        await db.query(`INSERT INTO cenit.purchase_request_lines(id,request_id,position,${lineKeys.map(column).join(',')}) VALUES(${lineValues.map((_, i) => `$${i + 1}`).join(',')})`, lineValues);
+      }
+      await enqueuePurchaseSheets(db, id);
+      return { data: (await this.detail(db, id))! };
     });
   }
   async create(input: CreatePurchase, accountId: string, authorizeNew: () => void = () => {}): Promise<{ record: PurchaseRecord; created: boolean }> {
