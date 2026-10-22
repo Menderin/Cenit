@@ -1,6 +1,22 @@
-# Arquitectura y funcionamiento de Cenit
+# Diseño de software (SDD): arquitectura y funcionamiento de Cenit
 
 Cenit organiza información administrativa y facilita la consulta académica de Nutrición y Dietética en la Facultad de Medicina de la Universidad Católica del Norte, sede Coquimbo. Este documento explica la solución existente, sus límites y los asuntos que aún requieren definición. La instalación se describe en las [guías de operación](../deploy/LOCAL.md) y las comprobaciones en [Pruebas y criterios de aceptación](PRUEBAS-Y-ACEPTACION.md).
+
+Este archivo es el SDD vigente del repositorio. README es el punto de entrada; `deploy` conserva los procedimientos de operación. No se mantiene otra copia del diseño con decisiones diferentes. Los diagramas siguientes son Mermaid editable en Markdown, revisable junto con el código.
+
+## Estado de la implementación
+
+«Implementado» identifica comportamiento disponible en el código con pruebas enlazadas; «preparado» identifica una herramienta o configuración que requiere ejecución explícita en un destino; «pendiente» identifica definición, validación o comprobación que todavía no se acredita. Ninguno de esos estados sustituye la aceptación del cliente ni confirma qué SHA está instalado actualmente en Azure.
+
+| Área | Implementado | Preparado o pendiente |
+| --- | --- | --- |
+| Plataforma | Login local, rol por cuenta, sesión de dos horas, frontend compilado servido por API, PostgreSQL persistente | Aceptación de usuarios y comprobación del destino elegido |
+| Administrativo | Compras: captura, revisión, alta manual, persistencia, búsqueda, resumen, validación local y eliminación | Precisión OCR acordada con nuevas muestras; actualización de una copia desde otra captura |
+| Académico | Consulta por rol, versiones del catálogo, detalle, reglas simples/conjuntas e historiales ficticios | Carga explícita de `diagrama-r2` en cada entorno; año, códigos y aceptación institucional pendientes |
+| Personal y Bienes | Navegación y páginas de construcción | Requisitos y módulos funcionales pendientes; no se presentan como entregados |
+| Entrega | CI, imágenes por digest, despliegue Azure, migrador separado y recuperación de configuración ante fallos de activación | Catálogo/cuentas se preparan por separado; restauración completa de datos y retiro del servidor anterior requieren ensayo y aprobación |
+
+La [matriz de aceptación](PRUEBAS-Y-ACEPTACION.md) identifica pruebas y evidencia histórica. El estado operativo se obtiene de Actions, `current.json`, health y recorridos autenticados, siguiendo la [guía Azure](../deploy/azure/README.md#diagnóstico-y-recuperación).
 
 ## Alcance y entregas
 
@@ -35,6 +51,31 @@ Cenit es un monolito modular. El navegador consume un API REST JSON bajo `/api/v
 | `experiments` | Investigación reproducible separada de la aplicación |
 
 Las rutas adaptan HTTP; los servicios aplican las reglas; los repositorios realizan las consultas. Cada módulo controla su persistencia y evita acceder a estructuras privadas de otro módulo. El frontend comparte contratos públicos con el servidor, no tablas Drizzle ni modelos internos.
+
+### Componentes y límites
+
+```mermaid
+flowchart LR
+    Usuario["Navegador"] --> HTTPS["Caddy: HTTPS en Azure"]
+    HTTPS --> Web["Fastify sirve React compilado"]
+    Web --> Router["React Router y TanStack Query"]
+    Router --> Auth["API: sesión y permisos"]
+    Auth --> Compras["Módulo administrativo: Compras"]
+    Auth --> Academico["Módulo académico: catálogo e historial"]
+    Compras --> PG[("PostgreSQL: esquema cenit")]
+    Academico --> PG
+    Compras --> OCR["OCR privado: Python y ONNX"]
+    OCR --> Candidatos["Candidatos sin persistir"]
+    Candidatos --> Router
+    Contratos["TypeBox: contratos públicos"] -.-> Router
+    Contratos -.-> Auth
+    Operador["Operador autorizado"] --> Herramientas["Migrador y cargador explícitos"]
+    Herramientas --> PG
+```
+
+El navegador vuelve al mismo origen para consultar `/api/v1`; las flechas representan dependencias, no servicios frontend desplegados por separado. Administrativo accede a Compras; docente y estudiante acceden a académico, con restricciones diferentes para historiales. PostgreSQL se usa con `cenit_app` desde la aplicación y `cenit_migrator` desde herramientas separadas. OCR no recibe credenciales PostgreSQL. La revisión humana y el POST explícito separan extracción de guardado.
+
+En Azure cada entorno tiene su red, contenedores, volumen y secretos independientes, pero comparte la VM y sus recursos físicos. En local Nginx sustituye la entrada Caddy; en desarrollo Vite sirve React y hace proxy al API. Esas variantes y sus puertos están en [Entorno local](../deploy/LOCAL.md#configuración-del-runtime-y-puertos).
 
 Se mantiene React, Vite, TypeScript, React Router, TanStack Query, Tailwind y los componentes seleccionados de shadcn/Radix. El API usa Node.js 24 LTS, Fastify 5, PostgreSQL 17 y Drizzle. Las versiones exactas están en los manifiestos, el único `package-lock.json`, `.node-version` y `deploy/images.lock.json`; no se duplican aquí. REST y las versiones concretas son la base técnica del repositorio, sin atribuirles ratificación institucional. No se añaden microservicios, GraphQL ni abstracciones generales sin una necesidad y decisión documentadas.
 
@@ -136,19 +177,19 @@ La versión de procesamiento actual es `ppocr5-latin-grid8-layout-v3`. La exacti
 
 ## Académico
 
-El catálogo de trabajo corresponde a Nutrición y Dietética, plan 2027-r1: 52 asignaturas, 305 SCT y cuatro internados agrupados en IX–X. La [foto recibida](Foto%20prerequisitos%20Nutricion.jpeg) es la referencia prioritaria de nombres/SCT; el [PDF](malla-nutricion-y-dietetica-2027.pdf) es complementario. El equipo confirmó la correspondencia con 2027, sin acreditar validación independiente del cliente.
+El catálogo de trabajo es [diagrama-r2](../catalogs/academic/nutricion-diagrama-r2.json): 52 asignaturas, 305 SCT y cuatro internados agrupados en IX–X. La [imagen recibida](Foto%20prerequisitos%20Nutricion.jpeg) es la fuente curricular vigente; el año oficial del plan no está confirmado. El PDF antiguo fue retirado y su referencia se conserva únicamente como antecedente histórico de `2027-r1` y del [cotejo](COTEJO-CATALOGO-ACADEMICO.md).
 
-Los códigos `NUT2027-001` a `NUT2027-052` son internos; `officialCode` permanece `null`. Las fuentes del [catálogo versionado](../catalogs/academic/nutricion-2027-r1.json) tienen hashes, fecha y estado de revisión. `teamReviewed` no equivale a `clientValidated` ni confirma la interpretación de cada flecha.
+Los códigos `NUT2027-001` a `NUT2027-052` son identificadores internos heredados: el prefijo no acredita el año del plan y `officialCode` permanece `null`. Imagen y cotejo tienen hashes, fecha y estado `teamReviewed`; esta revisión del equipo no equivale a `clientValidated` ni se atribuye a Registro Curricular.
 
-Todas las expresiones actuales son `pending`; se conservan 35 relaciones observadas con fuente e interpretación pendiente. Falta cotejar sus extremos y confirmar si las entradas múltiples son conjuntas o alternativas. La ausencia de flechas no confirma ausencia de requisitos. `none` exige confirmación expresa; `allOf`, `anyOf` y `unsupported` son formas de contrato, sin evaluación de habilitación ni simulación. Una corrección de contenido publicado necesita otra versión, no modificar silenciosamente la existente.
+La interpretación aclarada por el líder produce 43 relaciones, 26 reglas simples, ocho `allOf` y 18 `pending`. Una flecha apunta a la asignatura que exige el requisito; varias entradas exigen todos los cursos. APS exige Dietética y Modelo de intervención; el integrador exige Proyecto de innovación, Gestión estratégica de sistemas y Nutrición clínica materno infanto juvenil. Internado APS exige sólo Proyecto de intervención comunitaria, por aclaración explícita, sin generalizar el corchete a otros internados. El cotejo identifica esa aclaración como fuente de la relación. La ausencia de flechas no confirma ausencia de requisitos: `none` exige confirmación expresa. No hay evaluación de habilitación ni simulación.
 
-La propuesta de presentación de SCRUM-72 reutiliza el detalle de la malla: requisito simple por nombre, «Todos los siguientes» y «Al menos uno de los siguientes» con listas, ausencia confirmada sólo ante `none`, y estados «Pendientes de confirmación» y «Regla no soportada» con su explicación recibida. Las relaciones observadas se muestran aparte y no sustituyen esas condiciones. El diálogo permite teclado y retorno de foco. Los ejemplos de revisión son ficticios y no se publican ni se usan como reemplazo ante fallos del API. El diseño espera aprobación; completar SCRUM-75 requiere además la fuente revisada de Kevin (SCRUM-71) y la publicación versionada de Víctor (SCRUM-74). La [matriz de aceptación](PRUEBAS-Y-ACEPTACION.md#consulta-académica) contiene el recorrido reproducible y sus límites.
+`2027-r1`, sus migraciones y registros publicados permanecen intactos y consultables donde estén instalados. La carga transaccional explícita prepara la nueva versión sin trasladar adscripciones ni historiales. El selector existente permite consultarla sin aplicar el historial de otra versión; no cambia la selección inicial del frontend. La preparación de demo rechaza un cambio de versión de un historial existente. La aceptación institucional de la historia y las dependencias de validación de fuentes siguen pendientes.
 
-La malla permite explorar visualmente las conexiones hacia ramos posteriores: entrar con el mouse a una tarjeta resalta su cadena inmediatamente, acentuando el color propio y la sombra de las tarjetas con un fundido de 300 ms, conservando el color de todos los demás ramos, con un contorno de 2 px gris azulado para el origen, borde sólido fino y fondo más intenso para enlaces directos, y borde discontinuo fino con fondo también oscurecido, de menor intensidad, para indirectos, sin flechas. La leyenda reproduce los tres contornos; las relaciones conservan sus descripciones accesibles. El indicador «Demostración» del encabezado identifica el contexto sin repetir avisos de ejemplo en el subtítulo, la leyenda o cada detalle. Pasar a otra tarjeta cambia la cadena sin espera previa; salir del tablero o pulsar Escape la limpia. Las transiciones son interrumpibles; un degradado más vivo conserva el color del estado del ramo y termina en su superficie clara original. El borde, el color y la sombra se funden juntos al entrar, cambiar de relación y salir. Sin preferencia de movimiento reducido, los ramos relacionados se elevan 2 px durante 300 ms con la misma curva `ease-out` del panel de detalle, sin escalar el texto; con esa preferencia sólo se mantiene el fundido. El foco de teclado activa la misma vista sin espera y el clic/toque abre el detalle, que incluye las conexiones indirectas y su ramo intermedio. El resaltado sigue únicamente `prerequisiteEdges`, sin deducir AND/OR ni habilitación. La malla ficticia del mockup contiene 50 ramos en 10 semestres, con ramas y convergencias identificadas como ejemplo; sustituir esas conexiones corresponde al catálogo versionado cuando se validen las fuentes.
+La propuesta de presentación de SCRUM-72 reutiliza el detalle de la malla: requisito simple por nombre, «Todos los siguientes» y «Al menos uno de los siguientes» con listas, ausencia confirmada sólo ante `none`, y estados «Pendientes de confirmación» y «Regla no soportada» con su explicación recibida. Las relaciones observadas se muestran aparte y no sustituyen esas condiciones. El diálogo permite teclado y retorno de foco. Los ejemplos de revisión son ficticios y no se publican ni se usan como reemplazo ante fallos del API. El diseño espera aprobación; la entrega de SCRUM-74 prepara la publicación versionada con revisión del equipo. La aceptación de SCRUM-75 y la validación institucional de la fuente de SCRUM-71 siguen pendientes. La [matriz de aceptación](PRUEBAS-Y-ACEPTACION.md#consulta-académica) contiene el recorrido reproducible y sus límites.
 
-El cálculo agrupa las conexiones por ramo para recorrer la cadena sin revisar todas las relaciones a cada paso. La pantalla reutiliza la cadena, los semestres y el historial mientras no cambien sus datos; volver a señalar el mismo ramo conserva el estado existente. El hover se resuelve localmente, sin nuevas consultas al API ni mediciones de posiciones del documento. Dos capas persistentes, una con borde sólido y otra discontinuo, conservan su degradado y sombra incluso al desactivarse; un contorno persistente distingue el origen y se desvanece con ellas. Sólo se animan su opacidad y el desplazamiento de la tarjeta; así las relaciones se cruzan sin cambiar bordes o retirar sombras de golpe ni escalar el texto.
+La malla permite explorar conexiones directas e indirectas mediante mouse, teclado y toque, con contornos diferenciados y explicación del curso intermedio. El detalle conserva requisitos separados de relaciones visuales. Las conexiones se recorren localmente a partir de `prerequisiteEdges`; no calculan habilitación ni infieren reglas nuevas. El mockup de revisión usa datos ficticios separados del catálogo publicado.
 
-Si la malla supera el ancho disponible, conserva columnas legibles y muestra controles para recorrer todos los semestres junto al contexto de avance, inmediatamente antes del tablero. Se puede arrastrar horizontalmente con el mouse, incluso desde una tarjeta: el cursor cambia de mano abierta a cerrada y el desplazamiento sigue al puntero sin animación. Un movimiento de al menos 5 px inicia el arrastre y evita abrir un detalle por accidente; el clic normal lo conserva. El trackpad, los controles de semestres y el teclado siguen disponibles; el gesto táctil conserva el desplazamiento nativo. El botón del encabezado permite plegar o mostrar la navegación lateral. Los controles se deshabilitan al llegar a cada extremo y desaparecen cuando la malla cabe completa. En pantallas de hasta 720 px los semestres se apilan verticalmente. El desplazamiento suave de las flechas y la respuesta de presión de los controles respetan la preferencia de movimiento reducido.
+En pantallas estrechas los semestres se apilan; en escritorio se conservan controles, arrastre y desplazamiento horizontal del tablero. Escape limpia la exploración o cierra el diálogo según el contexto; el foco vuelve al control de origen. Colores, transiciones y movimiento reducido pertenecen a componentes/CSS y se verifican en los recorridos de navegador de la matriz.
 
 | Consulta | Ruta |
 | --- | --- |
@@ -187,5 +228,7 @@ Readiness comprueba conexión, historial de migraciones, esquema y permisos del 
 ## Documentación y aceptación
 
 Esta guía describe el funcionamiento que necesita comprender quien desarrolla o mantiene Cenit. Los comandos operativos tienen su guía propia y los criterios se relacionan con pruebas en la matriz. El Project Charter conserva la definición del proyecto; Jira y las actas registran compromisos y aceptación. La existencia de código o una prueba correcta no se presenta como validación del cliente.
+
+El equipo confirmó Markdown del repositorio como formato de entrega documental. El SDD, README, guías y diagramas se revisan en el mismo cambio que el código correspondiente; cualquier exportación adicional requiere confirmar previamente su necesidad y formato. El procedimiento de carga de catálogo y el de recuperación pertenecen a la guía Azure, no se duplican en este documento.
 
 Cuando cambia un comportamiento se actualiza su sección, manteniendo en Git el historial anterior. Las decisiones arquitectónicas relevantes conservan su motivo: monolito modular para el alcance actual, contratos compartidos para evitar diferencias entre consumidores, montos exactos para preservar datos documentales, OCR auxiliar para separar inferencia y persistencia, y reglas pendientes para no inventar condiciones académicas. Las notas de sesión y las listas de ajustes ya implementados pertenecen a la revisión del cambio, no a nuevos documentos permanentes.

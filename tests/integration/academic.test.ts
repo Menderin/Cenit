@@ -37,7 +37,7 @@ const admin = createTestPool({ connectionString: adminUrl });
 const migrationPools: pg.Pool[] = [];
 const runtimePools: pg.Pool[] = [];
 const urls: string[] = [];
-const plan = readCatalog('catalogs/academic/nutricion-2027-r1.json');
+const plan = readCatalog('catalogs/academic/nutricion-diagrama-r2.json');
 const firstStudent = randomUUID(), secondStudent = randomUUID();
 const firstAccount = randomUUID(), secondAccount = randomUUID();
 const teacherAccount = randomUUID();
@@ -248,6 +248,43 @@ describe('historial migrado con FK real a cuentas de login', () => {
   });
 });
 describe('API con identidad simulada únicamente en el harness de pruebas', () => {
+  it('conserva ambas versiones y no traslada adscripciones al publicar', async () => {
+    // Simula una versión histórica ya instalada: no relee el PDF retirado.
+    const historical: typeof plan = JSON.parse(readFileSync('catalogs/academic/nutricion-2027-r1.json', 'utf8'));
+    const before = await repository.progress(firstStudent);
+    await loadCatalog(migrationPools[0]!, historical, true);
+    expect(await loadCatalog(migrationPools[0]!, plan, true)).toBe('unchanged');
+    expect(await repository.progress(firstStudent)).toEqual(before);
+    await expect(seedAcademicDemo(migrationPools[0]!, historical.planId, historical.version, [
+      { id: firstStudent, accountId: firstAccount, name: 'Alex Demo', rut: '20.123.456-5', attempts },
+    ])).rejects.toThrow();
+    expect(await repository.progress(firstStudent)).toEqual(before);
+    const versions = (await request('/api/v1/academic/plans', 'teacher')).json().data[0].versions;
+    expect(versions.map((version: { version: string }) => version.version)).toEqual(['2027-r1', 'diagrama-r2']);
+    for (const version of [historical, plan]) {
+      const response = await request(`/api/v1/academic/plans/${version.planId}/versions/${version.version}`, 'student');
+      expect(response.statusCode).toBe(200);
+      expect(Value.Check(PlanResponseSchema, response.json())).toBe(true);
+      expect(response.json().data).toEqual({ ...version, prerequisiteEdges: [...version.prerequisiteEdges].sort((a, b) => a.fromCode.localeCompare(b.fromCode) || a.toCode.localeCompare(b.toCode)) });
+    }
+  });
+
+  it('revierte cabecera y fuentes si una inserción del catálogo falla a mitad de la carga', async () => {
+    const pool = migrationPools[0]!;
+    const failed = structuredClone(plan); failed.version = 'rollback-r2';
+    await pool.query(`CREATE FUNCTION cenit.reject_catalog_test() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF NEW.id='cotejo-equipo' AND EXISTS(SELECT 1 FROM cenit.academic_versions WHERE id=NEW.version_id AND version='rollback-r2')
+      THEN RAISE EXCEPTION 'test failure'; END IF; RETURN NEW; END $$;
+      CREATE TRIGGER reject_catalog_test BEFORE INSERT ON cenit.academic_sources FOR EACH ROW EXECUTE FUNCTION cenit.reject_catalog_test()`);
+    try {
+      await expect(loadCatalog(pool, failed, true)).rejects.toThrow('test failure');
+      expect((await pool.query('SELECT id FROM cenit.academic_versions WHERE version=$1', [failed.version])).rows).toHaveLength(0);
+      expect((await repository.plan(plan.planId, plan.version))).toEqual(plan);
+    } finally {
+      await pool.query('DROP TRIGGER reject_catalog_test ON cenit.academic_sources; DROP FUNCTION cenit.reject_catalog_test()');
+    }
+  });
+
   it('por defecto no acepta identidad enviada por el cliente', async () => {
     const closed = buildAcademicApp({ repository });
     try { expect((await closed.inject({ url: '/api/v1/academic/plans?role=docente', headers: { authorization: 'Bearer teacher' } })).statusCode).toBe(401); }

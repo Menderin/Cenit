@@ -18,16 +18,19 @@ Cenit complementa los sistemas institucionales: no usa la API de Oracle, no camb
 | Necesidad | Documento |
 | --- | --- |
 | Instalar, configurar y ejecutar localmente | [Entorno local](deploy/LOCAL.md) |
-| Comprender módulos, contratos, datos y límites | [Arquitectura y funcionamiento](Docs/ARQUITECTURA.md) |
+| Comprender módulos, componentes, contratos y límites | [Diseño de software (SDD) y diagramas](Docs/ARQUITECTURA.md) |
+| Consultar el índice del SDD restaurado y el mapa del código | [SDD](AGENTS/SDD.md) y [Estructura](AGENTS/ESTRUCTURA.md) |
 | Revisar criterios, pruebas y resultados | [Pruebas y aceptación](Docs/PRUEBAS-Y-ACEPTACION.md) |
-| Preparar o mantener el destino de entrega | [Azure](deploy/azure/README.md) |
+| Entender CI/CD y el flujo de una release | [Flujo de entrega Azure](deploy/azure/README.md#flujo-de-una-entrega-y-controles) |
+| Diagnosticar y recuperar el destino | [Operación Azure](deploy/azure/README.md#diagnóstico-y-recuperación) |
+| Cargar la malla en staging o producción | [Publicación explícita del catálogo](deploy/azure/README.md#publicar-el-catálogo-académico-operación-explícita) |
 | Contribuir, preparar commits y revisar cambios | [Guía de colaboración](CONTRIBUTING.md) |
 | Trabajar con un agente | [Instrucciones para agentes](AGENTS.md) |
 | Reproducir la investigación OCR | [Experimentos de compras](experiments/purchases/README.md) |
 | Consultar modelos OCR y licencias | [Modelos](apps/ocr/MODELS.md) |
 | Mantener el servidor anterior durante la transición | [Instalación anterior](deploy/README.md) |
 
-La documentación se actualiza con el producto; las versiones anteriores se consultan en Git. Jira conserva el backlog y las asignaciones. El Charter y las actas del proyecto definen el alcance acordado y la aceptación de los responsables; este repositorio conserva las instrucciones de la versión y su evidencia técnica.
+La documentación se actualiza con el producto; las versiones anteriores se consultan en Git. Jira conserva el backlog y las asignaciones. El Charter y las actas del proyecto definen el alcance acordado y la aceptación de los responsables; este repositorio conserva las instrucciones de la versión y su evidencia técnica. El formato de entrega documental confirmado es **Markdown del repositorio**, incluidos diagramas Mermaid editables; no se generan copias PDF/Word con otra versión de las decisiones.
 
 ## Herramientas
 
@@ -51,7 +54,7 @@ npm run test:unit
 npm run build
 ```
 
-Integración y navegador necesitan PostgreSQL exclusivo de pruebas; consultar sus requisitos antes de ejecutar `npm run test:integration` o `npm run test:e2e`. El catálogo se valida sin publicarlo con `npm run catalog:check`.
+Integración y navegador necesitan PostgreSQL exclusivo de pruebas; consultar sus requisitos antes de ejecutar `npm run test:integration` o `npm run test:e2e`. El catálogo se valida sin publicarlo con `npm run catalog:check`. Build compila contratos, API, cargador operativo y web; no migra ni prepara datos. El [verificador de imagen](deploy/LOCAL.md#verificar-el-build-o-una-imagen) usa recursos descartables propios.
 
 ## Estructura
 
@@ -71,5 +74,7 @@ Integración y navegador necesitan PostgreSQL exclusivo de pruebas; consultar su
 ## Entregas y pendientes
 
 `develop` integra y entrega staging en `https://develop.cenit.dpdns.org`; `main` entrega producción de la demostración en `https://cenit.dpdns.org`, mediante PR, revisión y CI. Un workflow correcto acredita su ejecución; los recorridos y la recuperación en el destino se comprueban por separado.
+
+El [estado de implementación del SDD](Docs/ARQUITECTURA.md#estado-de-la-implementación) separa funciones implementadas, herramientas preparadas y pendientes. Que el despliegue esté listo no acredita cuentas ni malla cargadas: su preparación es explícita por entorno. `/health/ready` comprueba PostgreSQL y esquema, no datos de demo ni la disponibilidad de OCR. El catálogo vigente interpreta el diagrama mediante revisión del equipo; eso no equivale a aceptación institucional.
 
 La exactitud OCR con muestras y criterios acordados con el cliente y la interpretación oficial de prerrequisitos siguen requiriendo validación. Las funcionalidades de Personal y Bienes son incrementos posteriores; nombrarlas en el Charter no define automáticamente sus campos o permisos. La matriz mantiene los casos sin cobertura y las dependencias de esas validaciones.

@@ -1,0 +1,1141 @@
+{
+  "planId": "nutricion-dietetica",
+  "version": "diagrama-r2",
+  "name": "Nutrición y Dietética",
+  "isExample": false,
+  "source": {
+    "sourceId": "foto-prerrequisitos",
+    "title": "Diagrama curricular: Nutrición y Dietética",
+    "reference": "Docs/Foto prerequisitos Nutricion.jpeg",
+    "sha256": "b07562e215af72311d54e0f5cdd16abf5adc7305dc5f0fc525fca46e4b582e67",
+    "reviewedAt": "2026-10-20",
+    "validationStatus": "teamReviewed"
+  },
+  "sources": [
+    {
+      "sourceId": "foto-prerrequisitos",
+      "title": "Diagrama curricular: Nutrición y Dietética",
+      "reference": "Docs/Foto prerequisitos Nutricion.jpeg",
+      "sha256": "b07562e215af72311d54e0f5cdd16abf5adc7305dc5f0fc525fca46e4b582e67",
+      "reviewedAt": "2026-10-20",
+      "validationStatus": "teamReviewed"
+    },
+    {
+      "sourceId": "cotejo-equipo",
+      "title": "Revisión del equipo: relaciones y aclaraciones del diagrama",
+      "reference": "Docs/COTEJO-CATALOGO-ACADEMICO.md",
+      "sha256": "4e246d1c17f7de1c298f4beb6daae5575ae8dde4e5abc65aaa8d4f28ae75bc07",
+      "reviewedAt": "2026-10-20",
+      "validationStatus": "teamReviewed"
+    }
+  ],
+  "courses": [
+    {
+      "code": "NUT2027-001",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Ciencia de los alimentos",
+      "semester": 1,
+      "semesterEnd": 1,
+      "credits": 7,
+      "displayOrder": 1,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-002",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Estructura y función aplicada a la nutrición I",
+      "semester": 1,
+      "semesterEnd": 1,
+      "credits": 6,
+      "displayOrder": 2,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-003",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Fundamentos biológicos para la nutrición",
+      "semester": 1,
+      "semesterEnd": 1,
+      "credits": 4,
+      "displayOrder": 3,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-004",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Introducción a la carrera",
+      "semester": 1,
+      "semesterEnd": 1,
+      "credits": 5,
+      "displayOrder": 4,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-005",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Formación general electiva I",
+      "semester": 1,
+      "semesterEnd": 1,
+      "credits": 2,
+      "displayOrder": 5,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-006",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Inglés 1",
+      "semester": 1,
+      "semesterEnd": 1,
+      "credits": 4,
+      "displayOrder": 6,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-007",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Formación en identidad UCN nivel 1: Identidad, Universidad y Equidad de género",
+      "semester": 1,
+      "semesterEnd": 1,
+      "credits": 2,
+      "displayOrder": 7,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-008",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Inocuidad alimentaria",
+      "semester": 2,
+      "semesterEnd": 2,
+      "credits": 8,
+      "displayOrder": 8,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-001"
+      }
+    },
+    {
+      "code": "NUT2027-009",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Estructura y función aplicada a la nutrición II",
+      "semester": 2,
+      "semesterEnd": 2,
+      "credits": 8,
+      "displayOrder": 9,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-002"
+      }
+    },
+    {
+      "code": "NUT2027-010",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Bases bioquímicas de la nutrición",
+      "semester": 2,
+      "semesterEnd": 2,
+      "credits": 7,
+      "displayOrder": 10,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-003"
+      }
+    },
+    {
+      "code": "NUT2027-011",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Bioestadística",
+      "semester": 2,
+      "semesterEnd": 2,
+      "credits": 3,
+      "displayOrder": 11,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-012",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Inglés 2",
+      "semester": 2,
+      "semesterEnd": 2,
+      "credits": 4,
+      "displayOrder": 12,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-006"
+      }
+    },
+    {
+      "code": "NUT2027-013",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Tecnología y evaluación sensorial de alimentos",
+      "semester": 3,
+      "semesterEnd": 3,
+      "credits": 6,
+      "displayOrder": 13,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-008"
+      }
+    },
+    {
+      "code": "NUT2027-014",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Análisis alimentario y antropometría",
+      "semester": 3,
+      "semesterEnd": 3,
+      "credits": 8,
+      "displayOrder": 14,
+      "prerequisites": {
+        "kind": "allOf",
+        "rules": [
+          {
+            "kind": "course",
+            "code": "NUT2027-008"
+          },
+          {
+            "kind": "course",
+            "code": "NUT2027-009"
+          }
+        ]
+      }
+    },
+    {
+      "code": "NUT2027-015",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Nutrición básica",
+      "semester": 3,
+      "semesterEnd": 3,
+      "credits": 5,
+      "displayOrder": 15,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-010"
+      }
+    },
+    {
+      "code": "NUT2027-016",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Introducción a los determinantes sociales de la salud y salud pública",
+      "semester": 3,
+      "semesterEnd": 3,
+      "credits": 5,
+      "displayOrder": 16,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-004"
+      }
+    },
+    {
+      "code": "NUT2027-017",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Bioestadística aplicada a la nutrición",
+      "semester": 3,
+      "semesterEnd": 3,
+      "credits": 4,
+      "displayOrder": 17,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-011"
+      }
+    },
+    {
+      "code": "NUT2027-018",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Formación general electiva II",
+      "semester": 3,
+      "semesterEnd": 3,
+      "credits": 2,
+      "displayOrder": 18,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-019",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Innovación y creatividad en nutrición",
+      "semester": 4,
+      "semesterEnd": 4,
+      "credits": 4,
+      "displayOrder": 19,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-013"
+      }
+    },
+    {
+      "code": "NUT2027-020",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Economía y comercialización de los alimentos",
+      "semester": 4,
+      "semesterEnd": 4,
+      "credits": 4,
+      "displayOrder": 20,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-013"
+      }
+    },
+    {
+      "code": "NUT2027-021",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Diagnóstico nutricional integrado",
+      "semester": 4,
+      "semesterEnd": 4,
+      "credits": 8,
+      "displayOrder": 21,
+      "prerequisites": {
+        "kind": "allOf",
+        "rules": [
+          {
+            "kind": "course",
+            "code": "NUT2027-014"
+          },
+          {
+            "kind": "course",
+            "code": "NUT2027-015"
+          }
+        ]
+      }
+    },
+    {
+      "code": "NUT2027-022",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Planificación alimentaria nutricional",
+      "semester": 4,
+      "semesterEnd": 4,
+      "credits": 4,
+      "displayOrder": 22,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-015"
+      }
+    },
+    {
+      "code": "NUT2027-023",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Promoción en salud interdisciplinario",
+      "semester": 4,
+      "semesterEnd": 4,
+      "credits": 4,
+      "displayOrder": 23,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-016"
+      }
+    },
+    {
+      "code": "NUT2027-024",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Epidemiología nutricional",
+      "semester": 4,
+      "semesterEnd": 4,
+      "credits": 4,
+      "displayOrder": 24,
+      "prerequisites": {
+        "kind": "allOf",
+        "rules": [
+          {
+            "kind": "course",
+            "code": "NUT2027-016"
+          },
+          {
+            "kind": "course",
+            "code": "NUT2027-017"
+          }
+        ]
+      }
+    },
+    {
+      "code": "NUT2027-025",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Formación en identidad UCN nivel 2: Diálogo, cristianismo y culturas",
+      "semester": 4,
+      "semesterEnd": 4,
+      "credits": 2,
+      "displayOrder": 25,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-026",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Gestión, liderazgo y talento humano en salud",
+      "semester": 5,
+      "semesterEnd": 5,
+      "credits": 7,
+      "displayOrder": 26,
+      "prerequisites": {
+        "kind": "allOf",
+        "rules": [
+          {
+            "kind": "course",
+            "code": "NUT2027-019"
+          },
+          {
+            "kind": "course",
+            "code": "NUT2027-020"
+          }
+        ]
+      }
+    },
+    {
+      "code": "NUT2027-027",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Dietética en el curso de vida",
+      "semester": 5,
+      "semesterEnd": 5,
+      "credits": 8,
+      "displayOrder": 27,
+      "prerequisites": {
+        "kind": "allOf",
+        "rules": [
+          {
+            "kind": "course",
+            "code": "NUT2027-021"
+          },
+          {
+            "kind": "course",
+            "code": "NUT2027-022"
+          }
+        ]
+      }
+    },
+    {
+      "code": "NUT2027-028",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Modelo de intervención en salud",
+      "semester": 5,
+      "semesterEnd": 5,
+      "credits": 4,
+      "displayOrder": 28,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-023"
+      }
+    },
+    {
+      "code": "NUT2027-029",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Metodología de la investigación",
+      "semester": 5,
+      "semesterEnd": 5,
+      "credits": 4,
+      "displayOrder": 29,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-024"
+      }
+    },
+    {
+      "code": "NUT2027-030",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Electivo profesional I",
+      "semester": 5,
+      "semesterEnd": 5,
+      "credits": 5,
+      "displayOrder": 30,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-031",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Formación en identidad UCN nivel 3: Diálogo, Fe y Ciencias",
+      "semester": 5,
+      "semesterEnd": 5,
+      "credits": 2,
+      "displayOrder": 31,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-032",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Gestión estratégica y calidad en salud",
+      "semester": 6,
+      "semesterEnd": 6,
+      "credits": 8,
+      "displayOrder": 32,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-026"
+      }
+    },
+    {
+      "code": "NUT2027-033",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Nutrición clínica del adulto y personas mayores",
+      "semester": 6,
+      "semesterEnd": 6,
+      "credits": 8,
+      "displayOrder": 33,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-027"
+      }
+    },
+    {
+      "code": "NUT2027-034",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Políticas públicas asociadas a la nutrición",
+      "semester": 6,
+      "semesterEnd": 6,
+      "credits": 4,
+      "displayOrder": 34,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-028"
+      }
+    },
+    {
+      "code": "NUT2027-035",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Módulo interdisciplinario APS",
+      "semester": 6,
+      "semesterEnd": 6,
+      "credits": 1,
+      "displayOrder": 35,
+      "prerequisites": {
+        "kind": "allOf",
+        "rules": [
+          {
+            "kind": "course",
+            "code": "NUT2027-027"
+          },
+          {
+            "kind": "course",
+            "code": "NUT2027-028"
+          }
+        ]
+      }
+    },
+    {
+      "code": "NUT2027-036",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Proyecto de investigación I",
+      "semester": 6,
+      "semesterEnd": 6,
+      "credits": 4,
+      "displayOrder": 36,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-029"
+      }
+    },
+    {
+      "code": "NUT2027-037",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Electivo profesional II",
+      "semester": 6,
+      "semesterEnd": 6,
+      "credits": 5,
+      "displayOrder": 37,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-038",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Proyecto de innovación y emprendimiento en nutrición y salud",
+      "semester": 7,
+      "semesterEnd": 7,
+      "credits": 4,
+      "displayOrder": 38,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-032"
+      }
+    },
+    {
+      "code": "NUT2027-039",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Gestión estratégica de sistemas de alimentación",
+      "semester": 7,
+      "semesterEnd": 7,
+      "credits": 5,
+      "displayOrder": 39,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-032"
+      }
+    },
+    {
+      "code": "NUT2027-040",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Nutrición clínica materno infanto juvenil",
+      "semester": 7,
+      "semesterEnd": 7,
+      "credits": 7,
+      "displayOrder": 40,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-033"
+      }
+    },
+    {
+      "code": "NUT2027-041",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Educación y nutrición comunitaria",
+      "semester": 7,
+      "semesterEnd": 7,
+      "credits": 5,
+      "displayOrder": 41,
+      "prerequisites": {
+        "kind": "allOf",
+        "rules": [
+          {
+            "kind": "course",
+            "code": "NUT2027-033"
+          },
+          {
+            "kind": "course",
+            "code": "NUT2027-034"
+          }
+        ]
+      }
+    },
+    {
+      "code": "NUT2027-042",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Proyecto de investigación II",
+      "semester": 7,
+      "semesterEnd": 7,
+      "credits": 4,
+      "displayOrder": 42,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-036"
+      }
+    },
+    {
+      "code": "NUT2027-043",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Electivo profesional III",
+      "semester": 7,
+      "semesterEnd": 7,
+      "credits": 5,
+      "displayOrder": 43,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-044",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Módulo integrador práctico profesional",
+      "semester": 8,
+      "semesterEnd": 8,
+      "credits": 14,
+      "displayOrder": 44,
+      "prerequisites": {
+        "kind": "allOf",
+        "rules": [
+          {
+            "kind": "course",
+            "code": "NUT2027-038"
+          },
+          {
+            "kind": "course",
+            "code": "NUT2027-039"
+          },
+          {
+            "kind": "course",
+            "code": "NUT2027-040"
+          }
+        ]
+      }
+    },
+    {
+      "code": "NUT2027-045",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Módulo interdisciplinario clínico",
+      "semester": 8,
+      "semesterEnd": 8,
+      "credits": 2,
+      "displayOrder": 45,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-040"
+      }
+    },
+    {
+      "code": "NUT2027-046",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Proyecto de intervención comunitaria",
+      "semester": 8,
+      "semesterEnd": 8,
+      "credits": 5,
+      "displayOrder": 46,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-041"
+      }
+    },
+    {
+      "code": "NUT2027-047",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Proyecto de investigación III",
+      "semester": 8,
+      "semesterEnd": 8,
+      "credits": 4,
+      "displayOrder": 47,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-042"
+      }
+    },
+    {
+      "code": "NUT2027-048",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Electivo profesional IV",
+      "semester": 8,
+      "semesterEnd": 8,
+      "credits": 5,
+      "displayOrder": 48,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-049",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Internado en gestión del rubro alimentario",
+      "semester": 9,
+      "semesterEnd": 10,
+      "credits": 13,
+      "displayOrder": 49,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-050",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Internado en nutrición clínica",
+      "semester": 9,
+      "semesterEnd": 10,
+      "credits": 13,
+      "displayOrder": 50,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    },
+    {
+      "code": "NUT2027-051",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Internado de APS interdisciplinario",
+      "semester": 9,
+      "semesterEnd": 10,
+      "credits": 26,
+      "displayOrder": 51,
+      "prerequisites": {
+        "kind": "course",
+        "code": "NUT2027-046"
+      }
+    },
+    {
+      "code": "NUT2027-052",
+      "codeKind": "internal",
+      "officialCode": null,
+      "name": "Internado electivo",
+      "semester": 9,
+      "semesterEnd": 10,
+      "credits": 13,
+      "displayOrder": 52,
+      "prerequisites": {
+        "kind": "pending",
+        "description": "El diagrama no especifica requisitos para esta asignatura; ausencia pendiente de confirmación."
+      }
+    }
+  ],
+  "prerequisiteEdges": [
+    {
+      "fromCode": "NUT2027-001",
+      "toCode": "NUT2027-008",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-002",
+      "toCode": "NUT2027-009",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-003",
+      "toCode": "NUT2027-010",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-004",
+      "toCode": "NUT2027-016",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-006",
+      "toCode": "NUT2027-012",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-008",
+      "toCode": "NUT2027-013",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-008",
+      "toCode": "NUT2027-014",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-009",
+      "toCode": "NUT2027-014",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-010",
+      "toCode": "NUT2027-015",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-011",
+      "toCode": "NUT2027-017",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-013",
+      "toCode": "NUT2027-019",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-013",
+      "toCode": "NUT2027-020",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-014",
+      "toCode": "NUT2027-021",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-015",
+      "toCode": "NUT2027-021",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-015",
+      "toCode": "NUT2027-022",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-016",
+      "toCode": "NUT2027-023",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-016",
+      "toCode": "NUT2027-024",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-017",
+      "toCode": "NUT2027-024",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-019",
+      "toCode": "NUT2027-026",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-020",
+      "toCode": "NUT2027-026",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-021",
+      "toCode": "NUT2027-027",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-022",
+      "toCode": "NUT2027-027",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-023",
+      "toCode": "NUT2027-028",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-024",
+      "toCode": "NUT2027-029",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-026",
+      "toCode": "NUT2027-032",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-027",
+      "toCode": "NUT2027-033",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-027",
+      "toCode": "NUT2027-035",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-028",
+      "toCode": "NUT2027-034",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-028",
+      "toCode": "NUT2027-035",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-029",
+      "toCode": "NUT2027-036",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-032",
+      "toCode": "NUT2027-038",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-032",
+      "toCode": "NUT2027-039",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-033",
+      "toCode": "NUT2027-040",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-033",
+      "toCode": "NUT2027-041",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-034",
+      "toCode": "NUT2027-041",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-036",
+      "toCode": "NUT2027-042",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-038",
+      "toCode": "NUT2027-044",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-039",
+      "toCode": "NUT2027-044",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-040",
+      "toCode": "NUT2027-044",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-040",
+      "toCode": "NUT2027-045",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-041",
+      "toCode": "NUT2027-046",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-042",
+      "toCode": "NUT2027-047",
+      "sourceId": "foto-prerrequisitos",
+      "interpretation": "confirmed",
+      "note": "Flecha cotejada en la imagen; dirección y conjunción confirmadas por el equipo, sin validación institucional independiente."
+    },
+    {
+      "fromCode": "NUT2027-046",
+      "toCode": "NUT2027-051",
+      "sourceId": "cotejo-equipo",
+      "interpretation": "confirmed",
+      "note": "Requisito único aclarado por el líder del equipo; no se generaliza el corchete a otros internados."
+    }
+  ]
+}

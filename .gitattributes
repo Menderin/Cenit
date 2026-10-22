@@ -11,3 +11,6 @@
 Containerfile text eol=lf
 # Migration checksums must be identical on Windows and Linux.
 db/migrations/*.sql text eol=lf
+# This reviewed source was hashed with CRLF. Preserve its pinned bytes on
+# every checkout; newline conversion would invalidate an existing catalog.
+Docs/COTEJO-CATALOGO-ACADEMICO.md -text whitespace=cr-at-eol

@@ -32,7 +32,7 @@ const connection = (database: string, role?: string, password?: string) => {
 };
 const admin = createTestPool({ connectionString: adminUrl });
 const migrations: pg.Pool[] = [], runtimes: pg.Pool[] = [];
-const credentials = createDemoCredentials(), plan = readCatalog('catalogs/academic/nutricion-2027-r1.json');
+const credentials = createDemoCredentials(), plan = readCatalog('catalogs/academic/nutricion-diagrama-r2.json');
 const origin = 'http://127.0.0.1:3000';
 let now = new Date('2026-10-11T22:00:00.000Z');
 let app: ReturnType<typeof buildAcademicApp>;
