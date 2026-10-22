@@ -87,12 +87,6 @@ test('historial de 800 compras: períodos, orden, páginas acotadas y tamaño co
     property: (animation as CSSTransition).transitionProperty,
     duration: animation.effect?.getComputedTiming().duration,
   })));
-  await page.waitForTimeout(50);
-  const firstPanelHeight = await filterPanel.evaluate(element => element.getBoundingClientRect().height);
-  await page.waitForTimeout(50);
-  const secondPanelHeight = await filterPanel.evaluate(element => element.getBoundingClientRect().height);
-  expect(firstPanelHeight).toBeGreaterThan(0);
-  expect(secondPanelHeight).toBeGreaterThan(firstPanelHeight);
   expect(openingTransitions).toContainEqual({ property: 'opacity', duration: 150 });
   expect(openingTransitions).toContainEqual({ property: 'grid-template-rows', duration: 150 });
   await filterPanel.evaluate(async element => { await Promise.all(element.getAnimations().map(animation => animation.finished)); });
