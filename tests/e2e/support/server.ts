@@ -14,6 +14,8 @@ import { seedAcademicDemo } from '../../../db/seeds/academic-demo.js';
 import { PurchaseRepository } from '../../../apps/api/src/modules/purchases/repositories/purchases.js';
 
 process.env.APP_ENV = 'test';
+process.env.CENIT_PURCHASE_SECOND_REVIEW_ENABLED = 'true';
+process.env.CENIT_PURCHASE_SHEETS_SYNC_ENABLED = 'false';
 const suffix = randomBytes(6).toString('hex');
 const database = `cenit_auth_browser_${suffix}`, migrator = `browser_migrator_${suffix}`, runtime = `browser_runtime_${suffix}`;
 const migrationPassword = randomBytes(24).toString('hex'), runtimePassword = randomBytes(24).toString('hex');
@@ -68,14 +70,14 @@ async function main() {
   execFileSync(process.execPath, ['deploy/migrate.cjs'], { env: { ...process.env, DATABASE_URL_FILE: migrationFile }, stdio: 'pipe' });
   rmSync(migrationFile);
   const catalogPool = createTestPool({ connectionString: urlFor(migrator, migrationPassword) });
-  try { await loadCatalog(catalogPool, readCatalog('catalogs/academic/nutricion-2027-r1.json'), true); }
+  try { await loadCatalog(catalogPool, readCatalog('catalogs/academic/nutricion-diagrama-r2.json'), true); }
   finally { await closeTestPool(catalogPool); }
   pool = createTestPool({ connectionString: urlFor(runtime, runtimePassword) });
   const credentials = createDemoCredentials();
   await prepareDemoAccounts(pool, credentials);
   const additional = createAcademicDemoAccounts();
   await prepareDemoStudentAccounts(pool, additional);
-  const plan = readCatalog('catalogs/academic/nutricion-2027-r1.json');
+  const plan = readCatalog('catalogs/academic/nutricion-diagrama-r2.json');
   await seedAcademicDemo(pool, plan.planId, plan.version, academicDemoStudents([credentials.find(c => c.role === 'estudiante')!, ...additional], plan));
   writeFileSync(credentialsFile, JSON.stringify(credentials), { mode: 0o600 });
   if (process.env.CENIT_E2E_RUNTIME === 'production') {
@@ -88,7 +90,7 @@ async function main() {
     // The child receives only runtime credentials; migration credentials are no longer needed.
   } else {
     rmSync(migrationFile, { force: true });
-    app = buildAcademicApp({ repository: new AcademicRepository(pool), purchases: new PurchaseRepository(pool), auth: {
+    app = buildAcademicApp({ purchaseCapabilities: { secondReviewEnabled: true, sheetsSyncEnabled: false }, repository: new AcademicRepository(pool), purchases: new PurchaseRepository(pool), auth: {
       service: new AuthService(new AuthRepository(pool)), config: { cookieSecure: false, allowedOrigins: ['http://127.0.0.1:5174'] },
     } });
     // Browser scenarios share one proxy IP. Only this disposable server gets a

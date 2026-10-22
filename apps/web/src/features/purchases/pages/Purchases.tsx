@@ -1,127 +1,207 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router';
-import { PlusIcon } from '@phosphor-icons/react/dist/csr/Plus';
 import { FunnelSimpleIcon } from '@phosphor-icons/react/dist/csr/FunnelSimple';
-import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass';
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/csr/ArrowUpRight';
-import { FlaskIcon } from '@phosphor-icons/react/dist/csr/Flask';
-import { useQuery } from '@tanstack/react-query';
-import { validatePurchaseListQuery, type PurchaseFilters, type ContractProblem } from '@cenit/contracts/purchases';
+import { UploadSimpleIcon } from '@phosphor-icons/react/dist/csr/UploadSimple';
+import { XIcon } from '@phosphor-icons/react/dist/csr/X';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { validatePurchaseListQuery, type PurchaseFilters, type PurchaseListQuery } from '@cenit/contracts/purchases';
 import { listPurchases } from '../api/purchases.js';
+import { usePurchaseCapabilities } from '../model/capabilities.js';
+import { SheetsSyncStatus } from '../components/SheetsSyncStatus.js';
 import { ValidateRecord } from '../components/ValidateRecord.js';
+import { PurchasePagination } from '../components/PurchasePagination.js';
+import { PurchaseSelect } from '../components/PurchaseSelect.js';
 import { dateLabel, amountLabel } from '../model/fields.js';
+import { periodRange, selectedPeriod } from '../model/list.js';
 import { DateField } from '../../../shared/components/DateField.js';
+import { useExitPresence } from '../../../shared/lib/use-exit-presence.js';
+import { PurchaseDateRangeField } from '../components/PurchaseDateRangeField.js';
 import '../records.css';
 
-function RequestTable({ state, title, filters, page, setPage, valid, searching, returnTo }: {
-  state: 'pending' | 'reviewed'; title: string; filters: PurchaseFilters; page: number; setPage: (page: number) => void; valid: boolean; searching: boolean; returnTo: string;
+const labels = { q: 'Buscar solicitudes', unitCode: 'Código de unidad', projectCode: 'Código de proyecto' };
+const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const currentSantiagoYear = () => new Intl.DateTimeFormat('en', { timeZone: 'America/Santiago', year: 'numeric' }).format(new Date());
+type ListView = Pick<PurchaseListQuery, 'sort' | 'pageSize'>;
+type FilterInput = { q: string; dateFrom: string; dateTo: string; unitCode: string; projectCode: string };
+type FilterChip = { key: keyof FilterInput | 'period'; label: string };
+function RequestTable({ state, title, filters, page, setPage, view, setPageSize, onYears, valid, searching, returnTo }: {
+  state: 'pending' | 'reviewed' | 'all'; title: string; filters: PurchaseFilters; page: number; setPage: (page: number) => void; valid: boolean; searching: boolean; returnTo: string;
+  view: ListView; setPageSize: (size: number) => void; onYears: (years: number[] | undefined) => void;
 }) {
-  const query = useQuery({ queryKey: ['purchases', 'list', state, filters, page], queryFn: ({ signal }) => listPurchases(state, page, signal, filters), enabled: valid && !searching });
-  const data = query.data;
+  const query = useQuery({ queryKey: ['purchases', 'list', state, filters, page, view], queryFn: ({ signal }) => listPurchases(state, page, signal, filters, view), enabled: valid, placeholderData: keepPreviousData });
+  const data = query.data, updating = searching || query.isFetching || query.isPlaceholderData;
   const heading = useRef<HTMLHeadingElement>(null);
-  return <section className="purchase-list" aria-label={title}>
-    <div className="purchase-list-heading"><h2 ref={heading} tabIndex={-1}>{title}</h2>{data && !query.isError && !searching && <><span className="purchase-count">{data.pagination.total} {data.pagination.total === 1 ? 'registro' : 'registros'}</span><span className="purchase-total">Total de solicitudes · CLP <strong>{amountLabel(data.totals.documentTotal)}</strong></span></>}</div>
-    {searching ? <p className="purchase-state" role="status">Buscando solicitudes…</p> : !valid ? <p className="purchase-state">Corrige los filtros para consultar las solicitudes.</p> : query.isPending ? <p className="purchase-state" role="status">Cargando solicitudes…</p> : query.isError ? <div className="purchase-state" role="alert"><p>{query.error.message}</p><button onClick={() => { void query.refetch(); }}>Reintentar</button></div> : data && <>
-      <div className="purchase-table-scroll" tabIndex={0} role="region" aria-label={`Tabla: ${title}`}><table>
-        <caption className="purchase-sr-only">{title}</caption><thead><tr><th scope="col">Nº Solicitud</th><th scope="col">Fecha</th><th scope="col">Detalle</th><th scope="col">Tipo de documento</th><th scope="col">Acciones</th></tr></thead>
-        <tbody>{!data.data.length && <tr><td colSpan={5} className="purchase-empty"><span>{!data.pagination.total && Object.keys(filters).length ? 'No hay solicitudes que coincidan con los filtros.' : 'No hay solicitudes en esta página.'}</span></td></tr>}{data.data.map(record => <tr key={record.id}><th scope="row">{record.requestNumber}</th><td>{dateLabel(record.sentDate)}</td><td className="purchase-description"><span>{record.description}</span>{record.source === 'image_capture' && <p className="purchase-origin-notice">Captura procesada y revisada</p>}{record.source === 'contract_example' && <p className="purchase-origin-notice">Ejemplo de demostración</p>}</td><td>{record.documentType ?? 'Sin dato'}</td><td className="purchase-row-actions">
-          <div className="purchase-row-actions__controls"><Link to={`/administracion/compras/${record.id}`} state={{ purchasesReturnTo: returnTo }}>Ver detalles<ArrowUpRightIcon size={14} aria-hidden="true" /></Link>
-          {state === 'pending' && <ValidateRecord id={record.id} version={record.version} requestNumber={record.requestNumber} fallbackFocus={heading} />}
-          </div>
-        </td></tr>)}</tbody>
+  const previousPage = useRef(`${page}:${view.pageSize}`);
+  const filterKey = JSON.stringify(filters), previousFilters = useRef(filterKey);
+  useEffect(() => { if (query.isError || query.isSuccess) onYears(query.isError ? undefined : data?.availableYears); }, [data?.availableYears, query.isError, query.isSuccess, onYears]);
+  useEffect(() => {
+    const current = `${page}:${view.pageSize}`;
+    if (updating || query.isError) return;
+    const filtersChanged = previousFilters.current !== filterKey;
+    previousFilters.current = filterKey;
+    if (previousPage.current === current) return;
+    previousPage.current = current;
+    if (filtersChanged) return;
+    heading.current?.focus({ preventScroll: true }); heading.current?.scrollIntoView({ block: 'start' });
+  }, [page, view.pageSize, updating, query.isError, filterKey]);
+  const actions = (record: NonNullable<typeof data>['data'][number]) => <div className="purchase-row-actions__controls"><Link to={`/administracion/compras/${record.id}`} aria-disabled={updating} onClick={event => { if (updating) event.preventDefault(); }} state={{ purchasesReturnTo: returnTo }}>Ver detalles<ArrowUpRightIcon size={16} aria-hidden="true" /></Link>{state === 'pending' && !updating && <ValidateRecord id={record.id} version={record.version} requestNumber={record.requestNumber} fallbackFocus={heading} />}</div>;
+  return <section className="purchase-list" aria-label={title} aria-busy={updating}>
+    <div className="purchase-list-heading"><h2 ref={heading} tabIndex={-1}>{title}</h2>{data && !query.isError && <><span className="purchase-count">{data.pagination.total} {data.pagination.total === 1 ? 'registro' : 'registros'}</span><span className="purchase-total">Total documental · CLP <strong>{amountLabel(data.totals.documentTotal)}</strong></span></>}</div>
+    {updating && <p className="purchase-updating" role="status">Actualizando resultados…</p>}
+    {!valid ? <p className="purchase-state">Corrige los filtros para consultar las compras.</p> : query.isPending ? <div className="purchase-list-skeleton" role="status">Cargando compras…<i /><i /><i /></div> : query.isError ? <div className="purchase-state" role="alert"><p>{query.error.message}</p><button onClick={() => { void query.refetch(); }}>Reintentar</button></div> : data && <>
+      {!data.data.length ? <div className="purchase-empty"><MagnifyingGlassIcon size={28} aria-hidden="true" /><h3>{page > 1 ? 'Esta página ya no tiene compras' : Object.keys(filters).length ? 'No encontramos compras con estos filtros' : 'Aún no hay compras registradas'}</h3><p>{page > 1 ? 'Vuelve al inicio del listado para ver los resultados disponibles.' : Object.keys(filters).length ? 'Prueba con otro período, número o código.' : 'Sube una captura o registra la primera compra manualmente.'}</p>{page > 1 && <button type="button" disabled={updating} onClick={() => setPage(1)}>Ir a la primera página</button>}</div> : <>
+      <div className="purchase-table-scroll" tabIndex={0} role="region" aria-label={`Tabla: ${title}`}><table><caption className="purchase-sr-only">{title}</caption><thead><tr><th scope="col">Nº Solicitud</th><th scope="col">Fecha de envío</th><th scope="col">Detalle</th><th scope="col">Tipo de documento</th><th scope="col" className="purchase-money">Monto · CLP</th><th scope="col">Acciones</th></tr></thead>
+        <tbody>{data.data.map(record => <tr key={record.id}><th scope="row" className="purchase-request-number">{record.requestNumber}</th><td className="purchase-sent-date" data-label="Fecha de envío">{dateLabel(record.sentDate)}</td><td className="purchase-description"><span>{record.description}</span><p className="purchase-origin-notice">{record.source === 'image_capture' ? 'Desde captura' : record.source === 'contract_example' ? 'Ejemplo de demostración' : 'Ingreso manual'}</p></td><td className="purchase-document-type" data-label="Documento">{record.documentType ?? 'Sin dato'}</td><td className="purchase-money">{amountLabel(record.totalAmount)}</td><td className="purchase-row-actions">{actions(record)}</td></tr>)}</tbody>
       </table></div>
-      <div className="purchase-pagination" aria-label={`Paginación: ${title}`}><button disabled={page === 1} onClick={() => setPage(page - 1)}>Anterior</button><span>Página {page}</span><button disabled={page * 20 >= data.pagination.total} onClick={() => setPage(page + 1)}>Siguiente</button></div>
+
+      </>}
+      <PurchasePagination title={title} page={page} pageSize={data.pagination.pageSize} total={data.pagination.total} updating={updating} setPage={setPage} setPageSize={setPageSize} />
     </>}
   </section>;
 }
+
 export function Purchases() {
+  const { secondReviewEnabled } = usePurchaseCapabilities();
   const [params, setParams] = useSearchParams(), location = useLocation();
-  const readInputs = () => ({ q: params.get('q') ?? '', dateFrom: params.get('dateFrom') ?? '', dateTo: params.get('dateTo') ?? '', unitCode: params.get('unitCode') ?? '', projectCode: params.get('projectCode') ?? '' });
-  const [inputs, setInputs] = useState(readInputs);
-  const searchNavigation = useRef<string | null>(null);
-  const [feedback, setFeedback] = useState('');
-  const filters = Object.fromEntries(Object.entries(readInputs()).filter(([, value]) => value !== '')) as PurchaseFilters;
-  const filterKey = JSON.stringify(filters);
-  const pendingFilters = Object.fromEntries(Object.entries({ ...inputs, q: inputs.q.trim() }).filter(([, value]) => value !== '')) as PurchaseFilters;
-  const unapplied = JSON.stringify(pendingFilters) !== filterKey;
-  const searchText = inputs.q.trim(), searching = searchText !== (filters.q ?? '');
-  const valid = validatePurchaseListQuery({ ...filters, reviewStatus: 'pending', page: 1, pageSize: 20 }).length === 0;
-  const returnTo = location.pathname + location.search;
-  const [problems, setProblems] = useState<ContractProblem[]>([]);
-  const [expanded, setExpanded] = useState(() => !!(params.get('unitCode') || params.get('projectCode')));
-  const form = useRef<HTMLFormElement>(null);
-  const filterLabels = { q: 'Buscar solicitudes', dateFrom: 'Enviado desde', dateTo: 'Enviado hasta', unitCode: 'Código de unidad', projectCode: 'Código de proyecto' };
-  useEffect(() => { if (problems.length) form.current?.querySelector<HTMLInputElement>('[aria-invalid="true"]')?.focus(); }, [problems]);
+  const readInputs = (): FilterInput => ({ q: params.get('q') ?? '', dateFrom: params.get('dateFrom') ?? '', dateTo: params.get('dateTo') ?? '', unitCode: params.get('unitCode') ?? '', projectCode: params.get('projectCode') ?? '' });
+  const [inputs, setInputs] = useState(readInputs), [touched, setTouched] = useState<string[]>([]);
+  const inferDateMode = (values: FilterInput) => selectedPeriod(values).year === 'custom' ? (values.dateFrom === values.dateTo ? 'exact' : 'range') : null;
+  const [dateMode, setDateMode] = useState<'exact' | 'range' | null>(() => inferDateMode(readInputs()));
+  const [expanded, setExpanded] = useState(() => params.has('unitCode') || params.has('projectCode') || selectedPeriod(readInputs()).year === 'custom');
+  const { mounted: filtersMounted, closing: filtersClosing } = useExitPresence(expanded);
+  const [availableYears, setAvailableYears] = useState<number[]>();
+  const [yearsUnavailable, setYearsUnavailable] = useState(false);
+  const [dateWarnings, setDateWarnings] = useState({ exact: '', range: '' });
+  const queryClient = useQueryClient();
+  const receiveYears = useCallback((years: number[] | undefined) => { setYearsUnavailable(!years); if (years) setAvailableYears(years); }, []);
+  const dateBounds = { minYear: availableYears?.length ? Math.min(...availableYears) : undefined, maxYear: availableYears?.length ? Math.max(...availableYears) : undefined, disabled: !availableYears?.length };
+  const dateWarning = dateMode ? dateWarnings[dateMode] : '';
+  const sort = params.get('sort') === 'sentDateAsc' ? 'sentDateAsc' : 'sentDateDesc';
+  const pageSize = [20, 50, 100].includes(Number(params.get('pageSize'))) ? Number(params.get('pageSize')) : 20;
+  const view: ListView = { sort, pageSize }, period = selectedPeriod(inputs);
+  const allYears = params.get('allYears') === '1', currentYear = currentSantiagoYear();
+  const selected = period.year || allYears ? period : { year: currentYear, month: '' };
+  const years = [...new Set([...(availableYears ?? []), ...(selected.year && selected.year !== 'custom' ? [Number(selected.year)] : [])])].sort((a, b) => b - a);
+  const resolveDefaultYear = (source: PurchaseFilters) => !allYears && !source.dateFrom && !source.dateTo ? { ...source, ...periodRange(currentYear) } : source;
+  const filters = Object.fromEntries(Object.entries(resolveDefaultYear(readInputs())).filter(([, value]) => value !== '')) as PurchaseFilters;
+  const pendingInputs = Object.fromEntries(Object.entries({ ...inputs, q: inputs.q.trim() }).filter(([, value]) => value !== '')) as PurchaseFilters;
+  const pending = Object.fromEntries(Object.entries(resolveDefaultYear(pendingInputs)).filter(([, value]) => value !== '')) as PurchaseFilters;
+  const visibleInputs = readInputs(), visiblePeriod = selectedPeriod(visibleInputs);
+  const hasNonDefaultQuickPeriod = allYears || (!!visiblePeriod.year && visiblePeriod.year !== currentYear) || !!visiblePeriod.month;
+  const activeFilters: FilterChip[] = (['q', 'unitCode', 'projectCode'] as const).flatMap(key => visibleInputs[key] ? [{ key, label: key === 'q' ? visibleInputs.q : `${labels[key]}: ${visibleInputs[key]}` }] : []);
+  if (visiblePeriod.year === 'custom') {
+    if (visibleInputs.dateFrom && visibleInputs.dateTo && visibleInputs.dateFrom === visibleInputs.dateTo) {
+      activeFilters.push({ key: 'period', label: `Fecha de envío: ${dateLabel(visibleInputs.dateFrom)}` });
+    } else if (visibleInputs.dateFrom || visibleInputs.dateTo) {
+      const from = visibleInputs.dateFrom ? dateLabel(visibleInputs.dateFrom) : 'dd/mm/aaaa';
+      const to = visibleInputs.dateTo ? dateLabel(visibleInputs.dateTo) : 'dd/mm/aaaa';
+      activeFilters.push({ key: 'period', label: `Rango de fechas: ${from} – ${to}` });
+    }
+  }
+  const filterKey = JSON.stringify(filters), pendingKey = JSON.stringify(pending), ownNavigation = useRef<string | null>(null);
+  const errors = validatePurchaseListQuery({ ...pending, reviewStatus: 'all', page: 1, pageSize: 20 });
+  if (dateWarning) errors.unshift({ path: '/dateFrom', message: dateWarning });
+  if (dateMode === 'range' && (!!inputs.dateFrom !== !!inputs.dateTo) && !errors.length) errors.push({ path: inputs.dateFrom ? '/dateTo' : '/dateFrom', message: 'Completa ambas fechas del rango.' });
+  const valid = validatePurchaseListQuery({ ...filters, reviewStatus: 'all', page: 1, pageSize: 20 }).length === 0;
+  const changed = pendingKey !== filterKey, returnTo = location.pathname + location.search;
   useEffect(() => {
-    if (searchNavigation.current === params.toString()) { searchNavigation.current = null; return; }
-    searchNavigation.current = null;
-    const values = readInputs(); setInputs(values);
-    const errors = validatePurchaseListQuery({ ...filters, reviewStatus: 'pending', page: 1, pageSize: 20 });
-    setProblems(errors);
-    if (values.unitCode || values.projectCode) setExpanded(true);
-  }, [filterKey]);
+    if (ownNavigation.current === params.toString()) { ownNavigation.current = null; return; }
+    ownNavigation.current = null; setInputs(readInputs()); setDateMode(inferDateMode(readInputs())); setDateWarnings({ exact: '', range: '' }); setTouched([]);
+  }, [filterKey, currentYear]);
   useEffect(() => {
-    if (!searching) return;
-    const nextFilters = { ...filters };
-    if (searchText) nextFilters.q = searchText; else delete nextFilters.q;
-    if (validatePurchaseListQuery({ ...nextFilters, reviewStatus: 'pending', page: 1, pageSize: 20 }).length) return;
+    if (!changed || errors.length) return;
     const timer = window.setTimeout(() => {
-      const next = new URLSearchParams(params);
-      if (searchText) next.set('q', searchText); else next.delete('q');
-      next.delete('pendingPage'); next.delete('reviewedPage');
-      // Preserve unfinished date/code inputs when only the live search changes the URL.
-      searchNavigation.current = next.toString();
-      setParams(next, { replace: true });
+      const next = new URLSearchParams(Object.entries({ ...pendingInputs, ...(sort === 'sentDateAsc' ? { sort } : {}), ...(pageSize !== 20 ? { pageSize: String(pageSize) } : {}) }).map(([key, value]) => [key, String(value)]));
+      if (allYears && !pendingInputs.dateFrom && !pendingInputs.dateTo) next.set('allYears', '1');
+      ownNavigation.current = next.toString(); setParams(next, { replace: true });
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [searchText, filterKey, location.search]);
-  useEffect(() => { setFeedback(''); }, [location.search]);
-  function apply(next: PurchaseFilters) {
-    setInputs({ q: next.q ?? '', dateFrom: next.dateFrom ?? '', dateTo: next.dateTo ?? '', unitCode: next.unitCode ?? '', projectCode: next.projectCode ?? '' });
-    setProblems([]);
-    if (JSON.stringify(next) === filterKey && page('pending') === 1 && page('reviewed') === 1) {
-      setFeedback(Object.keys(next).length ? 'Los filtros no han cambiado' : 'Ingresa al menos un filtro para acotar la búsqueda');
+  }, [pendingKey, filterKey, changed, errors.length, sort, pageSize, allYears]);
+  function remove(field?: FilterChip['key']) {
+    if (!field) {
+      setInputs({ q: '', dateFrom: '', dateTo: '', unitCode: '', projectCode: '' }); setDateMode(null); setDateWarnings({ exact: '', range: '' }); setTouched([]);
+      setParams(previous => {
+        const next = new URLSearchParams(previous);
+        for (const key of ['q', 'dateFrom', 'dateTo', 'unitCode', 'projectCode', 'allYears', 'page', 'pendingPage', 'reviewedPage']) next.delete(key);
+        ownNavigation.current = next.toString(); return next;
+      }, { replace: true });
       return;
     }
-    setFeedback('');
-    setParams(new URLSearchParams(Object.entries(next).map(([key, value]) => [key, String(value)])));
+    if (field === 'period') { setInputs(previous => ({ ...previous, dateFrom: '', dateTo: '' })); setDateMode(null); }
+    else setInputs(previous => ({ ...previous, [field]: '' }));
+    setTouched([]);
   }
-  function page(state: 'pending' | 'reviewed') {
-    const value = Number(params.get(`${state}Page`) ?? 1);
-    return Number.isSafeInteger(value) && value > 0 ? value : 1;
+  function setView(key: 'sort' | 'pageSize', value: string) {
+    setParams(previous => {
+      const next = new URLSearchParams(previous);
+      for (const pageKey of ['page', 'pendingPage', 'reviewedPage']) next.delete(pageKey);
+      if (value === (key === 'sort' ? 'sentDateDesc' : '20')) next.delete(key); else next.set(key, value);
+      return next;
+    }, { replace: true });
   }
-  function setPage(state: 'pending' | 'reviewed', value: number) {
-    setParams(previous => { const next = new URLSearchParams(previous); if (value === 1) next.delete(`${state}Page`); else next.set(`${state}Page`, String(value)); return next; });
+  function setPeriod(year: string, month = '') {
+    setInputs(previous => ({ ...previous, ...periodRange(year, month) })); setDateMode(null); setDateWarnings({ exact: '', range: '' }); setTouched([]);
+    if (!year) setParams(previous => {
+      const next = new URLSearchParams(previous);
+      next.delete('dateFrom'); next.delete('dateTo'); next.set('allYears', '1');
+      for (const pageKey of ['page', 'pendingPage', 'reviewedPage']) next.delete(pageKey);
+      ownNavigation.current = next.toString(); return next;
+    }, { replace: true });
   }
-  function filterInput(field: keyof typeof inputs) {
-    const id = `purchase-filter-${field}`, error = problems.find(problem => problem.path === `/${field}`);
-    return <div className="purchase-input" key={field}><label htmlFor={id}>{filterLabels[field]}</label>
-      <div className={field === 'q' ? 'purchase-search-input' : undefined}>{field === 'q' && <MagnifyingGlassIcon size={16} aria-hidden="true" />}
-        {field.startsWith('date') ? <DateField id={id} label={filterLabels[field]} value={inputs[field]} aria-invalid={!!error} aria-describedby={error ? `${id}-error` : undefined}
-          onValueChange={value => { setInputs(previous => ({ ...previous, [field]: value })); setProblems([]); setFeedback(''); }} />
-          : <input id={id} type="text" value={inputs[field]} placeholder={field === 'q' ? 'Número, descripción o proveedor' : undefined} maxLength={field === 'q' ? 100 : 255} aria-invalid={!!error} aria-describedby={error ? `${id}-error` : undefined}
-            onChange={event => { setInputs(previous => ({ ...previous, [field]: event.target.value })); setProblems([]); setFeedback(''); }} />}</div>
-      {error && <p role="alert" className="purchase-field-error" id={`${id}-error`}>{error.message}</p>}
+  function input(field: 'q' | 'unitCode' | 'projectCode') {
+    const id = `purchase-filter-${field}`, error = touched.includes(field) ? errors.find(problem => problem.path === `/${field}`) : undefined;
+    const props = { id, value: inputs[field], 'aria-invalid': !!error, 'aria-describedby': error ? `${id}-error` : undefined, onBlur: () => setTouched(previous => previous.includes(field) ? previous : [...previous, field]) };
+    return <div className="purchase-input" key={field}><label htmlFor={id} className={field === 'q' ? 'purchase-sr-only' : undefined}>{labels[field]}</label><div className={field === 'q' ? 'purchase-search-input' : undefined}>{field === 'q' && <MagnifyingGlassIcon size={18} aria-hidden="true" />}
+      <input {...props} type="text" placeholder={field === 'q' ? 'Número, descripción o proveedor' : undefined} maxLength={field === 'q' ? 100 : 255} onChange={event => setInputs(previous => ({ ...previous, [field]: event.target.value }))} />
+    </div>{error && <p role="alert" className="purchase-field-error" id={`${id}-error`}>{error.message}</p>}</div>;
+  }
+  const dateProblem = errors.find(problem => problem.path === '/dateFrom' || problem.path === '/dateTo');
+  const dateError = dateWarning ? { message: dateWarning } : touched.includes('dateFrom') || touched.includes('dateTo') || [inputs.dateFrom, inputs.dateTo].some(value => value.length === 10 && !value.includes('_')) ? dateProblem : undefined;
+  const exactDate = dateMode === 'exact' ? inputs.dateFrom : '';
+  const rangeFrom = dateMode === 'range' ? inputs.dateFrom : '';
+  const rangeTo = dateMode === 'range' ? inputs.dateTo : '';
+
+  function exactDateField() {
+    const id = 'purchase-filter-exact-date';
+    const exactError = dateError && dateMode === 'exact' ? dateError : undefined;
+    return <div className="purchase-input purchase-input--exact-date" key="exactDate"><label htmlFor={id}>Fecha de envío</label><DateField {...dateBounds} closeOnSelect={false} onValidationError={message => setDateWarnings(previous => ({ ...previous, exact: message }))} id={id} label="Fecha de envío" value={exactDate}
+      aria-invalid={!!exactError || undefined} aria-describedby={exactError ? `${id}-error` : undefined}
+      onValueChange={date => { setDateMode('exact'); setInputs(previous => ({ ...previous, dateFrom: date, dateTo: date })); setTouched([]); }}
+      onBlur={() => setTouched(previous => [...new Set([...previous, 'dateFrom', 'dateTo'])])} />
+      {exactError && <p role="alert" className="purchase-field-error" id={`${id}-error`}>{exactError.message}</p>}
     </div>;
   }
-  return <section className="purchase-records"><div className="purchase-page-heading"><div><h1>Sistema de compra</h1><p>Solicitudes registradas</p></div><div className="purchase-heading-actions"><Link className="purchase-secondary-link" to="/administracion/compras/laboratorio" state={{ purchasesReturnTo: returnTo }}><FlaskIcon size={15} aria-hidden="true" />Revisar ejemplo</Link><Link className="admin-primary" to="/administracion/compras/captura" state={{ purchasesReturnTo: returnTo }}>Subir captura</Link><Link className="admin-primary" to="/administracion/compras/nueva" state={{ purchasesReturnTo: returnTo }}><PlusIcon size={16} aria-hidden="true" />Nueva solicitud</Link></div></div>
-    <form ref={form} className="purchase-filters" noValidate aria-label="Filtros de solicitudes" onSubmit={event => {
-      event.preventDefault();
-      const next = pendingFilters;
-      const errors = validatePurchaseListQuery({ ...next, reviewStatus: 'pending', page: 1, pageSize: 20 });
-      setProblems(errors);
-      if (errors.some(error => error.path === '/unitCode' || error.path === '/projectCode')) setExpanded(true);
-      if (!errors.length) apply(next);
-    }}>
-      <p className="purchase-filter-help">La búsqueda se actualiza al escribir. Usa Aplicar filtros para fechas y códigos.</p>
-      <div className="purchase-filter-grid">{filterInput('q')}{filterInput('dateFrom')}{filterInput('dateTo')}</div>
-      <div id="purchase-more-filters" className="purchase-filter-extra" hidden={!expanded}><div className="purchase-input-grid">{filterInput('unitCode')}{filterInput('projectCode')}</div><p>Unidad y proyecto del mismo ítem.</p></div>
-      <div className="purchase-filter-actions"><button className="purchase-filter-toggle" type="button" aria-expanded={expanded} aria-controls="purchase-more-filters" onClick={() => setExpanded(value => !value)}>Más filtros<CaretDownIcon size={14} aria-hidden="true" />{(inputs.unitCode || inputs.projectCode) && <span className="purchase-filter-dot" aria-label="Hay códigos ingresados" />}</button><div><button type="submit"><FunnelSimpleIcon size={14} aria-hidden="true" />Aplicar filtros</button><button type="button" onClick={() => { apply({}); }}>Limpiar</button></div></div>
-      <p className={`purchase-filter-feedback${unapplied && !searching ? ' purchase-filter-feedback--pending' : ''}`} role="status" aria-atomic="true">{searching ? 'Buscando solicitudes…' : unapplied ? 'Cambios por aplicar' : !problems.length ? feedback : ''}</p>
-      {Object.keys(filters).length > 0 && <p className="purchase-applied-filters">{Object.keys(filters).length} {Object.keys(filters).length === 1 ? 'filtro aplicado' : 'filtros aplicados'} · Pendientes y validados</p>}
+
+  function dateRangeField() {
+    const id = 'purchase-filter-date-range';
+    const rangeError = dateError && dateMode === 'range' ? dateError : undefined;
+    return <div className="purchase-input purchase-input--date-range" key="dateRange"><label htmlFor={id}>Rango de fechas</label><PurchaseDateRangeField {...dateBounds} onValidationError={message => setDateWarnings(previous => ({ ...previous, range: message }))} id={id}
+      from={rangeFrom} to={rangeTo}
+      invalid={!!rangeError} describedBy={rangeError ? `${id}-error` : undefined}
+      onValueChange={(dateFrom, dateTo) => { setDateMode('range'); setInputs(previous => ({ ...previous, dateFrom, dateTo })); setTouched([]); }}
+      onBlur={() => setTouched(previous => [...new Set([...previous, 'dateFrom', 'dateTo'])])} />
+      {rangeError && <p role="alert" className="purchase-field-error" id={`${id}-error`}>{rangeError.message}</p>}
+    </div>;
+  }
+  function page(state: 'pending' | 'reviewed' | 'all') { const value = Number(params.get(state === 'all' ? 'page' : `${state}Page`) ?? 1); return Number.isSafeInteger(value) && value > 0 ? value : 1; }
+  function setPage(state: 'pending' | 'reviewed' | 'all', value: number) { setParams(previous => { const next = new URLSearchParams(previous), key = state === 'all' ? 'page' : `${state}Page`; if (value === 1) next.delete(key); else next.set(key, String(value)); return next; }); }
+  return <section className="purchase-records"><div className="purchase-page-heading"><div><p className="admin-section-label">Compras</p><h1>Registro de compras</h1><p>Compras aprobadas en Oracle, conservadas en Cenit.</p></div><div className="purchase-heading-actions">
+    <Link className="admin-button" to="/administracion/compras/nueva" state={{ purchasesReturnTo: returnTo }}>Registrar manualmente</Link><Link className="admin-primary" to="/administracion/compras/captura" state={{ purchasesReturnTo: returnTo }}><UploadSimpleIcon size={18} aria-hidden="true" />Subir captura</Link>
+  </div></div><SheetsSyncStatus />
+    <form className="purchase-filters" noValidate aria-label="Filtros de solicitudes" onSubmit={event => event.preventDefault()}>
+      <div className="purchase-search-bar">{input('q')}
+        <div className="purchase-inline-select purchase-select-year"><PurchaseSelect label="Año de envío" placeholder="Año" value={selected.year} onValueChange={value => setPeriod(value, selected.month)} options={[{ value: '', label: 'Todos los años' }, ...(selected.year === 'custom' ? [{ value: 'custom', label: 'Rango personalizado', disabled: true }] : []), ...years.map(year => ({ value: String(year).padStart(4, '0'), label: String(year) }))]} /></div>
+        <div className="purchase-inline-select purchase-select-month"><PurchaseSelect label="Mes de envío" placeholder="Mes" value={selected.month} disabled={!selected.year || selected.year === 'custom'} onValueChange={value => setPeriod(selected.year, value)} options={[{ value: '', label: 'Todos los meses' }, ...months.map((month, index) => ({ value: String(index + 1).padStart(2, '0'), label: month }))]} /></div>
+        <div className="purchase-inline-select purchase-sort"><PurchaseSelect label="Ordenar por fecha de envío" value={sort} onValueChange={value => setView('sort', value)} options={[{ value: 'sentDateDesc', label: 'Más recientes' }, { value: 'sentDateAsc', label: 'Más antiguas' }]} /></div>
+        <button className="purchase-filter-toggle" type="button" aria-expanded={expanded} aria-controls={filtersMounted ? 'purchase-more-filters' : undefined} onClick={() => setExpanded(value => !value)}><FunnelSimpleIcon size={18} aria-hidden="true" />Más filtros{activeFilters.filter(filter => filter.key !== 'q').length > 0 && <span className="purchase-count">{activeFilters.filter(filter => filter.key !== 'q').length}</span>}</button>
+        <button disabled={!(hasNonDefaultQuickPeriod || activeFilters.length > 0 || changed || dateWarning)} className="purchase-clear-period" type="button" onClick={() => remove()}>Limpiar</button>
+      </div>
+      {filtersMounted && <div id="purchase-more-filters" className={`purchase-filter-extra${filtersClosing ? ' purchase-filter-extra--closing' : ''}`} aria-hidden={filtersClosing || undefined} inert={filtersClosing || undefined}><div className="purchase-filter-extra__clip"><div className="purchase-filter-extra__content"><div className="purchase-filter-grid">{exactDateField()}{dateRangeField()}{input('unitCode')}{input('projectCode')}</div></div></div></div>}
+      {expanded && !availableYears?.length && <p className="purchase-filter-feedback">{yearsUnavailable ? 'No se pudieron cargar los años del historial.' : availableYears ? 'Las fechas estarán disponibles cuando haya compras registradas.' : 'Cargando años del historial…'}{yearsUnavailable && <button type="button" onClick={() => { void queryClient.invalidateQueries({ queryKey: ['purchases', 'list'] }); }}>Reintentar</button>}</p>}
+      {!expanded && activeFilters.some(filter => filter.key !== 'q') && <div className="purchase-filter-chips" aria-label="Filtros activos">{activeFilters.filter(filter => filter.key !== 'q').map(filter => <button type="button" key={filter.key} aria-label={`Quitar filtro: ${filter.label}`} onClick={() => remove(filter.key)}>{filter.label}<XIcon size={14} aria-hidden="true" /></button>)}</div>}
     </form>
-    <RequestTable state="pending" title="Pendientes de validación" filters={filters} page={page('pending')} setPage={value => setPage('pending', value)} valid={valid} searching={searching} returnTo={returnTo} />
-    <RequestTable state="reviewed" title="Registros validados" filters={filters} page={page('reviewed')} setPage={value => setPage('reviewed', value)} valid={valid} searching={searching} returnTo={returnTo} />
+    {(secondReviewEnabled ? [{ state: 'pending' as const, title: 'Por revisar en Cenit' }, { state: 'reviewed' as const, title: 'Revisados en Cenit' }] : [{ state: 'all' as const, title: 'Compras registradas' }]).map(list => <RequestTable key={list.state} {...list} filters={filters} page={page(list.state)} setPage={value => setPage(list.state, value)} view={view} setPageSize={size => setView('pageSize', String(size))} onYears={receiveYears} valid={valid} searching={changed && !errors.length} returnTo={returnTo} />)}
   </section>;
 }

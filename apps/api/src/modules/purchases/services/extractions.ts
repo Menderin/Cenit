@@ -26,7 +26,9 @@ export function httpExtractionProcessor(url: string): ExtractionProcessor {
     if (!response.ok) {
       const known = body as { code?: string };
       const codes: Record<string, number> = { INVALID_IMAGE: 422, IMAGE_DIMENSIONS_EXCEEDED: 422, EXTRACTION_NO_DATA: 422, UNSUPPORTED_CAPTURE_LAYOUT: 422, UNSUPPORTED_MEDIA_TYPE: 415, PAYLOAD_TOO_LARGE: 413, EXTRACTION_UNAVAILABLE: 503 };
-      if (known && typeof known.code === 'string' && codes[known.code]) throw new ApiError(codes[known.code]!, known.code, known.code === 'UNSUPPORTED_CAPTURE_LAYOUT' ? 'La imagen no tiene el formato esperado. Sube una captura de la solicitud de compra.' : 'No fue posible procesar la captura. Revisa el archivo o reintenta.');
+      if (known && typeof known.code === 'string' && codes[known.code]) throw new ApiError(codes[known.code]!, known.code,
+        known.code === 'EXTRACTION_UNAVAILABLE' ? 'El procesador está ocupado o no está disponible. Reintenta en unos instantes.'
+          : known.code === 'UNSUPPORTED_CAPTURE_LAYOUT' ? 'La imagen no tiene el formato esperado. Sube una captura de la solicitud de compra.' : 'No fue posible procesar la captura. Revisa el archivo o reintenta.');
       throw new Error('Respuesta OCR inválida.');
     }
     return body;
@@ -43,7 +45,7 @@ export class ExtractionService {
       if (!Value.Check(ExtractionResponseSchema, data) || validateExtractionResponse(data).length || !data.data.captureLayout || data.data.origin ||
         data.data.input.bytes !== image.length || data.data.input.name !== name || data.data.input.mimeType !== mime) throw new Error('Salida OCR inválida.');
       data.data.extractionId = randomUUID();
-      data.data.origin = this.receipts.issue({ type: 'image_capture', extractionId: data.data.extractionId, processorVersion: 'ppocr5-latin-grid8-layout-v3', processedAt: new Date().toISOString() }, accountId);
+      data.data.origin = this.receipts.issue({ type: 'image_capture', extractionId: data.data.extractionId, processorVersion: data.data.regions ? 'ppocr5-latin-grid8-layout-v4' : 'ppocr5-latin-grid8-layout-v3', processedAt: new Date().toISOString() }, accountId);
       if (validateExtractionResponse(data).length) throw new Error('Salida OCR inválida.');
       return data;
     } catch (error) {

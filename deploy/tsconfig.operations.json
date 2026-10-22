@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "paths": {},
+    "rootDir": "..",
+    "outDir": "../dist/operations",
+    "declaration": false
+  },
+  "include": ["../db/seeds/load-academic.ts"],
+  "exclude": ["../**/*.test.ts"]
+}

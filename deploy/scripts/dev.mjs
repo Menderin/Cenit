@@ -37,12 +37,12 @@ function start(name, args, cwd, env) {
   });
   return child;
 }
-async function prepareAccounts(env) {
+async function runStep(args, env, failure) {
   await new Promise((done, reject) => {
-    const child = spawn(process.execPath, ['--import', 'tsx', 'db/seeds/auth-demo.ts'], { cwd: root, env, stdio: ['ignore', 'inherit', 'inherit'] });
+    const child = spawn(process.execPath, args, { cwd: root, env, stdio: ['ignore', 'inherit', 'inherit'] });
     children.push(child);
-    child.once('error', () => reject(new Error('No se pudo preparar las cuentas locales.')));
-    child.once('exit', code => code === 0 ? done() : reject(new Error('Preparación de cuentas fallida. Revisa las claves privadas existentes y .env; no se cambian contraseñas automáticamente.')));
+    child.once('error', () => reject(new Error(failure)));
+    child.once('exit', code => code === 0 ? done() : reject(new Error(failure)));
   });
 }
 async function freePort(port) {
@@ -86,16 +86,29 @@ async function main() {
     DATABASE_URL_FILE: databaseFile, AUTH_COOKIE_SECURE: 'false',
     AUTH_ALLOWED_ORIGINS: 'http://127.0.0.1:5173,http://127.0.0.1:3000',
     CENIT_API_PROXY: 'http://127.0.0.1:3000' };
-  for (const key of ['OCR_URL', 'CAPTURE_RECEIPT_KEY_FILE']) if (local[key]) env[key] = local[key];
+  for (const key of ['OCR_URL', 'CAPTURE_RECEIPT_KEY_FILE', 'CENIT_PURCHASE_SECOND_REVIEW_ENABLED', 'CENIT_PURCHASE_SHEETS_SYNC_ENABLED', 'CENIT_PURCHASE_SHEETS_ID', 'CENIT_PURCHASE_SHEETS_KEY_FILE']) if (local[key]) env[key] = local[key];
+  if (env.OCR_URL) {
+    try {
+      const response = await fetch(`${env.OCR_URL.replace(/\/$/, '')}/health/live`, { signal: AbortSignal.timeout(3000) });
+      if (!response.ok || (await response.json()).status !== 'live') throw new Error('ocr-not-ready');
+    } catch {
+      throw new Error('OCR_URL está configurado pero el procesador no responde. Inicia el OCR local con docker compose --profile ocr up -d --build ocr y vuelve a ejecutar npm run dev.');
+    }
+  }
   const passwordKeys = ['CENIT_DEMO_DOCENTE_PASSWORD', 'CENIT_DEMO_ESTUDIANTE_PASSWORD', 'CENIT_DEMO_ADMINISTRATIVO_PASSWORD'];
   const passwords = Object.fromEntries(passwordKeys.map(key => [key, local[key] ?? process.env[key] ?? '']));
   if (passwordKeys.some(key => passwords[key].length < 12 || passwords[key].length > 128)) throw new Error('Configura las tres CENIT_DEMO_*_PASSWORD en el .env privado (12–128 caracteres).');
   console.log('Preparando/verificando las tres cuentas locales de demo…');
-  await prepareAccounts({ ...env, ...passwords, APP_ENV: 'demo' });
+  await runStep(['--import', 'tsx', 'db/seeds/auth-demo.ts'], { ...env, ...passwords, APP_ENV: 'demo' }, 'Preparación de cuentas fallida. Revisa las claves privadas existentes y .env; no se cambian contraseñas automáticamente.');
   if (stopping) return;
   for (const key of passwordKeys) delete env[key];
+  const contracts = [resolve(root, 'node_modules/typescript/bin/tsc'), '-p', 'packages/contracts/tsconfig.build.json'];
+  console.log('Compilando contratos compartidos…');
+  await runStep(contracts, env, 'No se pudieron compilar los contratos compartidos. Corrige los errores antes de iniciar el API.');
+  if (stopping) return;
+  start('Contratos', [...contracts, '--watch', '--preserveWatchOutput'], root, env);
   console.log('Iniciando API local en http://127.0.0.1:3000…');
-  start('API', ['--import', 'tsx', 'apps/api/src/server.ts'], root, env);
+  start('API', ['--watch', '--watch-preserve-output', '--import', 'tsx', 'apps/api/src/server.ts'], root, env);
   let ready = false;
   for (let i = 0; i < 100 && !stopping; i++) {
     try {

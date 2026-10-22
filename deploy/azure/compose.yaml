@@ -48,6 +48,21 @@ services:
     mem_limit: 384m
     restart: 'no'
     logging: *logging
+  catalog:
+    profiles: [catalog]
+    image: ${CENIT_APP_IMAGE:?}
+    entrypoint: [node, /app/operations/db/seeds/load-academic.js]
+    command: [--check]
+    environment:
+      APP_ENV: demo
+      DATABASE_URL_FILE: /run/secrets/migrator-url
+    secrets: [migrator-url]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 384m
+    restart: 'no'
+    logging: *logging
   app:
     image: ${CENIT_APP_IMAGE:?}
     environment:

@@ -2,12 +2,14 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { TrashIcon } from '@phosphor-icons/react/dist/csr/Trash';
 import { toast } from 'sonner';
+import { usePurchaseCapabilities } from '../model/capabilities.js';
 import { deletePurchase } from '../api/purchases.js';
 import { ContextualConfirm } from '../../../shared/components/ContextualConfirm.js';
 
 export function DeleteRecord({ id, version, requestNumber, fallbackFocus, onDeleted }: {
   id: string; version: number; requestNumber: string; fallbackFocus: RefObject<HTMLElement | null>; onDeleted?: () => void;
 }) {
+  const { sheetsSyncEnabled } = usePurchaseCapabilities();
   const [confirming, setConfirming] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null), selected = useRef({ id, version });
   const sending = useRef(false), active = useRef(true);
@@ -35,7 +37,7 @@ export function DeleteRecord({ id, version, requestNumber, fallbackFocus, onDele
     event.currentTarget.focus({ preventScroll: true }); selected.current = { id, version }; mutation.reset(); setConfirming(true);
   }}><TrashIcon size={16} aria-hidden="true" /></button>
     <ContextualConfirm open={confirming} origin={trigger.current} fallbackFocus={fallbackFocus} title={`¿Eliminar ${requestNumber}?`}
-      description="Se eliminarán definitivamente esta copia de Cenit y todos sus ítems. Esta acción no se puede deshacer."
+      description={`Se eliminarán definitivamente esta copia de Cenit y todos sus ítems.${sheetsSyncEnabled ? ' También se retirará su copia de Google Sheets cuando se complete la sincronización.' : ''} Esta acción no se puede deshacer.`}
       caution confirmLabel="Eliminar registro" cancelLabel="Cancelar" busy={mutation.isPending} busyLabel="Eliminando…"
       onConfirm={() => {
         if (sending.current || !confirming) return;
