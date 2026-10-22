@@ -201,10 +201,37 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     expect(list.statusCode).toBe(200); expect(list.json().data).toHaveLength(1); expect(list.json().pagination.total).toBeGreaterThan(1);
     expect((await request('GET', '/api/v1/purchases?reviewStatus=paid')).statusCode).toBe(400);
     expect((await request('GET', '/api/v1/purchases?reviewStatus=pending&pageSize=101')).statusCode).toBe(400);
+    expect((await request('GET', '/api/v1/purchases?reviewStatus=all&sort=unknown')).statusCode).toBe(400);
     expect((await request('GET', `/api/v1/purchases/${randomUUID()}`)).statusCode).toBe(404);
     const invalid = body(); invalid.header.sentDate = '2026-02-30';
     const response = await request('POST', '/api/v1/purchases', invalid);
     expect(response.statusCode).toBe(400); expect(response.body).not.toMatch(/SELECT|INSERT|stack|password_hash/); expect(response.json().error.requestId).toBeTruthy();
+  });
+  it('ordena todo el historial antes de paginar y conserva los años disponibles al filtrar', async () => {
+    const prefix = `HISTORY-${randomUUID()}`;
+    for (const date of ['2023-12-31', '2024-02-01', '2024-02-29', '2024-03-01', '2026-01-01']) {
+      const input = body(); input.header.requestNumber = prefix; input.header.sentDate = date;
+      expect((await request('POST', '/api/v1/purchases', input)).statusCode).toBe(201);
+    }
+    const query = `/api/v1/purchases?reviewStatus=all&q=${prefix}&pageSize=1`;
+    const recent = (await request('GET', query)).json();
+    expect(recent.data[0].sentDate).toBe('2026-01-01');
+    expect(recent.availableYears).toEqual(expect.arrayContaining([2026, 2024, 2023]));
+    const oldest = (await request('GET', `${query}&sort=sentDateAsc`)).json();
+    expect(oldest.data[0].sentDate).toBe('2023-12-31');
+    expect((await request('GET', `${query}&sort=sentDateAsc&page=2`)).json().data[0].sentDate).toBe('2024-02-01');
+    const february = (await request('GET', `${query}&dateFrom=2024-02-01&dateTo=2024-02-29&sort=sentDateAsc`)).json();
+    expect(february.pagination.total).toBe(2);
+    expect(february.data[0].sentDate).toBe('2024-02-01');
+    expect(february.availableYears).toEqual(recent.availableYears);
+    const empty = (await request('GET', `${query}&dateFrom=2025-01-01&dateTo=2025-12-31`)).json();
+    expect(empty.pagination.total).toBe(0); expect(empty.availableYears).toEqual(recent.availableYears);
+    for (const sort of ['sentDateAsc', 'sentDateDesc']) {
+      const first = (await request('GET', `${query}&sort=${sort}&dateFrom=2024-02-01&dateTo=2024-02-29`)).json();
+      const second = (await request('GET', `${query}&sort=${sort}&dateFrom=2024-02-01&dateTo=2024-02-29&page=2`)).json();
+      expect(first.data[0].id).not.toBe(second.data[0].id);
+      expect(first.totals).toEqual(second.totals);
+    }
   });
   it('resumen persistente suma cabeceras una vez y refleja altas, revisión y eliminación con montos exactos', async () => {
     expect(await new PurchaseRepository(pools[1]!).summary()).toMatchObject({ data: { requests: 1, pending: 1, pendingAmount: historical.header.totalAmount } });

@@ -57,6 +57,7 @@ export const PurchaseFiltersSchema = object({
 });
 export type PurchaseFilters = Static<typeof PurchaseFiltersSchema>;
 export const PurchaseListQuerySchema = object({ ...PurchaseFiltersSchema.properties, reviewStatus: Type.Union([Type.Literal('pending'), Type.Literal('reviewed'), Type.Literal('all')]),
+  sort: Type.Optional(Type.Union([Type.Literal('sentDateDesc'), Type.Literal('sentDateAsc')])),
   page: Type.Integer({ minimum: 1, maximum: 1000000 }), pageSize: Type.Integer({ minimum: 1, maximum: 100 }) });
 export type PurchaseListQuery = Static<typeof PurchaseListQuerySchema>;
 const actor = object({ id: uuid, name: Type.String({ minLength: 1, maxLength: 200 }) });
@@ -74,6 +75,7 @@ export const PurchaseListResponseSchema = object({ data: Type.Array(object({
   source: PurchaseRecordSchema.properties.source, exampleId: PurchaseRecordSchema.properties.exampleId,
   capture: PurchaseRecordSchema.properties.capture,
 })), pagination: object({ page: Type.Integer({ minimum: 1 }), pageSize: Type.Integer({ minimum: 1, maximum: 100 }), total: Type.Integer({ minimum: 0 }) }),
+  availableYears: Type.Optional(Type.Array(Type.Integer({ minimum: 1, maximum: 9999 }), { uniqueItems: true })),
   totals: object({ currency: Type.Literal('CLP'), documentTotal: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }) }) });
 export type PurchaseListResponse = Static<typeof PurchaseListResponseSchema>;
 export function validatePurchaseListQuery(input: unknown): ContractProblem[] {

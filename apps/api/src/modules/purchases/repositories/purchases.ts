@@ -129,11 +129,14 @@ export class PurchaseRepository {
       if (codes.length) predicates.push(`EXISTS (SELECT 1 FROM cenit.purchase_request_lines l WHERE l.request_id=p.id AND ${codes.join(' AND ')})`);
       const where = predicates.join(' AND ');
       // EXISTS preserves one row per request. Both statements share this transaction's snapshot.
-      const count = await db.query(`SELECT count(*)::int AS total,coalesce(sum(p.total_amount),0)::text AS amount FROM cenit.purchase_requests p WHERE ${where}`, values);
+      const count = await db.query(`SELECT count(*)::int AS total,coalesce(sum(p.total_amount),0)::text AS amount,
+        ARRAY(SELECT DISTINCT extract(year FROM sent_date)::int FROM cenit.purchase_requests ORDER BY 1 DESC) AS years
+        FROM cenit.purchase_requests p WHERE ${where}`, values);
+      const direction = query.sort === 'sentDateAsc' ? 'ASC' : 'DESC';
       const { rows } = await db.query(`SELECT p.id,p.request_number AS "requestNumber",p.sent_date::text AS "sentDate",p.description,p.total_amount AS "totalAmount",p.document_type AS "documentType",p.review_status AS "reviewStatus",p.version,p.source,p.example_id AS "exampleId",
         CASE WHEN p.source='image_capture' THEN json_build_object('type','image_capture','extractionId',p.extraction_id,'processorVersion',p.processor_version,'processedAt',to_char(p.processed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) ELSE NULL END AS capture
-        FROM cenit.purchase_requests p WHERE ${where} ORDER BY p.sent_date DESC,p.id DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`, [...values, query.pageSize, (query.page - 1) * query.pageSize]);
-      return { data: rows, pagination: { page: query.page, pageSize: query.pageSize, total: count.rows[0].total }, totals: { currency: 'CLP', documentTotal: count.rows[0].amount } };
+        FROM cenit.purchase_requests p WHERE ${where} ORDER BY p.sent_date ${direction},p.id ${direction} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`, [...values, query.pageSize, (query.page - 1) * query.pageSize]);
+      return { data: rows, pagination: { page: query.page, pageSize: query.pageSize, total: count.rows[0].total }, availableYears: count.rows[0].years, totals: { currency: 'CLP', documentTotal: count.rows[0].amount } };
     }, true);
   }
   async validate(id: string, expectedVersion: number, accountId: string): Promise<PurchaseRecord> {

@@ -652,7 +652,7 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
     await expect(table.getByText('1 registro', { exact: true })).toBeVisible();
     await expect(table.locator('.purchase-total strong')).toHaveText('$300');
   }
-  await page.getByRole('button', { name: 'Filtros', exact: true }).click();
+  await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
   await page.getByLabel('Código de unidad', { exact: true }).fill('000A');
   await page.getByLabel('Código de proyecto', { exact: true }).fill('000Y');
 
@@ -691,7 +691,7 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
 test('listado: validación, error/reintento, carga y filtros descartados al cambiar sesión', async ({ page }) => {
   await login(page, 'administrativo'); await page.goto('/administracion/compras');
   const search = page.getByLabel('Buscar solicitudes', { exact: true });
-  await page.getByRole('button', { name: 'Filtros', exact: true }).click();
+  await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
   await page.getByLabel('Enviado desde', { exact: true }).fill('2026-10-14');
   await page.getByLabel('Enviado hasta', { exact: true }).fill('2026-10-13');
 

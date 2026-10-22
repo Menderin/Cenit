@@ -287,7 +287,7 @@ test('filtros automáticos esperan el conjunto válido, agrupan escritura y cons
   await page.goto('/administracion/compras?pendingPage=2&reviewedPage=2');
   await expect(page.getByText(/^Página 2 de /)).toHaveCount(2);
   const prefix = records[0]!.number.slice(0, -2), search = page.getByLabel('Buscar solicitudes', { exact: true });
-  await page.getByRole('button', { name: 'Filtros', exact: true }).click();
+  await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
   const until = page.getByLabel('Enviado hasta', { exact: true });
   await until.fill('31/12/');
   const history = await page.evaluate(() => window.history.length), queries: URL[] = [];

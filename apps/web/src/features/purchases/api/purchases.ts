@@ -1,6 +1,6 @@
 import { Value } from '@sinclair/typebox/value';
 import type { TSchema, Static } from '@sinclair/typebox';
-import { PurchaseResponseSchema, PurchaseListResponseSchema, PurchaseSummaryResponseSchema, PurchaseDeletionResponseSchema, PurchaseCapabilitiesResponseSchema, PurchaseSheetsResponseSchema, validateExtractionResponse, type ExtractionResponse, type CreatePurchase, type PurchaseFilters } from '@cenit/contracts/purchases';
+import { PurchaseResponseSchema, PurchaseListResponseSchema, PurchaseSummaryResponseSchema, PurchaseDeletionResponseSchema, PurchaseCapabilitiesResponseSchema, PurchaseSheetsResponseSchema, validateExtractionResponse, type ExtractionResponse, type CreatePurchase, type PurchaseFilters, type PurchaseListQuery } from '@cenit/contracts/purchases';
 import { api, HttpError } from '../../../shared/lib/http.js';
 
 async function read<T extends TSchema>(schema: T, response: Response): Promise<Static<T>> {
@@ -8,8 +8,8 @@ async function read<T extends TSchema>(schema: T, response: Response): Promise<S
   if (!Value.Check(schema, body)) throw new HttpError(0, 'El servidor devolvió datos con un formato inesperado.');
   return body as Static<T>;
 }
-export const listPurchases = async (state: 'pending' | 'reviewed' | 'all', page: number, signal: AbortSignal, filters: PurchaseFilters = {}) => {
-  const query = new URLSearchParams({ reviewStatus: state, page: String(page), pageSize: '20', ...filters });
+export const listPurchases = async (state: 'pending' | 'reviewed' | 'all', page: number, signal: AbortSignal, filters: PurchaseFilters = {}, view: Pick<PurchaseListQuery, 'sort' | 'pageSize'> = { pageSize: 20 }) => {
+  const query = new URLSearchParams({ reviewStatus: state, page: String(page), pageSize: String(view.pageSize), ...(view.sort ? { sort: view.sort } : {}), ...filters });
   return read(PurchaseListResponseSchema, await api(`/purchases?${query}`, { signal }));
 };
 export const getPurchaseCapabilities = async (signal: AbortSignal) => read(PurchaseCapabilitiesResponseSchema, await api('/purchases/capabilities', { signal }));
