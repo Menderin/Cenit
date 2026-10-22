@@ -27,6 +27,9 @@ export const PurchaseSummaryResponseSchema = object({ data: object({
   days: Type.Array(object({ date: headerFields.sentDate, count: Type.Integer({ minimum: 0 }) })),
   overview: Type.Optional(object({
     documentTotal: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }),
+    documentTotalThisMonth: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }),
+    registrationMonth: Type.String({ pattern: '^\\d{4}-(0[1-9]|1[0-2])$' }),
+    registeredThisYear: Type.Integer({ minimum: 0 }),
     registeredThisMonth: Type.Integer({ minimum: 0 }),
     sourceCounts: object({ manual: Type.Integer({ minimum: 0 }), image_capture: Type.Integer({ minimum: 0 }), contract_example: Type.Integer({ minimum: 0 }) }),
     registrationDays: Type.Array(object({ date: headerFields.sentDate, count: Type.Integer({ minimum: 0 }) }), { maxItems: 30 }),

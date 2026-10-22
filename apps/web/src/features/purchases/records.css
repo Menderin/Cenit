@@ -156,7 +156,6 @@
 .purchase-empty p { margin: 6px 0 0; font-size: 13px; }
 .purchase-list-skeleton { display: grid; gap: 12px; color: var(--admin-muted); }
 .purchase-list-skeleton i { height: 52px; border-radius: 8px; background: #f0f0f3; }
-.purchase-options a { display: block; min-height: 40px; padding: 8px 12px; border-radius: 8px; text-decoration: none; color: #45454d; }
 .purchase-technical { margin-top: 14px; color: var(--admin-muted); font-size: 12px; }
 .purchase-technical summary { cursor: pointer; padding-block: 8px; }
 .purchase-detail-meta { gap: 18px 28px; }

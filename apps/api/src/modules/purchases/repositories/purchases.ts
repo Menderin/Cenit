@@ -45,6 +45,9 @@ export class PurchaseRepository {
       coalesce(sum(total_amount) FILTER (WHERE review_status='pending'),0)::text AS amount
       FROM cenit.purchase_requests GROUP BY sent_date ORDER BY sent_date`);
     const metrics = (await db.query(`SELECT coalesce(sum(total_amount),0)::text AS amount,
+      coalesce(sum(total_amount) FILTER (WHERE date_trunc('month',created_at AT TIME ZONE 'America/Santiago')=date_trunc('month',now() AT TIME ZONE 'America/Santiago')),0)::text AS month_amount,
+      to_char(now() AT TIME ZONE 'America/Santiago','YYYY-MM') AS registration_month,
+      (count(*) FILTER (WHERE date_trunc('year',created_at AT TIME ZONE 'America/Santiago')=date_trunc('year',now() AT TIME ZONE 'America/Santiago')))::int AS year,
       (count(*) FILTER (WHERE date_trunc('month',created_at AT TIME ZONE 'America/Santiago')=date_trunc('month',now() AT TIME ZONE 'America/Santiago')))::int AS month,
       (count(*) FILTER (WHERE source='manual'))::int AS manual,
       (count(*) FILTER (WHERE source='image_capture'))::int AS image_capture,
@@ -60,7 +63,8 @@ export class PurchaseRepository {
       requests: rows.reduce((total, row) => total + row.requests, 0), pending: rows.reduce((total, row) => total + row.pending, 0),
       currency: 'CLP', pendingAmount: rows.reduce((total, row) => total + BigInt(row.amount), 0n).toString(),
       days: rows.map(row => ({ date: row.date, count: row.pending })),
-      overview: { documentTotal: metrics.amount, registeredThisMonth: metrics.month,
+      overview: { documentTotal: metrics.amount, documentTotalThisMonth: metrics.month_amount, registrationMonth: metrics.registration_month,
+        registeredThisYear: metrics.year, registeredThisMonth: metrics.month,
         sourceCounts: { manual: metrics.manual, image_capture: metrics.image_capture, contract_example: metrics.contract_example },
         registrationDays: activity.rows, recentRecords: recent.rows.map(row => ({ ...row, createdAt: row.createdAt.toISOString() })),
       },

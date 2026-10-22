@@ -5,7 +5,7 @@ import { manualPurchaseExample } from '../../packages/contracts/src/purchases/re
 test('registro: una lista histórica sin segunda revisión, conservando ambos estados y paginación', async ({ page }) => {
   await page.route('**/api/v1/purchases/capabilities', route => route.fulfill({ json: { data: { secondReviewEnabled: false, sheetsSyncEnabled: false } } }));
   await login(page, 'administrativo');
-  await expect(page.locator('.dashboard-kpis dt')).toHaveText(['Compras registradas', 'Monto documental registrado', 'Registradas este mes', 'Desde captura']);
+  await expect(page.locator('.dashboard-kpis dt')).toHaveText(['Compras este año', 'Compras este mes', 'Monto registrado este mes', 'Desde captura']);
   await expect(page.locator('.dashboard-chart')).toHaveCount(0);
   const prefix = 'HIST-' + crypto.randomUUID().slice(0, 8), origin = new URL(page.url()).origin;
   for (let i = 0; i < 22; i++) {

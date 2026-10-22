@@ -95,7 +95,7 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.__drizzle_migrations')).rows[0].n).toBe(readMigrationFiles({ migrationsFolder: 'db/migrations' }).length);
       if (index === 0) {
         const empty = await new PurchaseRepository(pool).summary();
-        expect(empty).toMatchObject({ data: { requests: 0, pending: 0, currency: 'CLP', pendingAmount: '0', days: [], overview: { documentTotal: '0', registeredThisMonth: 0, sourceCounts: { manual: 0, image_capture: 0, contract_example: 0 }, recentRecords: [] } } });
+        expect(empty).toMatchObject({ data: { requests: 0, pending: 0, currency: 'CLP', pendingAmount: '0', days: [], overview: { documentTotal: '0', documentTotalThisMonth: '0', registeredThisYear: 0, registeredThisMonth: 0, sourceCounts: { manual: 0, image_capture: 0, contract_example: 0 }, recentRecords: [] } } });
         expect(empty.data.overview!.registrationDays).toHaveLength(30);
         expect(empty.data.overview!.registrationDays.every(day => day.count === 0)).toBe(true);
       }
@@ -217,6 +217,8 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     expect(summary.json().data).toMatchObject({ requests: before.requests + 1, pending: before.pending + 1, currency: 'CLP', pendingAmount: (BigInt(before.pendingAmount) + BigInt(input.header.totalAmount)).toString() });
     expect(summary.json().data.overview).toMatchObject({
       documentTotal: (BigInt(before.overview.documentTotal) + BigInt(input.header.totalAmount)).toString(),
+      documentTotalThisMonth: (BigInt(before.overview.documentTotalThisMonth) + BigInt(input.header.totalAmount)).toString(),
+      registeredThisYear: before.overview.registeredThisYear + 1,
       registeredThisMonth: before.overview.registeredThisMonth + 1,
       sourceCounts: { ...before.overview.sourceCounts, manual: before.overview.sourceCounts.manual + 1 },
     });
@@ -231,15 +233,21 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: 2 })).statusCode).toBe(200);
     expect((await request('GET', '/api/v1/purchases/summary')).json().data).toEqual(before);
   });
-  it('el mes de incorporación respeta medianoche de America/Santiago y no la fecha documental', async () => {
+  it('los indicadores mensuales y anuales respetan medianoche de Santiago y no la fecha documental', async () => {
     const before = (await repository.summary()).data.overview!;
     const input = body(); input.header.sentDate = '2098-12-31';
     const saved = (await request('POST', '/api/v1/purchases', input)).json().data;
     const pool = pools[0]!;
     await pool.query("UPDATE cenit.purchase_requests SET created_at=(date_trunc('month',now() AT TIME ZONE 'America/Santiago') AT TIME ZONE 'America/Santiago')-interval '1 millisecond' WHERE id=$1", [saved.id]);
-    expect((await repository.summary()).data.overview!.registeredThisMonth).toBe(before.registeredThisMonth);
+    expect((await repository.summary()).data.overview).toMatchObject({ registeredThisMonth: before.registeredThisMonth, documentTotalThisMonth: before.documentTotalThisMonth });
     await pool.query("UPDATE cenit.purchase_requests SET created_at=date_trunc('month',now() AT TIME ZONE 'America/Santiago') AT TIME ZONE 'America/Santiago' WHERE id=$1", [saved.id]);
-    expect((await repository.summary()).data.overview!.registeredThisMonth).toBe(before.registeredThisMonth + 1);
+    const month = (await repository.summary()).data.overview!;
+    expect(month).toMatchObject({ registeredThisMonth: before.registeredThisMonth + 1, documentTotalThisMonth: (BigInt(before.documentTotalThisMonth) + BigInt(input.header.totalAmount)).toString() });
+    expect(month.registrationMonth).toBe((await pool.query("SELECT to_char(now() AT TIME ZONE 'America/Santiago','YYYY-MM') AS month")).rows[0].month);
+    await pool.query("UPDATE cenit.purchase_requests SET created_at=(date_trunc('year',now() AT TIME ZONE 'America/Santiago') AT TIME ZONE 'America/Santiago')-interval '1 millisecond' WHERE id=$1", [saved.id]);
+    expect((await repository.summary()).data.overview).toMatchObject({ registeredThisYear: before.registeredThisYear, documentTotalThisMonth: before.documentTotalThisMonth });
+    await pool.query("UPDATE cenit.purchase_requests SET created_at=date_trunc('year',now() AT TIME ZONE 'America/Santiago') AT TIME ZONE 'America/Santiago' WHERE id=$1", [saved.id]);
+    expect((await repository.summary()).data.overview!.registeredThisYear).toBe(before.registeredThisYear + 1);
     await repository.delete(saved.id, 1);
   });
   it('elimina pendientes y validados con sus ítems, exige versión y rechaza formatos inválidos', async () => {

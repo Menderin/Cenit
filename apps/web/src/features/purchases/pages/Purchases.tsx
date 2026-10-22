@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router';
-import * as Popover from '@radix-ui/react-popover';
 import { FunnelSimpleIcon } from '@phosphor-icons/react/dist/csr/FunnelSimple';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass';
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/csr/ArrowUpRight';
-import { DotsThreeIcon } from '@phosphor-icons/react/dist/csr/DotsThree';
 import { UploadSimpleIcon } from '@phosphor-icons/react/dist/csr/UploadSimple';
 import { XIcon } from '@phosphor-icons/react/dist/csr/X';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
@@ -15,7 +13,6 @@ import { SheetsSyncStatus } from '../components/SheetsSyncStatus.js';
 import { ValidateRecord } from '../components/ValidateRecord.js';
 import { dateLabel, amountLabel } from '../model/fields.js';
 import { DateField } from '../../../shared/components/DateField.js';
-import { useExitPresence } from '../../../shared/lib/use-exit-presence.js';
 import '../records.css';
 
 const labels = { q: 'Buscar solicitudes', dateFrom: 'Enviado desde', dateTo: 'Enviado hasta', unitCode: 'Código de unidad', projectCode: 'Código de proyecto' };
@@ -42,8 +39,6 @@ function RequestTable({ state, title, filters, page, setPage, valid, searching, 
 }
 
 export function Purchases() {
-  const [optionsOpen, setOptionsOpen] = useState(false);
-  const options = useExitPresence(optionsOpen);
   const { secondReviewEnabled } = usePurchaseCapabilities();
   const [params, setParams] = useSearchParams(), location = useLocation();
   const readInputs = () => ({ q: params.get('q') ?? '', dateFrom: params.get('dateFrom') ?? '', dateTo: params.get('dateTo') ?? '', unitCode: params.get('unitCode') ?? '', projectCode: params.get('projectCode') ?? '' });
@@ -78,7 +73,6 @@ export function Purchases() {
   function setPage(state: 'pending' | 'reviewed' | 'all', value: number) { setParams(previous => { const next = new URLSearchParams(previous), key = state === 'all' ? 'page' : `${state}Page`; if (value === 1) next.delete(key); else next.set(key, String(value)); return next; }); }
   return <section className="purchase-records"><div className="purchase-page-heading"><div><p className="admin-section-label">Compras</p><h1>Registro de compras</h1><p>Compras aprobadas en Oracle, conservadas en Cenit.</p></div><div className="purchase-heading-actions">
     <Link className="admin-button" to="/administracion/compras/nueva" state={{ purchasesReturnTo: returnTo }}>Registrar manualmente</Link><Link className="admin-primary" to="/administracion/compras/captura" state={{ purchasesReturnTo: returnTo }}><UploadSimpleIcon size={18} aria-hidden="true" />Subir captura</Link>
-    <Popover.Root open={options.mounted} onOpenChange={setOptionsOpen}><Popover.Trigger asChild><button className="admin-icon-button" aria-label="Más opciones" onClick={event => { if (options.closing) { event.preventDefault(); setOptionsOpen(true); } }}><DotsThreeIcon size={22} aria-hidden="true" /></button></Popover.Trigger><Popover.Portal><Popover.Content inert={options.closing} className={`cenit-popover purchase-options${options.closing ? ' cenit-closing' : ''}`} align="end" sideOffset={8}><Link to="/administracion/compras/laboratorio" state={{ purchasesReturnTo: returnTo }}>Revisar ejemplo</Link></Popover.Content></Popover.Portal></Popover.Root>
   </div></div><SheetsSyncStatus />
     <form className="purchase-filters" noValidate aria-label="Filtros de solicitudes" onSubmit={event => event.preventDefault()}>
       <div className="purchase-search-bar">{input('q')}<button className="purchase-filter-toggle" type="button" aria-expanded={expanded} aria-controls="purchase-more-filters" onClick={() => setExpanded(value => !value)}><FunnelSimpleIcon size={18} aria-hidden="true" />Filtros{Object.keys(filters).filter(key => key !== 'q').length > 0 && <span className="purchase-count">{Object.keys(filters).filter(key => key !== 'q').length}</span>}</button></div>

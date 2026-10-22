@@ -296,8 +296,8 @@ async function openPurchases(page: Page) {
   await login(page, 'administrativo');
   await navigateAdministration(page, 'Registro de compras');
   await expect(page).toHaveURL(/\/administracion\/compras$/);
-  await page.getByRole('button', { name: 'Más opciones' }).click();
-  await page.getByRole('link', { name: 'Revisar ejemplo' }).click();
+  await expect(page.getByRole('link', { name: 'Revisar ejemplo' })).toHaveCount(0);
+  await page.goto('/administracion/compras/laboratorio');
 }
 
 test('contrato de compras: revisar ejemplos, corregir sin alterar original y restablecer', async ({ page }) => {
@@ -394,13 +394,13 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await expect(nav.getByRole('link')).toHaveCount(4);
   await expect(nav.getByRole('link', { name: 'Inicio', exact: true })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveCount(0);
-  await expect(page.getByText('Demostración', { exact: true })).toBeVisible();
+  await expect(page.getByText('Demostración', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Prototipo con datos ficticios', { exact: true })).toHaveCount(0);
   const indicators = page.getByRole('definition');
   const summary = (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
-  await expect(indicators.nth(0)).toHaveText(String(summary.requests));
-  await expect(indicators.nth(2)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.overview.documentTotal)));
-  await expect(indicators.nth(4)).toHaveText(String(summary.overview.registeredThisMonth));
+  await expect(indicators.nth(0)).toHaveText(String(summary.overview.registeredThisYear));
+  await expect(indicators.nth(2)).toHaveText(String(summary.overview.registeredThisMonth));
+  await expect(indicators.nth(4)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.overview.documentTotalThisMonth)));
   await expect(page.getByRole('table')).toHaveCount(0);
   const chart = page.getByRole('list', { name: 'Compras incorporadas por día' });
   await expect(chart.getByRole('listitem')).toHaveCount(30);
@@ -418,16 +418,16 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
     await page.reload(); await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
   }
   await navigateAdministration(page, 'Registro de compras');
-  await page.getByRole('button', { name: 'Más opciones' }).click();
-  await page.getByRole('link', { name: 'Revisar ejemplo' }).click();
+  await expect(page.getByRole('link', { name: 'Revisar ejemplo' })).toHaveCount(0);
+  await page.goto('/administracion/compras/laboratorio');
   await page.getByLabel('Nº Documento / solicitud', { exact: true }).fill('navigation-draft');
   await navigateAdministration(page, 'Inicio');
   await page.getByRole('alertdialog').getByRole('button', { name: 'Descartar y salir' }).click();
   await expect(page).toHaveURL(/\/administracion$/);
   await expect(page.getByRole('button', { name: 'Mostrar navegación', exact: true })).toBeVisible();
   await navigateAdministration(page, 'Registro de compras');
-  await page.getByRole('button', { name: 'Más opciones' }).click();
-  await page.getByRole('link', { name: 'Revisar ejemplo' }).click();
+  await expect(page.getByRole('link', { name: 'Revisar ejemplo' })).toHaveCount(0);
+  await page.goto('/administracion/compras/laboratorio');
   await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveValue('000125');
   await page.reload(); await expect(page.getByRole('heading', { name: 'Revisar datos', exact: true })).toBeVisible();
   await logout(page);
