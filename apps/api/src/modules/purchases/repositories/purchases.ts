@@ -44,14 +44,19 @@ export class PurchaseRepository {
       count(*)::int AS requests, (count(*) FILTER (WHERE review_status='pending'))::int AS pending,
       coalesce(sum(total_amount) FILTER (WHERE review_status='pending'),0)::text AS amount
       FROM cenit.purchase_requests GROUP BY sent_date ORDER BY sent_date`);
-    const metrics = (await db.query(`SELECT coalesce(sum(total_amount),0)::text AS amount,
-      coalesce(sum(total_amount) FILTER (WHERE date_trunc('month',created_at AT TIME ZONE 'America/Santiago')=date_trunc('month',now() AT TIME ZONE 'America/Santiago')),0)::text AS month_amount,
-      to_char(now() AT TIME ZONE 'America/Santiago','YYYY-MM') AS registration_month,
-      (count(*) FILTER (WHERE date_trunc('year',created_at AT TIME ZONE 'America/Santiago')=date_trunc('year',now() AT TIME ZONE 'America/Santiago')))::int AS year,
-      (count(*) FILTER (WHERE date_trunc('month',created_at AT TIME ZONE 'America/Santiago')=date_trunc('month',now() AT TIME ZONE 'America/Santiago')))::int AS month,
+    const metrics = (await db.query(`WITH period AS (
+      SELECT date_trunc('month',now() AT TIME ZONE 'America/Santiago')::date AS month_start,
+        date_trunc('year',now() AT TIME ZONE 'America/Santiago')::date AS year_start,
+        to_char(now() AT TIME ZONE 'America/Santiago','YYYY-MM') AS registration_month
+    ) SELECT coalesce(sum(total_amount),0)::text AS amount,
+      coalesce(sum(total_amount) FILTER (WHERE sent_date >= period.month_start AND sent_date < (period.month_start + interval '1 month')::date),0)::text AS month_amount,
+      period.registration_month,
+      (count(*) FILTER (WHERE sent_date >= period.year_start AND sent_date < (period.year_start + interval '1 year')::date))::int AS year,
+      (count(*) FILTER (WHERE sent_date >= period.month_start AND sent_date < (period.month_start + interval '1 month')::date))::int AS month,
       (count(*) FILTER (WHERE source='manual'))::int AS manual,
       (count(*) FILTER (WHERE source='image_capture'))::int AS image_capture,
-      (count(*) FILTER (WHERE source='contract_example'))::int AS contract_example FROM cenit.purchase_requests`)).rows[0];
+      (count(*) FILTER (WHERE source='contract_example'))::int AS contract_example
+      FROM cenit.purchase_requests CROSS JOIN period GROUP BY period.month_start,period.year_start,period.registration_month`)).rows[0];
     const activity = await db.query<{ date: string; count: number }>(`WITH dates AS (
       SELECT generate_series((now() AT TIME ZONE 'America/Santiago')::date-29,(now() AT TIME ZONE 'America/Santiago')::date,'1 day')::date AS day
     ), counts AS (SELECT (created_at AT TIME ZONE 'America/Santiago')::date AS day,count(*)::int AS count FROM cenit.purchase_requests

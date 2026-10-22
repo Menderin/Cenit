@@ -4,6 +4,16 @@ Esta guía permite preparar una base de demostración, trabajar en desarrollo y 
 
 La base local conserva sus datos en un volumen. Las preparaciones que siguen son para datos ficticios de demostración, no para una base real. Las [pruebas automatizadas](../Docs/PRUEBAS-Y-ACEPTACION.md) usan bases descartables separadas.
 
+## Atajo: levantar desarrollo local
+
+Desde la raíz del repo, comprobar las versiones de Node y npm indicadas en `.node-version` y `package.json`. En una instalación nueva, ejecutar `python3 deploy/scripts/setup-local.py`, completar las tres `CENIT_DEMO_*_PASSWORD` en el `.env` privado y ejecutar `npm ci` una vez. Estos pasos conservan los secretos existentes.
+
+Iniciar o reutilizar PostgreSQL local con `docker compose up -d db`, y luego ejecutar `npm run dev`. El supervisor comprueba que conecta a `cenit_demo` por loopback con el rol `cenit_app`, prepara/verifica las tres cuentas ficticias y abre el API en `3000` y Vite en `5173`. No aplica migraciones ni carga catálogo o compras de ejemplo. Si informa que faltan migraciones, confirmar que se trata de la base local de demostración y seguir [Preparar PostgreSQL](#preparar-postgresql-y-las-cuentas) con el rol migrador antes de volver a iniciar.
+
+Abrir [http://127.0.0.1:5173/login](http://127.0.0.1:5173/login) y usar las cuentas ficticias guardadas localmente. `Ctrl+C` cierra API y web; PostgreSQL queda iniciado y conserva su volumen. La demo compilada de `8081`, si está activa, es independiente.
+
+La copia automática a Google Sheets es opcional y viene apagada. Para revisar ese flujo hacen falta una planilla dedicada de pruebas, su ID y la credencial privada de la cuenta de servicio; seguir [Conectar una planilla de pruebas](#conectar-una-planilla-de-pruebas). Crear un registro ficticio desde Cenit y esperar el estado «Sincronizado»; los cambios de Sheets no se importan a Cenit.
+
 ## Herramientas y configuración
 
 Comprobar Node/npm fijados por `.node-version` y `package.json`, Python 3 y el motor de contenedores. El proveedor Compose debe admitir perfiles, secretos de archivo y dependencias por salud/finalización.
@@ -119,7 +129,11 @@ Las compras de ejemplo son opcionales:
 APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run purchases:prepare-demo
 ```
 
-Prepara ocho copias ficticias, inicialmente cinco sin segunda revisión y tres revisadas. Esos estados se conservan aunque la presentación normal muestre un único registro histórico. Repetir conserva contenido y revisiones, pero puede volver a crear un ejemplo eliminado; omitirlo si ya se tienen los registros que se usarán. Estos comandos están limitados a la demo local y no forman parte de CD.
+Prepara 74 compras ficticias editables, distribuidas por los meses de 2024 y 2025 y de enero a octubre de 2026. Toman las categorías de compra de la planilla de referencia; folios y montos son inventados, y los nombres, RUT, estados de pago y códigos institucionales no validados quedan fuera o vacíos. La carga crea registros de ingreso manual, no ejemplos de contrato, por eso se pueden corregir desde el detalle. Sus fechas de incorporación se distribuyen de forma repetible en los últimos 30 días para que el gráfico de actividad del Inicio muestre movimiento.
+
+Si las compras ficticias ya están cargadas, se pueden distribuir únicamente sus fechas de incorporación con `APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run purchases:prepare-demo -- --spread-activity-only`. La opción sólo actualiza `created_at` de las operaciones reservadas a esta semilla en `cenit_demo` local; no crea ni reemplaza compras ni modifica su contenido.
+
+En la primera ejecución, la carga reemplaza sólo los ejemplos antiguos que coincidan con sus operaciones fijas y la cuenta administrativa de demo. Conserva cualquier otra compra; una diferencia inesperada en esos registros detiene la preparación. Repetir conserva contenido y revisión, y puede volver a crear un registro de la semilla que se haya eliminado. Estos comandos están limitados a la demo local y no forman parte de CD.
 
 ## Trabajar en desarrollo
 

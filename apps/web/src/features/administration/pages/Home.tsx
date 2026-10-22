@@ -27,9 +27,9 @@ export function Home() {
     <div className="dashboard-purchases">
     {query.isPending ? <div className="dashboard-skeleton" role="status"><span>Cargando resumen…</span><i /><i /><i /></div> : query.isError ? <div className="purchase-state" role="alert"><p>{query.error.message}</p><button className="admin-button" onClick={() => { void query.refetch(); }}>Reintentar</button></div> : data && <>
       <dl className="dashboard-kpis" aria-label="Resumen de compras">
-        <div><dt><FilesIcon size={19} aria-hidden="true" />Compras este año</dt><dd>{overview?.registeredThisYear ?? '—'}</dd><dd className="dashboard-kpi-detail">{overview ? `Enero a diciembre de ${overview.registrationMonth.slice(0, 4)}` : 'Según incorporación a Cenit'}</dd></div>
-        <div><dt><CalendarBlankIcon size={19} aria-hidden="true" />Compras este mes</dt><dd>{overview?.registeredThisMonth ?? '—'}</dd><dd className="dashboard-kpi-detail">{month ?? 'Según incorporación a Cenit'}</dd></div>
-        <div><dt><CurrencyDollarIcon size={19} aria-hidden="true" />Monto registrado este mes</dt><dd>{overview ? amountLabel(overview.documentTotalThisMonth) : '—'}</dd><dd className="dashboard-kpi-detail">{month ? `${month} · CLP` : 'Total de documentos · CLP'}</dd></div>
+        <div><dt><FilesIcon size={19} aria-hidden="true" />Compras con fecha documental este año</dt><dd>{overview?.registeredThisYear ?? '—'}</dd><dd className="dashboard-kpi-detail">{overview ? `Enero a diciembre de ${overview.registrationMonth.slice(0, 4)}` : 'Año en curso'}</dd></div>
+        <div><dt><CalendarBlankIcon size={19} aria-hidden="true" />Compras con fecha documental este mes</dt><dd>{overview?.registeredThisMonth ?? '—'}</dd><dd className="dashboard-kpi-detail">{month ?? 'Mes en curso'}</dd></div>
+        <div><dt><CurrencyDollarIcon size={19} aria-hidden="true" />Monto documental este mes</dt><dd>{overview ? amountLabel(overview.documentTotalThisMonth) : '—'}</dd><dd className="dashboard-kpi-detail">{month ? `${month} · CLP` : 'CLP'}</dd></div>
       </dl>
       {overview && <div className="dashboard-grid">
         <section className="dashboard-activity" aria-labelledby="activity-title"><div className="dashboard-section-heading"><h2 id="activity-title">Actividad de registro</h2><span>{overview.registrationDays.reduce((sum, day) => sum + day.count, 0)} incorporaciones · 30 días</span></div>
