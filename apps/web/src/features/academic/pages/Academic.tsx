@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { NavLink } from 'react-router';
-import { BookOpen, CaretRight, GraduationCap, Info, SidebarSimple, SignOut, SquaresFour } from '@phosphor-icons/react';
-import type { AcademicCourse } from '@cenit/contracts/academic';
+import { BookOpen, CaretLeft, CaretRight, GraduationCap, Info, SidebarSimple, SignOut, SquaresFour } from '@phosphor-icons/react';
+import type { AcademicCourse, AcademicPlan } from '@cenit/contracts/academic';
 import { useAuth } from '../../auth/model/session.js';
 import { SessionWarning } from '../../auth/components/SessionWarning.js';
 import { HttpError } from '../../../shared/lib/http.js';
@@ -12,6 +12,7 @@ import { courseLabel } from '../model/course-label.js';
 import { CatalogDetails } from '../components/CatalogDetails.js';
 import { StudentLookup, type Student } from '../components/StudentLookup.js';
 import { progressLabels } from '../model/progress-presentation.js';
+import { courseRelations } from '../model/course-relations.js';
 import '../academic.css';
 
 export function Academic() {
@@ -19,12 +20,15 @@ export function Academic() {
   const account = auth.session!.account;
   const heading = useRef<HTMLHeadingElement>(null);
   const board = useRef<HTMLDivElement>(null);
+  const boardDrag = useRef<{ pointerId: number; startX: number; scrollLeft: number; dragged: boolean } | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [pointerFocus, setPointerFocus] = useState(false);
-  const [boardOverflow, setBoardOverflow] = useState(false);
+  const [boardScroll, setBoardScroll] = useState({ previous: false, next: false });
+  const [boardDragging, setBoardDragging] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState('');
   const [detail, setDetail] = useState<AcademicCourse | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [relationPreview, setRelationPreview] = useState<{ plan: AcademicPlan; code: string } | null>(null);
   useEffect(() => { heading.current?.focus(); }, []);
   useEffect(() => { document.title = 'Cenit · Malla curricular'; return () => { document.title = 'Cenit'; }; }, []);
   const plans = useQuery({ queryKey: ['academic', account.id, 'plans'], queryFn: ({ signal }) => getPlans(signal), retry: retryAcademicRead });
@@ -35,6 +39,11 @@ export function Academic() {
     queryFn: ({ signal }) => getPlan(available!.planId, version!, signal), enabled: Boolean(available && version), retry: retryAcademicRead,
   });
   const plan = catalog.data;
+  const relationOrigin = detail?.code ?? (relationPreview?.plan === plan ? relationPreview?.code : undefined);
+  const relations = useMemo(() => plan && relationOrigin ? courseRelations(plan, relationOrigin) : new Map<string, { depth: number; via: string }>(), [plan, relationOrigin]);
+  function showRelations(code: string) {
+    if (plan) setRelationPreview(previous => previous?.plan === plan && previous.code === code ? previous : { plan, code });
+  }
   const hasStudent = account.role === 'estudiante' || selectedStudent !== null;
   const progress = useQuery({
     queryKey: ['academic', account.id, 'progress', account.role === 'estudiante' ? 'me' : selectedStudent?.id, version],
@@ -42,19 +51,24 @@ export function Academic() {
     enabled: Boolean(plan) && hasStudent, retry: retryAcademicRead,
   });
   const matchingProgress = progress.data?.plan.planId === plan?.planId && progress.data?.plan.version === plan?.version ? progress.data : undefined;
-  const courseProgress = new Map(matchingProgress?.courses.map(course => [course.code, course]));
-  const groups = plan ? groupBySemester(plan.courses) : [];
+  const courseProgress = useMemo(() => new Map(matchingProgress?.courses.map(course => [course.code, course])), [matchingProgress]);
+  const groups = useMemo(() => plan ? groupBySemester(plan.courses) : [], [plan]);
   const error = plans.error ?? catalog.error;
   const loading = plans.isPending || (Boolean(version) && catalog.isPending);
   const role = account.role === 'docente' ? 'Docente' : 'Estudiante';
   useEffect(() => {
     const element = board.current;
     if (!element) return;
-    const update = () => setBoardOverflow(element.scrollWidth > element.clientWidth + 1);
+    const update = () => {
+      const previous = element.scrollLeft > 1;
+      const next = element.scrollLeft + element.clientWidth < element.scrollWidth - 1;
+      setBoardScroll(current => current.previous === previous && current.next === next ? current : { previous, next });
+    };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(element);
-    return () => observer.disconnect();
+    element.addEventListener('scroll', update, { passive: true });
+    return () => { observer.disconnect(); element.removeEventListener('scroll', update); };
   }, [plan]);
 
   return <main className={`academic-workspace${pointerFocus ? ' academic-workspace--pointer' : ''}`} onPointerDownCapture={() => setPointerFocus(true)} onKeyDownCapture={() => setPointerFocus(false)}>
@@ -80,7 +94,7 @@ export function Academic() {
         <header className="academic-toolbar cenit-page-enter">
           <div className="academic-toolbar__title">
             <button type="button" className="academic-sidebar-toggle academic-icon-button" aria-label={sidebarCollapsed ? 'Mostrar navegación' : 'Ocultar navegación'} aria-expanded={!sidebarCollapsed} aria-controls="academic-navigation" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}><SidebarSimple size={18} weight="regular" aria-hidden="true" /></button>
-            <div><h1 ref={heading} tabIndex={-1}>Malla curricular</h1><p className="academic-toolbar__subtitle">{plan?.name ?? 'Nutrición y Dietética'}{plan?.isExample && ' · Plan de ejemplo'}</p></div>
+            <div><h1 ref={heading} tabIndex={-1}>Malla curricular</h1><p className="academic-toolbar__subtitle">{plan?.name ?? 'Nutrición y Dietética'}</p></div>
           </div>
           <div className="academic-toolbar__tools">
             {version && available!.versions.length > 1 && <label className="academic-version">Plan<select aria-label="Versión del plan" value={version} onChange={event => { setDetail(null); setSelectedVersion(event.target.value); }}>{available!.versions.map(v => <option value={v.version} key={v.version}>{v.version}</option>)}</select></label>}
@@ -95,6 +109,7 @@ export function Academic() {
           {error && <div className="academic-state"><Info size={24} aria-hidden="true" /><h2>{error instanceof HttpError && error.status === 403 ? 'Acceso no autorizado' : 'No pudimos cargar la malla'}</h2><p role="alert">{error.message}</p><button className="academic-button" type="button" onClick={() => { void (plans.error ? plans.refetch() : catalog.refetch()); }}>Reintentar</button></div>}
           {!loading && !error && !version && <div className="academic-state"><BookOpen size={28} weight="regular" aria-hidden="true" /><h2>La malla todavía no está disponible</h2><p>No hay una versión publicada de Nutrición y Dietética para consultar.</p><button className="academic-button" type="button" onClick={() => { void plans.refetch(); }}>Volver a consultar</button></div>}
           {!error && plan && <>
+            <div className="academic-board-context">
             <section className="academic-progress-context" aria-label="Avance curricular">
               {account.role === 'docente' && <StudentLookup accountId={account.id} selected={selectedStudent} onSelect={student => { setDetail(null); setSelectedStudent(student); }} />}
               {hasStudent && <>
@@ -104,10 +119,39 @@ export function Academic() {
               {!progress.error && progress.data && !matchingProgress && <p role="status">El historial pertenece a la versión {progress.data.plan.version}. Selecciona esa versión para consultarlo sobre la malla.</p>}
               </>}
             </section>
-            {boardOverflow && <div className="academic-board-meta"><span className="academic-scroll-hint">Desplaza para ver más <CaretRight size={12} aria-hidden="true" /></span></div>}
-            <p id="academic-scroll-hint" className="academic-sr-only">Asignaturas por semestre. Abre una asignatura para consultar su nombre completo, historial y prerrequisitos. Usa las flechas del teclado para recorrer el tablero cuando no quepa completo.</p>
-            <div ref={board} className="academic-board" tabIndex={0} role="region" aria-label="Asignaturas por semestre" aria-describedby="academic-scroll-hint">
-              <div className="academic-columns" style={{ '--semester-count': groups.length } as CSSProperties}>
+            {(boardScroll.previous || boardScroll.next) && <div className="academic-board-actions" role="group" aria-label="Navegación de semestres">
+              <span className="academic-board-hint">Arrastra para recorrer</span>
+              <button className="academic-icon-button" type="button" aria-label="Ver semestres anteriores" aria-controls="academic-semesters" disabled={!boardScroll.previous} onClick={() => board.current?.scrollBy({ left: -board.current.clientWidth * .8 })}><CaretLeft size={16} weight="regular" aria-hidden="true" /></button>
+              <button className="academic-icon-button" type="button" aria-label="Ver semestres siguientes" aria-controls="academic-semesters" disabled={!boardScroll.next} onClick={() => board.current?.scrollBy({ left: board.current.clientWidth * .8 })}><CaretRight size={16} weight="regular" aria-hidden="true" /></button>
+            </div>}
+            </div>
+            <p id="academic-scroll-hint" className="academic-sr-only">Asignaturas por semestre. Abre una asignatura para consultar su nombre completo, historial y prerrequisitos. Arrastra con el mouse o usa los controles de semestres y las flechas del teclado para recorrer el tablero cuando no quepa completo.</p>
+            <div ref={board} id="academic-semesters" className={`academic-board${boardScroll.previous || boardScroll.next ? ' academic-board--scrollable' : ''}${boardDragging ? ' academic-board--dragging' : ''}`} tabIndex={0} role="region" aria-label="Asignaturas por semestre" aria-describedby="academic-scroll-hint"
+              onPointerDown={event => {
+                boardDrag.current = null;
+                if (event.pointerType !== 'mouse' || event.button !== 0 || !(boardScroll.previous || boardScroll.next)) return;
+                boardDrag.current = { pointerId: event.pointerId, startX: event.clientX, scrollLeft: event.currentTarget.scrollLeft, dragged: false };
+              }}
+              onPointerMove={event => {
+                const drag = boardDrag.current;
+                if (!drag || drag.pointerId !== event.pointerId || event.buttons !== 1) return;
+                const distance = event.clientX - drag.startX;
+                if (!drag.dragged && Math.abs(distance) < 5) return;
+                if (!drag.dragged) {
+                  drag.dragged = true;
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  setBoardDragging(true); setRelationPreview(null);
+                }
+                event.preventDefault();
+                event.currentTarget.scrollTo({ left: drag.scrollLeft - distance, behavior: 'instant' });
+              }}
+              onPointerUp={() => { setBoardDragging(false); if (!boardDrag.current?.dragged) boardDrag.current = null; }}
+              onPointerCancel={() => { setBoardDragging(false); boardDrag.current = null; }}
+              onLostPointerCapture={() => setBoardDragging(false)} onDragStart={event => event.preventDefault()}
+              onClickCapture={event => { if (boardDrag.current?.dragged) { event.preventDefault(); event.stopPropagation(); boardDrag.current = null; } }}
+              onPointerLeave={() => { if (!boardDrag.current?.dragged) boardDrag.current = null; setRelationPreview(null); }} onKeyDown={event => { boardDrag.current = null; setBoardDragging(false); if (event.key === 'Escape') setRelationPreview(null); }}
+              onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setRelationPreview(null); }}>
+              <div className={`academic-columns${relationOrigin ? ' academic-columns--relations' : ''}`} style={{ '--semester-count': groups.length } as CSSProperties}>
                 {groups.map(group => {
                   const title = semesterLabel(group.semester, group.semesterEnd);
                   return <section className="academic-semester" key={`${group.semester}-${group.semesterEnd}`} aria-label={title}>
@@ -115,13 +159,19 @@ export function Academic() {
                     <ul>{group.courses.map(course => {
                       const record = !progress.error ? courseProgress.get(course.code) : undefined;
                       const label = courseLabel(course.name);
-                      return <li key={course.code}><button className={`academic-course${record ? ` academic-course--${record.status}` : ''}`} type="button" aria-label={`Ver asignatura: ${label}${label !== course.name ? ` (${course.name})` : ''}`} aria-describedby={`academic-course-meta-${course.code}`} onClick={event => {
+                      const linked = relations.get(course.code);
+                      const relation = course.code === relationOrigin ? 'origin' : linked ? (linked.depth === 1 ? 'direct' : 'indirect') : undefined;
+                      return <li key={course.code}><button data-course-code={course.code} data-relation={relation} className={`academic-course${record ? ` academic-course--${record.status}` : ''}${relation ? ` academic-course--relation-${relation}` : ''}`} type="button" aria-label={`Ver asignatura: ${label}${label !== course.name ? ` (${course.name})` : ''}`} aria-describedby={`academic-course-meta-${course.code}`}
+                        onPointerEnter={event => { if (event.pointerType === 'mouse' && !boardDrag.current?.dragged) showRelations(course.code); }}
+                        onFocus={event => { if (!pointerFocus && event.currentTarget.matches(':focus-visible')) showRelations(course.code); }} onClick={event => {
                         // Safari no enfoca botones al pulsarlos; el diálogo debe regresar al ramo.
                         event.currentTarget.focus({ preventScroll: true });
                         setDetail(course);
                       }}>
+                        <span className="academic-course__origin-ring" aria-hidden="true" />
                         <span className="academic-course__name">{label}</span>
                         <span id={`academic-course-meta-${course.code}`} className="academic-course__footer">
+                          {relation && <span className="academic-sr-only">{relation === 'origin' ? 'Origen de la cadena' : relation === 'direct' ? 'Relación directa' : 'Relación indirecta'}. Relación de referencia.</span>}
                           {record && <span className={`academic-progress-badge academic-progress-badge--${record.status}`}>{progressLabels[record.status]}</span>}
                           <span>{course.credits === null ? 'SCT no informados' : `${new Intl.NumberFormat('es-CL', { maximumFractionDigits: 2 }).format(course.credits)} SCT`}</span>
                         </span>
@@ -131,6 +181,7 @@ export function Academic() {
                 })}
               </div>
             </div>
+            {relationOrigin && <div className="academic-relation-legend" aria-label="Relaciones resaltadas"><span className="academic-relation-key academic-relation-key--origin">Origen</span><span className="academic-relation-key academic-relation-key--direct">Directa</span><span className="academic-relation-key academic-relation-key--indirect">Indirecta</span>{!plan.isExample && <span>Relaciones por confirmar</span>}</div>}
           </>}
         </div>
       </div>

@@ -6,6 +6,7 @@
 .purchase-secondary-link { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; color: #686871 !important; font-size: 13px; text-decoration: none; }
 .purchase-records button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 8px 12px; border: 1px solid transparent; border-radius: 7px; color: #45454d; background: #fff; font-size: 13px; line-height: 18px; cursor: pointer; box-shadow: var(--admin-shadow); }
 .purchase-records button svg { flex: none; }
+.purchase-records .purchase-delete { width: 36px; height: 36px; padding: 0; color: var(--admin-muted); background: transparent; box-shadow: none; }
 .purchase-list { margin-top: 30px; }
 .purchase-list-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .purchase-count { display: inline-flex; padding: 1px 6px; border-radius: 4px; color: #6c6c76; background: #f3f3f6; font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; }

@@ -12,7 +12,9 @@ tmp
 experiments
 apps/ocr
 tests/ocr
-Docs
+Docs/**
+!Docs/Foto prerequisitos Nutricion.jpeg
+!Docs/COTEJO-CATALOGO-ACADEMICO.md
 **/__pycache__
 *.log
 *.pem

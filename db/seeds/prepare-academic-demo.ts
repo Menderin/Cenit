@@ -18,7 +18,7 @@ async function main() {
   if (existsSync(file) && lstatSync(file).isSymbolicLink()) throw new Error('No usar enlaces para credenciales.');
   if (!existsSync(file)) writeFileSync(file, JSON.stringify(createAcademicDemoAccounts(), null, 2), { flag: 'wx', mode: 0o600 });
   const extra: DemoCredential[] = JSON.parse(readFileSync(file, 'utf8'));
-  const plan = readCatalog('catalogs/academic/nutricion-2027-r1.json');
+  const plan = readCatalog('catalogs/academic/nutricion-diagrama-r2.json');
   const pool = createPool();
   try {
     const target = (await pool.query('SELECT current_database() AS name,current_user AS role')).rows[0];

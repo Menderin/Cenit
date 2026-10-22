@@ -50,7 +50,7 @@ for (const source of ['academic', 'purchases']) {
       }
       const credentials = createDemoCredentials();
       await prepareDemoAccounts(pool, credentials);
-      const catalog = readCatalog('catalogs/academic/nutricion-2027-r1.json');
+      const catalog = readCatalog('catalogs/academic/nutricion-diagrama-r2.json');
       const student = credentials.find(account => account.role === 'estudiante')!;
       let purchaseId: string | undefined;
       if (source === 'academic') {

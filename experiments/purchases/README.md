@@ -1,36 +1,112 @@
-# Batería OCR de compras
+# Evaluar la extracción de compras
 
-Actualización del 14 de octubre: la nueva [batería de formato Oracle](ORACLE-FORMATO.md) reconstruye la captura de referencia con ocho columnas, cabecera compacta, controles y aprobaciones. Generar con `py -3 experiments/purchases/oracle_format.py`; imágenes en `tmp/ocr-oracle-format`. Las baterías históricas siguientes emplean plantillas simplificadas y no acreditan precisión sobre este formato.
+Este laboratorio compara lectores OCR y formas de reconstruir cabeceras e ítems. Usa documentos completamente ficticios. Sus resultados ayudan a elegir qué investigar; la aceptación de la aplicación se revisa en [Pruebas y aceptación](../../Docs/PRUEBAS-Y-ACEPTACION.md).
 
-Este laboratorio corre en el notebook dentro de Podman Linux, sólo CPU, con una cuota de 1 CPU y límite de 1 GiB por variante. No usa PostgreSQL, API, frontend o VM. Los pesos son preentrenados e idénticos a los del primer ensayo; no hay entrenamiento.
+Los scripts experimentales están separados del API, PostgreSQL y la entrega automática. El [procesador integrado](../../Docs/ARQUITECTURA.md#capturas-y-ocr) tiene sus propios límites y contrato. Los resultados sintéticos no acreditan precisión sobre documentos institucionales.
 
-## Organización
+## Capturas con formato de referencia
 
-- `baseline/`: primera comparación y evidencia histórica, sin modificar sus fuentes.
-- `dataset.py`: cuatro muestras de desarrollo conocidas y ocho configuraciones sintéticas nuevas de evaluación, con valores ficticios diferentes, otra distribución y variantes de fuente/calidad. Las coordenadas del generador no se exportan al extractor.
-- `pipeline.py`: variantes base, ampliación con posiciones de palabra y segmentación por celdas. Sólo recibe imagen y configuración; nunca consulta valores esperados.
-- `battery.py` y `summarize_battery.py`: ejecutan OCR real, comparan con verdad esperada y registran fallos, fuentes, imágenes y hashes de pesos.
-- `run.ps1`, `Containerfile`, `requirements.lock`: entorno experimental independiente. Los pesos y reportes completos permanecen en `tmp`.
-- `pipeline_v3.py`, `dataset_v3.py`, `round3.py`: tercera batería; reutiliza casos anteriores como desarrollo y reserva nuevos valores, tipografía monoespaciada/serif y anchos para evaluación. Conserva intacto el código de la segunda batería.
-- `pipeline_v4.py`, `dataset_v4.py`, `round4.py`: cuarta batería; verifica encabezados dentro de la cuadrícula y reconstruye filas sin depender de la asignación global de columnas. Usa otra evaluación sintética distinta.
+El generador `oracle_format.py` reproduce la distribución de una captura de referencia: cabecera compacta, ocho columnas, texto multilínea, controles y aprobaciones ilustradas. Los nombres, referencias y valores son ficticios; los iconos son aproximaciones y no acreditan autenticidad ni aprobación institucional.
 
-## Procedimiento
+Desde la raíz, con Python, Pillow y Arial instalada:
 
-1. Preparar los pesos explícitamente como explica [la investigación](../../Docs/INVESTIGACION-EXTRACCION-COMPRAS.md). La primera descarga necesita red; las mediciones no.
-2. Ajustar sólo con `./experiments/purchases/run.ps1 -Split development -Repeats 1`.
-3. Congelar extractor y generador. Ejecutar `./experiments/purchases/run.ps1 -Split holdout -Repeats 2` sin volver a ajustar con esos resultados.
-4. Resumir con `py -3 experiments/purchases/summarize_battery.py tmp/ocr-battery tmp/ocr-battery/summary.json`.
+```powershell
+py -3 experiments/purchases/oracle_format.py
+```
 
-Los reportes validan que las tres variantes utilizaron los mismos hashes de fuentes e imágenes. Cada configuración se compara con las mismas entradas, secuencialmente y sin GPU. El arranque se mide separado del procesamiento; memoria máxima se registra por contenedor/proceso. Conservar el reporte histórico antes de repetir una batería.
+Las imágenes y el manifiesto se crean en `tmp/ocr-oracle-format`, fuera de Git:
 
-## Límites
+| Archivo | Variante |
+| --- | --- |
+| `01-completa.png` | Captura completa de 1085 × 658 px, un ítem |
+| `02-dos-items.png` | Dos ítems y proveedores distintos |
+| `03-tres-items.png` | Tres ítems, secciones inferiores desplazadas |
+| `04-jpeg.jpg` | Compresión JPEG, calidad 78 |
+| `05-reducida.png` | Escala 85 % |
+| `06-ampliada.png` | Dos ítems, escala 125 % |
+| `07-grises.png` | Sin información de color |
+| `08-cabecera-recortada.png` | Sin barra de navegación superior |
 
-La evaluación sigue siendo sintética, no capturas independientes del cliente. No transforma texto en candidatos del contrato ni implementa guardado. El formato experimental tiene siete columnas; exige geometría suficiente para segmentar filas. La muestra sin cuadrícula explora el fallo explícito de esa restricción.
+En macOS se pueden usar las fuentes locales y la imagen OCR ya construida siguiendo la [guía local](../../deploy/LOCAL.md#ejecutar-el-build-de-demostración-con-ocr):
 
-Las posiciones de palabra provienen del alineamiento del reconocedor, no de cajas etiquetadas manualmente. El modo celdas localiza una cuadrícula por bordes y anclas; relee las celdas numéricas sin detector y usa contraste sólo al reintentar un número dudoso. Nunca sustituye directamente `O` por `0`.
+```sh
+mkdir -p tmp/ocr-fonts
+cp "/System/Library/Fonts/Supplemental/Arial.ttf" tmp/ocr-fonts/arial.ttf
+cp "/System/Library/Fonts/Supplemental/Arial Bold.ttf" tmp/ocr-fonts/arialbd.ttf
+docker run --rm -i --user "$(id -u):$(id -g)" \
+  -v "$PWD:/workspace:rw" -w /workspace \
+  --entrypoint python localhost/cenit-ocr:adapter1 - <<'OCR_SAMPLE'
+import sys
+from pathlib import Path
+sys.path.insert(0, 'experiments/purchases')
+import oracle_format
+oracle_format.FONT_DIR = Path('tmp/ocr-fonts')
+oracle_format.main()
+OCR_SAMPLE
+```
 
-Tercera batería: `./experiments/purchases/run.ps1 -Round 3 -Split development -Repeats 1`, luego congelar y ejecutar con `-Split holdout -Repeats 2`. Resumir con `py -3 experiments/purchases/summarize_round3.py tmp/ocr-round3 tmp/ocr-round3/summary.json`. El modo `tight` recorta tinta real y conserva proporciones antes de reconocer; `consensus` exige acuerdo con Tesseract para cantidad/precio/importe y conserva las lecturas discrepantes como observaciones. Un resultado numérico no verificable queda `null` con incidencia. No es el contrato público ni una garantía contra errores coincidentes de ambos motores.
+Usar el nombre real de la imagen construida si es diferente. Para revisar la interfaz, entrar como administrativo, abrir «Sistema de compra → Subir captura» y elegir una muestra. Comparar los candidatos con la imagen antes de guardar; extraer no conserva una compra.
 
-Cuarta batería: utilizar `-Round 4` y resumir con `summarize_round4.py tmp/ocr-round4 tmp/ocr-round4/summary.json`. El modo `structured` lee líneas dentro de cada celda con recorte al texto y padding; `verified` contrasta cantidades/precios/importes con Tesseract. Se exige lectura exacta de los siete encabezados conocidos antes de reconstruir filas. Los espacios de la lectura global sólo se reutilizan si ambas lecturas contienen exactamente los mismos caracteres al excluir espacios. No se reparan dígitos ni puntuación por comparación con los esperados.
+Para medir el procesador real con las ocho muestras:
 
-No debe interpretarse un campo no nulo como campo confiable: la evidencia distingue valores incorrectos de ausencias. Una mejora de coincidencias puede empeorar tiempo, memoria o errores numéricos; no incorporar automáticamente una variante a producción.
+```powershell
+py -3 experiments/purchases/oracle_format.py --evaluate
+```
+
+Requiere OCR en `127.0.0.1:8090`, sin otra inferencia simultánea. No utiliza credenciales del API ni PostgreSQL. El evaluador conserva los valores esperados y registra hashes, respuestas, ítems, campos exactos/incorrectos/ausentes y tiempos con arranque del modelo. Excluye la cuenta de cargo cuando queda cortada: no se exige recuperar texto invisible.
+
+Las mismas muestras se usaron para ajustar la segmentación v3. Sus resultados son una regresión sobre desarrollo; una evaluación independiente necesita nuevas capturas preparadas por otra persona.
+
+## Resultados conservados
+
+Cada archivo de evidencia identifica muestras, fuentes, configuración y límites de su ejecución. Los resultados de conjuntos distintos no se comparan como una mejora directa.
+
+| Conjunto | Evidencia | Lectura del resultado |
+| --- | --- | --- |
+| Comparación inicial | [Resumen inicial](baseline/evidence.json) | Referencia histórica de motores y parser; plantilla simplificada. |
+| Segmentación por celdas | [Segunda batería](battery-evidence.json) | La ampliación y las celdas no mejoraron globalmente la lectura; algunos números no nulos eran incorrectos. |
+| Recorte numérico y contraste entre motores | [Tercera batería](round3-evidence.json) | El contraste omitió más valores sin beneficio de exactitud en ese conjunto. |
+| Encabezados locales y lectura por líneas | [Cuarta batería](round4-evidence.json) | Mejora emparejada de un campo entre 162; no acredita una sustitución universal. |
+| Formato de ocho columnas, procesador v2 | [Evaluación v2](oracle-format-evidence.json) | 50 campos exactos, 21 incorrectos, 93 ausentes; ningún ítem reconstruido en las ocho capturas. |
+| Mismas muestras, procesador v3 | [Regresión v3](oracle-format-v3-evidence.json) | 118 exactos, 11 incorrectos y 35 ausentes. Recupera los ítems de PNG nativos y del recorte superior; falla la tabla en JPEG, escalados y gris. Mediana 14,32 s, máximo 28,67 s. |
+
+Los dos últimos registros corresponden al ensayo local del 14 de octubre de 2026. HTTP 200 significa que hubo respuesta, no que la lectura fuera correcta. Los pesos no fueron entrenados ni cambiados en esos ajustes. No se reparan dígitos a partir de los valores esperados, de sumas ni de acuerdos supuestos entre motores.
+
+PP-OCRv5 móvil latino mediante ONNX quedó como motor candidato. Las mejoras de geometría deben evaluarse separadamente de detección, reconocimiento y normalización. El acuerdo con Tesseract no garantiza corrección y puede añadir tiempo. Las pruebas de muestras reales, calidad mínima aceptada y recursos del destino siguen siendo necesarias para aceptar un uso institucional.
+
+## Reproducir las baterías experimentales
+
+`baseline/` conserva el primer ensayo. `dataset.py`/`pipeline.py` contienen la segunda batería; los archivos con sufijos `_v3` y `_v4` pertenecen a las rondas posteriores. Cada evaluador conoce las respuestas esperadas; los extractores reciben sólo imagen y configuración. Las coordenadas del generador no se exportan al extractor.
+
+El entorno usa `Containerfile`, `requirements.lock` y `run.ps1`, con Podman Linux, CPU, cuota de un núcleo y límite de 1 GiB por variante. Descargar pesos requiere red; las mediciones se realizan sin ella. Para preparar el entorno inicial en PowerShell:
+
+```powershell
+podman build -f experiments/purchases/Containerfile -t localhost/cenit-ocr-research:20261014 experiments/purchases
+New-Item -ItemType Directory -Force tmp/ocr-research | Out-Null
+podman run --name cenit-research-prepare --cpus 1 --memory 1g `
+  -v "$($PWD.Path)/tmp/ocr-research:/results" `
+  localhost/cenit-ocr-research:20261014 python baseline/benchmark.py --engine rapid --output /results
+podman cp cenit-research-prepare:/opt/research/lib/python3.11/site-packages/rapidocr/models tmp/ocr-research/models
+```
+
+Conservar los pesos y sus hashes; los [modelos de runtime](../../apps/ocr/MODELS.md) documentan su procedencia y licencia. El runner monta los modelos preparados. Usar nombres nuevos o retirar sólo los contenedores del ensayo propio si ya existen. Los scripts congelados pueden mencionar la guía antigua en sus mensajes; la preparación vigente está en esta sección.
+
+1. Ajustar con desarrollo: `./experiments/purchases/run.ps1 -Split development -Repeats 1`.
+2. Congelar fuentes y configuración antes de evaluar: `./experiments/purchases/run.ps1 -Split holdout -Repeats 2`.
+3. Resumir: `py -3 experiments/purchases/summarize_battery.py tmp/ocr-battery tmp/ocr-battery/summary.json`.
+
+Para las rondas 3 y 4, añadir `-Round 3` o `-Round 4` al runner y usar `summarize_round3.py tmp/ocr-round3 tmp/ocr-round3/summary.json` o `summarize_round4.py tmp/ocr-round4 tmp/ocr-round4/summary.json`. No ajustar después de ver una evaluación y volver a presentarla como no vista.
+
+Las baterías anteriores usan siete columnas. La de formato de referencia usa ocho. Los reportes permiten comprobar igualdad de imágenes, fuentes y pesos entre variantes; distinguen arranque, tiempo de procesamiento y memoria. Conservar los resultados históricos antes de repetir; imágenes, pesos adicionales y salidas completas permanecen en `tmp`.
+
+## Comprobar el procesador integrado
+
+Las pruebas Python están en `tests/ocr`, separadas de las baterías. Ejecutarlas con las dependencias del OCR instaladas en un entorno aislado o en su imagen:
+
+```sh
+PYTHONPATH=apps/ocr python3 -m unittest discover -s tests/ocr -v
+```
+
+`tests/ocr/check_layout.py` verifica casos sintéticos de formato, parciales y rechazos contra OCR local; requiere Pillow y la fuente DejaVu prevista por el generador. `tests/ocr/evaluate.py --url http://127.0.0.1:8090 --split holdout --output <directorio-nuevo-en-tmp>` registra evaluación por campo y hashes. Consultar sus opciones antes de ejecutar; los valores esperados permanecen en el evaluador, fuera del runtime.
+
+El E2E opcional de OCR real figura en la [matriz](../../Docs/PRUEBAS-Y-ACEPTACION.md). Es un recorrido de integración con una imagen ficticia, no una medición de exactitud institucional. La capacidad de la VM, la concurrencia y la aceptación de usuarios requieren sus propias comprobaciones.

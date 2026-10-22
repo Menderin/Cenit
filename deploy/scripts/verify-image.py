@@ -1,7 +1,8 @@
 """Smoke-test the actual release image with separate migration/runtime roles.
 
 Does not replace application unit/integration/E2E tests. Temporary resources are
-limited to this invocation; never prune, seed or access the VM database.
+limited to this invocation; catalogue loading is tested only in its disposable DB.
+Never prune or access the VM database; no accounts or histories are prepared.
 """
 import argparse
 import json
@@ -72,6 +73,9 @@ class ImageCheck:
             raise RuntimeError('Image source label does not match Cenit.')
         if labels.get('org.opencontainers.image.revision') != self.revision:
             raise RuntimeError('Image revision does not match the tested commit.')
+        self.phase = 'packaged catalog and source hashes'
+        self.run('run', '--rm', '--network=none', '--read-only', self.image,
+                 'node', '/app/operations/db/seeds/load-academic.js', '--check')
         images = json.loads((ROOT / 'deploy/images.lock.json').read_text(encoding='utf-8'))
         with tempfile.TemporaryDirectory(prefix=self.prefix) as directory:
             files = Path(directory)
@@ -109,6 +113,30 @@ class ImageCheck:
                              '--cpus=1', '-e', 'DATABASE_URL_FILE=/run/secrets/database-url',
                              '-v', f'{files / "migrator-url"}:/run/secrets/database-url:ro',
                              self.image, 'node', '/app/deploy/migrate.cjs', timeout=180)
+                self.phase = 'explicit catalog publication'
+                empty = self.run('exec', self.database, 'psql', '-U', 'cenit_admin',
+                                 '-d', 'cenit_demo', '-Atc',
+                                 'SELECT count(*) FROM cenit.academic_versions')
+                if empty.strip() != '0':
+                    raise RuntimeError('Migration must not publish a catalog.')
+                for _ in range(2):
+                    self.run('run', '--rm', '--read-only', '--network', self.network,
+                             '--memory=384m', '-e', 'DATABASE_URL_FILE=/run/secrets/database-url',
+                             '-v', f'{files / "migrator-url"}:/run/secrets/database-url:ro',
+                             self.image, 'node', '/app/operations/db/seeds/load-academic.js', '--publish')
+                counts = self.run('exec', self.database, 'psql', '-U', 'cenit_admin',
+                                  '-d', 'cenit_demo', '-Atc', """
+SELECT json_build_array(
+ (SELECT count(*) FROM cenit.academic_versions WHERE version='diagrama-r2' AND status='published'),
+ (SELECT count(*) FROM cenit.academic_courses),
+ (SELECT count(*) FROM cenit.academic_prerequisite_edges),
+ (SELECT sum(credits)::int FROM cenit.academic_courses),
+ (SELECT count(*) FROM cenit.accounts),
+ (SELECT count(*) FROM cenit.academic_enrollments))
+""")
+                if json.loads(counts) != [1, 52, 43, 305, 0, 0]:
+                    raise RuntimeError('Catalog loading must be complete, repeatable and leave identities/history untouched.')
+                self.phase = 'runtime HTTP'
                 self.run('run', '-d', '--name', self.application, '--network', self.network,
                          '--network-alias', 'cenit-app',
                          '--memory=512m', '--cpus=1', '-e', 'DATABASE_URL_FILE=/run/secrets/database-url',

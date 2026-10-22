@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { ErrorResponseSchema } from '@cenit/contracts';
-import { CreatePurchaseSchema, PurchaseListQuerySchema, PurchaseListResponseSchema, PurchaseParamsSchema, PurchaseResponseSchema, PurchaseValidationSchema, type CreatePurchase, type PurchaseListQuery } from '@cenit/contracts/purchases';
+import { CreatePurchaseSchema, PurchaseListQuerySchema, PurchaseListResponseSchema, PurchaseParamsSchema, PurchaseResponseSchema, PurchaseValidationSchema, PurchaseDeletionSchema, PurchaseDeletionResponseSchema, PurchaseSummaryResponseSchema, type CreatePurchase, type PurchaseListQuery } from '@cenit/contracts/purchases';
 import type { Authenticate } from '../../auth/services/principal.js';
 import { ApiError } from '../../../infrastructure/errors.js';
 import type { PurchaseService } from '../services/purchases.js';
@@ -22,6 +22,10 @@ export async function purchaseRoutes(app: FastifyInstance, options: { service: P
     if (!request.headers.origin || !options.allowedOrigins.includes(request.headers.origin)) throw new ApiError(403, 'FORBIDDEN', 'Origen no autorizado.');
   };
   const errors = Object.fromEntries([400, 401, 403, 404, 409, 413, 500, 503].map(status => [status, ErrorResponseSchema]));
+  app.get('/summary', { onRequest: access, schema: { response: { 200: PurchaseSummaryResponseSchema, ...errors } } }, () => options.service.summary());
+  app.delete<{ Params: { id: string }; Body: { expectedVersion: number } }>('/:id', { onRequest: write,
+    schema: { params: PurchaseParamsSchema, body: PurchaseDeletionSchema, response: { 200: PurchaseDeletionResponseSchema, ...errors } },
+  }, request => options.service.delete(request.params.id, request.body.expectedVersion));
   app.post('/extractions', { onRequest: write, schema: { response: { 200: ExtractionResponseSchema, ...errors, 415: ErrorResponseSchema, 422: ErrorResponseSchema } } }, async (request, reply) => {
     if (!request.isMultipart()) throw new ApiError(400, 'VALIDATION_ERROR', 'Envía un único archivo PNG/JPEG en el campo file.');
     const controller = new AbortController();
