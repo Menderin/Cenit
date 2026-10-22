@@ -628,7 +628,7 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
       if (state === 'reviewed') expect((await page.request.post(`/api/v1/purchases/${record.id}/validation`, { headers: { origin }, data: { expectedVersion: 1 } })).status()).toBe(200);
     }
   }
-  await page.goto('/administracion/compras');
+  await page.goto('/administracion/compras?allYears=1');
   const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
   const reviewed = page.getByRole('region', { name: 'Revisados en Cenit', exact: true });
   await pending.getByRole('button', { name: 'Siguiente' }).click();
@@ -666,8 +666,11 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
     await page.screenshot({ path: `tmp/purchase-empty-tables-${width}.png`, fullPage: true });
   }
   await page.getByLabel('Código de proyecto', { exact: true }).fill('000X');
-  await page.getByLabel('Enviado desde', { exact: true }).fill('2027-02-01');
-  await page.getByLabel('Enviado hasta', { exact: true }).fill('2027-02-01');
+  const datePicker = page.getByLabel('Fecha de envío', { exact: true });
+  await page.getByRole('button', { name: 'Abrir calendario: Fecha de envío', exact: true }).click();
+  for (let month = 0; month < 4; month++) await page.locator('.cenit-calendar .rdp-button_next').click();
+  await page.locator('.cenit-calendar [data-day="2027-02-01"] .rdp-day_button').click();
+  await expect(page).toHaveURL(/dateFrom=2027-02-01&dateTo=2027-02-01/);
   await search.fill('100%_\\');
   for (const table of [pending, reviewed]) await expect(table.getByText('1 registro', { exact: true })).toBeVisible();
   for (const width of [1280, 375]) {
@@ -680,25 +683,24 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
   await expect(page.getByText(targets[0]!, { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Volver al registro' }).click();
   await expect(search).toHaveValue('100%_\\');
-  await expect(page.getByLabel('Enviado desde', { exact: true })).toHaveValue('01/02/2027');
+  await expect(datePicker).toHaveValue('01/02/2027');
   await expect(page.getByLabel('Código de proyecto', { exact: true })).toHaveValue('000X');
   await search.fill('no coincidence');
   await expect(pending.getByText('0 registros', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
-  await expect(search).toHaveValue(''); await expect(pending.getByRole('row').nth(1)).toBeVisible();
+  await expect(search).toHaveValue('');
+  await page.getByRole('button', { name: /^Año de envío:/ }).click();
+  await page.getByRole('listbox', { name: 'Año de envío', exact: true }).getByRole('option', { name: 'Todos los años', exact: true }).click();
+  await expect(pending.getByRole('row').nth(1)).toBeVisible();
 });
 
 test('listado: validación, error/reintento, carga y filtros descartados al cambiar sesión', async ({ page }) => {
   await login(page, 'administrativo'); await page.goto('/administracion/compras');
   const search = page.getByLabel('Buscar solicitudes', { exact: true });
-  await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
-  await page.getByLabel('Enviado desde', { exact: true }).fill('2026-10-14');
-  await page.getByLabel('Enviado hasta', { exact: true }).fill('2026-10-13');
-
-  await search.focus();
-  await expect(page.locator('.purchase-filter-feedback')).toContainText('corrige el rango');
-  await page.getByLabel('Enviado desde', { exact: true }).fill('');
-  await page.getByLabel('Enviado hasta', { exact: true }).fill('');
+  await page.goto('/administracion/compras?dateFrom=2026-10-14&dateTo=2026-10-13');
+  await expect(page.getByText('Corrige los filtros para consultar las compras.', { exact: true }).first()).toBeVisible();
+  await page.getByRole('button', { name: /^Quitar filtro: Fecha de envío/ }).click();
+  await expect(page).toHaveURL(/\/compras$/);
   await page.route('**/api/v1/purchases?**', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'filter-error' } }) }));
   await search.fill('PRIVATE-FILTER');
   const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });

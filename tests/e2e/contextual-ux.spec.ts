@@ -259,13 +259,13 @@ test('descarte usa origen explícito, atrás usa cabecera visible y cerrar no de
 });
 
 test('filtros vacíos, repetidos y quitados no generan consultas ni historial redundantes', async ({ page }) => {
-  await login(page, 'administrativo'); await page.goto('/administracion/compras');
+  await login(page, 'administrativo'); await fixtures(page, 1); await page.goto('/administracion'); await page.goto('/administracion/compras');
   await expect(pending(page).getByRole('table')).toBeVisible();
   let queries = 0; page.on('request', r => { if (new URL(r.url()).pathname === '/api/v1/purchases') queries++; });
   const search = page.getByLabel('Buscar solicitudes', { exact: true });
   const history = await page.evaluate(() => window.history.length);
   await page.clock.install(); await search.fill('   '); await page.clock.runFor(300);
-  await expect(page.getByRole('button', { name: 'Limpiar', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Limpiar', exact: true })).toBeDisabled();
   expect(queries).toBe(0); expect(await page.evaluate(() => window.history.length)).toBe(history);
   await search.fill('FILTRO-CONTEXTUAL'); await page.clock.runFor(300); await page.clock.resume();
   await expect(page).toHaveURL(/q=FILTRO-CONTEXTUAL/);
@@ -273,7 +273,7 @@ test('filtros vacíos, repetidos y quitados no generan consultas ni historial re
   const appliedQueries = queries;
   await search.fill(' FILTRO-CONTEXTUAL '); await page.clock.runFor(300);
   expect(queries).toBe(appliedQueries);
-  await page.getByRole('button', { name: 'Quitar filtro: Buscar solicitudes', exact: true }).click();
+  await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
   await page.clock.runFor(300); await expect(page).toHaveURL(/\/compras$/);
   await expect(page.locator('.purchase-filter-chips')).toHaveCount(0);
   expect(await page.evaluate(() => window.history.length)).toBe(history);
@@ -281,27 +281,29 @@ test('filtros vacíos, repetidos y quitados no generan consultas ni historial re
   await page.goForward(); await expect(search).toHaveValue('');
 });
 
-test('filtros automáticos esperan el conjunto válido, agrupan escritura y conservan borrador y foco', async ({ page }) => {
+test('filtros automáticos aplican un día específico, agrupan escritura y conservan foco', async ({ page }) => {
   await login(page, 'administrativo'); const records = await fixtures(page, 2);
   await page.request.post(`/api/v1/purchases/${records[1]!.id}/validation`, { headers: { Origin: new URL(page.url()).origin }, data: { expectedVersion: 1 } });
   await page.goto('/administracion/compras?pendingPage=2&reviewedPage=2');
   await expect(page.getByText(/^Página 2 de /)).toHaveCount(2);
   const prefix = records[0]!.number.slice(0, -2), search = page.getByLabel('Buscar solicitudes', { exact: true });
-  await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
-  const until = page.getByLabel('Enviado hasta', { exact: true });
-  await until.fill('31/12/');
   const history = await page.evaluate(() => window.history.length), queries: URL[] = [];
   page.on('request', request => { const url = new URL(request.url()); if (url.pathname === '/api/v1/purchases') queries.push(url); });
   await page.clock.install(); await page.clock.pauseAt(new Date());
-  await search.fill(prefix); await page.clock.runFor(500);
-  expect(queries).toHaveLength(0); await expect(until).toHaveValue('31/12/');
-  await expect(page.locator('.purchase-filter-feedback')).toContainText('Se conservan los últimos resultados');
-  await until.fill('31/12/2099'); await search.focus(); await page.clock.runFor(249);
+  await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
+  await page.getByRole('button', { name: 'Abrir calendario: Fecha de envío', exact: true }).click();
+  await page.locator('.cenit-calendar [data-day="2026-10-12"] .rdp-day_button').click();
+  await page.clock.runFor(249);
   expect(queries).toHaveLength(0); await page.clock.runFor(1); await page.clock.resume();
-  await expect(page).toHaveURL(new RegExp(`q=${prefix}&dateTo=2099-12-31$`));
+  await expect(page).toHaveURL(/dateFrom=2026-10-12&dateTo=2026-10-12$/);
+  expect(await page.evaluate(() => window.history.length)).toBe(history);
+  await page.keyboard.press('Escape');
+  queries.length = 0;
+  await search.fill(prefix);
+  await expect(page).toHaveURL(new RegExp(`q=${prefix}&dateFrom=2026-10-12&dateTo=2026-10-12$`));
   await expect.poll(() => queries.length).toBe(2);
   await expect(page.getByText(/^Página 1 de /)).toHaveCount(2);
-  for (const query of queries) { expect(query.searchParams.get('q')).toBe(prefix); expect(query.searchParams.get('dateTo')).toBe('2099-12-31'); }
+  for (const query of queries) { expect(query.searchParams.get('q')).toBe(prefix); expect(query.searchParams.get('dateFrom')).toBe('2026-10-12'); expect(query.searchParams.get('dateTo')).toBe('2026-10-12'); }
   await expect(search).toBeFocused();
   await expect(pending(page).getByText('1 registro', { exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Revisados en Cenit', exact: true }).getByText('1 registro', { exact: true })).toBeVisible();
@@ -350,7 +352,7 @@ test('cambiar filtros reinicia páginas, limpiar evita duplicados y el no cambio
   await page.unroute('**/api/v1/purchases?**'); await pending(page).getByRole('button', { name: 'Reintentar' }).click();
   await expect(pending(page).getByText('No encontramos compras con estos filtros')).toBeVisible();
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click(); await expect(page).toHaveURL(/\/compras$/);
-  await expect(page.getByRole('button', { name: 'Limpiar', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Limpiar', exact: true })).toBeDisabled();
 });
 
 test('marco y navegación permanecen visibles al desplazar listas/formularios, con fallback móvil y poca altura', async ({ page }) => {
