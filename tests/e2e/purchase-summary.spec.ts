@@ -54,7 +54,8 @@ test('Inicio muestra error y permite reintentar hasta un resumen vacío', async 
   await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
   await expect(page.locator('.dashboard-kpis')).toBeVisible();
   await expect(page.getByText('Aún no hay compras registradas', { exact: true })).toBeVisible();
-  await expect(page.locator('.dashboard-kpis dd').filter({ hasText: /^0$/ })).toHaveCount(3);
+  await expect(page.locator('.dashboard-kpis > div')).toHaveCount(3);
+  await expect(page.locator('.dashboard-kpis dd').filter({ hasText: /^0$/ })).toHaveCount(2);
   await expect(page.getByRole('navigation', { name: 'Módulos de Cenit' })).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link')).toHaveCount(4);
   await expect(page.locator('.dashboard-kpis')).not.toContainText(/ejemplos/);
@@ -79,6 +80,17 @@ test('Inicio reúne cinco altas e indicadores en una pantalla de escritorio y se
   await expect(page.getByRole('region', { name: 'Sincronización con Google Sheets' })).toContainText('Pendiente de sincronización');
   await expect(page.locator('.dashboard-kpis > div').nth(0).locator('dd').first()).toHaveText('48');
   await expect(page.locator('.dashboard-kpis > div').nth(2).locator('dd').first()).toHaveText(amountLabel('3520000'));
+  const graph = page.locator('.dashboard-chart .recharts-surface');
+  await graph.focus();
+  await expect(page.locator('.dashboard-chart-tooltip')).toContainText('23/09/2026');
+  await expect(page.locator('.dashboard-chart-tooltip')).toContainText('0 compras incorporadas');
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.dashboard-chart-tooltip')).toContainText('24/09/2026');
+  await expect(page.locator('.dashboard-chart-tooltip')).toContainText('1 compra incorporada');
+  await page.getByRole('link', { name: 'Abrir Compras' }).focus();
+  await page.locator('.recharts-bar-rectangle').filter({ has: page.locator('path') }).first().hover();
+  await expect(page.locator('.dashboard-chart-tooltip')).toBeVisible();
+  await expect(page.locator('.dashboard-chart-tooltip')).toContainText('24/09/2026');
   for (const width of [1280, 1366, 1440]) {
     await page.setViewportSize({ width, height: 720 });
     await expect.poll(() => page.locator('.admin-content').evaluate(element => element.scrollHeight - element.clientHeight)).toBeLessThanOrEqual(1);
