@@ -80,8 +80,6 @@ test('historial de 800 compras: períodos, orden, páginas acotadas y tamaño co
   await expect(month).toBeEnabled();
   const filtersButton = page.getByRole('button', { name: 'Más filtros', exact: true });
   const filterPanel = page.locator('#purchase-more-filters');
-  const resultsHeading = list.getByRole('heading', { name: 'Compras registradas', exact: true });
-  const initialHeadingTop = await resultsHeading.evaluate(element => element.getBoundingClientRect().top);
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await filtersButton.click();
   await expect(filterPanel).toBeVisible();
@@ -90,11 +88,11 @@ test('historial de 800 compras: períodos, orden, páginas acotadas y tamaño co
     duration: animation.effect?.getComputedTiming().duration,
   })));
   await page.waitForTimeout(50);
-  const firstHeadingTop = await resultsHeading.evaluate(element => element.getBoundingClientRect().top);
+  const firstPanelHeight = await filterPanel.evaluate(element => element.getBoundingClientRect().height);
   await page.waitForTimeout(50);
-  const secondHeadingTop = await resultsHeading.evaluate(element => element.getBoundingClientRect().top);
-  expect(firstHeadingTop).toBeGreaterThan(initialHeadingTop);
-  expect(secondHeadingTop).toBeGreaterThan(firstHeadingTop);
+  const secondPanelHeight = await filterPanel.evaluate(element => element.getBoundingClientRect().height);
+  expect(firstPanelHeight).toBeGreaterThan(0);
+  expect(secondPanelHeight).toBeGreaterThan(firstPanelHeight);
   expect(openingTransitions).toContainEqual({ property: 'opacity', duration: 150 });
   expect(openingTransitions).toContainEqual({ property: 'grid-template-rows', duration: 150 });
   await filterPanel.evaluate(async element => { await Promise.all(element.getAnimations().map(animation => animation.finished)); });
