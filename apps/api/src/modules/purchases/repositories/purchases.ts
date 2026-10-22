@@ -56,7 +56,8 @@ export class PurchaseRepository {
       (count(*) FILTER (WHERE source='manual'))::int AS manual,
       (count(*) FILTER (WHERE source='image_capture'))::int AS image_capture,
       (count(*) FILTER (WHERE source='contract_example'))::int AS contract_example
-      FROM cenit.purchase_requests CROSS JOIN period GROUP BY period.month_start,period.year_start,period.registration_month`)).rows[0];
+      FROM period LEFT JOIN cenit.purchase_requests ON TRUE
+      GROUP BY period.month_start,period.year_start,period.registration_month`)).rows[0];
     const activity = await db.query<{ date: string; count: number }>(`WITH dates AS (
       SELECT generate_series((now() AT TIME ZONE 'America/Santiago')::date-29,(now() AT TIME ZONE 'America/Santiago')::date,'1 day')::date AS day
     ), counts AS (SELECT (created_at AT TIME ZONE 'America/Santiago')::date AS day,count(*)::int AS count FROM cenit.purchase_requests
