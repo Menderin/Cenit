@@ -18,7 +18,7 @@ test('Inicio coincide con compras y se actualiza al volver después de guardar y
   const openRecord = async () => {
     await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
     await page.getByLabel('Buscar solicitudes', { exact: true }).fill(input.header.requestNumber);
-    await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+
     const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
     const row = pending.getByRole('row').filter({ hasText: input.header.requestNumber });
     await expect(row).toBeVisible();
@@ -26,17 +26,18 @@ test('Inicio coincide con compras y se actualiza al volver después de guardar y
   };
   await openRecord();
   await home();
-  await expect(card('Registros guardados')).toHaveText(String(before.requests + 1));
-  await expect(card('Pendientes de revisión')).toHaveText(String(before.pending + 1));
-  await expect(card('Monto por revisar en Cenit')).toHaveText(amountLabel((BigInt(before.pendingAmount) + BigInt(input.header.totalAmount)).toString()));
+  await expect(card('Compras registradas')).toHaveText(String(before.requests + 1));
+  await expect(card('Monto documental registrado')).toHaveText(amountLabel((BigInt(before.overview.documentTotal) + BigInt(input.header.totalAmount)).toString()));
+  await expect(card('Registradas este mes')).toHaveText(String(before.overview.registeredThisMonth + 1));
+  await expect(page.getByRole('region', { name: 'Segunda revisión' })).toContainText(String(before.pending + 1));
   const row = await openRecord();
   await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Validar registro', exact: true }).click();
   await expect(row).toHaveCount(0);
   await home();
-  await expect(card('Registros guardados')).toHaveText(String(before.requests + 1));
-  await expect(card('Pendientes de revisión')).toHaveText(String(before.pending));
-  await expect(card('Monto por revisar en Cenit')).toHaveText(amountLabel(before.pendingAmount));
+  await expect(card('Compras registradas')).toHaveText(String(before.requests + 1));
+  await expect(card('Monto documental registrado')).toHaveText(amountLabel((BigInt(before.overview.documentTotal) + BigInt(input.header.totalAmount)).toString()));
+  await expect(page.getByRole('region', { name: 'Segunda revisión' })).toContainText(amountLabel(before.pendingAmount));
 });
 
 test('Inicio muestra error y permite reintentar hasta un resumen vacío', async ({ page }) => {
@@ -44,7 +45,7 @@ test('Inicio muestra error y permite reintentar hasta un resumen vacío', async 
   await page.route('**/api/v1/purchases/summary', route => route.fulfill({
     status: unavailable ? 503 : 200, contentType: 'application/json',
     body: JSON.stringify(unavailable ? { error: { code: 'SERVICE_UNAVAILABLE', message: 'Resumen temporalmente no disponible.', requestId: crypto.randomUUID() } }
-      : { data: { requests: 0, pending: 0, currency: 'CLP', pendingAmount: '0', days: [] } }),
+      : { data: { requests: 0, pending: 0, currency: 'CLP', pendingAmount: '0', days: [], overview: { documentTotal: '0', registeredThisMonth: 0, sourceCounts: { manual: 0, image_capture: 0, contract_example: 0 }, registrationDays: [], recentRecords: [] } } }),
   }));
   await login(page, 'administrativo');
   await expect(page.getByRole('alert')).toContainText('Resumen temporalmente no disponible.');
@@ -52,6 +53,8 @@ test('Inicio muestra error y permite reintentar hasta un resumen vacío', async 
   unavailable = false;
   await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
   await expect(page.locator('.dashboard-kpis')).toBeVisible();
-  await expect(page.getByText('Aún no hay solicitudes registradas.', { exact: true })).toBeVisible();
-  await expect(page.locator('.dashboard-kpis dd').filter({ hasText: /^0$/ })).toHaveCount(2);
+  await expect(page.getByText('Aún no hay compras registradas', { exact: true })).toBeVisible();
+  await expect(page.locator('.dashboard-kpis dd').filter({ hasText: /^0$/ })).toHaveCount(3);
+  await expect(page.getByRole('navigation', { name: 'Módulos de Cenit' }).getByRole('link')).toHaveCount(3);
+  await expect(page.getByRole('link', { name: /Subir captura/ })).toHaveCount(0);
 });

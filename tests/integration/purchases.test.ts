@@ -93,7 +93,12 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.purchase_requests')).rows[0].n).toBe(index === 0 ? 0 : 1);
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.accounts')).rows[0].n).toBe(index === 0 ? 0 : 3);
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.__drizzle_migrations')).rows[0].n).toBe(readMigrationFiles({ migrationsFolder: 'db/migrations' }).length);
-      if (index === 0) expect(await new PurchaseRepository(pool).summary()).toEqual({ data: { requests: 0, pending: 0, currency: 'CLP', pendingAmount: '0', days: [] } });
+      if (index === 0) {
+        const empty = await new PurchaseRepository(pool).summary();
+        expect(empty).toMatchObject({ data: { requests: 0, pending: 0, currency: 'CLP', pendingAmount: '0', days: [], overview: { documentTotal: '0', registeredThisMonth: 0, sourceCounts: { manual: 0, image_capture: 0, contract_example: 0 }, recentRecords: [] } } });
+        expect(empty.data.overview!.registrationDays).toHaveLength(30);
+        expect(empty.data.overview!.registrationDays.every(day => day.count === 0)).toBe(true);
+      }
     }
     const previous = (await pools[1]!.query('SELECT source,example_id,payload_hash FROM cenit.purchase_requests WHERE id=$1', [historicalId])).rows[0];
     expect(previous).toEqual({ source: 'manual', example_id: null, payload_hash: historicalHash });
@@ -210,13 +215,32 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     expect(summary.statusCode).toBe(200); expect(Value.Check(PurchaseSummaryResponseSchema, summary.json())).toBe(true);
     expect(summary.headers['cache-control']).toBe('no-store');
     expect(summary.json().data).toMatchObject({ requests: before.requests + 1, pending: before.pending + 1, currency: 'CLP', pendingAmount: (BigInt(before.pendingAmount) + BigInt(input.header.totalAmount)).toString() });
+    expect(summary.json().data.overview).toMatchObject({
+      documentTotal: (BigInt(before.overview.documentTotal) + BigInt(input.header.totalAmount)).toString(),
+      registeredThisMonth: before.overview.registeredThisMonth + 1,
+      sourceCounts: { ...before.overview.sourceCounts, manual: before.overview.sourceCounts.manual + 1 },
+    });
+    expect(summary.json().data.overview.registrationDays.at(-1).count).toBe(before.overview.registrationDays.at(-1).count + 1);
+    expect(summary.json().data.overview.recentRecords[0]).toMatchObject({ id: saved.id, totalAmount: input.header.totalAmount, createdAt: saved.createdAt });
     expect(summary.json().data.days.at(-1)).toEqual({ date: '2098-01-02', count: 1 });
     await request('POST', `/api/v1/purchases/${saved.id}/validation`, { expectedVersion: 1 });
     const reviewed = (await request('GET', '/api/v1/purchases/summary')).json().data;
+    expect(reviewed.overview).toEqual(summary.json().data.overview);
     expect(reviewed).toMatchObject({ requests: before.requests + 1, pending: before.pending, pendingAmount: before.pendingAmount });
     expect(reviewed.days.at(-1)).toEqual({ date: '2098-01-02', count: 0 });
     expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: 2 })).statusCode).toBe(200);
     expect((await request('GET', '/api/v1/purchases/summary')).json().data).toEqual(before);
+  });
+  it('el mes de incorporación respeta medianoche de America/Santiago y no la fecha documental', async () => {
+    const before = (await repository.summary()).data.overview!;
+    const input = body(); input.header.sentDate = '2098-12-31';
+    const saved = (await request('POST', '/api/v1/purchases', input)).json().data;
+    const pool = pools[0]!;
+    await pool.query("UPDATE cenit.purchase_requests SET created_at=(date_trunc('month',now() AT TIME ZONE 'America/Santiago') AT TIME ZONE 'America/Santiago')-interval '1 millisecond' WHERE id=$1", [saved.id]);
+    expect((await repository.summary()).data.overview!.registeredThisMonth).toBe(before.registeredThisMonth);
+    await pool.query("UPDATE cenit.purchase_requests SET created_at=date_trunc('month',now() AT TIME ZONE 'America/Santiago') AT TIME ZONE 'America/Santiago' WHERE id=$1", [saved.id]);
+    expect((await repository.summary()).data.overview!.registeredThisMonth).toBe(before.registeredThisMonth + 1);
+    await repository.delete(saved.id, 1);
   });
   it('elimina pendientes y validados con sus ítems, exige versión y rechaza formatos inválidos', async () => {
     for (const reviewed of [false, true]) {

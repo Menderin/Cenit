@@ -1,16 +1,16 @@
 /* Selected UI primitives share Cenit's existing light surfaces, typography and density. */
 .cenit-popover, .cenit-notice, .cenit-toast { color: #29292f; font: 13px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; color-scheme: light; }
 .cenit-confirm *, .cenit-popover * { box-sizing: border-box; }
-.cenit-ui-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 8px 12px; border: 1px solid #dcdce3; border-radius: 7px; color: #45454d; background: #fff; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color 150ms ease-out, opacity 150ms ease-out; }
-.cenit-ui-button--primary { border-color: #34343b; background: #34343b; color: #fff; }
+.cenit-ui-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 10px 14px; border: 1px solid #dcdce3; border-radius: 9px; color: #45454d; background: #fff; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color 150ms ease-out, opacity 150ms ease-out; }
+.cenit-ui-button--primary { min-height: 44px; border-color: #34343b; background: #34343b; color: #fff; }
 .cenit-ui-button:disabled { opacity: .5; cursor: default; }
 .cenit-popover :is(button, select):focus-visible { outline: 2px solid #526bb5; outline-offset: 3px; }
 .cenit-dialog-note { margin-top: 12px !important; font-size: 12px; }
 .cenit-popover { z-index: 90; padding: 12px; border: 1px solid transparent; border-radius: 12px; background: #fff; max-width: calc(100vw - 32px); max-height: var(--radix-popover-content-available-height); overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 0 0 1px #0000000f, 0 8px 24px #00000014, 0 2px 6px #00000008; transition: opacity 300ms ease-out; }
 .cenit-date-field { position: relative; width: 100%; min-width: 0; }
 .cenit-date-field > input { padding-right: 42px !important; }
-.cenit-date-field .cenit-date-trigger { position: absolute; top: 3px; right: 3px; display: grid; place-items: center; min-height: 30px; width: 30px; height: 30px; padding: 0; border: 1px solid transparent; border-radius: 5px; background: transparent; color: #62626c; box-shadow: none; cursor: pointer; transition: background-color 150ms ease-out; }
-.cenit-calendar .rdp-root { --rdp-accent-color: #34343b; --rdp-accent-background-color: #eeeef2; --rdp-day-height: 36px; --rdp-day-width: 36px; --rdp-day_button-height: 34px; --rdp-day_button-width: 34px; --rdp-nav_button-height: 32px; --rdp-nav_button-width: 32px; --rdp-selected-border: 1px solid #34343b; font: inherit; }
+.cenit-date-field .cenit-date-trigger { position: absolute; top: 1px; right: 1px; display: grid; place-items: center; min-height: 40px; width: 40px; height: calc(100% - 2px); padding: 0; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #62626c; box-shadow: none; cursor: pointer; transition: background-color 150ms ease-out; }
+.cenit-calendar .rdp-root { --rdp-accent-color: #34343b; --rdp-accent-background-color: #eeeef2; --rdp-day-height: 40px; --rdp-day-width: 40px; --rdp-day_button-height: 40px; --rdp-day_button-width: 40px; --rdp-nav_button-height: 40px; --rdp-nav_button-width: 40px; --rdp-selected-border: 1px solid #34343b; font: inherit; }
 .cenit-calendar .rdp-month_caption { font-size: 13px; font-weight: 500; }
 .cenit-calendar .rdp-day_button { background: transparent; color: #45454d; border: 1px solid transparent; border-radius: 6px; font: inherit; padding: 0; transition: background-color 150ms ease-out; }
 .cenit-calendar .rdp-selected .rdp-day_button { color: #fff; background: #34343b; }
@@ -48,6 +48,32 @@
   .cenit-calendar .rdp-day_button:hover:not(:disabled) { background: #eeeef2; }
   .cenit-calendar .rdp-selected .rdp-day_button:hover:not(:disabled) { background: #484850; }
 }
+.workspace-nav-close { display: none !important; }
+.admin-shell .admin-sidebar, .academic-shell .academic-sidebar { padding: 0; }
+.workspace-sidebar-content { display: flex; flex-direction: column; flex: none; width: 220px; min-width: 220px; min-height: 100%; padding: 24px 12px 16px; }
+.workspace-nav-overlay { position: fixed; inset: 0; z-index: 79; background: #00000052; opacity: 1; transition: opacity 300ms ease-out; }
+.workspace-nav-overlay--closing { opacity: 0; transition-duration: 150ms; }
+.admin-shell .admin-sidebar, .academic-shell .academic-sidebar { transition: opacity 300ms ease-out, visibility 0s; }
+.admin-shell.admin-shell--collapsed .admin-sidebar, .academic-shell.academic-shell--collapsed .academic-sidebar { transition-duration: 150ms, 0s, 150ms; transition-delay: 0s, 150ms, 0s; }
+@starting-style { .workspace-nav-overlay { opacity: 0; } }
+@media (max-width: 760px) {
+  .admin-sidebar { padding: 0; }
+  .admin-nav-item, .admin-logout { min-height: 44px; }
+  .admin-sidebar .workspace-sidebar-content { width: 100%; padding: 24px 16px; }
+  .admin-sidebar .workspace-nav-close { display: grid !important; align-self: flex-end; margin-bottom: 16px; }
+  .cenit-date-field .cenit-date-trigger { min-height: 44px; width: 44px; top: 0; right: 0; }
+  .cenit-date-field > input { min-height: 44px; padding-right: 48px !important; }
+}
+@media (max-width: 720px) {
+  .academic-sidebar { padding: 0; }
+  .academic-sidebar .workspace-sidebar-content { width: 100%; padding: 24px 16px; }
+  .academic-sidebar .workspace-nav-close { display: grid !important; align-self: flex-end; margin-bottom: 16px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .admin-shell .admin-sidebar, .academic-shell .academic-sidebar { transition-property: opacity, visibility, translate; }
+  @media (max-width: 760px) { .admin-sidebar { translate: 0 0; } .admin-shell.admin-shell--collapsed .admin-sidebar { translate: -100% 0; } }
+  @media (max-width: 720px) { .academic-sidebar { translate: 0 0; } .academic-shell.academic-shell--collapsed .academic-sidebar { translate: -100% 0; } }
+}
 @media (prefers-reduced-motion: no-preference) {
   .cenit-popover { transition-property: opacity, translate, filter; }
   .academic-detail { transition-property: opacity, translate, filter; }
@@ -55,10 +81,9 @@
   .cenit-popover.cenit-closing { translate: 0 -12px; filter: blur(4px); }
   @starting-style {
     .cenit-popover, .academic-detail[open] { translate: 0 12px; filter: blur(4px); }
-    .admin-sidebar, .academic-sidebar { opacity: 0; }
   }
-  .cenit-ui-button, .cenit-access__primary, .academic-button, .academic-icon-button { transition-property: scale, background-color, opacity; transition-duration: 150ms; transition-timing-function: ease-out; }
-  .cenit-ui-button:not(:disabled):active, .cenit-access__primary:not(:disabled):active, .academic-button:not(:disabled):active, .academic-icon-button:not(:disabled):active { scale: .96; }
+  .cenit-ui-button, .cenit-access__primary, .academic-button, .academic-icon-button, .admin-icon-button { transition-property: scale, background-color, opacity; transition-duration: 150ms; transition-timing-function: ease-out; }
+  .cenit-ui-button:not(:disabled):active, .cenit-access__primary:not(:disabled):active, .academic-button:not(:disabled):active, .academic-icon-button:not(:disabled):active, .admin-icon-button:not(:disabled):active { scale: .96; }
 }
 @media (prefers-reduced-motion: reduce) {
   [data-sonner-toaster] [data-sonner-toast], [data-sonner-toaster] [data-sonner-toast] * { transition-property: opacity !important; animation: none !important; }
@@ -81,3 +106,5 @@
   .cenit-confirm.cenit-closing { translate: 0 -12px; filter: blur(4px); }
   @starting-style { .cenit-confirm { translate: 0 12px; filter: blur(4px); } }
 }
+
+@media (max-width: 380px) { .cenit-calendar { padding: 3px; } }

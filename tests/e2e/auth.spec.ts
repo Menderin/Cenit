@@ -38,7 +38,7 @@ for (const role of ['administrativo', 'docente', 'estudiante']) {
     await page.reload(); await expect(page.locator('.academic-account, .admin-account').getByText(account.name, { exact: true })).toBeVisible();
     await page.goto(path === '/administracion' ? '/academico' : '/administracion');
     await expect(page).toHaveURL(new RegExp(`${path}$`));
-    await expect(page.getByRole('heading', { name: role === 'administrativo' ? 'Administración' : 'Malla curricular', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: role === 'administrativo' ? 'Inicio' : 'Malla curricular', exact: true })).toBeVisible();
     if (role !== 'administrativo') await expect(page.getByRole('region', { name: 'Asignaturas por semestre' })).toBeVisible();
     else await expect(page.getByRole('link', { name: 'Ver registros', exact: true })).toBeVisible();
     await page.goto('/prototipo.html'); await expect(page).toHaveURL(new RegExp(`${path}$`));
@@ -296,6 +296,7 @@ async function openPurchases(page: Page) {
   await login(page, 'administrativo');
   await navigateAdministration(page, 'Registro de compras');
   await expect(page).toHaveURL(/\/administracion\/compras$/);
+  await page.getByRole('button', { name: 'Más opciones' }).click();
   await page.getByRole('link', { name: 'Revisar ejemplo' }).click();
 }
 
@@ -307,7 +308,7 @@ test('contrato de compras: revisar ejemplos, corregir sin alterar original y res
   await expect(number).toHaveValue('000125');
   await number.fill('000999');
   const field = number.locator('..');
-  await expect(field).toContainText('Modificado');
+  await expect(field).toContainText('Corregido');
   await field.locator('summary').press('Enter');
   await expect(field.locator('details dd').first()).toHaveText('000125');
   await expandPurchaseSection(page, 'Seguimiento administrativo');
@@ -398,12 +399,11 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   const indicators = page.getByRole('definition');
   const summary = (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
   await expect(indicators.nth(0)).toHaveText(String(summary.requests));
-  await expect(indicators.nth(2)).toHaveText(String(summary.pending));
-  await expect(indicators.nth(4)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.pendingAmount)));
+  await expect(indicators.nth(2)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.overview.documentTotal)));
+  await expect(indicators.nth(4)).toHaveText(String(summary.overview.registeredThisMonth));
   await expect(page.getByRole('table')).toHaveCount(0);
-  const chart = page.getByRole('list', { name: 'Cantidad de solicitudes pendientes por día' });
-  if (summary.requests) await expect(chart.getByRole('listitem')).toHaveCount(summary.days.length);
-  else await expect(page.getByText('Aún no hay solicitudes registradas.')).toBeVisible();
+  const chart = page.getByRole('list', { name: 'Compras incorporadas por día' });
+  await expect(chart.getByRole('listitem')).toHaveCount(30);
   await expect(page.getByRole('button', { name: /aprobar/i })).toHaveCount(0);
   for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 900 });
@@ -414,10 +414,11 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
     await navigateAdministration(page, name);
     await expect(page).toHaveURL(new RegExp(`/administracion/${path}$`));
     await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
-    await expect(page.getByText('Módulo no disponible', { exact: true })).toBeVisible();
+    await expect(page.getByText('En preparación', { exact: true })).toBeVisible();
     await page.reload(); await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
   }
   await navigateAdministration(page, 'Registro de compras');
+  await page.getByRole('button', { name: 'Más opciones' }).click();
   await page.getByRole('link', { name: 'Revisar ejemplo' }).click();
   await page.getByLabel('Nº Documento / solicitud', { exact: true }).fill('navigation-draft');
   await navigateAdministration(page, 'Inicio');
@@ -425,6 +426,7 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await expect(page).toHaveURL(/\/administracion$/);
   await expect(page.getByRole('button', { name: 'Mostrar navegación', exact: true })).toBeVisible();
   await navigateAdministration(page, 'Registro de compras');
+  await page.getByRole('button', { name: 'Más opciones' }).click();
   await page.getByRole('link', { name: 'Revisar ejemplo' }).click();
   await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveValue('000125');
   await page.reload(); await expect(page.getByRole('heading', { name: 'Revisar datos', exact: true })).toBeVisible();
@@ -542,7 +544,7 @@ test('laboratorio: transferir correcciones no guarda, y el reintento conserva op
   const list = await page.request.get('/api/v1/purchases?reviewStatus=pending&pageSize=100');
   expect((await list.json()).data.some((row: { requestNumber: string }) => row.requestNumber === number)).toBe(false);
   await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
-  await expect(page.getByText('Revisa los campos antes de guardar.')).toBeVisible();
+  await expect(page.getByText('Completa o corrige los campos indicados.')).toBeVisible();
   await page.getByLabel('Fecha de envío *', { exact: true }).fill('2027-01-01');
   await page.getByLabel('Monto total (CLP) *', { exact: true }).fill('200000');
   const attempts: Record<string, unknown>[] = [];
@@ -631,32 +633,32 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
   const reviewed = page.getByRole('region', { name: 'Revisados en Cenit', exact: true });
   await pending.getByRole('button', { name: 'Siguiente' }).click();
   await reviewed.getByRole('button', { name: 'Siguiente' }).click();
-  await expect(pending.getByText('Página 2', { exact: true })).toBeVisible();
-  await expect(reviewed.getByText('Página 2', { exact: true })).toBeVisible();
+  await expect(pending.getByText(/^Página 2 de /)).toBeVisible();
+  await expect(reviewed.getByText(/^Página 2 de /)).toBeVisible();
   const returnUrl = page.url();
   await pending.getByRole('link', { name: 'Ver detalles' }).first().click();
   await page.getByRole('link', { name: 'Volver al registro' }).click();
   await expect(page).toHaveURL(returnUrl);
-  await expect(pending.getByText('Página 2', { exact: true })).toBeVisible();
-  await expect(reviewed.getByText('Página 2', { exact: true })).toBeVisible();
+  await expect(pending.getByText(/^Página 2 de /)).toBeVisible();
+  await expect(reviewed.getByText(/^Página 2 de /)).toBeVisible();
   await page.reload();
-  await expect(pending.getByText('Página 2', { exact: true })).toBeVisible();
-  await expect(reviewed.getByText('Página 2', { exact: true })).toBeVisible();
+  await expect(pending.getByText(/^Página 2 de /)).toBeVisible();
+  await expect(reviewed.getByText(/^Página 2 de /)).toBeVisible();
   const search = page.getByLabel('Buscar solicitudes', { exact: true });
   await search.fill('clinica hu06');
   await expect(page).toHaveURL(/q=clinica\+hu06/);
   for (const table of [pending, reviewed]) {
-    await expect(table.getByText('Página 1', { exact: true })).toBeVisible();
+    await expect(table.getByText(/^Página 1 de /)).toBeVisible();
     await expect(table.getByText('1 registro', { exact: true })).toBeVisible();
     await expect(table.locator('.purchase-total strong')).toHaveText('$300');
   }
-  await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
+  await page.getByRole('button', { name: 'Filtros', exact: true }).click();
   await page.getByLabel('Código de unidad', { exact: true }).fill('000A');
   await page.getByLabel('Código de proyecto', { exact: true }).fill('000Y');
-  await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+
   for (const table of [pending, reviewed]) {
-    await expect(table.getByText('No hay solicitudes que coincidan con los filtros.', { exact: true })).toBeVisible();
-    await expect(table.getByRole('columnheader')).toHaveText(['Nº Solicitud', 'Fecha', 'Detalle', 'Tipo de documento', 'Acciones']);
+    await expect(table.getByText('No encontramos compras con estos filtros', { exact: true })).toBeVisible();
+    await expect(table.getByRole('table')).toHaveCount(0);
   }
   for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 900 });
@@ -666,7 +668,7 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
   await page.getByLabel('Código de proyecto', { exact: true }).fill('000X');
   await page.getByLabel('Enviado desde', { exact: true }).fill('2027-02-01');
   await page.getByLabel('Enviado hasta', { exact: true }).fill('2027-02-01');
-  await search.fill('100%_\\'); await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+  await search.fill('100%_\\');
   for (const table of [pending, reviewed]) await expect(table.getByText('1 registro', { exact: true })).toBeVisible();
   for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 900 });
@@ -674,12 +676,13 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
     await page.screenshot({ path: `tmp/purchase-filters-${width}.png`, fullPage: true });
   }
   await pending.getByRole('link', { name: 'Ver detalles' }).click();
+  await expect(page).toHaveURL(/\/compras\/[0-9a-f-]{36}$/);
   await expect(page.getByText(targets[0]!, { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Volver al registro' }).click();
   await expect(search).toHaveValue('100%_\\');
   await expect(page.getByLabel('Enviado desde', { exact: true })).toHaveValue('01/02/2027');
   await expect(page.getByLabel('Código de proyecto', { exact: true })).toHaveValue('000X');
-  await search.fill('no coincidence'); await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+  await search.fill('no coincidence');
   await expect(pending.getByText('0 registros', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
   await expect(search).toHaveValue(''); await expect(pending.getByRole('row').nth(1)).toBeVisible();
@@ -688,37 +691,40 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
 test('listado: validación, error/reintento, carga y filtros descartados al cambiar sesión', async ({ page }) => {
   await login(page, 'administrativo'); await page.goto('/administracion/compras');
   const search = page.getByLabel('Buscar solicitudes', { exact: true });
+  await page.getByRole('button', { name: 'Filtros', exact: true }).click();
   await page.getByLabel('Enviado desde', { exact: true }).fill('2026-10-14');
   await page.getByLabel('Enviado hasta', { exact: true }).fill('2026-10-13');
-  await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('La fecha final');
-  await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
+
+  await search.focus();
+  await expect(page.locator('.purchase-filter-feedback')).toContainText('corrige el rango');
+  await page.getByLabel('Enviado desde', { exact: true }).fill('');
+  await page.getByLabel('Enviado hasta', { exact: true }).fill('');
   await page.route('**/api/v1/purchases?**', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'filter-error' } }) }));
-  await search.fill('PRIVATE-FILTER'); await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+  await search.fill('PRIVATE-FILTER');
   const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
   await expect(pending.getByRole('alert')).toContainText('No disponible');
   await expect(pending.getByRole('table')).toHaveCount(0);
   await page.unroute('**/api/v1/purchases?**');
   await pending.getByRole('button', { name: 'Reintentar', exact: true }).click();
-  await expect(pending.getByText('No hay solicitudes que coincidan con los filtros.', { exact: true })).toBeVisible();
+  await expect(pending.getByText('No encontramos compras con estos filtros', { exact: true })).toBeVisible();
   let release!: () => void;
   const hold = new Promise<void>(resolve => { release = resolve; });
   await page.route('**/api/v1/purchases?**', async route => { await hold; await route.continue(); });
   await search.fill('LOADING-FILTER');
-  await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
-  await expect(pending.getByText('Cargando solicitudes…', { exact: true })).toBeVisible();
+
+  await expect(pending.getByText('Actualizando resultados…', { exact: true })).toBeVisible();
   release();
-  await expect(pending.getByText('No hay solicitudes que coincidan con los filtros.', { exact: true })).toBeVisible();
+  await expect(pending.getByText('No encontramos compras con estos filtros', { exact: true })).toBeVisible();
   await page.unrouteAll({ behavior: 'wait' });
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
   await expect(pending.getByRole('table')).toBeVisible();
-  await search.fill('PRIVATE-FILTER'); await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+  await search.fill('PRIVATE-FILTER');
   await logout(page); await expect(page).toHaveURL(/\/login$/);
   await login(page, 'docente'); await page.goto('/administracion/compras'); await expect(page).toHaveURL(/\/academico$/);
   await logout(page);
   await login(page, 'administrativo'); await page.goto('/administracion/compras'); await expect(search).toHaveValue('');
   await page.clock.install(); await page.reload(); await expect(search).toBeVisible();
-  await search.fill('EXPIRED-FILTER'); await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+  await search.fill('EXPIRED-FILTER');
   await page.clock.fastForward(7201000); await expect(page).toHaveURL(/\/login$/);
   await page.clock.setSystemTime(new Date()); await page.goto('/administracion/compras'); await expect(search).toHaveValue('');
 });
@@ -733,8 +739,8 @@ test('solicitudes: paginación independiente y vistas sin desbordamiento horizon
   const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
   const reviewed = page.getByRole('region', { name: 'Revisados en Cenit', exact: true });
   await pending.getByRole('button', { name: 'Siguiente' }).click();
-  await expect(pending.getByText('Página 2', { exact: true })).toBeVisible();
-  await expect(reviewed.getByText('Página 1', { exact: true })).toBeVisible();
+  await expect(pending.getByText(/^Página 2 de /)).toBeVisible();
+  await expect(reviewed.getByText(/^Página 1 de /)).toBeVisible();
   for (const width of [1280, 1440, 1920, 390]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -782,7 +788,7 @@ test('ítems desplegables: errores abren el ítem y eliminar otro conserva valor
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.getByRole('link', { name: 'Volver al registro', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill('DISCLOSURE-DRAFT');
-  await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+
   const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
   await expect(pending.getByText('1 registro', { exact: true })).toBeVisible();
   await expect(pending.locator('.purchase-total strong')).toContainText('999.999');

@@ -25,6 +25,16 @@ export const PurchaseSummaryResponseSchema = object({ data: object({
   requests: Type.Integer({ minimum: 0 }), pending: Type.Integer({ minimum: 0 }),
   currency: Type.Literal('CLP'), pendingAmount: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }),
   days: Type.Array(object({ date: headerFields.sentDate, count: Type.Integer({ minimum: 0 }) })),
+  overview: Type.Optional(object({
+    documentTotal: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }),
+    registeredThisMonth: Type.Integer({ minimum: 0 }),
+    sourceCounts: object({ manual: Type.Integer({ minimum: 0 }), image_capture: Type.Integer({ minimum: 0 }), contract_example: Type.Integer({ minimum: 0 }) }),
+    registrationDays: Type.Array(object({ date: headerFields.sentDate, count: Type.Integer({ minimum: 0 }) }), { maxItems: 30 }),
+    recentRecords: Type.Array(object({ id: uuid, requestNumber: headerFields.requestNumber, description: headerFields.description,
+      sentDate: headerFields.sentDate, totalAmount: headerFields.totalAmount, createdAt: stamp,
+      source: Type.Union([Type.Literal('manual'), Type.Literal('image_capture'), Type.Literal('contract_example')]),
+    }), { maxItems: 5 }),
+  })),
 }) });
 export type PurchaseSummaryResponse = Static<typeof PurchaseSummaryResponseSchema>;
 export const PurchaseCapabilitiesResponseSchema = object({ data: object({ secondReviewEnabled: Type.Boolean(), sheetsSyncEnabled: Type.Boolean() }) });
@@ -55,6 +65,7 @@ export type PurchaseRecord = Static<typeof PurchaseRecordSchema>;
 export const PurchaseResponseSchema = object({ data: PurchaseRecordSchema });
 export const PurchaseListResponseSchema = object({ data: Type.Array(object({
   id: uuid, requestNumber: headerFields.requestNumber, sentDate: headerFields.sentDate, description: headerFields.description,
+  totalAmount: headerFields.totalAmount,
   documentType: ExtractionReviewDraftSchema.properties.administrative.properties.documentType,
   reviewStatus: PurchaseRecordSchema.properties.reviewStatus, version: PurchaseRecordSchema.properties.version,
   source: PurchaseRecordSchema.properties.source, exampleId: PurchaseRecordSchema.properties.exampleId,
@@ -73,7 +84,11 @@ export function validatePurchaseListQuery(input: unknown): ContractProblem[] {
   return problems;
 }
 export function validateCreatePurchase(input: unknown): ContractProblem[] {
-  if (!Value.Check(CreatePurchaseSchema, input)) return [...Value.Errors(CreatePurchaseSchema, input)].map(error => ({ path: error.path, message: 'Revisa el formato o completa los campos obligatorios.' }));
+  if (!Value.Check(CreatePurchaseSchema, input)) return [...Value.Errors(CreatePurchaseSchema, input)].map(error => ({ path: error.path,
+    message: error.value === null || error.value === '' || error.value === undefined ? 'Completa este campo obligatorio.'
+      : /\/(totalAmount|taxAmount|price|amount)$/.test(error.path) ? 'Escribe un monto entero sin puntos, comas ni signos.'
+      : error.path.endsWith('/sentDate') ? 'Escribe una fecha válida en formato dd/mm/aaaa.' : 'Revisa el formato o el límite de este campo.',
+  }));
   const problems = validateReviewDraft({ header: input.header, lines: input.lines, administrative: input.administrative });
   // PostgreSQL date has no year zero; reject it before reaching persistence.
   if (input.header.sentDate.startsWith('0000-')) problems.push({ path: '/header/sentDate', message: 'El año debe ser mayor que cero.' });

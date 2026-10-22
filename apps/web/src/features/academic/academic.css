@@ -3,10 +3,10 @@
 .academic-workspace button:focus-visible, .academic-workspace a:focus-visible, .academic-workspace summary:focus-visible, .academic-workspace select:focus-visible, .academic-workspace input:focus-visible, .academic-board:focus-visible { outline: 2px solid #526bb5; outline-offset: 3px; }
 .academic-workspace button:disabled { opacity: .5; cursor: not-allowed; }
 .academic-shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); height: calc(100svh - 32px); min-height: 360px; border: 1px solid #e2e2e7; border-radius: 16px; background: linear-gradient(150deg, #fafafb, #f0f1f4); box-shadow: 0 2px 5px #25252b06; }
-.academic-shell--collapsed { grid-template-columns: minmax(0, 1fr); }
-.academic-shell--collapsed .academic-sidebar { display: none; }
+.academic-shell--collapsed { grid-template-columns: 0px minmax(0, 1fr); }
+.academic-shell--collapsed .academic-sidebar { opacity: 0; visibility: hidden; pointer-events: none; }
 .academic-shell--collapsed .academic-main { margin-left: 6px; }
-.academic-sidebar { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; padding: 24px 12px 16px; border-radius: 16px 0 0 16px; }
+.academic-sidebar { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow-y: auto; overflow-x: clip; overscroll-behavior: contain; padding: 24px 12px 16px; border-radius: 16px 0 0 16px; }
 .academic-brand { padding: 0 10px; font-size: 17px; line-height: 1.4; font-weight: 600; letter-spacing: -.5px; }
 .academic-navigation { margin-top: 34px; }
 .academic-eyebrow { color: #72727b; font-size: 11px; line-height: 1.5; }
@@ -57,9 +57,9 @@
 .academic-course__footer > :last-child { margin-left: auto; }
 .academic-course { --course-accent: #78baff; --course-stroke: color-mix(in srgb, var(--course-accent) 70%, #293343); position: relative; isolation: isolate; transition: none; }
 /* Las capas conservan borde, degradado y sombra también al salir: sólo cambia su opacidad. */
-.academic-course::before, .academic-course::after { content: ''; position: absolute; inset: -1px; z-index: -1; border: 1.5px solid var(--course-stroke); border-radius: inherit; pointer-events: none; background: linear-gradient(145deg, color-mix(in srgb, var(--course-accent) 65%, var(--course-surface)), var(--course-surface)); box-shadow: 0 4px 12px color-mix(in srgb, var(--course-accent) 32%, transparent); opacity: 0; transition: opacity 300ms ease-out; }
+.academic-course::before, .academic-course::after { content: ''; position: absolute; inset: -1px; z-index: -1; border: 1.5px solid var(--course-stroke); border-radius: inherit; pointer-events: none; background: linear-gradient(145deg, color-mix(in srgb, var(--course-accent) 65%, var(--course-surface)), var(--course-surface)); box-shadow: 0 4px 12px color-mix(in srgb, var(--course-accent) 32%, transparent); opacity: 0; transition: opacity 150ms ease-out; }
 .academic-course::after { border-style: dashed; background: linear-gradient(145deg, color-mix(in srgb, var(--course-accent) 55%, var(--course-surface)), var(--course-surface)); box-shadow: 0 2px 6px color-mix(in srgb, var(--course-accent) 20%, transparent); }
-.academic-course__origin-ring { position: absolute; inset: -1px; border: 2px solid #637087; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity 300ms ease-out; }
+.academic-course__origin-ring { position: absolute; inset: -1px; border: 2px solid #637087; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity 150ms ease-out; }
 .academic-course--relation-origin::before { opacity: .9; }
 .academic-course--relation-origin .academic-course__origin-ring { opacity: 1; }
 .academic-course--relation-direct::before { opacity: .85; }
@@ -68,8 +68,8 @@
   .academic-board { scroll-behavior: smooth; }
   .academic-board-actions button { transition: scale 150ms ease-out; }
   .academic-board-actions button:not(:disabled):active { scale: .96; }
-  .academic-course { transition: translate 300ms ease-out; }
-  .academic-course[data-relation] { translate: 0 -2px; }
+  .academic-shell { transition: grid-template-columns 300ms ease-out; }
+  .academic-shell--collapsed { transition-duration: 150ms; }
 }
 .academic-relation-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 10px; color: #53535e; font-size: 11px; }
 .academic-relation-key { display: inline-flex; align-items: center; gap: 5px; }
@@ -165,9 +165,9 @@
 @media (max-width: 720px) {
   .academic-workspace { padding: 10px; }
   .academic-shell, .academic-shell:not(.academic-shell--collapsed) { grid-template-columns: minmax(0, 1fr); height: calc(100svh - 20px); border-radius: 12px; }
-  .academic-sidebar { display: none; }
+  .academic-sidebar { position: fixed; inset: 8px auto 8px 8px; z-index: 80; height: calc(100svh - 16px); width: min(300px, calc(100vw - 40px)); padding: 24px 16px; border: 1px solid transparent; border-radius: 16px; background: #fafafb; box-shadow: 0 0 0 1px #0000000f, 8px 0 30px #00000024; }
   .academic-shell .academic-main { margin: 0; border: 0; border-radius: inherit; }
-  .academic-sidebar-toggle { display: none; }
+  .academic-sidebar-toggle { display: grid; }
   .academic-mobile-logout { display: grid; }
   .academic-mobile-account { display: block; width: 100%; color: #686871; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
   .academic-toolbar { gap: 8px; flex-wrap: wrap; }
@@ -184,6 +184,16 @@
   .academic-students__search input { width: 100%; }
   .academic-students__results { grid-template-columns: minmax(0, 1fr); }
 }
+.academic-button { min-height: 40px; font-size: 13px; padding: 10px 12px; border-radius: 9px; color: #45454d; }
+.academic-icon-button { min-width: 40px; width: 40px; height: 40px; border-radius: 9px; }
+.academic-version { color: #62626c; font-size: 12px; }
+.academic-version select { min-height: 40px; border-color: #91919d; font-size: 12px; }
+.academic-students__search input { min-height: 42px; border-color: #91919d; }
+.academic-detail__section > p, .academic-detail__explanation { font-size: 13px; }
+.academic-relations { margin-top: 18px; }
+.academic-relations li { font-size: 13px; }
+.academic-relations__via { font-size: 12px; }
+@media (max-width: 720px) { .academic-toolbar .academic-icon-button, .academic-icon-button { min-width: 44px; width: 44px; height: 44px; } .academic-toolbar__tools { flex-wrap: wrap; } }
 @media (max-width: 380px) {
   .academic-content, .academic-toolbar { padding-inline: 12px; }
   .academic-semester > ul { grid-template-columns: minmax(0, 1fr); }

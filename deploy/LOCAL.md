@@ -131,7 +131,9 @@ El supervisor lee `.env`, verifica la conexión runtime y las tablas, comprueba/
 
 Abrir [http://127.0.0.1:5173/login](http://127.0.0.1:5173/login). `Ctrl+C` cierra los procesos del supervisor; PostgreSQL permanece iniciado. El modo desarrollo y la demo compilada tienen puertos distintos: cerrar desarrollo antes de una presentación si no se va a usar.
 
-Para OCR desde desarrollo, preparar la clave e imagen según la siguiente sección, iniciar `ocr`, configurar en `.env` `OCR_URL=http://127.0.0.1:8090` y `CAPTURE_RECEIPT_KEY_FILE` con la ruta de la clave. Reiniciar el supervisor para leer esa configuración.
+El supervisor compila los contratos al arrancar y mantiene su compilación y el API en observación; Vite actualiza la web. Así los cambios de contratos y API se reflejan en desarrollo sin conservar una respuesta anterior en memoria. No ejecuta migraciones de forma automática.
+
+Para OCR desde desarrollo, preparar la clave e imagen según la siguiente sección, ejecutar `docker compose --profile ocr up -d --build ocr`, configurar en `.env` `OCR_URL=http://127.0.0.1:8090` y `CAPTURE_RECEIPT_KEY_FILE` con la ruta de la clave. Reiniciar el supervisor para leer esa configuración. Si `OCR_URL` está configurado y el procesador no responde, el arranque avisa cómo iniciarlo antes de abrir la web. Repetir la construcción del servicio cuando cambie el extractor; el supervisor Node no recarga Python. Comprobar `http://127.0.0.1:8090/health/live` además de la salud del API.
 
 ## Ejecutar el build de demostración con OCR
 
@@ -180,7 +182,7 @@ Esperar `{"status":"ready"}` y HTTP 200 para login. Abrir [http://127.0.0.1:8081
 
 En los siguientes arranques se pueden reutilizar las imágenes, quitando `--build`. Reconstruirlas cuando cambie el código. El overlay `compose.ocr.yaml` conecta `app` con `http://ocr:8090` y monta la clave; sin él, la extracción no está configurada y devuelve 503.
 
-Para una captura ficticia, seguir la [preparación de muestras](../experiments/purchases/README.md#capturas-con-formato-de-referencia). En «Registro de compras → Subir captura» elegir una imagen, extraer y revisar. Sólo «Guardar registro» conserva la copia.
+Para una captura ficticia, seguir la [preparación de muestras](../experiments/purchases/README.md#capturas-con-formato-de-referencia). En «Registro de compras → Subir captura» arrastrar la imagen al recuadro grande o activarlo por clic/teclado. El análisis comienza al validar el archivo; comparar recuadros y campos, corregir y guardar desde esa misma vista. Sólo «Guardar registro» conserva la copia.
 
 ## Conectar una planilla de pruebas
 
@@ -189,7 +191,7 @@ Compras presenta un registro histórico por defecto. Para comprobar la segunda r
 La sincronización con Sheets empieza apagada. No usa las credenciales del plugin de Drive ni el login de Cenit. Para ensayar el conector real:
 
 1. Habilitar Google Sheets API en un proyecto de pruebas y preparar una cuenta de servicio con su credencial de servidor. No requiere delegación general sobre el dominio.
-2. Crear una planilla **dedicada de pruebas** y compartirla como editora sólo con la cuenta de servicio que escribirá. Usar cuentas autorizadas para la consulta. No seleccionar el histórico existente ni copiar datos reales para QA.
+2. Crear una planilla **nativa de Google Sheets y dedicada de pruebas** (un Excel abierto desde Drive requiere primero una copia convertida) y compartirla como editora sólo con la cuenta de servicio que escribirá. Usar cuentas autorizadas para la consulta. No seleccionar el histórico existente ni copiar datos reales para QA.
 3. Guardar el JSON privado como `.local/secrets/purchase-sheets-key.json`, fuera de Git y con acceso limitado al operador/proceso. En contenedores, asegurar que el UID de la aplicación puede leer el secreto montado sin exponer el directorio completo de secretos.
 4. Para `npm run dev`, configurar en `.env` `CENIT_PURCHASE_SHEETS_SYNC_ENABLED=true`, `CENIT_PURCHASE_SHEETS_ID` con el ID del archivo y `CENIT_PURCHASE_SHEETS_KEY_FILE` con esa ruta. Reiniciar y recargar.
 5. Para el build local en Compose, añadir `-f compose.sheets.yaml` a los archivos usados para **app**, conservando los overlays OCR que correspondan. Definir `CENIT_PURCHASE_SHEETS_ID` en `.env`; el overlay monta sólo la credencial de Sheets y activa la integración explícitamente. No usarlo al ejecutar el migrador, que no necesita Google.

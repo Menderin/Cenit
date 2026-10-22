@@ -39,15 +39,33 @@ export class PurchaseRepository {
   }
   async get(id: string) { return this.transaction(db => this.detail(db, id), true); }
   async summary(): Promise<PurchaseSummaryResponse> {
-    const { rows } = await this.pool.query<{ date: string; requests: number; pending: number; amount: string }>(`SELECT sent_date::text AS date,
+    return this.transaction(async db => {
+    const { rows } = await db.query<{ date: string; requests: number; pending: number; amount: string }>(`SELECT sent_date::text AS date,
       count(*)::int AS requests, (count(*) FILTER (WHERE review_status='pending'))::int AS pending,
       coalesce(sum(total_amount) FILTER (WHERE review_status='pending'),0)::text AS amount
       FROM cenit.purchase_requests GROUP BY sent_date ORDER BY sent_date`);
+    const metrics = (await db.query(`SELECT coalesce(sum(total_amount),0)::text AS amount,
+      (count(*) FILTER (WHERE date_trunc('month',created_at AT TIME ZONE 'America/Santiago')=date_trunc('month',now() AT TIME ZONE 'America/Santiago')))::int AS month,
+      (count(*) FILTER (WHERE source='manual'))::int AS manual,
+      (count(*) FILTER (WHERE source='image_capture'))::int AS image_capture,
+      (count(*) FILTER (WHERE source='contract_example'))::int AS contract_example FROM cenit.purchase_requests`)).rows[0];
+    const activity = await db.query<{ date: string; count: number }>(`WITH dates AS (
+      SELECT generate_series((now() AT TIME ZONE 'America/Santiago')::date-29,(now() AT TIME ZONE 'America/Santiago')::date,'1 day')::date AS day
+    ), counts AS (SELECT (created_at AT TIME ZONE 'America/Santiago')::date AS day,count(*)::int AS count FROM cenit.purchase_requests
+      WHERE created_at >= (((now() AT TIME ZONE 'America/Santiago')::date-29)::timestamp AT TIME ZONE 'America/Santiago') GROUP BY 1)
+      SELECT dates.day::text AS date,coalesce(counts.count,0)::int AS count FROM dates LEFT JOIN counts USING(day) ORDER BY dates.day`);
+    const recent = await db.query(`SELECT id,request_number AS "requestNumber",description,sent_date::text AS "sentDate",total_amount AS "totalAmount",created_at AS "createdAt",source
+      FROM cenit.purchase_requests ORDER BY created_at DESC,id DESC LIMIT 5`);
     return { data: {
       requests: rows.reduce((total, row) => total + row.requests, 0), pending: rows.reduce((total, row) => total + row.pending, 0),
       currency: 'CLP', pendingAmount: rows.reduce((total, row) => total + BigInt(row.amount), 0n).toString(),
       days: rows.map(row => ({ date: row.date, count: row.pending })),
+      overview: { documentTotal: metrics.amount, registeredThisMonth: metrics.month,
+        sourceCounts: { manual: metrics.manual, image_capture: metrics.image_capture, contract_example: metrics.contract_example },
+        registrationDays: activity.rows, recentRecords: recent.rows.map(row => ({ ...row, createdAt: row.createdAt.toISOString() })),
+      },
     } };
+    }, true);
   }
   async delete(id: string, expectedVersion: number) {
     return this.transaction(async db => {
@@ -108,7 +126,7 @@ export class PurchaseRepository {
       const where = predicates.join(' AND ');
       // EXISTS preserves one row per request. Both statements share this transaction's snapshot.
       const count = await db.query(`SELECT count(*)::int AS total,coalesce(sum(p.total_amount),0)::text AS amount FROM cenit.purchase_requests p WHERE ${where}`, values);
-      const { rows } = await db.query(`SELECT p.id,p.request_number AS "requestNumber",p.sent_date::text AS "sentDate",p.description,p.document_type AS "documentType",p.review_status AS "reviewStatus",p.version,p.source,p.example_id AS "exampleId",
+      const { rows } = await db.query(`SELECT p.id,p.request_number AS "requestNumber",p.sent_date::text AS "sentDate",p.description,p.total_amount AS "totalAmount",p.document_type AS "documentType",p.review_status AS "reviewStatus",p.version,p.source,p.example_id AS "exampleId",
         CASE WHEN p.source='image_capture' THEN json_build_object('type','image_capture','extractionId',p.extraction_id,'processorVersion',p.processor_version,'processedAt',to_char(p.processed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) ELSE NULL END AS capture
         FROM cenit.purchase_requests p WHERE ${where} ORDER BY p.sent_date DESC,p.id DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`, [...values, query.pageSize, (query.page - 1) * query.pageSize]);
       return { data: rows, pagination: { page: query.page, pageSize: query.pageSize, total: count.rows[0].total }, totals: { currency: 'CLP', documentTotal: count.rows[0].amount } };

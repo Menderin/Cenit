@@ -5,7 +5,7 @@ import { manualPurchaseExample } from '../../packages/contracts/src/purchases/re
 test('registro: una lista histórica sin segunda revisión, conservando ambos estados y paginación', async ({ page }) => {
   await page.route('**/api/v1/purchases/capabilities', route => route.fulfill({ json: { data: { secondReviewEnabled: false, sheetsSyncEnabled: false } } }));
   await login(page, 'administrativo');
-  await expect(page.locator('.dashboard-kpis dt')).toHaveText(['Registros guardados']);
+  await expect(page.locator('.dashboard-kpis dt')).toHaveText(['Compras registradas', 'Monto documental registrado', 'Registradas este mes', 'Desde captura']);
   await expect(page.locator('.dashboard-chart')).toHaveCount(0);
   const prefix = 'HIST-' + crypto.randomUUID().slice(0, 8), origin = new URL(page.url()).origin;
   for (let i = 0; i < 22; i++) {
@@ -30,7 +30,7 @@ test('registro: una lista histórica sin segunda revisión, conservando ambos es
   await expect(page.locator('.purchase-status')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Validar registro', exact: true })).toHaveCount(0);
   await page.getByRole('link', { name: 'Volver al registro', exact: true }).click();
-  await expect(list.getByText('Página 2', { exact: true })).toBeVisible();
+  await expect(list.getByText(/^Página 2 de /)).toBeVisible();
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

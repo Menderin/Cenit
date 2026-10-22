@@ -54,9 +54,9 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
                 <span>{plan.courses.find(c => c.code === (group.from ? edge.fromCode : edge.toCode))?.name}</span>
               </li>)}</ul>
             </div>)}
-            {indirect.length > 0 && <div className="academic-relations"><h4>Más adelante en la cadena</h4><ul>{indirect.map(([code, relation]) => <li key={code}>
+            {indirect.length > 0 && <details className="academic-relations academic-disclosure"><summary>Más adelante en la cadena <span>{indirect.length}</span></summary><ul>{indirect.map(([code, relation]) => <li key={code}>
               <span>{plan.courses.find(item => item.code === code)?.name}</span><span className="academic-relations__via">A través de {plan.courses.find(item => item.code === relation.via)?.name}</span>
-            </li>)}</ul></div>}
+            </li>)}</ul></details>}
             {pending && incoming.length + outgoing.length === 0 && <p className="academic-detail__explanation">Todavía no hay información de prerrequisitos para esta asignatura.</p>}
           </section>
           {progress && student && <details className="academic-detail__section academic-disclosure">

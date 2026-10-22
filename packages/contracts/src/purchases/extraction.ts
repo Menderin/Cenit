@@ -61,6 +61,12 @@ export const ExtractionIssueSchema = object({
   code: Type.Union([Type.Literal('MISSING_FIELD'), Type.Literal('INVALID_VALUE'), Type.Literal('AMBIGUOUS_VALUE'), Type.Literal('FIELD_LIMIT_EXCEEDED'), Type.Literal('LINE_LIMIT_EXCEEDED'), Type.Literal('TABLE_STRUCTURE_UNRECOGNIZED')]),
   message: description,
 });
+export const ExtractionRegionSchema = object({
+  path: Type.String({ minLength: 1, maxLength: 255, pattern: '^/' }),
+  x: Type.Number({ minimum: 0, maximum: 1 }), y: Type.Number({ minimum: 0, maximum: 1 }),
+  width: Type.Number({ exclusiveMinimum: 0, maximum: 1 }), height: Type.Number({ exclusiveMinimum: 0, maximum: 1 }),
+});
+export type ExtractionRegion = Static<typeof ExtractionRegionSchema>;
 export const ExtractionResponseSchema = object({ data: object({
   extractionId: Type.String({ pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }),
   status: Type.Literal('reviewRequired'), input: ExtractionInputMetadataSchema,
@@ -68,6 +74,7 @@ export const ExtractionResponseSchema = object({ data: object({
   captureLayout: Type.Optional(CaptureLayoutSchema),
   header: candidates(headerFields), lines: Type.Array(candidates(lineFields), { maxItems: EXTRACTION_LIMITS.maxLines }),
   administrative: candidates(administrativeFields), issues: Type.Array(ExtractionIssueSchema, { maxItems: 2000 }),
+  regions: Type.Optional(Type.Array(ExtractionRegionSchema, { maxItems: 2000 })),
 }) });
 export type ExtractionResponse = Static<typeof ExtractionResponseSchema>;
 export type ExtractionCandidate = ExtractionResponse['data']['header']['sender'];
@@ -104,12 +111,18 @@ export function validateExtractionResponse(input: unknown): ContractProblem[] {
   if (field.status === 'recovered' && !validCalendarDate(field.value)) problems.push({ path: '/data/header/sentDate', message: 'La fecha no existe en el calendario.' });
   const groups = [['/header', input.data.header], ['/administrative', input.data.administrative], ...input.data.lines.map((line, i) => [`/lines/${i}`, line] as const)] as const;
   const paths = new Set<string>();
+  const candidates = new Map<string, ExtractionCandidate>();
   for (const [prefix, fields] of groups) for (const [key, value] of Object.entries(fields)) {
-    const path = `${prefix}/${key}`; paths.add(path);
+    const path = `${prefix}/${key}`; paths.add(path); candidates.set(path, value);
     if (['invalid', 'ambiguous'].includes(value.status) && !input.data.issues.some(issue => issue.path === path)) problems.push({ path: '/data' + path, message: 'El campo necesita una incidencia explícita.' });
   }
   paths.add('/lines');
   for (const issue of input.data.issues) if (!paths.has(issue.path)) problems.push({ path: '/data/issues', message: 'La incidencia debe referirse a un campo existente.' });
+  for (const region of input.data.regions ?? []) {
+    const field = candidates.get(region.path);
+    if (!field || field.status === 'missing' || region.x + region.width > 1 + 1e-9 || region.y + region.height > 1 + 1e-9)
+      problems.push({ path: '/data/regions', message: 'La región debe corresponder a un campo recuperado y quedar dentro de la imagen.' });
+  }
   return problems;
 }
 export function createReviewDraft(response: ExtractionResponse): ExtractionReviewDraft {
