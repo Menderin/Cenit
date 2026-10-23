@@ -1,0 +1,50 @@
+{
+  "id": "f0c45fe2725947338e8390e6f1fb1261",
+  "perspectiveSettings": {
+    "grid": {
+      "settingsKey": "tsPerspectiveGrid",
+      "orderBy": true,
+      "sortBy": "byName",
+      "layoutType": "grid",
+      "singleClickAction": "openInternal",
+      "entrySize": "small",
+      "thumbnailMode": "contain",
+      "showDirectories": true,
+      "showDetails": true,
+      "showDescription": false,
+      "showEntriesDescription": true,
+      "showTags": true,
+      "gridPageLimit": 100,
+      "maxVisibleTags": 4,
+      "maxDescriptionPreviewLength": 100
+    }
+  },
+  "customOrder": {
+    "folders": [
+      {
+        "uuid": "39fd78cb6fde44889b084571af9f6a2a",
+        "name": "AGENTS"
+      },
+      {
+        "uuid": "1fcbc891f23f46aaac4f6e61d0669c23",
+        "name": "Docs"
+      },
+      {
+        "uuid": "c8ffc55df19a43c888df8fd079b0b72e",
+        "name": "apps"
+      }
+    ]
+  },
+  "tags": [
+    {
+      "title": "ce",
+      "color": "#61DD61",
+      "textcolor": "white"
+    },
+    {
+      "title": "cenit",
+      "color": "#61DD61",
+      "textcolor": "white"
+    }
+  ]
+}
