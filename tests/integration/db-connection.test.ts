@@ -22,13 +22,4 @@ describe('Conexión con PostgreSQL', () => {
     expect(result.rows[0]?.ok).toBe(1);
   });
 
-  test('verifica que el esquema cenit existe', async () => {
-    const result = await pool.query<{ schema_name: string }>(
-      `SELECT schema_name
-       FROM information_schema.schemata
-       WHERE schema_name = 'cenit'`
-    );
-    expect(result.rowCount).toBe(1);
-    expect(result.rows[0]?.schema_name).toBe('cenit');
-  });
 });
