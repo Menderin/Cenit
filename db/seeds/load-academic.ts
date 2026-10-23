@@ -47,7 +47,7 @@ export async function loadCatalog(pool: Pool, input: unknown, publish: boolean):
 }
 async function main() {
   const args = process.argv.slice(2);
-  let file = 'catalogs/academic/nutricion-2027-r1.json';
+  let file = 'catalogs/academic/nutricion-diagrama-r2.json';
   for (let index = 0; index < args.length; index++) {
     if (args[index] === '--file') {
       const path = args[++index]; if (!path || path.startsWith('--')) throw new Error('Falta ruta del catálogo.'); file = path;
@@ -55,7 +55,7 @@ async function main() {
   }
   if (!args.includes('--check') && !args.includes('--publish')) throw new Error('Usa --check o --publish [--file ruta].');
   const plan = readCatalog(file);
-  if (args.includes('--check')) { console.log(`Catálogo validado: ${plan.courses.length} asignaturas; prerrequisitos pendientes explícitos.`); return; }
+  if (args.includes('--check')) { console.log(`Catálogo ${plan.version} validado: ${plan.courses.length} asignaturas; ${plan.prerequisiteEdges.length} relaciones; ${plan.courses.filter(course => course.prerequisites.kind === 'pending').length} pendientes.`); return; }
   if (process.env.APP_ENV !== 'demo') throw new Error('Carga permitida sólo con APP_ENV=demo.');
   const pool = createPool();
   try { const result = await loadCatalog(pool, plan, true); console.log(`Catálogo ${result}: ${plan.planId}/${plan.version}. No se cargaron cuentas ni historiales.`); }

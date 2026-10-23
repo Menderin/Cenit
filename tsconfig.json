@@ -19,6 +19,9 @@
       "@cenit/contracts/academic": [
         "./packages/contracts/src/academic/index.ts"
       ],
+      "@cenit/contracts/academic/examples": [
+        "./packages/contracts/src/academic/examples.ts"
+      ],
       "@cenit/contracts/auth": [
         "./packages/contracts/src/auth/index.ts"
       ],

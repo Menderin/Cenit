@@ -19,6 +19,14 @@ export type PurchasePayload = Static<typeof PurchasePayloadSchema>;
 export type CreatePurchase = Static<typeof CreatePurchaseSchema>;
 export const PurchaseParamsSchema = object({ id: uuid });
 export const PurchaseValidationSchema = object({ expectedVersion: Type.Integer({ minimum: 1, maximum: 2147483647 }) });
+export const PurchaseDeletionSchema = PurchaseValidationSchema;
+export const PurchaseDeletionResponseSchema = object({ data: object({ id: uuid }) });
+export const PurchaseSummaryResponseSchema = object({ data: object({
+  requests: Type.Integer({ minimum: 0 }), pending: Type.Integer({ minimum: 0 }),
+  currency: Type.Literal('CLP'), pendingAmount: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }),
+  days: Type.Array(object({ date: headerFields.sentDate, count: Type.Integer({ minimum: 0 }) })),
+}) });
+export type PurchaseSummaryResponse = Static<typeof PurchaseSummaryResponseSchema>;
 export const PurchaseFiltersSchema = object({
   q: Type.Optional(Type.String({ minLength: 1, maxLength: 100, pattern: '\\S' })),
   dateFrom: Type.Optional(headerFields.sentDate), dateTo: Type.Optional(headerFields.sentDate),

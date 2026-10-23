@@ -1,6 +1,132 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
 import { credential, login } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
+import { amountLabel } from '../../apps/web/src/features/purchases/model/fields.js';
+
+test('Inicio refleja altas, validación y eliminación de pendientes y validados sin recarga', async ({ page }) => {
+  await login(page, 'administrativo');
+  const home = async () => {
+    await page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link', { name: 'Inicio', exact: true }).click();
+  };
+  const summary = async () => (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
+  const check = async (requests: number, pendingCount: number, amount: string) => {
+    const indicators = page.getByRole('definition');
+    await expect(indicators.nth(0)).toHaveText(String(requests));
+    await expect(indicators.nth(2)).toHaveText(String(pendingCount));
+    await expect(indicators.nth(4)).toHaveText(amountLabel(amount));
+  };
+  const before = await summary();
+  const beforeDay = before.days.find((day: { date: string }) => day.date === '2026-10-16')?.count ?? 0;
+  const chartCount = page.getByRole('list', { name: 'Cantidad de solicitudes pendientes por día' }).getByRole('listitem').filter({ hasText: '16/10/2026' }).locator('.dashboard-chart-count');
+  const number = `HOME-${crypto.randomUUID().slice(0, 8)}`;
+  await page.getByRole('link', { name: 'Ver solicitudes', exact: true }).click();
+  await page.getByRole('link', { name: 'Nueva solicitud', exact: true }).click();
+  await page.getByLabel('Nº Documento / solicitud *', { exact: true }).fill(number);
+  await page.getByLabel('Fecha de envío *', { exact: true }).fill('16/10/2026');
+  await page.getByLabel('Descripción *', { exact: true }).fill('Solicitud ficticia para revisar el resumen');
+  await page.getByLabel('Monto total (CLP) *', { exact: true }).fill('12345');
+  await page.getByRole('button', { name: 'Guardar solicitud', exact: true }).click();
+  await expect(page.getByRole('heading', { name: `Solicitud ${number}` })).toBeVisible();
+  const id = new URL(page.url()).pathname.split('/').at(-1)!;
+  await home();
+  await check(before.requests + 1, before.pending + 1, (BigInt(before.pendingAmount) + 12345n).toString());
+  await expect(chartCount).toHaveText(`${beforeDay + 1} ${beforeDay + 1 === 1 ? 'solicitud' : 'solicitudes'}`);
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await expect(page.locator('.cenit-page-enter')).toHaveCSS('opacity', '1');
+    await page.screenshot({ path: `tmp/admin-home-connected-${width}.png` });
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.getByRole('link', { name: 'Ver solicitudes', exact: true }).click();
+  await page.getByLabel('Buscar solicitudes', { exact: true }).fill(number);
+  await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+  const row = pending(page).getByRole('row').filter({ hasText: number });
+  await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
+  await dialog(page).getByRole('button', { name: 'Validar registro', exact: true }).click();
+  await expect(row).toHaveCount(0);
+  await home(); await check(before.requests + 1, before.pending, before.pendingAmount);
+  await expect(chartCount).toHaveText(`${beforeDay} ${beforeDay === 1 ? 'solicitud' : 'solicitudes'}`);
+  // Delete a reviewed record through its detail; the filtered list is preserved on return.
+  await page.getByRole('link', { name: 'Ver solicitudes', exact: true }).click();
+  await page.getByLabel('Buscar solicitudes', { exact: true }).fill(number);
+  await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+  await page.getByRole('row').filter({ hasText: number }).getByRole('link', { name: 'Ver detalles' }).click();
+  await page.getByRole('button', { name: 'Eliminar', exact: true }).click();
+  await expect(dialog(page)).toContainText('no se puede deshacer');
+  await dialog(page).getByRole('button', { name: 'Eliminar registro', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/compras\\?q=${number}$`));
+  expect((await page.request.get(`/api/v1/purchases/${id}`)).status()).toBe(404);
+  await home(); await check(before.requests, before.pending, before.pendingAmount);
+  // Pending examples also require opening the detail before deleting.
+  const example = structuredClone(manualPurchaseExample); example.operationId = crypto.randomUUID();
+  example.origin = { type: 'contract_example', exampleId: 'recovered' }; example.header.requestNumber = `${number}-PENDING`;
+  const response = await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data: example });
+  expect(response.status()).toBe(201);
+  await page.getByRole('link', { name: 'Ver solicitudes', exact: true }).click();
+  await page.getByLabel('Buscar solicitudes', { exact: true }).fill(example.header.requestNumber);
+  await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+  const exampleRow = pending(page).getByRole('row').filter({ hasText: example.header.requestNumber });
+  await expect(page.getByRole('button', { name: 'Eliminar', exact: true })).toHaveCount(0);
+  await exampleRow.getByRole('link', { name: 'Ver detalles' }).click();
+  const deleteButton = page.getByRole('button', { name: 'Eliminar', exact: true });
+  await expect(deleteButton).toHaveText('');
+  await deleteButton.click();
+  await dialog(page).getByRole('button', { name: 'Eliminar registro', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/compras\\?q=${example.header.requestNumber}$`));
+  await expect(exampleRow).toHaveCount(0);
+  await home(); await check(before.requests, before.pending, before.pendingAmount);
+  await page.reload(); await check(before.requests, before.pending, before.pendingAmount);
+});
+
+test('eliminar confirma, permite cancelar y conserva el registro ante conflicto hasta actualizar', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 }); await login(page, 'administrativo');
+  const record = (await fixtures(page, 1))[0]!;
+  await expect(page.getByRole('button', { name: 'Eliminar', exact: true })).toHaveCount(0);
+  await pending(page).getByRole('link', { name: 'Ver detalles' }).click();
+  const trigger = page.getByRole('button', { name: 'Eliminar', exact: true });
+  await expect(trigger).toHaveText('');
+  await expect(trigger).toHaveAttribute('title', 'Eliminar registro');
+  await expect(page.locator('.cenit-page-enter')).toHaveCSS('opacity', '1');
+  await page.screenshot({ path: 'tmp/purchase-delete-detail-390.png' });
+  let deletes = 0; page.on('request', request => { if (request.method() === 'DELETE') deletes++; });
+  await trigger.click(); await insideViewport(page, dialog(page));
+  await expect(dialog(page)).toHaveCSS('opacity', '1');
+  await page.screenshot({ path: 'tmp/purchase-delete-confirm-390.png' });
+  await expect(dialog(page).getByRole('button', { name: 'Cancelar', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape'); await expect(dialog(page)).toHaveCount(0); await expect(trigger).toBeFocused(); expect(deletes).toBe(0);
+  // Another session validates after the table was loaded. A stale delete must not succeed.
+  await page.request.post(`/api/v1/purchases/${record.id}/validation`, { headers: { Origin: new URL(page.url()).origin }, data: { expectedVersion: 1 } });
+  await trigger.click(); await dialog(page).getByRole('button', { name: 'Eliminar registro', exact: true }).click();
+  await expect(dialog(page).getByRole('alert')).toContainText('El registro cambió');
+  expect((await page.request.get(`/api/v1/purchases/${record.id}`)).status()).toBe(200);
+  await expect(page.getByText('Registro eliminado', { exact: true })).toHaveCount(0);
+  await dialog(page).getByRole('button', { name: 'Actualizar datos' }).click();
+  await expect(page.getByText('Validado', { exact: true })).toBeVisible();
+  await trigger.click();
+  await dialog(page).getByRole('button', { name: 'Eliminar registro', exact: true }).click();
+  await expect(page).toHaveURL(/\/compras\?q=CTX-/);
+  await expect(page.getByRole('row').filter({ hasText: record.number })).toHaveCount(0);
+  expect(deletes).toBe(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+test('Inicio presenta carga y error con reintento sin mostrar cifras ficticias', async ({ page }) => {
+  await login(page, 'administrativo');
+  let release: (() => void) | undefined;
+  await page.route('**/api/v1/purchases/summary', async route => {
+    await new Promise<void>(resolve => { release = resolve; });
+    await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'Resumen temporalmente indisponible', requestId: 'summary-error' } }) });
+  });
+  await page.reload(); await expect(page.getByRole('status').filter({ hasText: 'Cargando resumen' })).toBeVisible();
+  expect(await page.getByRole('definition').count()).toBe(0);
+  await expect.poll(() => !!release).toBe(true); release!();
+  await expect(page.getByRole('alert')).toContainText('Resumen temporalmente indisponible');
+  await expect(page.getByRole('definition')).toHaveCount(0);
+  await page.unroute('**/api/v1/purchases/summary');
+  await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
+  await expect(page.getByRole('definition')).toHaveCount(6);
+});
 
 const dialog = (page: Page) => page.getByRole('alertdialog');
 const pending = (page: Page) => page.getByRole('region', { name: 'Pendientes de validación', exact: true });
@@ -138,22 +264,88 @@ test('filtros vacíos, repetidos y quitados dan feedback sin consultas ni histor
   const search = page.getByLabel('Buscar solicitudes', { exact: true });
   const status = page.locator('.purchase-filter-feedback');
   const history = await page.evaluate(() => window.history.length);
-  await expect(page.getByText('Puedes usar uno o más filtros para acotar la búsqueda')).toBeVisible();
+  await expect(page.getByText('La búsqueda se actualiza al escribir. Usa Aplicar filtros para fechas y códigos.')).toBeVisible();
   await search.fill('   '); await apply.focus(); await page.keyboard.press('Enter');
   await expect(status).toHaveText('Ingresa al menos un filtro para acotar la búsqueda'); await expect(apply).toBeFocused();
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
   expect(queries).toBe(0); expect(await page.evaluate(() => window.history.length)).toBe(history);
   await page.goBack(); await expect(page).toHaveURL(/\/administracion$/); await page.goForward();
-  await search.fill('FILTRO-CONTEXTUAL'); await expect(status).toHaveText('Cambios por aplicar');
-  await apply.click(); await expect(page).toHaveURL(/q=FILTRO-CONTEXTUAL/);
+  await search.fill('FILTRO-CONTEXTUAL'); await expect(page).toHaveURL(/q=FILTRO-CONTEXTUAL/);
   await expect(pending(page).getByText('No hay solicitudes que coincidan con los filtros.')).toBeVisible();
   const appliedQueries = queries, appliedHistory = await page.evaluate(() => window.history.length);
   await search.fill(' FILTRO-CONTEXTUAL '); await apply.click();
   await expect(status).toHaveText('Los filtros no han cambiado'); expect(queries).toBe(appliedQueries);
   expect(await page.evaluate(() => window.history.length)).toBe(appliedHistory);
-  await search.fill(''); await expect(status).toHaveText('Cambios por aplicar'); await apply.click(); await expect(page).toHaveURL(/\/compras$/);
+  await search.fill(''); await expect(page).toHaveURL(/\/compras$/);
   await expect(page.locator('.purchase-applied-filters')).toHaveCount(0);
-  await page.goBack(); await expect(search).toHaveValue('FILTRO-CONTEXTUAL');
+  expect(await page.evaluate(() => window.history.length)).toBe(appliedHistory);
+  await page.goBack(); await expect(page).toHaveURL(/\/administracion$/);
+  await page.goForward(); await expect(search).toHaveValue('');
+});
+
+test('búsqueda en vivo agrupa escritura, reinicia páginas y conserva filtros sin aplicar y foco', async ({ page }) => {
+  await login(page, 'administrativo'); const records = await fixtures(page, 2);
+  await page.request.post(`/api/v1/purchases/${records[1]!.id}/validation`, { headers: { Origin: new URL(page.url()).origin }, data: { expectedVersion: 1 } });
+  await page.goto('/administracion/compras?pendingPage=2&reviewedPage=2');
+  await expect(page.getByText('Página 2', { exact: true })).toHaveCount(2);
+  const prefix = records[0]!.number.slice(0, -2);
+  const search = page.getByLabel('Buscar solicitudes', { exact: true });
+  await page.getByLabel('Enviado hasta', { exact: true }).fill('31/12/2099');
+  await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
+  await page.getByLabel('Código de unidad', { exact: true }).fill('BORRADOR-UNIDAD');
+  const history = await page.evaluate(() => window.history.length);
+  const queries: URL[] = [];
+  page.on('request', request => { const url = new URL(request.url()); if (url.pathname === '/api/v1/purchases') queries.push(url); });
+  await page.clock.install(); await page.clock.pauseAt(new Date());
+  await search.fill(prefix.slice(0, -1)); await page.clock.runFor(150);
+  expect(queries).toHaveLength(0);
+  await search.fill(prefix); await page.clock.runFor(249);
+  expect(queries).toHaveLength(0);
+  await page.clock.runFor(1);
+  await expect(page).toHaveURL(new RegExp(`/compras\\?q=${prefix}$`));
+  await expect.poll(() => queries.length).toBe(2);
+  await page.clock.resume();
+  await expect(page.getByText('Página 1', { exact: true })).toHaveCount(2);
+  await expect(pending(page).getByText('1 registro', { exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Registros validados', exact: true }).getByText('1 registro', { exact: true })).toBeVisible();
+  expect(queries).toHaveLength(2);
+  for (const query of queries) { expect(query.searchParams.get('q')).toBe(prefix); expect(query.searchParams.has('dateTo')).toBe(false); expect(query.searchParams.has('unitCode')).toBe(false); }
+  await expect(search).toBeFocused();
+  await expect(page.getByLabel('Enviado hasta', { exact: true })).toHaveValue('31/12/2099');
+  await expect(page.getByLabel('Código de unidad', { exact: true })).toHaveValue('BORRADOR-UNIDAD');
+  await expect(page.locator('.purchase-filter-feedback')).toHaveText('Cambios por aplicar');
+  expect(await page.evaluate(() => window.history.length)).toBe(history);
+  await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+  await expect(pending(page).getByText('No hay solicitudes que coincidan con los filtros.')).toBeVisible();
+  await page.goBack(); await expect(search).toHaveValue(prefix);
+  await expect(page.getByLabel('Código de unidad', { exact: true })).toHaveValue('');
+  await search.fill('');
+  await expect(page).toHaveURL(/\/compras$/);
+  await page.reload(); await expect(search).toHaveValue('');
+});
+
+test('búsqueda en vivo descarta respuestas anteriores y conserva el filtro al volver del detalle', async ({ page }) => {
+  await login(page, 'administrativo'); const records = await fixtures(page, 2);
+  const search = page.getByLabel('Buscar solicitudes', { exact: true });
+  let release: (() => void) | undefined;
+  await page.route('**/api/v1/purchases?**', async route => {
+    const query = new URL(route.request().url()).searchParams;
+    if (query.get('q') !== records[0]!.number || query.get('reviewStatus') !== 'pending') return route.continue();
+    const response = await route.fetch();
+    await new Promise<void>(resolve => { release = resolve; });
+    await route.fulfill({ response }).catch(() => {});
+  });
+  await search.fill(records[0]!.number); await expect.poll(() => !!release).toBe(true);
+  await search.fill(records[1]!.number);
+  const current = pending(page).getByRole('row').filter({ hasText: records[1]!.number });
+  await expect(current).toBeVisible(); release!();
+  await expect(pending(page).getByRole('row').filter({ hasText: records[0]!.number })).toHaveCount(0);
+  await current.getByRole('link', { name: 'Ver detalles' }).click();
+  await page.getByRole('link', { name: 'Volver a solicitudes' }).click();
+  await expect(search).toHaveValue(records[1]!.number);
+  await expect(current).toBeVisible();
+  await page.reload(); await expect(search).toHaveValue(records[1]!.number);
+  await expect(current).toBeVisible();
 });
 
 test('reaplicar reinicia ambas páginas, limpiar evita duplicados y el no cambio conserva error/reintento', async ({ page }) => {

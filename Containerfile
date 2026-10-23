@@ -13,6 +13,7 @@ COPY . .
 RUN npm run build \
     && test -f apps/api/dist/server.js \
     && test -f apps/web/dist/index.html \
+    && test -f dist/operations/db/seeds/load-academic.js \
     && test -f db/migrations/meta/_journal.json
 
 FROM dependencies AS production-dependencies
@@ -29,6 +30,10 @@ COPY --from=build --chown=1000:1000 /app/apps/web/dist/ apps/web/dist/
 COPY --from=build --chown=1000:1000 /app/packages/contracts/dist/ packages/contracts/dist/
 COPY --from=build --chown=1000:1000 /app/db/migrations/ db/migrations/
 COPY --from=build --chown=1000:1000 /app/deploy/migrate.cjs deploy/migrate.cjs
+COPY --from=build --chown=1000:1000 /app/dist/operations/ operations/
+COPY --from=build --chown=1000:1000 /app/catalogs/academic/nutricion-diagrama-r2.json catalogs/academic/nutricion-diagrama-r2.json
+COPY --from=build --chown=1000:1000 ["/app/Docs/Foto prerequisitos Nutricion.jpeg", "Docs/Foto prerequisitos Nutricion.jpeg"]
+COPY --from=build --chown=1000:1000 /app/Docs/COTEJO-CATALOGO-ACADEMICO.md Docs/COTEJO-CATALOGO-ACADEMICO.md
 ENV NODE_ENV=production APP_ENV=demo HOST=0.0.0.0 PORT=3000
 USER 1000:1000
 EXPOSE 3000

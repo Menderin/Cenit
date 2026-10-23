@@ -1,11 +1,7 @@
 # Experimentos de Cenit
 
-Laboratorios aislados para investigar alternativas antes de incorporarlas a la aplicación. No se ejecutan desde `npm run dev`, las migraciones ni CI/CD, y no constituyen endpoints o funcionalidades entregadas.
+Esta carpeta conserva investigaciones reproducibles antes de incorporar cambios a la aplicación. Los scripts no se ejecutan desde desarrollo, migraciones ni CI/CD.
 
-- `purchases/baseline`: código y evidencia histórica de la primera comparación OCR; conservar sus fuentes para poder verificar los hashes.
-- `purchases`: segunda batería de capturas ficticias, segmentación dinámica, evaluación separada y entorno Python/Podman.
-- `purchases/battery-evidence.json`: resultados congelados de la segunda batería; ampliar o segmentar más no mejoró globalmente la lectura.
-- `purchases/round3-evidence.json` y `round4-evidence.json`: recorte numérico, contraste entre motores y reconstrucción por encabezados/celdas; cada ronda usa otra evaluación congelada. Consultar las limitaciones junto a los porcentajes.
-- Imágenes, pesos y salidas completas se generan en `tmp/ocr-research` y `tmp/ocr-battery`, fuera de Git. No colocar información institucional real, credenciales o datos de BD aquí.
+El [laboratorio de extracción de compras](purchases/README.md) reúne generación de capturas ficticias, comparación de lectores y segmentación, procedimientos y resultados. `purchases/baseline` conserva el primer ensayo; los archivos de evidencia JSON identifican muestras, configuración y límites de cada batería.
 
-Procedimiento y resultados: [investigación de extracción](../Docs/INVESTIGACION-EXTRACCION-COMPRAS.md). El procesamiento sigue en el notebook, dentro de Podman Linux con CPU; no se ha instalado el extractor en la VM universitaria.
+Imágenes generadas, pesos adicionales y salidas completas permanecen en `tmp`, fuera de Git. Los experimentos no usan credenciales ni datos institucionales reales. El comportamiento del OCR integrado se explica en [Arquitectura](../Docs/ARQUITECTURA.md#capturas-y-ocr), y su aceptación se verifica en la [matriz](../Docs/PRUEBAS-Y-ACEPTACION.md).
