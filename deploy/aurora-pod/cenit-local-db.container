@@ -1,0 +1,30 @@
+[Unit]
+Description=PostgreSQL 17 de Cenit en Pod local (Aurora Linux)
+Requires=cenit-local-pod.service
+After=cenit-local-pod.service
+
+[Container]
+Pod=cenit-local.pod
+ContainerName=cenit-local-db
+Image=docker.io/library/postgres:17.11-alpine3.24@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+Environment=POSTGRES_USER=cenit_admin
+Environment=POSTGRES_DB=cenit_demo
+Environment=POSTGRES_PASSWORD_FILE=/run/secrets/postgres-password
+Volume=cenit-local-postgres.volume:/var/lib/postgresql/data:Z
+Volume=/var/home/Helo/Documents/Cenit/deploy/local/init-db.sh:/docker-entrypoint-initdb.d/10-cenit.sh:ro,Z
+Volume=/var/home/Helo/Documents/Cenit/.local/secrets/postgres-password:/run/secrets/postgres-password:ro,Z
+Volume=/var/home/Helo/Documents/Cenit/.local/secrets/app-password:/run/secrets/app-password:ro,Z
+Volume=/var/home/Helo/Documents/Cenit/.local/secrets/migrator-password:/run/secrets/migrator-password:ro,Z
+SecurityLabelDisable=true
+HealthCmd=sh -c "pg_isready -U cenit_admin -d cenit_demo >/dev/null && psql -U cenit_admin -d cenit_demo -Atc \"SELECT count(*) = 2 FROM pg_roles WHERE rolname IN ('cenit_app','cenit_migrator')\" | grep -qx t"
+HealthInterval=5s
+HealthTimeout=5s
+HealthRetries=12
+PodmanArgs=--memory=512m
+
+[Service]
+Restart=unless-stopped
+TimeoutStartSec=180
+
+[Install]
+WantedBy=default.target

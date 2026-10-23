@@ -1,0 +1,19 @@
+[Unit]
+Description=Migrador de base de datos de Cenit en Pod local (Aurora Linux)
+Requires=cenit-local-pod.service cenit-local-db.service
+After=cenit-local-pod.service cenit-local-db.service
+
+[Container]
+Pod=cenit-local.pod
+ContainerName=cenit-local-migrate
+Image=localhost/cenit-local:dev
+Exec=node /app/deploy/migrate.cjs
+Environment=DATABASE_URL_FILE=/run/secrets/migrator-url
+Volume=/var/home/Helo/Documents/Cenit/.local/secrets/migrator-url:/run/secrets/migrator-url:ro,Z
+SecurityLabelDisable=true
+PodmanArgs=--memory=512m
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=180

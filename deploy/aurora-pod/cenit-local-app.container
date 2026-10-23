@@ -1,0 +1,23 @@
+[Unit]
+Description=Aplicación monolito de Cenit en Pod local (Aurora Linux)
+Requires=cenit-local-pod.service cenit-local-db.service cenit-local-migrate.service
+After=cenit-local-pod.service cenit-local-db.service cenit-local-migrate.service
+
+[Container]
+Pod=cenit-local.pod
+ContainerName=cenit-local-app
+Image=localhost/cenit-local:dev
+Environment=NODE_ENV=production
+Environment=APP_ENV=demo
+Environment=HOST=0.0.0.0
+Environment=PORT=3000
+Environment=AUTH_COOKIE_SECURE=false
+Environment=AUTH_ALLOWED_ORIGINS=http://127.0.0.1:8081,http://localhost:8081
+Environment=DATABASE_URL_FILE=/run/secrets/app-url
+Volume=/var/home/Helo/Documents/Cenit/.local/secrets/app-url:/run/secrets/app-url:ro,Z
+SecurityLabelDisable=true
+PodmanArgs=--memory=512m
+
+[Service]
+Restart=unless-stopped
+TimeoutStartSec=180

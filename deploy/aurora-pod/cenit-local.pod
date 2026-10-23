@@ -1,0 +1,14 @@
+# Podman Quadlet Pod para Aurora Linux / Fedora Atomic
+[Unit]
+Description=Pod local de Cenit (db, proxy, migrate, app, ocr)
+
+[Pod]
+PodName=cenit-local
+PublishPort=127.0.0.1:55432:5432
+PublishPort=127.0.0.1:8081:8080
+PublishPort=127.0.0.1:8090:8090
+# Resuelve los alias de Compose dentro del namespace compartido del Pod
+PodmanArgs=--add-host=db:127.0.0.1 --add-host=cenit-app:127.0.0.1 --add-host=ocr:127.0.0.1
+
+[Install]
+WantedBy=default.target

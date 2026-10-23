@@ -1,0 +1,19 @@
+[Unit]
+Description=Servicio auxiliar OCR de Cenit en Pod local (Aurora Linux)
+Requires=cenit-local-pod.service
+After=cenit-local-pod.service
+
+[Container]
+Pod=cenit-local.pod
+ContainerName=cenit-local-ocr
+Image=localhost/cenit-ocr:adapter1
+ReadOnly=true
+Tmpfs=/tmp:rw,size=64m,mode=1777
+NoNewPrivileges=true
+DropCapability=all
+SecurityLabelDisable=true
+PodmanArgs=--memory=1g --cpus=1
+
+[Service]
+Restart=no
+TimeoutStartSec=180

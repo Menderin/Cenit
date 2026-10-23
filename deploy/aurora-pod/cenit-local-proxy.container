@@ -1,0 +1,31 @@
+[Unit]
+Description=Proxy Nginx de Cenit en Pod local (Aurora Linux)
+Requires=cenit-local-pod.service
+After=cenit-local-pod.service
+
+[Container]
+Pod=cenit-local.pod
+ContainerName=cenit-local-proxy
+Image=docker.io/library/nginx:1.30.5-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94
+Entrypoint=nginx
+Exec=-g "daemon off;"
+User=101:101
+ReadOnly=true
+Tmpfs=/var/cache/nginx:rw,size=64m,mode=1777
+Tmpfs=/var/run:rw,size=1m,mode=1777
+# Por defecto inicia en modo bootstrap; cambiar a deploy/nginx/cenit.conf al levantar cenit-local-app
+Volume=/var/home/Helo/Documents/Cenit/deploy/nginx/bootstrap.conf:/etc/nginx/conf.d/default.conf:ro,Z
+Volume=/var/home/Helo/Documents/Cenit/deploy/bootstrap:/usr/share/nginx/html:ro,Z
+SecurityLabelDisable=true
+HealthCmd=wget -q -O /dev/null http://127.0.0.1:8080/
+HealthInterval=10s
+HealthTimeout=5s
+HealthRetries=6
+PodmanArgs=--memory=128m
+
+[Service]
+Restart=unless-stopped
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

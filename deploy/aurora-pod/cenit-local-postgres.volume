@@ -1,0 +1,3 @@
+[Volume]
+VolumeName=cenit-local-postgres-data
+Label=io.cenit.environment=local-aurora
