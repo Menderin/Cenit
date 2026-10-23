@@ -252,6 +252,8 @@ test('fechas segmentadas: placeholders, errores, rangos y calendarios coherentes
   await fillDate(exact, exactMonth, exactYear, '29022024');
   await expect(page).toHaveURL(/dateFrom=2024-02-29&dateTo=2024-02-29/);
   await expect(exact).not.toHaveAttribute('aria-invalid', 'true');
+  // Wait for every list query (pending/reviewed when enabled), not just the URL change.
+  await expect(page.getByText('Actualizando resultados…', { exact: true })).toHaveCount(0);
   const count = queries.length;
   await exactMonth.fill('40');
   await expect(exact).toHaveValue('29'); await expect(exactMonth).toHaveValue(''); await expect(exactYear).toHaveValue('2024');
