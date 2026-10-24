@@ -63,7 +63,7 @@ export function Login() {
         <div className="cenit-access__password">
           <input id="password" ref={passwordRef} name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" maxLength={128} placeholder="Escribe una contraseña" value={password} required disabled={busy} aria-invalid={!!errors.password} aria-describedby={errors.password ? 'password-error' : undefined} onChange={event => { setPassword(event.target.value); if (errors.password) setErrors(current => ({ ...current, password: undefined })); }} />
           <button className="cenit-access__reveal" type="button" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showPassword} disabled={busy} onClick={() => setShowPassword(current => !current)}>
-            {showPassword ? <EyeSlashIcon size={18} weight="regular" aria-hidden="true" /> : <EyeIcon size={18} weight="regular" aria-hidden="true" />}
+            <span className="cenit-access__eye" data-visible={!showPassword}><EyeIcon size={18} weight="regular" aria-hidden="true" /></span><span className="cenit-access__eye" data-visible={showPassword}><EyeSlashIcon size={18} weight="regular" aria-hidden="true" /></span>
           </button>
         </div>
         {errors.password && <p id="password-error" className="cenit-access__error" role="alert">{errors.password}</p>}

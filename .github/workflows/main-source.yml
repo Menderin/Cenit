@@ -1,0 +1,28 @@
+name: Main promotion policy
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    name: Main source branch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require develop from this repository
+        env:
+          SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
+          SOURCE_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          TARGET_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [[ "$SOURCE_BRANCH" != develop || "$SOURCE_REPOSITORY" != "$TARGET_REPOSITORY" ]]; then
+            echo '::error::Los PR hacia main deben proceder de develop del mismo repositorio. Integra primero la rama de tarea en develop.'
+            exit 1
+          fi
+          echo 'Origen permitido: develop del mismo repositorio.'

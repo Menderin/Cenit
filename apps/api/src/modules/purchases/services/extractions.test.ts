@@ -6,7 +6,7 @@ import { CaptureOriginSchema, CreatePurchaseSchema, validateExtractionResponse }
 import { extractionExamples } from '../../../../../../packages/contracts/src/purchases/examples.js';
 import { manualPurchaseExample } from '../../../../../../packages/contracts/src/purchases/record-examples.js';
 import { CaptureReceipts } from './capture-receipts.js';
-import { ExtractionService, type ExtractionProcessor } from './extractions.js';
+import { ExtractionService, httpExtractionProcessor, type ExtractionProcessor } from './extractions.js';
 import { purchaseRoutes } from '../routes/index.js';
 import type { PurchaseService } from './purchases.js';
 import { ApiError } from '../../../infrastructure/errors.js';
@@ -38,6 +38,16 @@ describe('capture receipt', () => {
 });
 describe('extraction service', () => {
   const receipts = new CaptureReceipts(randomBytes(32));
+  it('reports an unavailable HTTP worker without blaming the image', async () => {
+    const worker = Fastify();
+    worker.post('/extract', (_request, reply) => reply.code(503).send({ code: 'EXTRACTION_UNAVAILABLE' }));
+    worker.addContentTypeParser('image/png', { parseAs: 'buffer' }, (_request, body, done) => done(null, body));
+    const url = await worker.listen({ host: '127.0.0.1', port: 0 });
+    try {
+      await expect(httpExtractionProcessor(url)(Buffer.from('fake'), 'fake.png', 'image/png', new AbortController().signal))
+        .rejects.toMatchObject({ status: 503, code: 'EXTRACTION_UNAVAILABLE', message: 'El procesador está ocupado o no está disponible. Reintenta en unos instantes.' });
+    } finally { await worker.close(); }
+  });
   it('validates output and emits verifiable provenance without persistence', async () => {
     const result = await new ExtractionService(success, receipts).extract(Buffer.from('test'), 'fake.png', 'image/png', account, new AbortController().signal);
     expect(validateExtractionResponse(result)).toEqual([]);
@@ -77,7 +87,7 @@ async function app() {
     const e = error instanceof ApiError ? error : new ApiError(500, 'INTERNAL_ERROR', 'Error');
     reply.code(e.status).send({ error: { code: e.code, message: e.message, requestId: request.id } });
   });
-  await server.register(purchaseRoutes, { prefix: '/api/v1/purchases', service: {} as PurchaseService,
+  await server.register(purchaseRoutes, { capabilities: { secondReviewEnabled: false, sheetsSyncEnabled: false }, prefix: '/api/v1/purchases', service: {} as PurchaseService,
     authenticate: async request => request.headers['x-test-role'] ? { accountId: account, role: request.headers['x-test-role'] as 'administrativo' } : null,
     allowedOrigins: ['http://localhost:5173'], extraction: new ExtractionService(success, new CaptureReceipts(randomBytes(32))) });
   return server;
