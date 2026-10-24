@@ -39,7 +39,7 @@ export function PurchaseReview() {
       if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       guard.request(() => navigate(returnTo), event.currentTarget);
-    }}><ArrowLeftIcon size={13} aria-hidden="true" />Volver a solicitudes</Link>
+    }}><ArrowLeftIcon size={13} aria-hidden="true" />Volver al registro</Link>
     <div className="purchase-page-heading"><div><h1>Revisar datos</h1><p>Revisa y completa la información antes de continuar.</p></div><span className="purchase-origin-badge">Ejemplo de demostración</span></div>
     <div className="purchase-review__toolbar"><div><label htmlFor="review-example">Datos de ejemplo</label><select id="review-example" value={exampleId} onChange={event => {
       const next = event.target.value;

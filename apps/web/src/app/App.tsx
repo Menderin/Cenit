@@ -6,6 +6,7 @@ import { PurchaseCapture } from '../features/purchases/pages/PurchaseCapture.js'
 import { Purchases } from '../features/purchases/pages/Purchases.js';
 import { PurchaseCreate } from '../features/purchases/pages/PurchaseCreate.js';
 import { PurchaseDetail } from '../features/purchases/pages/PurchaseDetail.js';
+import { PurchaseEdit } from '../features/purchases/pages/PurchaseEdit.js';
 import { PurchaseTransferProvider } from '../features/purchases/model/transfer.js';
 import { AdministrativeLayout } from './AdministrativeLayout.js';
 import { Home } from '../features/administration/pages/Home.js';
@@ -15,6 +16,7 @@ import { AccessLayout } from '../features/auth/components/AccessLayout.js';
 import { Academic } from '../features/academic/pages/Academic.js';
 import { PurchaseGuardProvider, usePurchaseGuard } from '../features/purchases/model/guard.js';
 import { StatusNotice } from '../shared/components/StatusNotice.js';
+import { PurchaseCapabilitiesProvider } from '../features/purchases/model/capabilities.js';
 
 function AdministrativeArea() {
   const auth = useAuth(), guard = usePurchaseGuard();
@@ -27,6 +29,7 @@ function AdministrativeArea() {
       <Route path="/administracion/compras/nueva" element={<PurchaseCreate key={session.account.id} />} />
       <Route path="/administracion/compras/laboratorio" element={<PurchaseReview key={session.account.id} />} />
       <Route path="/administracion/compras/captura" element={<PurchaseCapture key={session.account.id} />} />
+      <Route path="/administracion/compras/:id/editar" element={<PurchaseEdit key={session.account.id} />} />
       <Route path="/administracion/compras/:id" element={<PurchaseDetail key={session.account.id} />} />
       <Route path="/administracion/personal" element={<Personnel />} />
       <Route path="/administracion/bienes" element={<Assets />} />
@@ -52,7 +55,7 @@ export function App() {
   </>;
   else if (!auth.session) content = <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Navigate to="/login" replace />} /></Routes>;
   if (auth.status === 'authenticated' && auth.session?.account.role === 'administrativo') return <PurchaseTransferProvider key={auth.session.account.id}>
-    <PurchaseGuardProvider><AdministrativeArea /></PurchaseGuardProvider>
+    <PurchaseCapabilitiesProvider><PurchaseGuardProvider><AdministrativeArea /></PurchaseGuardProvider></PurchaseCapabilitiesProvider>
   </PurchaseTransferProvider>;
   return <AccessLayout>{content}</AccessLayout>;
 }
