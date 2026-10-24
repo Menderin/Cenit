@@ -12,6 +12,8 @@ Antes de editar, revisar Git y conservar cambios ajenos. Trabajar en la tarea so
 
 Las ramas permanentes son `develop` para integración y staging, y `main` para producción de la demostración. Cada cambio entra mediante PR y CI; no se permiten push directo, force-push ni bypass de revisión en esas ramas.
 
+Los PR hacia `main` deben proceder de `develop` del mismo repositorio. El workflow `main-source.yml` publica el check `Main source branch`; para impedir integraciones desde otro origen, debe configurarse como obligatorio en la protección de `main`, junto con `CI required`, sin bypass. El workflow no configura por sí solo la protección de GitHub ni impide abrir PR. Incorporar primero el cambio en `develop`, abrir el PR de promoción a `main` y, cuando aparezca el check, seleccionarlo en el ruleset antes de integrar. Las ramas de tarea se integran previamente en `develop`.
+
 Usar nombres descriptivos con el ticket real cuando corresponda:
 
 | Tipo de cambio | Prefijo |
