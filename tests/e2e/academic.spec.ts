@@ -386,6 +386,12 @@ test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezcl
   const first = page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true });
   await expectLatestGrade(page, '6,5');
   await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
+  await expect(page.locator('.academic-students__heading')).toContainText('Camila Demo');
+  await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await expect(page.locator('#academic-students-search')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Cambiar estudiante', exact: true })).toBeFocused();
+  await expectLatestGrade(page, '6,5');
+  await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
   await page.getByLabel('Nombre', { exact: true }).fill('Estudiante');
   await expect(page.getByRole('status')).toContainText('No hay estudiantes que coincidan');
   await expect(first).not.toContainText('Aprobada');
