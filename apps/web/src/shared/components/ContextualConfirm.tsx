@@ -5,9 +5,9 @@ import { WarningCircleIcon } from '@phosphor-icons/react/dist/csr/WarningCircle'
 import { useExitPresence } from '../lib/use-exit-presence.js';
 
 export function ContextualConfirm({ open, origin, title, description, confirmLabel, cancelLabel = 'Seguir editando', busy = false,
-  busyLabel = 'Confirmando…', caution = false, onConfirm, onCancel, fallbackFocus, children }: {
+  busyLabel = 'Confirmando…', caution = false, destructive = false, onConfirm, onCancel, fallbackFocus, children }: {
   open: boolean; origin: HTMLElement | null; title: string; description: string; confirmLabel?: string; cancelLabel?: string;
-  busy?: boolean; busyLabel?: string; caution?: boolean; onConfirm?: () => void; onCancel: () => void;
+  busy?: boolean; busyLabel?: string; caution?: boolean; destructive?: boolean; onConfirm?: () => void; onCancel: () => void;
   fallbackFocus?: RefObject<HTMLElement | null>; children?: ReactNode;
 }) {
   const { mounted, closing } = useExitPresence(open);
@@ -16,8 +16,8 @@ export function ContextualConfirm({ open, origin, title, description, confirmLab
   const cancel = useRef<HTMLButtonElement>(null);
   const anchor = useRef(origin);
   const route = useRef('');
-  const text = useRef({ title, description, confirmLabel, cancelLabel, caution });
-  if (open) { anchor.current = origin; route.current = path; text.current = { title, description, confirmLabel, cancelLabel, caution }; }
+  const text = useRef({ title, description, confirmLabel, cancelLabel, caution, destructive });
+  if (open) { anchor.current = origin; route.current = path; text.current = { title, description, confirmLabel, cancelLabel, caution, destructive }; }
   useEffect(() => { if (open) cancel.current?.focus({ preventScroll: true }); }, [open]);
   useEffect(() => {
     if (!mounted) return;
@@ -51,12 +51,12 @@ export function ContextualConfirm({ open, origin, title, description, confirmLab
         onEscapeKeyDown={event => { if (busy || closing) event.preventDefault(); }}
         onInteractOutside={event => { if (busy || closing) event.preventDefault(); }}
         onClickCapture={event => { if (closing) { event.preventDefault(); event.stopPropagation(); } }}>
-        <div className="cenit-confirm-heading">{text.current.caution && <WarningCircleIcon size={18} aria-hidden="true" />}<h2 id={titleId}>{text.current.title}</h2></div>
+        <div className={`cenit-confirm-heading${text.current.destructive ? ' cenit-confirm-heading--destructive' : ''}`}>{text.current.caution && <WarningCircleIcon size={18} aria-hidden="true" />}<h2 id={titleId}>{text.current.title}</h2></div>
         <p id={descriptionId}>{text.current.description}</p>
         {children}
         <div className="cenit-confirm-actions">
           <button type="button" ref={cancel} className="cenit-ui-button" disabled={busy || closing} onClick={onCancel}>{text.current.cancelLabel}</button>
-          {text.current.confirmLabel && <button type="button" className="cenit-ui-button cenit-ui-button--primary" disabled={busy || closing} onClick={onConfirm}>{busy ? busyLabel : text.current.confirmLabel}</button>}
+          {text.current.confirmLabel && <button type="button" className={`cenit-ui-button ${text.current.destructive ? 'cenit-ui-button--destructive' : 'cenit-ui-button--primary'}`} disabled={busy || closing} onClick={onConfirm}>{busy ? busyLabel : text.current.confirmLabel}</button>}
         </div>
         <Popover.Arrow className="cenit-confirm-arrow" width={12} height={6} />
       </Popover.Content>

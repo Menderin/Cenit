@@ -9,11 +9,11 @@ import { getPurchaseSummary } from '../../purchases/api/purchases.js';
 import { usePurchaseCapabilities } from '../../purchases/model/capabilities.js';
 import { SheetsSyncStatus } from '../../purchases/components/SheetsSyncStatus.js';
 import { amountLabel } from '../../purchases/model/fields.js';
+import { displayInstantDate } from '../../../shared/lib/dates.js';
 import '../home.css';
 
 const RegistrationChart = lazy(() => import('../components/RegistrationChart.js').then(module => ({ default: module.RegistrationChart })));
 const sourceLabels = { manual: 'Ingreso manual', image_capture: 'Desde captura', contract_example: 'Ejemplo de demostración' };
-const registrationDate = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Santiago' });
 const registrationMonth = new Intl.DateTimeFormat('es-CL', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 export function Home() {
   const { secondReviewEnabled } = usePurchaseCapabilities();
@@ -39,7 +39,7 @@ export function Home() {
           <SheetsSyncStatus />
         </section>
         <section className="dashboard-recent" aria-labelledby="recent-title"><div className="dashboard-section-heading"><h2 id="recent-title">Últimos registros</h2><Link to="/administracion/compras">Ver registros<ArrowUpRightIcon size={16} aria-hidden="true" /></Link></div>
-          {overview.recentRecords.length ? <ul>{overview.recentRecords.map(record => <li key={record.id}><Link to={`/administracion/compras/${record.id}`}><div><strong>{record.requestNumber}</strong><span title={record.description}>{record.description}</span></div><div className="dashboard-recent-amount"><b>{amountLabel(record.totalAmount)}</b><small title={sourceLabels[record.source]}>{registrationDate.format(new Date(record.createdAt)).replaceAll('-', '/')}</small><span className="purchase-sr-only">{sourceLabels[record.source]}</span></div></Link></li>)}</ul>
+          {overview.recentRecords.length ? <ul>{overview.recentRecords.map(record => <li key={record.id}><Link to={`/administracion/compras/${record.id}`}><div><strong>{record.requestNumber}</strong><span title={record.description}>{record.description}</span></div><div className="dashboard-recent-amount"><b>{amountLabel(record.totalAmount)}</b><small><span className="purchase-sr-only">Incorporado el </span><time dateTime={record.createdAt}>{displayInstantDate(record.createdAt)}</time></small><span className="purchase-sr-only">{sourceLabels[record.source]}</span></div></Link></li>)}</ul>
             : <div className="dashboard-empty"><FilesIcon size={32} aria-hidden="true" /><h3>Aún no hay compras registradas</h3><p>Los registros del módulo aparecerán aquí.</p><Link className="admin-button" to="/administracion/compras">Ir a Compras</Link></div>}
         </section>
       </div>}

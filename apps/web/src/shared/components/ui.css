@@ -3,6 +3,7 @@
 .cenit-confirm *, .cenit-popover * { box-sizing: border-box; }
 .cenit-ui-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 10px 14px; border: 1px solid #dcdce3; border-radius: 9px; color: #45454d; background: #fff; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color 150ms ease-out, opacity 150ms ease-out; }
 .cenit-ui-button--primary { min-height: 44px; border-color: #34343b; background: #34343b; color: #fff; }
+.cenit-ui-button--destructive { min-height: 44px; border-color: #9e3935; background: #9e3935; color: #fff; }
 .cenit-ui-button:disabled { opacity: .5; cursor: default; }
 .cenit-popover :is(button, select):focus-visible { outline: 2px solid #526bb5; outline-offset: 3px; }
 .cenit-dialog-note { margin-top: 12px !important; font-size: 12px; }
@@ -47,6 +48,7 @@
 @media (hover: hover) {
   .cenit-ui-button:hover:not(:disabled), .cenit-date-field .cenit-date-trigger:hover:not(:disabled) { background: #f5f5f8; }
   .cenit-ui-button--primary:hover:not(:disabled) { background: #484850; }
+  .cenit-ui-button--destructive:hover:not(:disabled) { border-color: #8f302c; background: #8f302c; }
   .cenit-calendar .rdp-day_button:hover:not(:disabled) { background: #eeeef2; }
   .cenit-calendar .rdp-selected .rdp-day_button:hover:not(:disabled) { background: #484850; }
 }
@@ -100,6 +102,7 @@
 .cenit-confirm { z-index: 101; box-sizing: border-box; width: min(340px, calc(100vw - 32px)); max-height: var(--radix-popover-content-available-height); overflow-y: auto; overscroll-behavior: contain; padding: 18px; border: 1px solid transparent; border-radius: 12px; background: #fff; color: #29292f; font: 13px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; box-shadow: 0 0 0 1px #0000000f, 0 12px 30px #0000001a, 0 4px 10px #00000008; transition: opacity 150ms ease-out; }
 .cenit-confirm-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .cenit-confirm-heading > svg { flex: none; color: #7b613b; }
+.cenit-confirm-heading--destructive > svg { color: #9e3935; }
 .cenit-confirm h2 { margin: 0; color: #35353d; font-size: 15px; font-weight: 550; line-height: 1.4; overflow-wrap: anywhere; }
 .cenit-confirm p { margin: 0; color: #62626c; }
 .cenit-confirm .cenit-dialog-error { margin-top: 12px; padding: 8px 10px; border-radius: 6px; color: #9e3935; background: #fcf3f1; }
@@ -145,9 +148,10 @@
 .cenit-calendar .rdp-selected { font-size: inherit; font-weight: 400; }
 .cenit-calendar .rdp-selected.rdp-range_middle .rdp-day_button { color: #45454d; background: transparent; border-color: transparent; border-radius: 0; }
 .cenit-calendar .rdp-selected:is(.rdp-range_start, .rdp-range_end) .rdp-day_button { color: #fff; background: #34343b; border-color: #34343b; }
+.cenit-calendar .rdp-today:not(.rdp-selected) .rdp-day_button { color: #29292f; background: #eeeef2; font-weight: 500; }
 @media (hover: hover) {
   .cenit-select-trigger:hover:not(:disabled) { background: #f5f5f8; }
-  .cenit-calendar .rdp-selected.rdp-range_middle .rdp-day_button:hover:not(:disabled) { background: #e1e1e6; }
+  .cenit-calendar .rdp-selected.rdp-range_middle .rdp-day_button:hover:not(:disabled), .cenit-calendar .rdp-today:not(.rdp-selected) .rdp-day_button:hover:not(:disabled) { background: #e1e1e6; }
   .cenit-calendar .rdp-selected:is(.rdp-range_start, .rdp-range_end) .rdp-day_button:hover:not(:disabled) { background: #484850; }
 }
 @media (prefers-reduced-motion: no-preference) {
