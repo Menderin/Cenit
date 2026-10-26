@@ -152,10 +152,12 @@ describe('HU07-T04: registro válido', () => {
   it('procedencia de ejemplo y revisión local se reflejan tras validar; pago declarado sigue separado', async () => {
     const input = { ...fullRecord(), origin: { type: 'contract_example' as const, exampleId: 'ambiguous' as const } };
     const saved = await create(input);
-    const validated = await fetch(`${base}/api/v1/purchases/${saved.id}/validation`, { method: 'POST', headers: { origin: base, cookie: cookies.administrativo!, 'content-type': 'application/json' }, body: JSON.stringify({ expectedVersion: 1 }) });
-    expect(validated.status).toBe(200);
+    // Usa la versión que devolvió el servidor, no un valor fijo; si falla, el mensaje incluye el código de error de la API.
+    const validated = await fetch(`${base}/api/v1/purchases/${saved.id}/validation`, { method: 'POST', headers: { origin: base, cookie: cookies.administrativo!, 'content-type': 'application/json' }, body: JSON.stringify({ expectedVersion: saved.version }) });
+    const validationBody = await validated.text();
+    expect(validated.status, `validación respondió: ${validationBody}`).toBe(200);
     const record = (await (await detail(saved.id)).json()).data;
-    expect({ source: record.source, exampleId: record.exampleId, reviewStatus: record.reviewStatus, version: record.version }).toEqual({ source: 'contract_example', exampleId: 'ambiguous', reviewStatus: 'reviewed', version: 2 });
+    expect({ source: record.source, exampleId: record.exampleId, reviewStatus: record.reviewStatus, version: record.version }).toEqual({ source: 'contract_example', exampleId: 'ambiguous', reviewStatus: 'reviewed', version: saved.version + 1 });
     expect(record.reviewedBy.name).toBe(credentials.find(entry => entry.role === 'administrativo')!.name);
     expect(record.administrative.paymentSituation).toBe('Pago declarado ficticio'); // la revisión no altera el pago
     expect(record).not.toHaveProperty('approval'); expect(record).not.toHaveProperty('oracleApproval');
