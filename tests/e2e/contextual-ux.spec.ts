@@ -407,15 +407,21 @@ test('navegación: ancho fijo del contenido durante apertura/cierre, inversión 
   const label = page.locator('.admin-sidebar a[href="/administracion/compras"] span');
   const dimensions = () => label.evaluate(e => ({ width: e.getBoundingClientRect().width, height: e.getBoundingClientRect().height }));
   const before = await dimensions();
+  const expectStableDimensions = async () => {
+    const current = await dimensions();
+    // Animated transforms can introduce floating-point noise in DOMRect values.
+    expect(Math.abs(current.width - before.width)).toBeLessThan(0.01);
+    expect(Math.abs(current.height - before.height)).toBeLessThan(0.01);
+  };
   for (let index = 0; index < 3; index++) {
     await toolbar(page).click();
     // Replay the CSS transitions at 10% speed to inspect stable text geometry mid-flight.
     await page.evaluate(() => document.getAnimations().forEach(animation => animation.updatePlaybackRate(.1)));
-    await expect(content).toHaveCSS('width', '220px'); expect(await dimensions()).toEqual(before);
+    await expect(content).toHaveCSS('width', '220px'); await expectStableDimensions();
     await toolbar(page).click();
     await page.evaluate(() => document.getAnimations().forEach(animation => animation.updatePlaybackRate(1)));
     await expect(toolbar(page)).toHaveAttribute('aria-expanded', 'true');
-    await expect(content).toHaveCSS('width', '220px'); expect(await dimensions()).toEqual(before);
+    await expect(content).toHaveCSS('width', '220px'); await expectStableDimensions();
   }
   await page.goto('/administracion/compras');
   const manual = page.getByRole('link', { name: 'Registrar manualmente', exact: true }), capture = page.getByRole('link', { name: 'Subir captura', exact: true });
