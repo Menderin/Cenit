@@ -119,6 +119,7 @@
 .academic-disclosure[open] > summary > .academic-disclosure__caret { transform: rotate(90deg); }
 .academic-disclosure[open] > summary { margin-bottom: 14px; }
 .academic-plan-info > summary { color: #686871; font-size: 12px; }
+.academic-plan-sources { grid-template-columns: minmax(0, 1fr); }
 
 .academic-students { margin-bottom: 8px; }
 .academic-students__heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 14px; }

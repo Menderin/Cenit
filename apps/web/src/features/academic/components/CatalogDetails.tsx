@@ -7,6 +7,13 @@ import { semesterLabel } from '../model/group-by-semester.js';
 import { progressLabels, type CourseProgress } from '../model/progress-presentation.js';
 import type { Student } from './StudentLookup.js';
 import { courseRelations } from '../model/course-relations.js';
+import { displayDate } from '../../../shared/lib/dates.js';
+
+const sourceStatusLabels = {
+  example: 'Fuente de demostración.',
+  teamReviewed: 'Revisada por el equipo. Validación institucional pendiente.',
+  clientValidated: 'Validada institucionalmente.',
+};
 
 function Rule({ rule, plan }: { rule: Prerequisite; plan: AcademicPlan }) {
   if (rule.kind === 'pending') return <><p>Pendientes de confirmación.</p><p className="academic-detail__explanation">{rule.description}</p></>;
@@ -70,6 +77,10 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
           <details className="academic-detail__section academic-disclosure academic-plan-info">
             <summary><CaretRightIcon className="academic-disclosure__caret" size={12} aria-hidden="true" />Información del plan</summary>
             <dl className="academic-facts"><div><dt>Plan</dt><dd>{plan.name}</dd></div><div><dt>Versión</dt><dd>{plan.version}</dd></div><div><dt>Código interno</dt><dd>{course.code}</dd></div>{course.officialCode && <div><dt>Código oficial</dt><dd>{course.officialCode}</dd></div>}</dl>
+            <dl className="academic-facts academic-plan-sources" aria-label="Fuentes del catálogo">{plan.sources.map(source => <div key={source.sourceId}>
+              <dt>{source.title}</dt><dd>{sourceStatusLabels[source.validationStatus]}</dd>
+              {source.reviewedAt && <dd>Revisada el <time dateTime={source.reviewedAt}>{displayDate(source.reviewedAt)}</time></dd>}
+            </div>)}</dl>
           </details>
       </div>
     </div>
