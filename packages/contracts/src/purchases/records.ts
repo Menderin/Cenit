@@ -19,14 +19,38 @@ export type PurchasePayload = Static<typeof PurchasePayloadSchema>;
 export type CreatePurchase = Static<typeof CreatePurchaseSchema>;
 export const PurchaseParamsSchema = object({ id: uuid });
 export const PurchaseValidationSchema = object({ expectedVersion: Type.Integer({ minimum: 1, maximum: 2147483647 }) });
+export const UpdatePurchaseSchema = object({ expectedVersion: PurchaseValidationSchema.properties.expectedVersion, ...PurchasePayloadSchema.properties });
+export type UpdatePurchase = Static<typeof UpdatePurchaseSchema>;
 export const PurchaseDeletionSchema = PurchaseValidationSchema;
 export const PurchaseDeletionResponseSchema = object({ data: object({ id: uuid }) });
 export const PurchaseSummaryResponseSchema = object({ data: object({
   requests: Type.Integer({ minimum: 0 }), pending: Type.Integer({ minimum: 0 }),
   currency: Type.Literal('CLP'), pendingAmount: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }),
   days: Type.Array(object({ date: headerFields.sentDate, count: Type.Integer({ minimum: 0 }) })),
+  overview: Type.Optional(object({
+    documentTotal: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }),
+    documentTotalThisMonth: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }),
+    registrationMonth: Type.String({ pattern: '^\\d{4}-(0[1-9]|1[0-2])$' }),
+    registeredThisYear: Type.Integer({ minimum: 0 }),
+    registeredThisMonth: Type.Integer({ minimum: 0 }),
+    sourceCounts: object({ manual: Type.Integer({ minimum: 0 }), image_capture: Type.Integer({ minimum: 0 }), contract_example: Type.Integer({ minimum: 0 }) }),
+    registrationDays: Type.Array(object({ date: headerFields.sentDate, count: Type.Integer({ minimum: 0 }) }), { maxItems: 30 }),
+    recentRecords: Type.Array(object({ id: uuid, requestNumber: headerFields.requestNumber, description: headerFields.description,
+      sentDate: headerFields.sentDate, totalAmount: headerFields.totalAmount, createdAt: stamp,
+      source: Type.Union([Type.Literal('manual'), Type.Literal('image_capture'), Type.Literal('contract_example')]),
+    }), { maxItems: 5 }),
+  })),
 }) });
 export type PurchaseSummaryResponse = Static<typeof PurchaseSummaryResponseSchema>;
+export const PurchaseCapabilitiesResponseSchema = object({ data: object({ secondReviewEnabled: Type.Boolean(), sheetsSyncEnabled: Type.Boolean() }) });
+export type PurchaseCapabilities = Static<typeof PurchaseCapabilitiesResponseSchema>['data'];
+export const PurchaseSheetsQuerySchema = object({ purchaseId: Type.Optional(uuid) });
+export const PurchaseSheetsResponseSchema = object({ data: object({
+  status: Type.Union([Type.Literal('disabled'), Type.Literal('pending'), Type.Literal('synced'), Type.Literal('error')]),
+  pending: Type.Integer({ minimum: 0 }), lastSyncedAt: Type.Union([stamp, Type.Null()]),
+  url: Type.Union([Type.String({ pattern: '^https://docs\\.google\\.com/spreadsheets/d/[a-zA-Z0-9_-]+/edit$' }), Type.Null()]),
+}) });
+export type PurchaseSheetsResponse = Static<typeof PurchaseSheetsResponseSchema>;
 export const PurchaseFiltersSchema = object({
   q: Type.Optional(Type.String({ minLength: 1, maxLength: 100, pattern: '\\S' })),
   dateFrom: Type.Optional(headerFields.sentDate), dateTo: Type.Optional(headerFields.sentDate),
@@ -34,7 +58,8 @@ export const PurchaseFiltersSchema = object({
   projectCode: Type.Optional(Type.String({ minLength: 1, maxLength: 255, pattern: '\\S' })),
 });
 export type PurchaseFilters = Static<typeof PurchaseFiltersSchema>;
-export const PurchaseListQuerySchema = object({ ...PurchaseFiltersSchema.properties, reviewStatus: Type.Union([Type.Literal('pending'), Type.Literal('reviewed')]),
+export const PurchaseListQuerySchema = object({ ...PurchaseFiltersSchema.properties, reviewStatus: Type.Union([Type.Literal('pending'), Type.Literal('reviewed'), Type.Literal('all')]),
+  sort: Type.Optional(Type.Union([Type.Literal('sentDateDesc'), Type.Literal('sentDateAsc')])),
   page: Type.Integer({ minimum: 1, maximum: 1000000 }), pageSize: Type.Integer({ minimum: 1, maximum: 100 }) });
 export type PurchaseListQuery = Static<typeof PurchaseListQuerySchema>;
 const actor = object({ id: uuid, name: Type.String({ minLength: 1, maxLength: 200 }) });
@@ -46,11 +71,13 @@ export type PurchaseRecord = Static<typeof PurchaseRecordSchema>;
 export const PurchaseResponseSchema = object({ data: PurchaseRecordSchema });
 export const PurchaseListResponseSchema = object({ data: Type.Array(object({
   id: uuid, requestNumber: headerFields.requestNumber, sentDate: headerFields.sentDate, description: headerFields.description,
+  totalAmount: headerFields.totalAmount,
   documentType: ExtractionReviewDraftSchema.properties.administrative.properties.documentType,
   reviewStatus: PurchaseRecordSchema.properties.reviewStatus, version: PurchaseRecordSchema.properties.version,
   source: PurchaseRecordSchema.properties.source, exampleId: PurchaseRecordSchema.properties.exampleId,
   capture: PurchaseRecordSchema.properties.capture,
 })), pagination: object({ page: Type.Integer({ minimum: 1 }), pageSize: Type.Integer({ minimum: 1, maximum: 100 }), total: Type.Integer({ minimum: 0 }) }),
+  availableYears: Type.Optional(Type.Array(Type.Integer({ minimum: 1, maximum: 9999 }), { uniqueItems: true })),
   totals: object({ currency: Type.Literal('CLP'), documentTotal: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }) }) });
 export type PurchaseListResponse = Static<typeof PurchaseListResponseSchema>;
 export function validatePurchaseListQuery(input: unknown): ContractProblem[] {
@@ -64,8 +91,20 @@ export function validatePurchaseListQuery(input: unknown): ContractProblem[] {
   return problems;
 }
 export function validateCreatePurchase(input: unknown): ContractProblem[] {
-  if (!Value.Check(CreatePurchaseSchema, input)) return [...Value.Errors(CreatePurchaseSchema, input)].map(error => ({ path: error.path, message: 'Revisa el formato o completa los campos obligatorios.' }));
-  const problems = validateReviewDraft({ header: input.header, lines: input.lines, administrative: input.administrative });
+  if (!Value.Check(CreatePurchaseSchema, input)) return [...Value.Errors(CreatePurchaseSchema, input)].map(error => ({ path: error.path,
+    message: error.value === null || error.value === '' || error.value === undefined ? 'Completa este campo obligatorio.'
+      : /\/(totalAmount|taxAmount|price|amount)$/.test(error.path) ? 'Escribe un monto entero sin puntos, comas ni signos.'
+      : error.path.endsWith('/sentDate') ? 'Escribe una fecha válida en formato dd/mm/aaaa.' : 'Revisa el formato o el límite de este campo.',
+  }));
+  return validatePurchasePayload({ header: input.header, lines: input.lines, administrative: input.administrative });
+}
+export function validatePurchasePayload(input: unknown): ContractProblem[] {
+  if (!Value.Check(PurchasePayloadSchema, input)) return [...Value.Errors(PurchasePayloadSchema, input)].map(error => ({ path: error.path,
+    message: error.value === null || error.value === '' || error.value === undefined ? 'Completa este campo obligatorio.'
+      : /\/(totalAmount|taxAmount|price|amount)$/.test(error.path) ? 'Escribe un monto entero sin puntos, comas ni signos.'
+      : error.path.endsWith('/sentDate') ? 'Escribe una fecha válida en formato dd/mm/aaaa.' : 'Revisa el formato o el límite de este campo.',
+  }));
+  const problems = validateReviewDraft(input);
   // PostgreSQL date has no year zero; reject it before reaching persistence.
   if (input.header.sentDate.startsWith('0000-')) problems.push({ path: '/header/sentDate', message: 'El año debe ser mayor que cero.' });
   return problems;

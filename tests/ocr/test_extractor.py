@@ -1,7 +1,7 @@
 import io
 import unittest
 from PIL import Image
-from extractor import decode, candidates, money, sent, capture_layout, header, grouped, table, ProcessingError, MAX_BYTES
+from extractor import decode, candidates, money, sent, capture_layout, header, grouped, table, add_region, ProcessingError, MAX_BYTES
 from unittest.mock import patch
 from PIL import ImageDraw
 
@@ -13,6 +13,18 @@ def image_bytes(size=(20, 20), mode='PNG'):
 
 
 class ImageValidation(unittest.TestCase):
+    def test_exif_orientation_defines_region_coordinates(self):
+        output = io.BytesIO()
+        image = Image.new('RGB', (80, 40), 'white')
+        exif = image.getexif()
+        exif[274] = 6
+        image.save(output, format='JPEG', exif=exif)
+        oriented = decode(output.getvalue(), 'image/jpeg')
+        self.assertEqual(oriented.size, (40, 80))
+        regions = []
+        add_region(regions, '/header/description', (20, 20, 40, 60), oriented)
+        self.assertEqual(regions, [{'path': '/header/description', 'x': .5, 'y': .25, 'width': .5, 'height': .5}])
+
     def test_png_and_jpeg(self):
         for fmt, mime in [('PNG', 'image/png'), ('JPEG', 'image/jpeg')]:
             self.assertEqual(decode(image_bytes(mode=fmt), mime).size, (20, 20))
@@ -58,12 +70,16 @@ class CandidateMapping(unittest.TestCase):
                  word('Impuesto',340,95,65),word('(No Recuperable)',410,95,80),word('0 CLP',500,95),
                  word('Anexos',440,110,45),word('DEMO.pdf',500,110,80),
                  word('Líneas de Solicitud Interna',20,140,220)]
-        result = header(grouped(words))
+        regions = []
+        result = header(grouped(words), image=Image.new('RGB', (1000, 200)), regions=regions)
         self.assertEqual(result['recipient'],'BETA')
         self.assertEqual(result['description'],'SERVICIO MULTILÍNEA')
         self.assertEqual(result['oracleId'],'00325486')
         self.assertEqual(result['sentDate'],'08-Dec-2025 16:35:54')
         self.assertEqual(result['taxAmount'],'0 CLP')
+        description = next(r for r in regions if r['path'] == '/header/description')
+        self.assertEqual(description, {'path': '/header/description', 'x': .5, 'y': .25, 'width': .085, 'height': .125})
+        self.assertFalse(any(r['path'].startswith('/administrative/') for r in regions))
 
     def test_grid_skips_toolbar_and_page_frame(self):
         image=Image.new('RGB',(1085,658),'white')
@@ -86,10 +102,14 @@ class CandidateMapping(unittest.TestCase):
             return '001'
         class Reading:
             txts=[]
+        regions = []
         with patch('extractor.read_cell',side_effect=cell):
-            result=table(lambda *args,**kwargs:Reading(),image,groups)
+            result=table(lambda *args,**kwargs:Reading(),image,groups,regions)
         self.assertEqual(len(result),1)
         self.assertEqual(result[0]['chargeAccount'],'001')
+        self.assertEqual(len(regions), 8)
+        self.assertEqual({r['path'] for r in regions}, {'/lines/0/'+key for key in ['description','provider','costCenter','lineUnit','quantity','price','amount','chargeAccount']})
+        self.assertTrue(all(0 <= r['x'] < r['x']+r['width'] <= 1 and 0 <= r['y'] < r['y']+r['height'] <= 1 for r in regions))
 
     def test_layout_requires_structural_signals_not_oracle_or_blue(self):
         def group(text, center):

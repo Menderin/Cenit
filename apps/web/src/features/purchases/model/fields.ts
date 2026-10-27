@@ -1,12 +1,6 @@
 import { headerFields, lineFields, administrativeFields, type ExtractionReviewDraft } from '@cenit/contracts/purchases';
-export const purchaseLabels: Record<string, string> = {
-  requestNumber: 'Nº Documento / solicitud', oracleId: 'ID de Oracle', sender: 'Remitente', recipient: 'Destinatario',
-  sentDate: 'Fecha de envío', sentTime: 'Hora de envío', description: 'Descripción', totalAmount: 'Monto total (CLP)',
-  taxAmount: 'Impuesto (CLP)', attachmentReference: 'Referencia de anexos', provider: 'Proveedor', costCenter: 'Centro de costos',
-  lineUnit: 'Unidad de línea', quantity: 'Cantidad', price: 'Precio (CLP)', amount: 'Importe (CLP)', chargeAccount: 'Cuenta del cargo completa',
-  universityCode: 'Código universidad', campusCode: 'Código sede', unitCode: 'Código unidad', projectCode: 'Código proyecto', accountingCode: 'Código contable',
-  document: 'Documento', documentType: 'Tipo de documento', bi: 'BI', rut: 'RUT', unitName: 'Nombre de unidad', item: 'ITEM', paymentSituation: 'Situación de pago',
-};
+import { purchaseFieldLabels } from '@cenit/contracts/purchases';
+export const purchaseLabels = purchaseFieldLabels;
 export function purchaseProblemLabel(path: string) {
   const parts = path.split('/').filter(Boolean), field = parts.at(-1) ?? '';
   const label = purchaseLabels[field] ?? (parts[0] === 'lines' ? 'Ítems de la solicitud' : 'Datos de la solicitud');

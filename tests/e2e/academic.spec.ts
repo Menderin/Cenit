@@ -105,12 +105,12 @@ test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado 
   await expect(page.locator('[data-relation="indirect"]')).toHaveCount(8);
   await expect(page.locator('.academic-columns svg')).toHaveCount(0);
   await expect(unrelated).toHaveCSS('background-image', originalBackground);
-  expect(await a.evaluate(element => getComputedStyle(element, '::before').transitionDuration)).toBe('0.3s');
-  expect(await a.evaluate(element => getComputedStyle(element).transitionProperty)).toBe('translate');
+  expect(await a.evaluate(element => getComputedStyle(element, '::before').transitionDuration)).toBe('0.15s');
+  expect(await a.evaluate(element => getComputedStyle(element).transitionProperty)).toBe('none');
   await page.screenshot({ path: testInfo.outputPath('cadena-ficticia-1920.png'), animations: 'disabled' });
   expect(await a.evaluate(element => Number(getComputedStyle(element, '::before').opacity))).toBeGreaterThan(0);
   await expect(a).toHaveCSS('scale', 'none');
-  await expect(a).toHaveCSS('translate', '0px -2px');
+  await expect(a).toHaveCSS('translate', 'none');
   const highlightShadow = await a.evaluate(element => getComputedStyle(element, '::before').boxShadow);
   expect(highlightShadow).not.toBe('none');
   expect(await page.locator('[data-course-code="D"]').evaluate(element => ({ opacity: Number(getComputedStyle(element, '::after').opacity), border: getComputedStyle(element, '::after').borderStyle }))).toEqual({ opacity: .85, border: 'dashed' });

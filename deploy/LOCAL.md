@@ -4,6 +4,16 @@ Esta guía permite preparar una base de demostración, trabajar en desarrollo y 
 
 La base local conserva sus datos en un volumen. Las preparaciones que siguen son para datos ficticios de demostración, no para una base real. Las [pruebas automatizadas](../Docs/PRUEBAS-Y-ACEPTACION.md) usan bases descartables separadas.
 
+## Atajo: levantar desarrollo local
+
+Desde la raíz del repo, comprobar las versiones de Node y npm indicadas en `.node-version` y `package.json`. En una instalación nueva, ejecutar `python3 deploy/scripts/setup-local.py`, completar las tres `CENIT_DEMO_*_PASSWORD` en el `.env` privado y ejecutar `npm ci` una vez. Estos pasos conservan los secretos existentes.
+
+Iniciar o reutilizar PostgreSQL local con `docker compose up -d db`, y luego ejecutar `npm run dev`. El supervisor comprueba que conecta a `cenit_demo` por loopback con el rol `cenit_app`, prepara/verifica las tres cuentas ficticias y abre el API en `3000` y Vite en `5173`. No aplica migraciones ni carga catálogo o compras de ejemplo. Si informa que faltan migraciones, confirmar que se trata de la base local de demostración y seguir [Preparar PostgreSQL](#preparar-postgresql-y-las-cuentas) con el rol migrador antes de volver a iniciar.
+
+Abrir [http://127.0.0.1:5173/login](http://127.0.0.1:5173/login) y usar las cuentas ficticias guardadas localmente. `Ctrl+C` cierra API y web; PostgreSQL queda iniciado y conserva su volumen. La demo compilada de `8081`, si está activa, es independiente.
+
+La copia automática a Google Sheets es opcional y viene apagada. Para revisar ese flujo hacen falta una planilla dedicada de pruebas, su ID y la credencial privada de la cuenta de servicio; seguir [Conectar una planilla de pruebas](#conectar-una-planilla-de-pruebas). Crear un registro ficticio desde Cenit y esperar el estado «Sincronizado»; los cambios de Sheets no se importan a Cenit.
+
 ## Herramientas y configuración
 
 Comprobar Node/npm fijados por `.node-version` y `package.json`, Python 3 y el motor de contenedores. El proveedor Compose debe admitir perfiles, secretos de archivo y dependencias por salud/finalización.
@@ -119,7 +129,11 @@ Las compras de ejemplo son opcionales:
 APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run purchases:prepare-demo
 ```
 
-Prepara ocho solicitudes, inicialmente cinco pendientes y tres validadas. Repetir conserva contenido y revisiones, pero puede volver a crear un ejemplo eliminado; omitirlo si ya se tienen los registros que se usarán. Estos comandos están limitados a la demo local y no forman parte de CD.
+Prepara 74 compras ficticias editables, distribuidas por los meses de 2024 y 2025 y de enero a octubre de 2026. Toman las categorías de compra de la planilla de referencia; folios y montos son inventados, y los nombres, RUT, estados de pago y códigos institucionales no validados quedan fuera o vacíos. La carga crea registros de ingreso manual, no ejemplos de contrato, por eso se pueden corregir desde el detalle. Sus fechas de incorporación se distribuyen de forma repetible en los últimos 30 días para que el gráfico de actividad del Inicio muestre movimiento.
+
+Si las compras ficticias ya están cargadas, se pueden distribuir únicamente sus fechas de incorporación con `APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run purchases:prepare-demo -- --spread-activity-only`. La opción sólo actualiza `created_at` de las operaciones reservadas a esta semilla en `cenit_demo` local; no crea ni reemplaza compras ni modifica su contenido.
+
+En la primera ejecución, la carga reemplaza sólo los ejemplos antiguos que coincidan con sus operaciones fijas y la cuenta administrativa de demo. Conserva cualquier otra compra; una diferencia inesperada en esos registros detiene la preparación. Repetir conserva contenido y revisión, y puede volver a crear un registro de la semilla que se haya eliminado. Estos comandos están limitados a la demo local y no forman parte de CD.
 
 ## Trabajar en desarrollo
 
@@ -131,7 +145,9 @@ El supervisor lee `.env`, verifica la conexión runtime y las tablas, comprueba/
 
 Abrir [http://127.0.0.1:5173/login](http://127.0.0.1:5173/login). `Ctrl+C` cierra los procesos del supervisor; PostgreSQL permanece iniciado. El modo desarrollo y la demo compilada tienen puertos distintos: cerrar desarrollo antes de una presentación si no se va a usar.
 
-Para OCR desde desarrollo, preparar la clave e imagen según la siguiente sección, iniciar `ocr`, configurar en `.env` `OCR_URL=http://127.0.0.1:8090` y `CAPTURE_RECEIPT_KEY_FILE` con la ruta de la clave. Reiniciar el supervisor para leer esa configuración.
+El supervisor compila los contratos al arrancar y mantiene su compilación y el API en observación; Vite actualiza la web. Así los cambios de contratos y API se reflejan en desarrollo sin conservar una respuesta anterior en memoria. No ejecuta migraciones de forma automática.
+
+Para OCR desde desarrollo, preparar la clave e imagen según la siguiente sección, ejecutar `docker compose --profile ocr up -d --build ocr`, configurar en `.env` `OCR_URL=http://127.0.0.1:8090` y `CAPTURE_RECEIPT_KEY_FILE` con la ruta de la clave. Reiniciar el supervisor para leer esa configuración. Si `OCR_URL` está configurado y el procesador no responde, el arranque avisa cómo iniciarlo antes de abrir la web. Repetir la construcción del servicio cuando cambie el extractor; el supervisor Node no recarga Python. Comprobar `http://127.0.0.1:8090/health/live` además de la salud del API.
 
 ## Ejecutar el build de demostración con OCR
 
@@ -180,7 +196,24 @@ Esperar `{"status":"ready"}` y HTTP 200 para login. Abrir [http://127.0.0.1:8081
 
 En los siguientes arranques se pueden reutilizar las imágenes, quitando `--build`. Reconstruirlas cuando cambie el código. El overlay `compose.ocr.yaml` conecta `app` con `http://ocr:8090` y monta la clave; sin él, la extracción no está configurada y devuelve 503.
 
-Para una captura ficticia, seguir la [preparación de muestras](../experiments/purchases/README.md#capturas-con-formato-de-referencia). En «Sistema de compra → Subir captura» elegir una imagen, extraer y revisar. Sólo «Guardar solicitud» conserva la copia.
+Para una captura ficticia, seguir la [preparación de muestras](../experiments/purchases/README.md#capturas-con-formato-de-referencia). En «Registro de compras → Subir captura» arrastrar la imagen al recuadro grande o activarlo por clic/teclado. El análisis comienza al validar el archivo; comparar recuadros y campos, corregir y guardar desde esa misma vista. Sólo «Guardar registro» conserva la copia.
+
+## Conectar una planilla de pruebas
+
+Compras presenta un registro histórico por defecto. Para comprobar la segunda revisión opcional, configurar `CENIT_PURCHASE_SECOND_REVIEW_ENABLED=true`, reiniciar el API y recargar la web. Desactivarla no cambia estados, revisores ni versiones existentes. El servidor rechaza la validación posterior mientras esté apagada. Las pruebas antiguas activan expresamente esa opción; `purchase-register.spec.ts` cubre la presentación sin ella.
+
+La sincronización con Sheets empieza apagada. No usa las credenciales del plugin de Drive ni el login de Cenit. Para ensayar el conector real:
+
+1. Habilitar Google Sheets API en un proyecto de pruebas y preparar una cuenta de servicio con su credencial de servidor. No requiere delegación general sobre el dominio.
+2. Crear una planilla **nativa de Google Sheets y dedicada de pruebas** (un Excel abierto desde Drive requiere primero una copia convertida) y compartirla como editora sólo con la cuenta de servicio que escribirá. Usar cuentas autorizadas para la consulta. No seleccionar el histórico existente ni copiar datos reales para QA.
+3. Guardar el JSON privado como `.local/secrets/purchase-sheets-key.json`, fuera de Git y con acceso limitado al operador/proceso. En contenedores, asegurar que el UID de la aplicación puede leer el secreto montado sin exponer el directorio completo de secretos.
+4. Para `npm run dev`, configurar en `.env` `CENIT_PURCHASE_SHEETS_SYNC_ENABLED=true`, `CENIT_PURCHASE_SHEETS_ID` con el ID del archivo y `CENIT_PURCHASE_SHEETS_KEY_FILE` con esa ruta. Reiniciar y recargar.
+5. Para el build local en Compose, añadir `-f compose.sheets.yaml` a los archivos usados para **app**, conservando los overlays OCR que correspondan. Definir `CENIT_PURCHASE_SHEETS_ID` en `.env`; el overlay monta sólo la credencial de Sheets y activa la integración explícitamente. No usarlo al ejecutar el migrador, que no necesita Google.
+6. Guardar una copia ficticia con varios ítems y códigos con ceros, esperar «Sincronizado» y comprobar «Compras»/«Ítems». Ensayar una indisponibilidad y una baja confirmada. Las celdas vacías tras una baja son intencionales; no compactar ni ordenar físicamente las filas administradas. Usar vistas de filtro u otras pestañas.
+
+El estado se consulta también mediante `GET /api/v1/purchases/sheets-sync` con sesión administrativa; `purchaseId` limita la consulta a una copia existente. Mientras Google falle, el registro sigue guardado en Cenit y los reintentos continúan. Una cabecera cambiada, fila ajena o protección retirada requiere corregir la estructura antes del siguiente reintento. Apagar la flag detiene envíos; la cola se conserva para reactivarla.
+
+Esta configuración no modifica Azure ni activa integración en la planilla del cliente. Su activación allí debe incorporarse mediante la entrega versionada y secretos propios del entorno; el Compose Azure vigente deja Sheets apagado.
 
 ## Verificar el build o una imagen
 

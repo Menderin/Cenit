@@ -1,13 +1,13 @@
 .purchase-review__toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 16px; border: 1px solid var(--admin-line); border-radius: 8px; background: #fafafb; }
 .purchase-review__toolbar > div { min-width: 0; width: min(100%, 280px); }
 .purchase-review__toolbar label { display: block; margin-bottom: 6px; color: #55555e; font-size: 13px; }
-.purchase-review select { width: 100%; padding: 8px 10px; min-height: 36px; border: 1px solid var(--admin-input-line); border-radius: 7px; background: #fff; color: #29292f; font-size: 13px; }
+.purchase-review select { width: 100%; padding: 8px 10px; min-height: 40px; border: 1px solid var(--admin-input-line); border-radius: 7px; background: #fff; color: #29292f; font-size: 13px; }
 .purchase-review__metadata { color: var(--admin-muted); font-size: 12px; overflow-wrap: anywhere; }
 .purchase-review__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; }
 .purchase-review__primary .purchase-review__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .purchase-review__field { min-width: 0; }
 .purchase-review__field label { display: block; margin-bottom: 6px; color: #55555e; font-size: 13px; }
-.purchase-review__field input, .purchase-review__field textarea { display: block; width: 100%; min-height: 36px; padding: 8px 10px; border: 1px solid var(--admin-input-line); border-radius: 7px; background: #fff; color: #29292f; font-size: 13px; line-height: 1.4; }
+.purchase-review__field input, .purchase-review__field textarea { display: block; width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--admin-input-line); border-radius: 7px; background: #fff; color: #29292f; font-size: 13px; line-height: 1.4; }
 .purchase-review__field textarea { resize: vertical; }
 .purchase-review__origin { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 7px 12px; margin-top: 8px; color: #72727b; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .purchase-review__field-status { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
@@ -34,4 +34,10 @@
 .purchase-review__issues ul { margin: 12px 0 0; padding-left: 18px; }
 .purchase-review [role="status"] { margin-top: 14px; color: #486c59; font-size: 12px; }
 @media (hover: hover) { .purchase-review__original > summary:hover { color: var(--admin-ink); } }
+.purchase-review__field { transition: background-color 150ms ease-out; border-radius: 9px; min-width: 0; }
+.purchase-review__field--active { background: #f1f1f5; outline: 3px solid #f1f1f5; }
+.purchase-review__field-status [data-status="corrected"] { color: #7b613b; background: #fbf7ee; }
+.purchase-editor .purchase-review__origin { align-items: flex-start; flex-wrap: wrap; gap: 6px 10px; margin-top: 7px; }
+.purchase-editor .purchase-review__original { margin-left: auto; }
+.purchase-editor .purchase-review__original summary { font-size: 11px; }
 @media (max-width: 760px) { .purchase-review__grid, .purchase-review__primary .purchase-review__grid { grid-template-columns: minmax(0, 1fr); gap: 20px; } .purchase-review__toolbar > div { width: 100%; } .purchase-review select, .purchase-review__field input, .purchase-review__field textarea { font-size: 16px; } }

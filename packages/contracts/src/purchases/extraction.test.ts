@@ -25,6 +25,18 @@ describe('contrato de extracción, sin OCR ni persistencia', () => {
     }
     extractionErrorExamples.forEach(example => expect(Value.Check(ErrorResponseSchema, example.body)).toBe(true));
   });
+  it('admite regiones opcionales sólo para candidatos existentes dentro de la imagen orientada', () => {
+    const response = structuredClone(recoveredExample);
+    const region = { path: '/header/description', x: .1, y: .2, width: .8, height: .3 };
+    response.data.regions = [region];
+    expect(validateExtractionResponse(response)).toEqual([]);
+    for (const change of [{ x: -.1 }, { width: 0 }, { width: 1 }, { path: '/lines/100/provider' }, { path: '/administrative/paymentSituation' }]) {
+      response.data.regions = [{ ...region, ...change }];
+      expect(validateExtractionResponse(response).length).toBeGreaterThan(0);
+    }
+    response.data.regions = [];
+    expect(validateExtractionResponse(response)).toEqual([]);
+  });
   it('rechaza estados contradictorios, propiedades extra e incidencias sin campo', () => {
     const input = structuredClone(partialExample);
     Object.assign(input.data.lines[0]!.provider, { value: 'Inventado' });

@@ -22,7 +22,7 @@ Cenit es un monolito modular para la Facultad de Medicina de la UCN. El proyecto
 ## Contratos que deben conservarse
 
 - Inicio consulta `GET /api/v1/purchases/summary` con `requests`, `pending`, `pendingAmount` y `days`; usa las mismas cabeceras del listado y se refresca tras altas, validación y eliminación.
-- Búsqueda textual de compras tras 250 ms; fechas/códigos se aplican explícitamente y conservan sus borradores. Unidad y proyecto coinciden en el mismo ítem.
+- Filtros de compras automáticos tras 250 ms del último conjunto válido; una fecha incompleta o rango inválido conserva el borrador y los resultados anteriores. Unidad y proyecto coinciden en el mismo ítem.
 - Eliminar sólo desde el detalle, mediante ícono accesible y confirmación; sesión administrativa, Origin, versión esperada y transacción de cabecera/ítems.
 - Montos exactos como cadenas, identificadores textuales, guardado atómico y reintentos idempotentes. No imponer suma ítems=total ni sobrescribir conflictos silenciosamente.
 - Confirmar éxito sólo después del servidor; conservar borradores ante errores según el comportamiento vigente de sesión.
