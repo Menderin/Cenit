@@ -101,6 +101,7 @@ services:
       AUTH_COOKIE_SECURE: "false"
       AUTH_ALLOWED_ORIGINS: "http://127.0.0.1:${CENIT_HTTP_PORT:-8081},http://localhost:${CENIT_HTTP_PORT:-8081}"
       DATABASE_URL_FILE: /run/secrets/app-url
+      CENIT_PURCHASE_SECOND_REVIEW_ENABLED: ${CENIT_PURCHASE_SECOND_REVIEW_ENABLED:-false}
     secrets: [app-url]
     networks:
       cenit:
