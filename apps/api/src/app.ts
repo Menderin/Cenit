@@ -13,9 +13,12 @@ import { PurchaseService } from './modules/purchases/services/purchases.js';
 import { purchaseRoutes } from './modules/purchases/routes/index.js';
 import { registerFrontend } from './infrastructure/plugins/frontend.js';
 import type { ExtractionService } from './modules/purchases/services/extractions.js';
+import type { PurchaseCapabilities } from '@cenit/contracts/purchases';
+import { defaultPurchaseCapabilities } from './modules/purchases/services/config.js';
+import type { PurchaseSheetsRepository } from './modules/purchases/repositories/sheets.js';
 import type { CaptureReceipts } from './modules/purchases/services/capture-receipts.js';
 
-export function buildAcademicApp(options: { repository: AcademicReadRepository; purchases?: PurchaseRepository; extraction?: ExtractionService; captureReceipts?: CaptureReceipts; frontendRoot?: string; authenticate?: AuthenticateAcademic; auth?: { service: AuthService; config: AuthConfig } }) {
+export function buildAcademicApp(options: { repository: AcademicReadRepository; purchases?: PurchaseRepository; purchaseCapabilities?: PurchaseCapabilities; sheets?: { repository: PurchaseSheetsRepository; spreadsheetId: string }; extraction?: ExtractionService; captureReceipts?: CaptureReceipts; frontendRoot?: string; authenticate?: AuthenticateAcademic; auth?: { service: AuthService; config: AuthConfig } }) {
   if (options.auth && options.authenticate) throw new Error('No combinar sesión real con adaptador de identidad de prueba.');
   const app = Fastify({ bodyLimit: 128 * 1024, genReqId: () => randomUUID(), ajv: { customOptions: { removeAdditional: false, coerceTypes: false } } });
   // Query-only coercion keeps HTTP pagination usable without accepting role/body coercion.
@@ -47,6 +50,6 @@ export function buildAcademicApp(options: { repository: AcademicReadRepository; 
     return session ? { accountId: session.data.account.id, role: session.data.account.role } : null;
   } : options.authenticate ?? (async () => null);
   app.register(academicRoutes, { prefix: '/api/v1/academic', service: new AcademicService(options.repository), authenticate });
-  if (options.purchases) app.register(purchaseRoutes, { prefix: '/api/v1/purchases', service: new PurchaseService(options.purchases, options.captureReceipts), extraction: options.extraction, authenticate, allowedOrigins: options.auth?.config.allowedOrigins ?? [] });
+  if (options.purchases) app.register(purchaseRoutes, { prefix: '/api/v1/purchases', service: new PurchaseService(options.purchases, options.captureReceipts, options.purchaseCapabilities), capabilities: options.purchaseCapabilities ?? defaultPurchaseCapabilities, sheets: options.sheets, extraction: options.extraction, authenticate, allowedOrigins: options.auth?.config.allowedOrigins ?? [] });
   return app;
 }

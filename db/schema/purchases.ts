@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, date, index, integer, numeric, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { check, date, index, integer, numeric, primaryKey, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 import { cenit } from './academic.js';
 import { accounts } from './auth.js';
 
@@ -37,4 +37,19 @@ export const purchaseRequestLines = cenit.table('purchase_request_lines', {
   check('purchase_line_finite_amounts', sql`(${t.price} IS NULL OR ${t.price} <> 'NaN'::numeric) AND (${t.amount} IS NULL OR ${t.amount} <> 'NaN'::numeric)`),
   check('purchase_line_description', sql`${t.description} IS NULL OR (length(${t.description}) BETWEEN 1 AND 1000 AND ${t.description} ~ '[^[:space:]]')`),
   ...[t.provider, t.costCenter, t.lineUnit, t.quantity, t.chargeAccount, t.universityCode, t.campusCode, t.unitCode, t.projectCode, t.accountingCode].map((column, i) => check(`purchase_line_text_${i}`, sql`${column} IS NULL OR (length(${column}) BETWEEN 1 AND 255 AND ${column} ~ '[^[:space:]]')`)),
+]);
+
+// No FK: a deleted purchase still needs to be removed from its Sheets copy.
+export const purchaseSheetsOutbox = cenit.table('purchase_sheets_outbox', {
+  purchaseId: uuid('purchase_id').primaryKey(), generation: integer('generation').notNull().default(1),
+}, t => [check('purchase_sheets_generation', sql`${t.generation} > 0`)]);
+
+export const purchaseSheetsDelivery = cenit.table('purchase_sheets_delivery', {
+  spreadsheetId: text('spreadsheet_id').notNull(), purchaseId: uuid('purchase_id').notNull(),
+  headerRow: integer('header_row'), itemRows: integer('item_rows').array().notNull().default(sql`'{}'::integer[]`),
+  syncedGeneration: integer('synced_generation').notNull().default(0), attempts: integer('attempts').notNull().default(0),
+  nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }), lastError: text('last_error'),
+}, t => [primaryKey({ columns: [t.spreadsheetId, t.purchaseId] }), unique('purchase_sheets_header_row').on(t.spreadsheetId, t.headerRow),
+  check('purchase_sheets_delivery_values', sql`${t.syncedGeneration} >= 0 AND ${t.attempts} >= 0 AND (${t.headerRow} IS NULL OR ${t.headerRow} >= 2)`),
 ]);

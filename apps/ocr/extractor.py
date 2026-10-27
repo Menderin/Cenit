@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageOps
 
-VERSION = 'ppocr5-latin-grid8-layout-v3'
+VERSION = 'ppocr5-latin-grid8-layout-v4'
 MAX_BYTES = 5 * 1024 * 1024
 MAX_PIXELS = 20_000_000
 HEADER = 'requestNumber oracleId sender recipient sentDate sentTime description totalAmount taxAmount attachmentReference'.split()
@@ -140,7 +140,24 @@ def collapse(values):
     return [round(np.mean(g)) for g in groups]
 
 
-def table(engine, image, groups):
+def add_region(regions, path, bounds, image):
+    if regions is None:
+        return
+    left, top, right, bottom = bounds
+    left, right = max(0, left), min(image.width, right)
+    top, bottom = max(0, top), min(image.height, bottom)
+    if right > left and bottom > top:
+        regions.append({'path': path, 'x': left/image.width, 'y': top/image.height,
+                        'width': (right-left)/image.width, 'height': (bottom-top)/image.height})
+
+
+def word_region(regions, path, words, image):
+    if words and image is not None:
+        add_region(regions, path, (min(w['x'] for w in words), min(w['y'] for w in words),
+                                  max(w['x']+w['w'] for w in words), max(w['y']+w['h'] for w in words)), image)
+
+
+def table(engine, image, groups, regions=None):
     start = next((g for g in groups if 'lineas de solicitud' in normalize(g['text'])), None)
     end = next((g for g in groups if 'secuencia de aprobacion' in normalize(g['text'])), None)
     if not start or not end:
@@ -191,17 +208,28 @@ def table(engine, image, groups):
     body = ys[header_index+1:]
     if len(body)-1 > 100:
         raise ProcessingError('LINE_LIMIT_EXCEEDED', 422)
-    return [{key: read_cell(engine, image.crop((xs[i]+3, top+3, xs[i+1]-3, bottom-3)), detect=i < 3)
-             for i, (key, _) in enumerate(COLUMNS)} for top, bottom in zip(body, body[1:])]
+    rows = []
+    for position, (top, bottom) in enumerate(zip(body, body[1:])):
+        row = {}
+        for i, (key, _) in enumerate(COLUMNS):
+            bounds = (xs[i]+3, top+3, xs[i+1]-3, bottom-3)
+            row[key] = read_cell(engine, image.crop(bounds), detect=i < 3)
+            if row[key]:
+                add_region(regions, f'/lines/{position}/{key}', bounds, image)
+        rows.append(row)
+    return rows
 
 
-def header(groups, engine=None, image=None):
+def header(groups, engine=None, image=None, regions=None):
     result = {}
     title = next((g for g in groups if 'interna de compra' in normalize(g['text'])), None)
     if not title:
         return result
     match = re.search(r'compra\s+(\S+)', title['text'], re.I)
     result['requestNumber'] = match.group(1) if match else None
+    if match:
+        used = [w for w in title['words'] if re.search(r'(?<!\w)'+re.escape(match.group(1))+r'(?!\w)', w['text'])]
+        word_region(regions, '/header/requestNumber', used, image)
     start = next((g for g in groups if 'lineas de solicitud' in normalize(g['text'])), None)
     region = [g for g in groups if g['center'] > title['center'] and (not start or g['center'] < start['center'])]
     labels = {'sender': 'desde', 'recipient': 'a', 'sentDate': 'enviado', 'oracleId': 'id',
@@ -238,6 +266,10 @@ def header(groups, engine=None, image=None):
         if key == 'taxAmount':
             raw = re.sub(r'^\(No Recuperable\)\s*', '', raw, flags=re.I)
         result[key] = raw.strip() or None
+        if result[key]:
+            word_region(regions, '/header/'+key, found, image)
+            if key == 'sentDate' and re.search(r'\d{2}:\d{2}:\d{2}', raw):
+                word_region(regions, '/header/sentTime', found, image)
     return result
 
 
@@ -329,16 +361,19 @@ def candidates(raw_header, raw_lines, metadata):
 def extract(engine, content, name, mime):
     image = decode(content, mime)
     groups = grouped(tokens(engine, image))
+    regions = []
     try:
-        lines = table(engine, image, groups)
+        lines = table(engine, image, groups, regions)
     except ProcessingError as error:
         if error.code != 'LINE_LIMIT_EXCEEDED':
             raise
-        result = candidates(header(groups, engine, image), None, {'name': name, 'mimeType': mime, 'bytes': len(content), 'width': image.width, 'height': image.height})
+        result = candidates(header(groups, engine, image, regions), None, {'name': name, 'mimeType': mime, 'bytes': len(content), 'width': image.width, 'height': image.height})
+        result['data']['regions'] = regions
         result['data']['captureLayout'] = capture_layout(groups, None, table_verified=True)
         result['data']['issues'].append({'path': '/lines', 'code': 'LINE_LIMIT_EXCEEDED', 'message': 'La tabla supera 100 ítems; no se han truncado silenciosamente.'})
         return result
     layout = capture_layout(groups, lines)
-    result = candidates(header(groups, engine, image), lines, {'name': name, 'mimeType': mime, 'bytes': len(content), 'width': image.width, 'height': image.height})
+    result = candidates(header(groups, engine, image, regions), lines, {'name': name, 'mimeType': mime, 'bytes': len(content), 'width': image.width, 'height': image.height})
+    result['data']['regions'] = regions
     result['data']['captureLayout'] = layout
     return result

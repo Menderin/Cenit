@@ -19,6 +19,6 @@ export const purchaseListQueryExample: PurchaseListQuery = {
   dateFrom: '2026-10-12', dateTo: '2026-10-12', unitCode: '270101', projectCode: '00000000',
 };
 export const purchaseListResponseExample: PurchaseListResponse = {
-  data: [{ id: '00000000-0000-4000-8000-000000000126', requestNumber: '000125', sentDate: '2026-10-12', description: 'Insumos de demostración', documentType: null, reviewStatus: 'pending', version: 1, source: 'contract_example', exampleId: 'recovered' }],
+  data: [{ id: '00000000-0000-4000-8000-000000000126', requestNumber: '000125', sentDate: '2026-10-12', description: 'Insumos de demostración', totalAmount: '200000', documentType: null, reviewStatus: 'pending', version: 1, source: 'contract_example', exampleId: 'recovered' }],
   pagination: { page: 1, pageSize: 20, total: 1 }, totals: { currency: 'CLP', documentTotal: '200000' },
 };
