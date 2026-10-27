@@ -91,6 +91,7 @@ beforeAll(async () => {
 
   await prepareDemoAccounts(pool, credentials);
   app = buildAcademicApp({
+    purchaseCapabilities: { secondReviewEnabled: true, sheetsSyncEnabled: false },
     repository: new AcademicRepository(pool),
     purchases: new PurchaseRepository(pool),
     auth: {
