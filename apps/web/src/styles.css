@@ -1,7 +1,102 @@
 @import "tailwindcss";
+
+/* Tokens de Cenit: los valores del diseño actual, con nombre. Los estilos de cada pieza los aplican sus propias clases. */
+@theme static {
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --color-canvas: #f0f0f3;
+  --color-canvas-access: #f5f5f7;
+  --color-shell-from: #fafafb;
+  --color-shell-to: #f0f1f4;
+  --color-shell-line: #e2e2e7;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #fafafb;
+  --color-surface-header: #f8f8fa;
+  --color-surface-hover: #f5f5f8;
+  --color-surface-muted: #eeeef2;
+  --color-surface-chip: #f3f3f6;
+  --color-line: #e9e9ee;
+  --color-line-soft: #f0f0f3;
+  --color-line-strong: #dcdce3;
+  --color-line-input: #91919d;
+  --color-line-dashed: #b4b4bf;
+  --color-ink: #29292f;
+  --color-ink-secondary: #45454d;
+  --color-ink-label: #55555e;
+  --color-ink-muted: #62626c;
+  --color-ink-subtle: #686871;
+  --color-ink-placeholder: #73737d;
+  --color-icon: #7d7d87;
+  --color-icon-active: #35353d;
+  --color-primary: #34343b;
+  --color-primary-hover: #484850;
+  --color-on-primary: #ffffff;
+  --color-focus: #526bb5;
+  --color-focus-glow: #526bb52e;
+  --color-selection: #dce7f4;
+  --color-on-selection: #162b48;
+  --color-scrim: #252a361f;
+  --color-scrim-nav: #00000052;
+  --color-success: #486c59;
+  --color-success-icon: #35704f;
+  --color-success-soft: #edf5ef;
+  --color-success-line: #c9dfd2;
+  --color-warning: #7b613b;
+  --color-warning-icon: #936622;
+  --color-warning-soft: #fbf7ee;
+  --color-warning-line: #e8d6af;
+  --color-danger: #9e3935;
+  --color-danger-hover: #8f302c;
+  --color-danger-icon: #a44135;
+  --color-danger-border: #b75b55;
+  --color-danger-soft: #fcf3f1;
+  --color-danger-line: #e7c8c2;
+  --color-info-icon: #556b96;
+  --color-info-soft: #f4f6fa;
+  --color-info-line: #dde3ed;
+  --color-copper: #91522d;
+  --color-place: #764b2b;
+  --color-place-soft: #fffaf6;
+  --color-place-line: #e7d8cb;
+  --color-chart-bar: #a5b4d8;
+  --color-avatar-from: #91a2de;
+  --color-avatar-via: #cfb9e4;
+  --color-avatar-to: #eab9c9;
+  --color-course-ink: #293343;
+  --color-course-meta: #536176;
+  --color-course-line: #e9e9ef;
+  --color-course-origin: #637087;
+  --color-course-tint: #deebf8;
+  --color-course-surface: #f3f7fc;
+  --color-course-accent: #78baff;
+  --color-course-passed-tint: #d4eee3;
+  --color-course-passed-surface: #eff8f3;
+  --color-course-passed-accent: #69dfa5;
+  --color-course-failed-tint: #f7dbdf;
+  --color-course-failed-surface: #fcf3f4;
+  --color-course-failed-accent: #ff9db7;
+  --color-course-progress-tint: #e5ddfa;
+  --color-course-progress-surface: #f6f3fc;
+  --color-course-progress-accent: #bb9dff;
+  --color-progress-passed: #43856b;
+  --color-progress-failed: #af5a6a;
+  --color-progress-ongoing: #8263b4;
+  --color-progress-pending: #7191b5;
+  --radius-xs: 5px;
+  --radius-sm: 7px;
+  --radius-md: 9px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-control: 0 0 0 1px #0000000f, 0 1px 2px -1px #0000000f, 0 2px 4px #0000000a;
+  --shadow-primary: 0 2px 4px #24242b16;
+  --shadow-nav: 0 3px 7px #24242b0b, 0 12px 14px -12px #24242b25;
+  --shadow-shell: 0 2px 5px #25252b06;
+  --shadow-popover: 0 0 0 1px #0000000f, 0 8px 24px #00000014, 0 2px 6px #00000008;
+  --shadow-dialog: 0 0 0 1px #0000000f, 0 12px 30px #0000001a, 0 4px 10px #00000008;
+  --shadow-toast: 0 4px 12px #0000000a, 0 10px 30px #00000008;
+  --shadow-panel: -12px 0 40px #1a20301a;
+}
+
 @layer base {
-  body { @apply m-0 bg-slate-100 text-slate-900 font-sans; }
-  button { @apply rounded bg-slate-900 px-4 py-2 text-white cursor-pointer disabled:opacity-50 disabled:cursor-wait; }
-  input { @apply block w-full rounded border border-slate-400 bg-white px-3 py-2; }
-  button:focus-visible, input:focus-visible { @apply outline-2 outline-offset-2 outline-blue-600; }
+  body { margin: 0; background: var(--color-canvas); color: var(--color-ink); font-family: var(--font-sans); }
+  :where(a, button, input, textarea, select, summary):focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 }

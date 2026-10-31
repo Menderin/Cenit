@@ -1,5 +1,7 @@
 .cenit-access { padding: 16px; min-height: 100svh; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #202124; background: #f5f5f7; color-scheme: light; font-synthesis: none; -webkit-font-smoothing: antialiased; }
 .cenit-access button, .cenit-access input { font-family: inherit; }
+.cenit-access button { cursor: pointer; }
+.cenit-access button:disabled { cursor: wait; }
 .cenit-access__shell { --access-inset: clamp(64px, 10vw, 240px); position: relative; isolation: isolate; min-height: calc(100svh - 32px); border: 1px solid #e6e6e9; border-radius: 18px; background: #fff; overflow: clip; box-shadow: 0 2px 4px #20212403; }
 .cenit-access__badge { position: absolute; top: 28px; right: 28px; z-index: 2; padding: 4px 8px; border: 1px solid #e5e5e9; border-radius: 6px; color: #73737d; background: #ffffffeb; font-size: 11px; line-height: 1.4; font-weight: 500; letter-spacing: .01em; }
 .cenit-access__landscape { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
