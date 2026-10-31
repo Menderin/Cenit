@@ -20,7 +20,7 @@ export function SessionWarning({ expiresAt, logout }: { expiresAt: string; logou
   if (minutes === null) return null;
   return <aside className="cenit-session-warning" aria-label="Aviso de vencimiento de sesión">
     <StatusNotice kind="warning" title="La sesión está por vencer" message={`Tu sesión vencerá en ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}. Guarda tu trabajo antes de volver a iniciar sesión.`}>
-      <button className="cenit-ui-button" onClick={event => { event.currentTarget.focus({ preventScroll: true }); void logout(event.currentTarget); }}>Cerrar sesión ahora</button>
+      <button className="cenit-button cenit-button--outline" onClick={event => { event.currentTarget.focus({ preventScroll: true }); void logout(event.currentTarget); }}>Cerrar sesión ahora</button>
     </StatusNotice>
   </aside>;
 }
