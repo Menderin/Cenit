@@ -45,7 +45,7 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
     if (event.target === event.currentTarget) setClosing(true);
   }}>
     <div className="academic-detail__surface">
-      <header className="academic-detail__bar"><span><BookOpenIcon size={16} weight="regular" aria-hidden="true" />Asignatura</span><button type="button" className="academic-icon-button" aria-label="Cerrar detalle" autoFocus onClick={() => setClosing(true)}><XIcon size={18} aria-hidden="true" /></button></header>
+      <header className="academic-detail__bar"><span><BookOpenIcon size={16} weight="regular" aria-hidden="true" />Asignatura</span><button type="button" className="cenit-button cenit-button--icon" aria-label="Cerrar detalle" autoFocus onClick={() => setClosing(true)}><XIcon size={18} aria-hidden="true" /></button></header>
       <div className="academic-detail__body">
         <h2 id="academic-detail-title">{course.name}</h2>
           <dl className="academic-facts">

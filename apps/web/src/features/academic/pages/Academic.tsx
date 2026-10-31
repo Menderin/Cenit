@@ -86,7 +86,7 @@ export function Academic() {
       {mobile && mounted && <div className={`workspace-nav-overlay${closing ? ' workspace-nav-overlay--closing' : ''}`} aria-hidden="true" onClick={() => setSidebarCollapsed(true)} />}
       <aside ref={sidebar} id="academic-navigation" className="academic-sidebar" aria-label="Área académica" inert={sidebarCollapsed} aria-hidden={sidebarCollapsed} role={mobile ? 'dialog' : undefined} aria-modal={mobile && !sidebarCollapsed ? true : undefined}>
         <div className="workspace-sidebar-content">
-        <button type="button" className="workspace-nav-close academic-icon-button" aria-label="Cerrar navegación" onClick={() => setSidebarCollapsed(true)}><XIcon size={20} aria-hidden="true" /></button>
+        <button type="button" className="workspace-nav-close cenit-button cenit-button--icon" aria-label="Cerrar navegación" onClick={() => setSidebarCollapsed(true)}><XIcon size={20} aria-hidden="true" /></button>
         <div className="academic-brand">Cenit</div>
         <nav className="academic-navigation" aria-label="Navegación académica">
           <p className="academic-eyebrow">Académico</p>
@@ -106,7 +106,7 @@ export function Academic() {
       <div ref={panel} className="academic-main">
         <header className="academic-toolbar cenit-page-enter">
           <div className="academic-toolbar__title">
-            <button ref={toggle} type="button" className="academic-sidebar-toggle academic-icon-button" aria-label={sidebarCollapsed ? 'Mostrar navegación' : 'Ocultar navegación'} aria-expanded={!sidebarCollapsed} aria-controls="academic-navigation" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}><SidebarSimpleIcon size={20} weight="regular" aria-hidden="true" /></button>
+            <button ref={toggle} type="button" className="academic-sidebar-toggle cenit-button cenit-button--icon" aria-label={sidebarCollapsed ? 'Mostrar navegación' : 'Ocultar navegación'} aria-expanded={!sidebarCollapsed} aria-controls="academic-navigation" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}><SidebarSimpleIcon size={20} weight="regular" aria-hidden="true" /></button>
             <div><h1 ref={heading} tabIndex={-1}>Malla curricular</h1><p className="academic-toolbar__subtitle">{plan?.name ?? 'Nutrición y Dietética'}</p></div>
           </div>
           <div className="academic-toolbar__tools">
@@ -115,29 +115,29 @@ export function Academic() {
               <span className="academic-tag">Demostración</span>
             </div>
             <p className="academic-mobile-account">{account.name} · {role}</p>
-            <button type="button" className="academic-mobile-logout academic-icon-button" aria-label="Cerrar sesión" onClick={() => { void auth.logout(); }}><SignOutIcon size={18} aria-hidden="true" /></button>
+            <button type="button" className="academic-mobile-logout cenit-button cenit-button--icon" aria-label="Cerrar sesión" onClick={() => { void auth.logout(); }}><SignOutIcon size={18} aria-hidden="true" /></button>
           </div>
         </header>
         <main id="academic-content" className="academic-content" tabIndex={-1}>
           <SessionWarning expiresAt={auth.session!.expiresAt} logout={auth.logout} />
           {loading && !error && <div className="academic-state"><span className="academic-loading" aria-hidden="true" /><p role="status">Cargando la malla…</p></div>}
-          {error && <div className="academic-state"><InfoIcon size={24} aria-hidden="true" /><h2>{error instanceof HttpError && error.status === 403 ? 'Acceso no autorizado' : 'No pudimos cargar la malla'}</h2><p role="alert">{error.message}</p><button className="academic-button" type="button" onClick={() => { void (plans.error ? plans.refetch() : catalog.refetch()); }}>Reintentar</button></div>}
-          {!loading && !error && !version && <div className="academic-state"><BookOpenIcon size={28} weight="regular" aria-hidden="true" /><h2>La malla todavía no está disponible</h2><p>No hay una versión publicada de Nutrición y Dietética para consultar.</p><button className="academic-button" type="button" onClick={() => { void plans.refetch(); }}>Volver a consultar</button></div>}
+          {error && <div className="academic-state"><InfoIcon size={24} aria-hidden="true" /><h2>{error instanceof HttpError && error.status === 403 ? 'Acceso no autorizado' : 'No pudimos cargar la malla'}</h2><p role="alert">{error.message}</p><button className="cenit-button" type="button" onClick={() => { void (plans.error ? plans.refetch() : catalog.refetch()); }}>Reintentar</button></div>}
+          {!loading && !error && !version && <div className="academic-state"><BookOpenIcon size={28} weight="regular" aria-hidden="true" /><h2>La malla todavía no está disponible</h2><p>No hay una versión publicada de Nutrición y Dietética para consultar.</p><button className="cenit-button" type="button" onClick={() => { void plans.refetch(); }}>Volver a consultar</button></div>}
           {!error && plan && <>
             <div className="academic-board-context">
             <section className="academic-progress-context" aria-label="Avance curricular">
               {account.role === 'docente' && <StudentLookup accountId={account.id} selected={selectedStudent} onSelect={student => { setDetail(null); setSelectedStudent(student); }} />}
               {hasStudent && <>
               {progress.isPending && <p role="status">Cargando el avance curricular…</p>}
-              {progress.error && <div className="academic-inline-error"><p role="alert">{progress.error instanceof HttpError && progress.error.status === 404 ? 'Este estudiante aún no tiene un perfil académico preparado.' : progress.error.message}</p><button className="academic-button" onClick={() => { void progress.refetch(); }}>Reintentar historial</button></div>}
+              {progress.error && <div className="academic-inline-error"><p role="alert">{progress.error instanceof HttpError && progress.error.status === 404 ? 'Este estudiante aún no tiene un perfil académico preparado.' : progress.error.message}</p><button className="cenit-button" onClick={() => { void progress.refetch(); }}>Reintentar historial</button></div>}
               {!progress.error && matchingProgress && <>{account.role === 'estudiante' && <p className="academic-student-identity"><strong>{matchingProgress.student.name}</strong><span>RUT {matchingProgress.student.rut}</span></p>}<ul className="academic-progress-legend" aria-label="Estados del historial">{Object.entries(progressLabels).map(([status, label]) => <li key={status}><span className={`academic-progress-dot academic-progress-dot--${status}`} aria-hidden="true" />{label}</li>)}</ul></>}
               {!progress.error && progress.data && !matchingProgress && <p role="status">El historial pertenece a la versión {progress.data.plan.version}. Selecciona esa versión para consultarlo sobre la malla.</p>}
               </>}
             </section>
             {(boardScroll.previous || boardScroll.next) && <div className="academic-board-actions" role="group" aria-label="Navegación de semestres">
               <span className="academic-board-hint">Arrastra para recorrer</span>
-              <button className="academic-icon-button" type="button" aria-label="Ver semestres anteriores" aria-controls="academic-semesters" disabled={!boardScroll.previous} onClick={() => board.current?.scrollBy({ left: -board.current.clientWidth * .8 })}><CaretLeftIcon size={16} weight="regular" aria-hidden="true" /></button>
-              <button className="academic-icon-button" type="button" aria-label="Ver semestres siguientes" aria-controls="academic-semesters" disabled={!boardScroll.next} onClick={() => board.current?.scrollBy({ left: board.current.clientWidth * .8 })}><CaretRightIcon size={16} weight="regular" aria-hidden="true" /></button>
+              <button className="cenit-button cenit-button--icon" type="button" aria-label="Ver semestres anteriores" aria-controls="academic-semesters" disabled={!boardScroll.previous} onClick={() => board.current?.scrollBy({ left: -board.current.clientWidth * .8 })}><CaretLeftIcon size={16} weight="regular" aria-hidden="true" /></button>
+              <button className="cenit-button cenit-button--icon" type="button" aria-label="Ver semestres siguientes" aria-controls="academic-semesters" disabled={!boardScroll.next} onClick={() => board.current?.scrollBy({ left: board.current.clientWidth * .8 })}><CaretRightIcon size={16} weight="regular" aria-hidden="true" /></button>
             </div>}
             </div>
             <p id="academic-scroll-hint" className="academic-sr-only">Asignaturas por semestre. Abre una asignatura para consultar su nombre completo, historial y prerrequisitos. Arrastra con el mouse o usa los controles de semestres y las flechas del teclado para recorrer el tablero cuando no quepa completo.</p>

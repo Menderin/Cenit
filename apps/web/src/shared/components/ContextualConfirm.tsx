@@ -55,8 +55,8 @@ export function ContextualConfirm({ open, origin, title, description, confirmLab
         <p id={descriptionId}>{text.current.description}</p>
         {children}
         <div className="cenit-confirm-actions">
-          <button type="button" ref={cancel} className="cenit-ui-button" disabled={busy || closing} onClick={onCancel}>{text.current.cancelLabel}</button>
-          {text.current.confirmLabel && <button type="button" className={`cenit-ui-button ${text.current.destructive ? 'cenit-ui-button--destructive' : 'cenit-ui-button--primary'}`} disabled={busy || closing} onClick={onConfirm}>{busy ? busyLabel : text.current.confirmLabel}</button>}
+          <button type="button" ref={cancel} className="cenit-button cenit-button--outline" disabled={busy || closing} onClick={onCancel}>{text.current.cancelLabel}</button>
+          {text.current.confirmLabel && <button type="button" className={`cenit-button ${text.current.destructive ? 'cenit-button--destructive' : 'cenit-button--primary'}`} disabled={busy || closing} onClick={onConfirm}>{busy ? busyLabel : text.current.confirmLabel}</button>}
         </div>
         <Popover.Arrow className="cenit-confirm-arrow" width={12} height={6} />
       </Popover.Content>

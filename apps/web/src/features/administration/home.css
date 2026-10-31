@@ -7,7 +7,7 @@
 .dashboard-section-heading a { display: inline-flex; align-items: center; gap: 4px; }
 .dashboard-module-heading { margin-bottom: 12px; }
 .dashboard-module-heading h2 { font-size: 17px; }
-.dashboard-module-heading .admin-button { padding: 8px 12px 8px 14px; }
+.dashboard-module-heading .cenit-button { padding: 8px 12px 8px 14px; }
 .dashboard-purchases { min-width: 0; }
 .dashboard-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 16px; }
 .dashboard-kpis > div { min-width: 0; padding: 14px; border: 1px solid transparent; border-radius: 10px; background: #fff; box-shadow: var(--admin-shadow); }

@@ -2,7 +2,7 @@
 .admin-workspace *, .admin-workspace *::before, .admin-workspace *::after { box-sizing: border-box; }
 .admin-workspace button, .admin-workspace input, .admin-workspace textarea, .admin-workspace select { font: inherit; }
 .admin-workspace ::selection { background: #dce7f4; color: #162b48; }
-.admin-workspace :is(a, button, input, textarea, select, summary):focus-visible { outline: 2px solid #7b613b; outline-offset: 3px; }
+.admin-workspace :is(a, button, select, summary):focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
 .admin-workspace button { -webkit-tap-highlight-color: transparent; }
 .admin-workspace button:disabled { opacity: .5; cursor: default; }
 .admin-workspace a { color: inherit; text-underline-offset: 3px; }
@@ -34,7 +34,6 @@
 .admin-breadcrumb a { text-decoration: none; white-space: nowrap; }
 .admin-breadcrumb svg { flex: none; }
 .admin-breadcrumb [aria-current] { color: #45454d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.admin-icon-button { display: grid; place-items: center; flex: none; width: 40px; height: 40px; padding: 0; border: 1px solid transparent; border-radius: 7px; background: #fff; color: #62626c; cursor: pointer; box-shadow: var(--admin-shadow); }
 .admin-content { position: relative; min-width: 0; padding: 28px 28px 40px; outline: none; }
 .admin-content :is(input, textarea, select, summary, button, a) { scroll-margin-block: 20px; }
 @media (min-width: 761px) and (min-height: 561px) {
@@ -47,11 +46,7 @@
 .admin-content h1 { margin: 0 0 7px; font-size: 28px; font-weight: 600; letter-spacing: -.8px; line-height: 1.3; overflow-wrap: anywhere; }
 .admin-content h2 { margin: 0; font-size: 15px; font-weight: 550; line-height: 1.5; }
 .admin-content h3 { margin: 0 0 8px; font-size: 14px; font-weight: 500; }
-.admin-primary, .admin-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 10px 14px; border: 1px solid transparent; border-radius: 9px; background: #fff; color: #45454d; font-size: 14px; line-height: 18px; text-decoration: none; cursor: pointer; box-shadow: var(--admin-shadow); -webkit-tap-highlight-color: transparent; }
-.admin-primary svg, .admin-button svg { flex: none; }
-.admin-primary { min-height: 44px; background: #34343b; border-color: #34343b; color: #fff !important; box-shadow: 0 2px 4px #24242b16; }
 .admin-intro { margin: 0; color: var(--admin-muted); line-height: 1.7; }
-.admin-workspace .admin-content > [aria-label="Aviso de vencimiento de sesión"] .cenit-access__primary { width: auto; height: 36px; margin-top: 0; padding: 8px 12px; border-radius: 7px; background: #34343b; border-color: #34343b; color: #fff; font-size: 13px; line-height: 18px; transition: opacity 150ms ease-out; }
 .admin-section-label { margin: 0 0 8px !important; color: #72727b; font-size: 12px !important; font-weight: 400; }
 .admin-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 440px; padding: 48px 16px; text-align: center; }
 .admin-empty__icon { display: grid; place-items: center; width: 64px; height: 64px; margin-bottom: 26px; border: 1px solid transparent; border-radius: 16px; background: linear-gradient(145deg, #fff, #f5f5f8); color: #72727b; box-shadow: var(--admin-shadow); }
@@ -60,19 +55,13 @@
 .admin-skip:focus { width: auto; height: auto; clip-path: none; padding: 10px 16px; border-radius: 7px; box-shadow: 0 3px 10px #0002; }
 @media (hover: hover) {
   .admin-nav-item:not(.admin-nav-item--active):hover, .admin-logout:hover { background: #eeeef2; }
-  .admin-icon-button:hover, .admin-button:hover { background: #f7f7f9; }
-  .admin-primary:hover { background: #484850; }
-  .admin-workspace .admin-content > [aria-label="Aviso de vencimiento de sesión"] .cenit-access__primary:hover:not(:disabled) { background: #484850; }
-  .admin-breadcrumb a:hover { color: var(--admin-ink); }
+    .admin-breadcrumb a:hover { color: var(--admin-ink); }
 }
 @media (prefers-reduced-motion: no-preference) {
   .admin-shell { transition: grid-template-columns 300ms ease-out; }
   .admin-shell--collapsed { transition-duration: 150ms; }
   .admin-shell--collapsed .admin-sidebar { translate: -12px 0; }
-  .admin-workspace button:not(.admin-logout):not(.admin-icon-button), .admin-primary, .admin-button { transition: scale 150ms ease-out; }
-  .admin-workspace .admin-content > [aria-label="Aviso de vencimiento de sesión"] .cenit-access__primary { transition: scale 150ms ease-out; }
-  .admin-workspace button:not(:disabled):not(.admin-logout):not(.admin-icon-button):active, .admin-primary:not(:disabled):active, .admin-button:not(:disabled):active { scale: .96; }
-}
+  }
 @media (max-width: 760px), (max-height: 560px) {
   .admin-toolbar { position: sticky; top: 0; z-index: 5; background: #fff; border-radius: 12px 12px 0 0; }
   .admin-content :is(input, textarea, select, summary, button, a) { scroll-margin-top: 80px; }
@@ -93,6 +82,4 @@
   .admin-empty { min-height: 360px; padding-inline: 0; }
 }
 .admin-empty > .purchase-back-link { margin-top: 16px; }
-@media (max-width: 760px) {
-  .admin-icon-button { min-width: 44px; width: 44px; height: 44px; }
-}
+

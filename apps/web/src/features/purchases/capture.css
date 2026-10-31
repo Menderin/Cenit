@@ -5,7 +5,7 @@
 .capture-status .purchase-state { padding: 12px 14px; overflow-wrap: anywhere; }
 .capture-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-left: auto; }
 .capture-image-area { min-width: 0; min-height: 0; border-radius: 12px; }
-.purchase-records .capture-drop { display: flex; flex-direction: column; width: 100%; min-height: 380px; gap: 12px; padding: 32px; border: 1px dashed #b4b4bf; background: #fafafb; box-shadow: none; border-radius: 12px; color: var(--admin-muted); text-align: center; }
+.purchase-records .capture-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; font: inherit; cursor: pointer; min-height: 380px; gap: 12px; padding: 32px; border: 1px dashed #b4b4bf; background: #fafafb; box-shadow: none; border-radius: 12px; color: var(--admin-muted); text-align: center; }
 .capture-drop strong { color: var(--admin-ink); font-size: 17px; line-height: 1.5; }
 .capture-drop span { font-size: 14px; line-height: 1.6; }
 .capture-drop small { margin-top: 8px; font-size: 12px; }
@@ -21,7 +21,7 @@
 .capture-preview__stage { display: grid; place-items: center; }
 .capture-preview__image { position: relative; flex: none; }
 .capture-preview__image img { display: block; width: 100%; height: auto; outline: 1px solid oklch(0 0 0 / .1); outline-offset: -1px; }
-.purchase-records .capture-region { position: absolute; display: block; min-height: 0; padding: 0; border: 1px solid #34343b; border-radius: 2px; background: #34343b0a; box-shadow: none; transition: background-color 150ms ease-out; scale: none !important; }
+.purchase-records .capture-region { position: absolute; display: block; min-height: 0; padding: 0; border: 1px solid #34343b; border-radius: 2px; background: #34343b0a; box-shadow: none; cursor: pointer; transition: background-color 150ms ease-out; }
 .purchase-records .capture-region[data-active="true"] { background: #34343b26; outline: 2px solid #34343b; outline-offset: 1px; }
 .capture-region:focus-visible { outline: 2px solid #29292f; outline-offset: 2px; }
 .capture-review { min-width: 0; }

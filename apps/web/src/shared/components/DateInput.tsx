@@ -213,7 +213,7 @@ function PlainDateInput({ value, onValueChange, onOpenCalendar, ...props }: Date
   }
   const text = displayDate(value);
   return <div className="cenit-date-input">
-    <input {...nativeProps} ref={input} type="text" inputMode="numeric" maxLength={10} placeholder="dd/mm/aaaa" autoComplete="off"
+    <input {...nativeProps} className={`cenit-input ${nativeProps.className ?? ''}`.trim()} ref={input} type="text" inputMode="numeric" maxLength={10} placeholder="dd/mm/aaaa" autoComplete="off"
       value={text} onChange={changeInput} onKeyDown={handleKeyDown} />
     {text && text.length < 10 && <span className="cenit-date-mask" aria-hidden="true"><span>{text}</span>{'dd/mm/aaaa'.slice(text.length)}</span>}
   </div>;

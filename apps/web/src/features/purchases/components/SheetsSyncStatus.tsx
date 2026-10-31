@@ -11,7 +11,7 @@ export function SheetsSyncStatus({ purchaseId }: { purchaseId?: string }) {
   const data = query.data?.data;
   return <section className="purchase-sync" aria-label="Sincronización con Google Sheets">
     <strong>{purchaseId ? 'Copia en Google Sheets' : 'Google Sheets'}</strong>
-    {query.isError ? <div role="alert"><p>{query.error.message}</p><button onClick={() => { void query.refetch(); }}>Consultar estado</button></div>
+    {query.isError ? <div role="alert"><p>{query.error.message}</p><button className="cenit-button" onClick={() => { void query.refetch(); }}>Consultar estado</button></div>
       : !data ? <p role="status">Consultando sincronización…</p> : <>
         <p role="status">{data.status === 'synced' ? data.lastSyncedAt ? 'Sincronizado' : 'No hay registros por sincronizar.' : data.status === 'error' ? 'Error de sincronización. Se reintentará automáticamente.' : 'Pendiente de sincronización. Los datos están guardados en Cenit.'}</p>
         {!purchaseId && data.pending > 0 && <p>{data.pending} {data.pending === 1 ? 'registro por sincronizar' : 'registros por sincronizar'}</p>}

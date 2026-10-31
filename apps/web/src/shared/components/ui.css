@@ -1,42 +1,54 @@
 /* Selected UI primitives share Cenit's existing light surfaces, typography and density. */
-.cenit-popover, .cenit-notice, .cenit-toast { color: #29292f; font: 13px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; color-scheme: light; }
+.cenit-popover, .cenit-notice, .cenit-toast { color: var(--color-ink); font: 13px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; color-scheme: light; }
 .cenit-confirm *, .cenit-popover * { box-sizing: border-box; }
-.cenit-ui-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 10px 14px; border: 1px solid #dcdce3; border-radius: 9px; color: #45454d; background: #fff; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color 150ms ease-out, opacity 150ms ease-out; }
-.cenit-ui-button--primary { min-height: 44px; border-color: #34343b; background: #34343b; color: #fff; }
-.cenit-ui-button--destructive { min-height: 44px; border-color: #9e3935; background: #9e3935; color: #fff; }
-.cenit-ui-button:disabled { opacity: .5; cursor: default; }
-.cenit-popover :is(button, select):focus-visible { outline: 2px solid #526bb5; outline-offset: 3px; }
+/* Botón único: secundario blanco por defecto; --primary, --destructive, --outline (dentro de popovers), --quiet e --icon. */
+.cenit-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 10px 14px; border: 1px solid transparent; border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-ink-secondary); font: inherit; font-size: 14px; line-height: 18px; text-align: center; text-decoration: none; cursor: pointer; box-shadow: var(--shadow-control); -webkit-tap-highlight-color: transparent; transition: background-color 150ms ease-out, opacity 150ms ease-out; }
+.cenit-button > svg { flex: none; }
+.cenit-button:disabled, .cenit-button[aria-disabled="true"] { opacity: .5; cursor: default; }
+.cenit-button.cenit-button--primary { min-height: 44px; border-color: var(--color-primary); background: var(--color-primary); color: var(--color-on-primary); box-shadow: var(--shadow-primary); }
+.cenit-button.cenit-button--destructive { min-height: 44px; border-color: var(--color-danger); background: var(--color-danger); color: var(--color-on-primary); box-shadow: var(--shadow-primary); }
+.cenit-button--outline { border-color: var(--color-line-strong); box-shadow: none; }
+.cenit-button--quiet { background: transparent; color: var(--color-ink-muted); box-shadow: none; }
+.cenit-button--icon { width: 40px; min-width: 40px; height: 40px; padding: 0; border-radius: var(--radius-sm); color: var(--color-ink-muted); }
+/* Campo único: texto, número, área y select nativo. */
+.cenit-input { display: block; width: 100%; min-height: 42px; padding: 8px 12px; border: 1px solid var(--color-line-input); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-ink); font: inherit; font-size: 14px; line-height: 1.4; transition: border-color 150ms ease-out, box-shadow 150ms ease-out; }
+textarea.cenit-input { resize: vertical; }
+.cenit-input::placeholder { color: var(--color-ink-placeholder); opacity: 1; }
+.cenit-input:focus-visible { outline: none; border-color: var(--color-focus); box-shadow: 0 0 0 3px var(--color-focus-glow); }
+.cenit-input[aria-invalid="true"] { border-color: var(--color-danger-border); }
+.cenit-input:disabled { background: var(--color-surface-subtle); color: var(--color-ink-subtle); }
+.cenit-popover :is(button, select):focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
 .cenit-dialog-note { margin-top: 12px !important; font-size: 12px; }
-.cenit-popover { z-index: 90; padding: 12px; border: 1px solid transparent; border-radius: 12px; background: #fff; max-width: calc(100vw - 32px); max-height: var(--radix-popover-content-available-height); overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 0 0 1px #0000000f, 0 8px 24px #00000014, 0 2px 6px #00000008; transition: opacity 300ms ease-out; }
+.cenit-popover { z-index: 90; padding: 12px; border: 1px solid transparent; border-radius: var(--radius-lg); background: var(--color-surface); max-width: calc(100vw - 32px); max-height: var(--radix-popover-content-available-height); overflow-y: auto; overscroll-behavior: contain; box-shadow: var(--shadow-popover); transition: opacity 300ms ease-out; }
 .cenit-date-field { position: relative; width: 100%; min-width: 0; }
 .cenit-date-field .cenit-date-input:not(.cenit-date-input--segmented) > input { padding-right: 42px !important; }
-.cenit-date-field .cenit-date-trigger { position: absolute; top: 1px; right: 1px; display: grid; place-items: center; min-height: 40px; width: 40px; height: calc(100% - 2px); padding: 0; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #62626c; box-shadow: none; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color 150ms ease-out; }
-.cenit-calendar .rdp-root { --rdp-accent-color: #34343b; --rdp-accent-background-color: #eeeef2; --rdp-day-height: 40px; --rdp-day-width: 40px; --rdp-day_button-height: 40px; --rdp-day_button-width: 40px; --rdp-nav_button-height: 40px; --rdp-nav_button-width: 40px; --rdp-selected-border: 1px solid #34343b; font: inherit; }
-.cenit-calendar .rdp-month_caption { align-items: center; padding: 0; font-size: 13px; font-weight: 500; }
+.cenit-date-field .cenit-date-trigger { position: absolute; top: 1px; right: 1px; display: grid; place-items: center; min-height: 40px; width: 40px; height: calc(100% - 2px); padding: 0; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--color-ink-muted); box-shadow: none; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color 150ms ease-out; }
+.cenit-calendar .rdp-root { --rdp-accent-color: var(--color-primary); --rdp-accent-background-color: var(--color-surface-muted); --rdp-day-height: 40px; --rdp-day-width: 40px; --rdp-day_button-height: 40px; --rdp-day_button-width: 40px; --rdp-nav_button-height: 40px; --rdp-nav_button-width: 40px; --rdp-selected-border: 1px solid var(--color-primary); font: inherit; }
+.cenit-calendar .rdp-month_caption { align-items: center; padding: 0 0 0 6px; font-size: 14px; font-weight: 550; }
 .cenit-calendar .rdp-dropdowns { gap: 4px; }
 .cenit-calendar .rdp-month_grid { margin-top: 6px; }
-.cenit-calendar .rdp-day_button { background: transparent; color: #45454d; border: 1px solid transparent; border-radius: 6px; font: inherit; padding: 0; transition: background-color 150ms ease-out; }
-.cenit-calendar .rdp-selected .rdp-day_button { color: #fff; background: #34343b; }
-.cenit-calendar .rdp-button_previous, .cenit-calendar .rdp-button_next { color: #62626c; background: transparent; padding: 0; border-radius: 6px; }
-.cenit-calendar .rdp-weekday { color: #72727b; font-size: 11px; font-weight: 400; }
+.cenit-calendar .rdp-day_button { position: relative; background: transparent; color: var(--color-ink-secondary); border: 1px solid transparent; border-radius: var(--radius-sm); font: inherit; font-variant-numeric: tabular-nums; padding: 0; cursor: pointer; transition: background-color 150ms ease-out; }
+.cenit-calendar .rdp-selected .rdp-day_button { color: var(--color-on-primary); background: var(--color-primary); }
+.cenit-calendar .rdp-button_previous, .cenit-calendar .rdp-button_next { color: var(--color-ink-muted); background: transparent; padding: 0; border: 0; border-radius: var(--radius-sm); cursor: pointer; }
+.cenit-calendar .rdp-weekday { color: var(--color-ink-subtle); font-size: 12px; font-weight: 400; }
 .cenit-calendar .rdp-outside { opacity: .45; }
-.cenit-notice { display: flex; align-items: flex-start; gap: 10px; padding: 13px 14px; margin-bottom: 20px; border: 1px solid #dde3ed; border-radius: 9px; background: #f4f6fa; }
-.cenit-notice > svg { flex: none; margin-top: 1px; color: #556b96; }
+.cenit-notice { display: flex; align-items: flex-start; gap: 10px; padding: 13px 14px; margin-bottom: 20px; border: 1px solid var(--color-info-line); border-radius: var(--radius-md); background: var(--color-info-soft); }
+.cenit-notice > svg { flex: none; margin-top: 1px; color: var(--color-info-icon); }
 .cenit-notice > div { min-width: 0; }
 .cenit-notice strong { display: block; margin-bottom: 3px; font-size: 13px; font-weight: 550; }
-.cenit-notice p { margin: 0; font-size: 12px; color: #55555e; overflow-wrap: anywhere; }
-.cenit-notice .cenit-ui-button { margin-top: 12px; }
-.cenit-notice--success { background: #f1f8f4; border-color: #c9dfd2; }
-.cenit-notice--success > svg { color: #35704f; }
-.cenit-notice--warning { background: #fff9ee; border-color: #e8d6af; }
-.cenit-notice--warning > svg { color: #936622; }
-.cenit-notice--error { background: #fff3f1; border-color: #e7c8c2; }
-.cenit-notice--error > svg { color: #a44135; }
+.cenit-notice p { margin: 0; font-size: 12px; color: var(--color-ink-label); overflow-wrap: anywhere; }
+.cenit-notice .cenit-button { margin-top: 12px; }
+.cenit-notice--success { background: var(--color-success-soft); border-color: var(--color-success-line); }
+.cenit-notice--success > svg { color: var(--color-success-icon); }
+.cenit-notice--warning { background: var(--color-warning-soft); border-color: var(--color-warning-line); }
+.cenit-notice--warning > svg { color: var(--color-warning-icon); }
+.cenit-notice--error { background: var(--color-danger-soft); border-color: var(--color-danger-line); }
+.cenit-notice--error > svg { color: var(--color-danger-icon); }
 .cenit-session-warning { margin-bottom: 24px; }
-.cenit-toast[data-sonner-toast] { padding: 14px 16px; border: 1px solid #e5e5ec; border-radius: 10px; background: #fff; box-shadow: 0 4px 12px #0000000a, 0 10px 30px #00000008; }
+.cenit-toast[data-sonner-toast] { padding: 14px 16px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-toast); }
 .cenit-toast-title { font-size: 13px; font-weight: 550; }
-.cenit-toast-description { color: #62626c; font-size: 12px; }
-.cenit-toast-close { color: #62626c !important; background: #fff !important; padding: 0 !important; min-height: 20px; }
+.cenit-toast-description { color: var(--color-ink-muted); font-size: 12px; }
+.cenit-toast-close { color: var(--color-ink-muted) !important; background: var(--color-surface) !important; min-height: 20px; }
 .cenit-page-enter { animation: cenit-enter-opacity 150ms ease-out both; }
 .admin-nav-item, .academic-nav-item { transition: background-color 150ms ease-out, opacity 150ms ease-out; }
 .admin-sidebar, .academic-sidebar { transition: opacity 150ms ease-out; }
@@ -46,16 +58,17 @@
 @starting-style { .cenit-popover, .academic-detail[open] { opacity: 0; } }
 @keyframes cenit-enter-opacity { from { opacity: 0; } }
 @media (hover: hover) {
-  .cenit-ui-button:hover:not(:disabled), .cenit-date-field .cenit-date-trigger:hover:not(:disabled) { background: #f5f5f8; }
-  .cenit-ui-button--primary:hover:not(:disabled) { background: #484850; }
-  .cenit-ui-button--destructive:hover:not(:disabled) { border-color: #8f302c; background: #8f302c; }
-  .cenit-calendar .rdp-day_button:hover:not(:disabled) { background: #eeeef2; }
-  .cenit-calendar .rdp-selected .rdp-day_button:hover:not(:disabled) { background: #484850; }
+  .cenit-button:hover:not(:disabled), .cenit-date-field .cenit-date-trigger:hover:not(:disabled) { background: var(--color-surface-hover); }
+  .cenit-button.cenit-button--primary:hover:not(:disabled) { border-color: var(--color-primary-hover); background: var(--color-primary-hover); }
+  .cenit-button.cenit-button--destructive:hover:not(:disabled) { border-color: var(--color-danger-hover); background: var(--color-danger-hover); }
+  .cenit-input:hover:not(:disabled):not(:focus-visible) { border-color: var(--color-ink-placeholder); }
+  .cenit-calendar .rdp-day_button:hover:not(:disabled) { background: var(--color-surface-muted); }
+  .cenit-calendar .rdp-selected .rdp-day_button:hover:not(:disabled) { background: var(--color-primary-hover); }
 }
 .workspace-nav-close { display: none !important; }
 .admin-shell .admin-sidebar, .academic-shell .academic-sidebar { padding: 0; }
 .workspace-sidebar-content { display: flex; flex-direction: column; flex: none; width: 220px; min-width: 220px; min-height: 100%; padding: 24px 12px 16px; }
-.workspace-nav-overlay { position: fixed; inset: 0; z-index: 79; background: #00000052; opacity: 1; transition: opacity 300ms ease-out; }
+.workspace-nav-overlay { position: fixed; inset: 0; z-index: 79; background: var(--color-scrim-nav); opacity: 1; transition: opacity 300ms ease-out; }
 .workspace-nav-overlay--closing { opacity: 0; transition-duration: 150ms; }
 .admin-shell .admin-sidebar, .academic-shell .academic-sidebar { transition: opacity 300ms ease-out, visibility 0s; }
 .admin-shell.admin-shell--collapsed .admin-sidebar, .academic-shell.academic-shell--collapsed .academic-sidebar { transition-duration: 150ms, 0s, 150ms; transition-delay: 0s, 150ms, 0s; }
@@ -64,14 +77,16 @@
   .admin-sidebar { padding: 0; }
   .admin-nav-item, .admin-logout { min-height: 44px; }
   .admin-sidebar .workspace-sidebar-content { width: 100%; padding: 24px 16px; }
-  .admin-sidebar .workspace-nav-close { display: grid !important; align-self: flex-end; margin-bottom: 16px; }
+  .admin-sidebar .workspace-nav-close { display: inline-flex !important; align-self: flex-end; margin-bottom: 16px; }
+  .cenit-button--icon { min-width: 44px; width: 44px; height: 44px; }
+  .cenit-input { font-size: 16px; }
   .cenit-date-field .cenit-date-trigger { min-height: 44px; width: 44px; top: 0; right: 0; }
   .cenit-date-field .cenit-date-input:not(.cenit-date-input--segmented) > input { min-height: 44px; padding-right: 48px !important; }
 }
 @media (max-width: 720px) {
   .academic-sidebar { padding: 0; }
   .academic-sidebar .workspace-sidebar-content { width: 100%; padding: 24px 16px; }
-  .academic-sidebar .workspace-nav-close { display: grid !important; align-self: flex-end; margin-bottom: 16px; }
+  .academic-sidebar .workspace-nav-close { display: inline-flex !important; align-self: flex-end; margin-bottom: 16px; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .admin-shell .admin-sidebar, .academic-shell .academic-sidebar { transition-property: opacity, visibility, translate; }
@@ -90,25 +105,25 @@
     .cenit-popover, .academic-detail[open] { translate: 0 12px; filter: blur(4px); }
     .cenit-popover.cenit-calendar { translate: 0 var(--cenit-calendar-enter-y); filter: none; }
   }
-  .cenit-ui-button, .cenit-access__primary, .academic-button, .academic-icon-button, .admin-icon-button, .cenit-date-field .cenit-date-trigger { transition-property: scale, background-color, opacity; transition-duration: 150ms; transition-timing-function: ease-out; }
-  .cenit-ui-button:not(:disabled):active, .cenit-access__primary:not(:disabled):active, .academic-button:not(:disabled):active, .academic-icon-button:not(:disabled):active, .admin-icon-button:not(:disabled):active, .cenit-date-field .cenit-date-trigger:not(:disabled):active { scale: .96; }
+  .cenit-button, .cenit-date-field .cenit-date-trigger { transition-property: scale, background-color, opacity; transition-duration: 150ms; transition-timing-function: ease-out; }
+  .cenit-button:not(:disabled):active, .cenit-date-field .cenit-date-trigger:not(:disabled):active { scale: .96; }
 }
 @media (prefers-reduced-motion: reduce) {
   .cenit-popover.cenit-calendar { transition: none; }
   [data-sonner-toaster] [data-sonner-toast], [data-sonner-toaster] [data-sonner-toast] * { transition-property: opacity !important; animation: none !important; }
 }
 
-.cenit-confirm-overlay { position: fixed; inset: 0; z-index: 100; background: #252a361f; pointer-events: auto; transition: opacity 150ms ease-out; }
-.cenit-confirm { z-index: 101; box-sizing: border-box; width: min(340px, calc(100vw - 32px)); max-height: var(--radix-popover-content-available-height); overflow-y: auto; overscroll-behavior: contain; padding: 18px; border: 1px solid transparent; border-radius: 12px; background: #fff; color: #29292f; font: 13px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; box-shadow: 0 0 0 1px #0000000f, 0 12px 30px #0000001a, 0 4px 10px #00000008; transition: opacity 150ms ease-out; }
+.cenit-confirm-overlay { position: fixed; inset: 0; z-index: 100; background: var(--color-scrim); pointer-events: auto; transition: opacity 150ms ease-out; }
+.cenit-confirm { z-index: 101; box-sizing: border-box; width: min(340px, calc(100vw - 32px)); max-height: var(--radix-popover-content-available-height); overflow-y: auto; overscroll-behavior: contain; padding: 18px; border: 1px solid transparent; border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-ink); font: 13px/1.6 var(--font-sans); box-shadow: var(--shadow-dialog); transition: opacity 150ms ease-out; }
 .cenit-confirm-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.cenit-confirm-heading > svg { flex: none; color: #7b613b; }
-.cenit-confirm-heading--destructive > svg { color: #9e3935; }
-.cenit-confirm h2 { margin: 0; color: #35353d; font-size: 15px; font-weight: 550; line-height: 1.4; overflow-wrap: anywhere; }
-.cenit-confirm p { margin: 0; color: #62626c; }
-.cenit-confirm .cenit-dialog-error { margin-top: 12px; padding: 8px 10px; border-radius: 6px; color: #9e3935; background: #fcf3f1; }
+.cenit-confirm-heading > svg { flex: none; color: var(--color-warning); }
+.cenit-confirm-heading--destructive > svg { color: var(--color-danger); }
+.cenit-confirm h2 { margin: 0; color: var(--color-ink); font-size: 15px; font-weight: 550; line-height: 1.4; overflow-wrap: anywhere; }
+.cenit-confirm p { margin: 0; color: var(--color-ink-muted); }
+.cenit-confirm .cenit-dialog-error { margin-top: 12px; padding: 8px 10px; border-radius: 6px; color: var(--color-danger); background: var(--color-danger-soft); }
 .cenit-confirm-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
-.cenit-confirm :is(button, a):focus-visible { outline: 2px solid #7b613b; outline-offset: 3px; }
-.cenit-confirm-arrow { fill: #fff; }
+.cenit-confirm :is(button, a):focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+.cenit-confirm-arrow { fill: var(--color-surface); }
 .cenit-confirm.cenit-closing { opacity: 0; }
 @starting-style { .cenit-confirm-overlay, .cenit-confirm { opacity: 0; } }
 @media (prefers-reduced-motion: no-preference) {
@@ -121,38 +136,40 @@
 
 .cenit-date-input { position: relative; min-width: 0; width: 100%; }
 .cenit-date-input > input, .cenit-date-mask { font-variant-numeric: tabular-nums; }
-.cenit-date-mask { position: absolute; left: 11px; top: 50%; translate: 0 -50%; white-space: pre; pointer-events: none; color: #80808b; font-size: 13px; line-height: 1.4; }
+.cenit-date-mask { position: absolute; left: 13px; top: 50%; translate: 0 -50%; white-space: pre; pointer-events: none; color: var(--color-ink-placeholder); font-size: 13px; line-height: 1.4; }
 .cenit-date-mask > span { visibility: hidden; }
-.cenit-date-input--segmented { display: flex; align-items: center; gap: 0; min-height: 42px; padding: 0 42px 0 10px; overflow: hidden; border: 1px solid var(--admin-input-line, #b8b8c5); border-radius: 7px; background: #fff; transition: border-color 150ms ease-out, box-shadow 150ms ease-out; }
-.cenit-date-input--segmented:focus-within { border-color: #526bb5; box-shadow: 0 0 0 2px #526bb533; }
-.cenit-date-segment { flex: none; width: auto !important; min-height: 36px !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; outline: none !important; background: transparent !important; font: inherit !important; font-variant-numeric: tabular-nums; text-align: center; box-shadow: none !important; }
-.cenit-date-segment--day { width: 2.25ch !important; }
-.cenit-date-segment--month { width: 3.25ch !important; }
-.cenit-date-segment--year { width: 4.1ch !important; }
-.cenit-date-segment::placeholder { color: #80808b; opacity: 1; }
-.cenit-date-separator { flex: none; color: #80808b; text-align: center; }
+.cenit-date-input--segmented { display: flex; align-items: center; gap: 0; min-height: 42px; padding: 0 42px 0 12px; overflow: hidden; border: 1px solid var(--color-line-input); border-radius: var(--radius-md); background: var(--color-surface); transition: border-color 150ms ease-out, box-shadow 150ms ease-out; }
+.cenit-date-input--segmented:focus-within { border-color: var(--color-focus); box-shadow: 0 0 0 3px var(--color-focus-glow); }
+.cenit-date-segment { flex: none; width: auto; min-height: 36px; padding: 0; border: 0; border-radius: 0; outline: none; background: transparent; color: var(--color-ink); font: inherit; font-variant-numeric: tabular-nums; text-align: center; box-shadow: none; }
+.cenit-date-segment--day { width: 2.25ch; }
+.cenit-date-segment--month { width: 3.25ch; }
+.cenit-date-segment--year { width: 4.1ch; }
+.cenit-date-segment::placeholder { color: var(--color-ink-placeholder); opacity: 1; }
+.cenit-date-separator { flex: none; color: var(--color-ink-placeholder); text-align: center; }
 .cenit-date-field .cenit-date-input--segmented { width: 100%; }
-.cenit-select-trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 32px; padding: 4px 8px; border: 1px solid #b8b8c5; border-radius: 6px; color: #29292f; background: #fff; font: inherit; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.cenit-select-trigger svg { flex: none; color: #72727b; }
+.cenit-select-trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 32px; padding: 4px 8px; border: 1px solid var(--color-line-input); border-radius: var(--radius-sm); color: var(--color-ink); background: var(--color-surface); font: inherit; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cenit-select-trigger svg { flex: none; color: var(--color-icon); }
 .cenit-select-trigger:disabled { opacity: .5; cursor: default; }
 .cenit-popover.cenit-select-menu { --purchase-select-enter-y: -4px; --purchase-select-close-y: -4px; min-width: max(150px, var(--radix-popover-trigger-width)); max-height: min(320px, var(--radix-popover-content-available-height)); padding: 4px; transition-property: opacity; transition-duration: 150ms; transition-timing-function: ease-out; }
 .cenit-popover.cenit-select-menu[data-side="top"] { --purchase-select-enter-y: 4px; --purchase-select-close-y: 4px; }
-.cenit-select-menu [role="option"] { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 36px; padding: 8px 10px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #45454d; font: inherit; text-align: left; cursor: pointer; }
-.cenit-select-menu [role="option"][aria-selected="true"] { background: #f3f3f6; color: #29292f; }
+.cenit-select-menu [role="option"] { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 36px; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--color-ink-secondary); font: inherit; text-align: left; cursor: pointer; }
+.cenit-select-menu [role="option"][aria-selected="true"] { background: var(--color-surface-chip); color: var(--color-ink); }
 .cenit-select-menu [role="option"]:disabled { opacity: .5; cursor: default; }
 .cenit-select-menu [role="option"]:focus-visible { outline-offset: -2px; }
 .cenit-select-menu [role="option"] > svg { flex: none; }
-@media (hover: hover) { .cenit-select-menu [role="option"]:hover:not(:disabled) { background: #f5f5f8; } }
+@media (hover: hover) { .cenit-select-menu [role="option"]:hover:not(:disabled) { background: var(--color-surface-hover); } }
 
-.cenit-calendar .rdp-root { --rdp-range_middle-background-color: #eeeef2; }
+.cenit-calendar .rdp-root { --rdp-range_middle-background-color: var(--color-surface-muted); }
 .cenit-calendar .rdp-selected { font-size: inherit; font-weight: 400; }
-.cenit-calendar .rdp-selected.rdp-range_middle .rdp-day_button { color: #45454d; background: transparent; border-color: transparent; border-radius: 0; }
-.cenit-calendar .rdp-selected:is(.rdp-range_start, .rdp-range_end) .rdp-day_button { color: #fff; background: #34343b; border-color: #34343b; }
-.cenit-calendar .rdp-today:not(.rdp-selected) .rdp-day_button { color: #29292f; background: #eeeef2; font-weight: 500; }
+.cenit-calendar .rdp-selected.rdp-range_middle .rdp-day_button { color: var(--color-ink-secondary); background: transparent; border-color: transparent; border-radius: 0; }
+.cenit-calendar .rdp-selected:is(.rdp-range_start, .rdp-range_end) .rdp-day_button { color: var(--color-on-primary); background: var(--color-primary); border-color: var(--color-primary); }
+.cenit-calendar .rdp-today .rdp-day_button { font-weight: 600; }
+.cenit-calendar .rdp-today:not(.rdp-selected) .rdp-day_button { color: var(--color-ink); }
+.cenit-calendar .rdp-today .rdp-day_button::after { content: ''; position: absolute; bottom: 6px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: currentColor; }
 @media (hover: hover) {
-  .cenit-select-trigger:hover:not(:disabled) { background: #f5f5f8; }
-  .cenit-calendar .rdp-selected.rdp-range_middle .rdp-day_button:hover:not(:disabled), .cenit-calendar .rdp-today:not(.rdp-selected) .rdp-day_button:hover:not(:disabled) { background: #e1e1e6; }
-  .cenit-calendar .rdp-selected:is(.rdp-range_start, .rdp-range_end) .rdp-day_button:hover:not(:disabled) { background: #484850; }
+  .cenit-select-trigger:hover:not(:disabled) { background: var(--color-surface-hover); }
+  .cenit-calendar .rdp-selected.rdp-range_middle .rdp-day_button:hover:not(:disabled) { background: var(--color-shell-line); }
+  .cenit-calendar .rdp-selected:is(.rdp-range_start, .rdp-range_end) .rdp-day_button:hover:not(:disabled) { background: var(--color-primary-hover); }
 }
 @media (prefers-reduced-motion: no-preference) {
   .cenit-popover.cenit-select-menu { transition-property: opacity, translate; }
@@ -166,5 +183,6 @@
 
 /* Date text and its remaining mask share metrics at every breakpoint. */
 .cenit-date-input, .cenit-date-input > input, .cenit-date-mask { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; font-variant-numeric: tabular-nums; }
-.cenit-calendar .rdp-caption_label { font-size: 13px; font-weight: 500; }
+.cenit-calendar .rdp-caption_label { display: inline-block; font-size: 14px; font-weight: 550; }
+.cenit-calendar .rdp-caption_label::first-letter { text-transform: uppercase; }
 @media (max-width: 760px) { .purchase-input .cenit-date-input, .purchase-input .cenit-date-input > input, .cenit-date-mask { font-size: 16px; } }
