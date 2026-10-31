@@ -84,8 +84,8 @@ export function PurchaseCapture() {
       {error && <div className="purchase-state" role="alert">{error}{original && <p>Se conservan los datos de la extracción anterior.</p>}</div>}
     </div>
     {selected && <div className="capture-actions">
-      <button type="button" disabled={saving} onClick={event => { fileTrigger.current = event.currentTarget; input.current?.click(); }}>Cambiar captura</button>
-      <button type="button" disabled={saving || checking || busy} onClick={event => guard.request(() => { void runExtraction(selected.file); }, event.currentTarget, { title: 'Volver a extraer datos', description: 'Se reemplazarán tus correcciones con una nueva extracción.', confirmLabel: 'Descartar y extraer' })}>{busy ? 'Analizando…' : error ? 'Reintentar extracción' : 'Volver a extraer'}</button>
+      <button className="cenit-button" type="button" disabled={saving} onClick={event => { fileTrigger.current = event.currentTarget; input.current?.click(); }}>Cambiar captura</button>
+      <button className="cenit-button" type="button" disabled={saving || checking || busy} onClick={event => guard.request(() => { void runExtraction(selected.file); }, event.currentTarget, { title: 'Volver a extraer datos', description: 'Se reemplazarán tus correcciones con una nueva extracción.', confirmLabel: 'Descartar y extraer' })}>{busy ? 'Analizando…' : error ? 'Reintentar extracción' : 'Volver a extraer'}</button>
     </div>}
     </div>
     <div ref={workspace} className="capture-workspace">

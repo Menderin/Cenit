@@ -21,7 +21,7 @@ export function ValidateRecord({ id, version, requestNumber, fallbackFocus }: { 
     await client.invalidateQueries({ queryKey: ['purchases'] });
   } });
   useEffect(() => { setConfirming(false); }, [id, version]);
-  return <><button type="button" ref={trigger} disabled={mutation.isPending} aria-haspopup="dialog" aria-expanded={confirming} onClick={event => {
+  return <><button className="cenit-button" type="button" ref={trigger} disabled={mutation.isPending} aria-haspopup="dialog" aria-expanded={confirming} onClick={event => {
     event.currentTarget.focus({ preventScroll: true }); selected.current = { id, version }; setConfirming(true);
   }}>Validar registro</button>
     <ContextualConfirm open={confirming} origin={trigger.current} fallbackFocus={fallbackFocus} title={`¿Validar ${requestNumber}?`} description="La revisión de los datos quedará registrada en Cenit."

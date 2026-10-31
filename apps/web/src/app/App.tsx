@@ -51,7 +51,7 @@ export function App() {
   else if (auth.status === 'error' || auth.status === 'logout-error') content = <>
     <h1 id="access-title">No pudimos completar la operación</h1>
     <StatusNotice kind="error" title={auth.status === 'logout-error' ? 'Cierre sin confirmar' : 'Sesión sin comprobar'} message={auth.message} />
-    <button className="cenit-access__primary" onClick={() => { void (auth.status === 'logout-error' ? auth.logout() : auth.refresh()); }}>Reintentar</button>
+    <button className="cenit-button cenit-button--primary cenit-access__primary" onClick={() => { void (auth.status === 'logout-error' ? auth.logout() : auth.refresh()); }}>Reintentar</button>
   </>;
   else if (!auth.session) content = <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Navigate to="/login" replace />} /></Routes>;
   if (auth.status === 'authenticated' && auth.session?.account.role === 'administrativo') return <PurchaseTransferProvider key={auth.session.account.id}>
