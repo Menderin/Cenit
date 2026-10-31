@@ -39,6 +39,11 @@ for (const role of ['administrativo', 'docente', 'estudiante']) {
     await page.goto(path === '/administracion' ? '/academico' : '/administracion');
     await expect(page).toHaveURL(new RegExp(`${path}$`));
     await expect(page.getByRole('heading', { name: role === 'administrativo' ? 'Inicio' : 'Malla curricular', exact: true })).toBeVisible();
+    if (role !== 'administrativo') {
+      const id = crypto.randomUUID(), detail = `/administracion/compras/${id}`;
+      expect((await page.request.get(`/api/v1/purchases/${id}`)).status()).toBe(403);
+      await page.goto(detail); await expect(page).toHaveURL(/\/academico$/);
+    }
     if (role !== 'administrativo') await expect(page.getByRole('region', { name: 'Asignaturas por semestre' })).toBeVisible();
     else await expect(page.getByRole('link', { name: 'Ver registros', exact: true })).toBeVisible();
     await page.goto('/prototipo.html'); await expect(page).toHaveURL(new RegExp(`${path}$`));
@@ -47,6 +52,9 @@ for (const role of ['administrativo', 'docente', 'estudiante']) {
   });
 }
 test('sin sesión no muestra módulos y credenciales incorrectas no ingresan', async ({ page }) => {
+  const id = crypto.randomUUID();
+  expect((await page.request.get(`/api/v1/purchases/${id}`)).status()).toBe(401);
+  await page.goto(`/administracion/compras/${id}`); await expect(page).toHaveURL(/\/login$/);
   await page.goto('/compras'); await expect(page).toHaveURL(/\/login$/);
   await page.getByLabel('Correo electrónico', { exact: true }).fill(credential('docente').email);
   await page.getByLabel('Contraseña', { exact: true }).fill('incorrecta');
