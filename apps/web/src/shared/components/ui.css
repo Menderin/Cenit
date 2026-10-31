@@ -50,8 +50,6 @@ textarea.cenit-input { resize: vertical; }
 .cenit-toast-description { color: var(--color-ink-muted); font-size: 12px; }
 .cenit-toast-close { color: var(--color-ink-muted) !important; background: var(--color-surface) !important; min-height: 20px; }
 .cenit-page-enter { animation: cenit-enter-opacity 150ms ease-out both; }
-.admin-nav-item, .academic-nav-item { transition: background-color 150ms ease-out, opacity 150ms ease-out; }
-.admin-sidebar, .academic-sidebar { transition: opacity 150ms ease-out; }
 .academic-detail { transition: opacity 300ms ease-out; }
 .academic-detail--closing { opacity: 0; transition-duration: 150ms; }
 .cenit-closing { opacity: 0; pointer-events: none; transition-duration: 150ms; }
@@ -65,33 +63,11 @@ textarea.cenit-input { resize: vertical; }
   .cenit-calendar .rdp-day_button:hover:not(:disabled) { background: var(--color-surface-muted); }
   .cenit-calendar .rdp-selected .rdp-day_button:hover:not(:disabled) { background: var(--color-primary-hover); }
 }
-.workspace-nav-close { display: none !important; }
-.admin-shell .admin-sidebar, .academic-shell .academic-sidebar { padding: 0; }
-.workspace-sidebar-content { display: flex; flex-direction: column; flex: none; width: 220px; min-width: 220px; min-height: 100%; padding: 24px 12px 16px; }
-.workspace-nav-overlay { position: fixed; inset: 0; z-index: 79; background: var(--color-scrim-nav); opacity: 1; transition: opacity 300ms ease-out; }
-.workspace-nav-overlay--closing { opacity: 0; transition-duration: 150ms; }
-.admin-shell .admin-sidebar, .academic-shell .academic-sidebar { transition: opacity 300ms ease-out, visibility 0s; }
-.admin-shell.admin-shell--collapsed .admin-sidebar, .academic-shell.academic-shell--collapsed .academic-sidebar { transition-duration: 150ms, 0s, 150ms; transition-delay: 0s, 150ms, 0s; }
-@starting-style { .workspace-nav-overlay { opacity: 0; } }
 @media (max-width: 760px) {
-  .admin-sidebar { padding: 0; }
-  .admin-nav-item, .admin-logout { min-height: 44px; }
-  .admin-sidebar .workspace-sidebar-content { width: 100%; padding: 24px 16px; }
-  .admin-sidebar .workspace-nav-close { display: inline-flex !important; align-self: flex-end; margin-bottom: 16px; }
   .cenit-button--icon { min-width: 44px; width: 44px; height: 44px; }
   .cenit-input { font-size: 16px; }
   .cenit-date-field .cenit-date-trigger { min-height: 44px; width: 44px; top: 0; right: 0; }
   .cenit-date-field .cenit-date-input:not(.cenit-date-input--segmented) > input { min-height: 44px; padding-right: 48px !important; }
-}
-@media (max-width: 720px) {
-  .academic-sidebar { padding: 0; }
-  .academic-sidebar .workspace-sidebar-content { width: 100%; padding: 24px 16px; }
-  .academic-sidebar .workspace-nav-close { display: inline-flex !important; align-self: flex-end; margin-bottom: 16px; }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .admin-shell .admin-sidebar, .academic-shell .academic-sidebar { transition-property: opacity, visibility, translate; }
-  @media (max-width: 760px) { .admin-sidebar { translate: 0 0; } .admin-shell.admin-shell--collapsed .admin-sidebar { translate: -100% 0; } }
-  @media (max-width: 720px) { .academic-sidebar { translate: 0 0; } .academic-shell.academic-shell--collapsed .academic-sidebar { translate: -100% 0; } }
 }
 @media (prefers-reduced-motion: no-preference) {
   .cenit-popover { transition-property: opacity, translate, filter; }

@@ -647,8 +647,8 @@ test('malla y detalle legibles al redimensionar sin overflow del documento', asy
     if ([1920, 1440, 390].includes(width)) {
       const height = width === 1920 ? 1080 : width === 1440 ? 900 : 844;
       await page.setViewportSize({ width, height });
-      await expect(page.locator('.academic-shell')).toHaveCount(1);
-      await expect.poll(() => page.locator('.academic-shell').evaluate(element => Math.round(element.getBoundingClientRect().height))).toBe(height - (width <= 720 ? 20 : 32));
+      await expect(page.locator('.workspace-shell')).toHaveCount(1);
+      await expect.poll(() => page.locator('.workspace-shell').evaluate(element => Math.round(element.getBoundingClientRect().height))).toBe(height - (width <= 760 ? 16 : 32));
       await page.evaluate(() => { document.querySelector('.academic-content')!.scrollTop = 0; document.querySelector('.academic-board')!.scrollLeft = 0; });
       await page.getByRole('heading', { name: 'Malla curricular', exact: true }).focus();
       await page.mouse.move(0, 0);

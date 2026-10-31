@@ -364,7 +364,7 @@ test('marco y navegación permanecen visibles al desplazar listas/formularios, c
     await page.locator('#admin-content').evaluate(e => { e.scrollTop = e.scrollHeight; });
     await insideViewport(page, toolbar(page));
     expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(height);
-    expect(await page.locator('.admin-shell').evaluate(e => e.getBoundingClientRect().bottom)).toBeLessThanOrEqual(height - 15);
+    expect(await page.locator('.workspace-shell').evaluate(e => e.getBoundingClientRect().bottom)).toBeLessThanOrEqual(height - 15);
     expect(await page.locator('.purchase-table-scroll').first().evaluate(e => e.scrollHeight - e.clientHeight)).toBeLessThanOrEqual(1);
   }
   await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
@@ -403,8 +403,8 @@ test('reapertura durante salida, ancla retirada y movimiento reducido conservan 
 
 test('navegación: ancho fijo del contenido durante apertura/cierre, inversión y panel móvil con foco', async ({ page }) => {
   await login(page, 'administrativo');
-  const content = page.locator('.admin-sidebar .workspace-sidebar-content');
-  const label = page.locator('.admin-sidebar a[href="/administracion/compras"] span');
+  const content = page.locator('.workspace-sidebar .workspace-sidebar-content');
+  const label = page.locator('.workspace-sidebar a[href="/administracion/compras"] span');
   const dimensions = () => label.evaluate(e => ({ width: e.getBoundingClientRect().width, height: e.getBoundingClientRect().height }));
   const before = await dimensions();
   const expectStableDimensions = async () => {
@@ -428,7 +428,7 @@ test('navegación: ancho fijo del contenido durante apertura/cierre, inversión 
   expect((await manual.boundingBox())!.height).toBe((await capture.boundingBox())!.height);
   expect((await capture.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await page.setViewportSize({ width: 390, height: 844 });
-  const position = () => page.locator('.admin-main').evaluate(e => ({ top: (e as HTMLElement).offsetTop, width: (e as HTMLElement).offsetWidth, height: (e as HTMLElement).offsetHeight }));
+  const position = () => page.locator('.workspace-main').evaluate(e => ({ top: (e as HTMLElement).offsetTop, width: (e as HTMLElement).offsetWidth, height: (e as HTMLElement).offsetHeight }));
   const beforeDrawer = await position();
   await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
   const drawer = page.getByRole('dialog', { name: 'Navegación administrativa' });

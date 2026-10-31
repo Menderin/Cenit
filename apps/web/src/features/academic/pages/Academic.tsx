@@ -6,10 +6,7 @@ import { CaretLeftIcon } from '@phosphor-icons/react/dist/csr/CaretLeft';
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
 import { GraduationCapIcon } from '@phosphor-icons/react/dist/csr/GraduationCap';
 import { InfoIcon } from '@phosphor-icons/react/dist/csr/Info';
-import { SidebarSimpleIcon } from '@phosphor-icons/react/dist/csr/SidebarSimple';
-import { SignOutIcon } from '@phosphor-icons/react/dist/csr/SignOut';
 import { SquaresFourIcon } from '@phosphor-icons/react/dist/csr/SquaresFour';
-import { XIcon } from '@phosphor-icons/react/dist/csr/X';
 import type { AcademicCourse, AcademicPlan } from '@cenit/contracts/academic';
 import { useAuth } from '../../auth/model/session.js';
 import { SessionWarning } from '../../auth/components/SessionWarning.js';
@@ -22,6 +19,7 @@ import { StudentLookup, type Student } from '../components/StudentLookup.js';
 import { progressLabels } from '../model/progress-presentation.js';
 import { courseRelations } from '../model/course-relations.js';
 import { useSidebar } from '../../../shared/lib/use-sidebar.js';
+import { WorkspaceShell } from '../../../shared/components/WorkspaceShell.js';
 import '../academic.css';
 
 export function Academic() {
@@ -30,7 +28,7 @@ export function Academic() {
   const heading = useRef<HTMLHeadingElement>(null);
   const board = useRef<HTMLDivElement>(null);
   const boardDrag = useRef<{ pointerId: number; startX: number; scrollLeft: number; dragged: boolean } | null>(null);
-  const { collapsed: sidebarCollapsed, setCollapsed: setSidebarCollapsed, mobile, sidebar, panel, toggle, mounted, closing } = useSidebar('/academico', 720);
+  const sidebarState = useSidebar('/academico'), { collapsed: sidebarCollapsed, setCollapsed: setSidebarCollapsed, mobile } = sidebarState;
   const [pointerFocus, setPointerFocus] = useState(false);
   const [boardScroll, setBoardScroll] = useState({ previous: false, next: false });
   const [boardDragging, setBoardDragging] = useState(false);
@@ -80,44 +78,29 @@ export function Academic() {
     return () => { observer.disconnect(); element.removeEventListener('scroll', update); };
   }, [plan]);
 
-  return <div className={`academic-workspace${pointerFocus ? ' academic-workspace--pointer' : ''}`} onPointerDownCapture={() => setPointerFocus(true)} onKeyDownCapture={() => setPointerFocus(false)}>
-    <a className="academic-skip" href="#academic-content">Ir a la malla</a>
-    <div className={`academic-shell${sidebarCollapsed ? ' academic-shell--collapsed' : ''}`}>
-      {mobile && mounted && <div className={`workspace-nav-overlay${closing ? ' workspace-nav-overlay--closing' : ''}`} aria-hidden="true" onClick={() => setSidebarCollapsed(true)} />}
-      <aside ref={sidebar} id="academic-navigation" className="academic-sidebar" aria-label="Área académica" inert={sidebarCollapsed} aria-hidden={sidebarCollapsed} role={mobile ? 'dialog' : undefined} aria-modal={mobile && !sidebarCollapsed ? true : undefined}>
-        <div className="workspace-sidebar-content">
-        <button type="button" className="workspace-nav-close cenit-button cenit-button--icon" aria-label="Cerrar navegación" onClick={() => setSidebarCollapsed(true)}><XIcon size={20} aria-hidden="true" /></button>
-        <div className="academic-brand">Cenit</div>
-        <nav className="academic-navigation" aria-label="Navegación académica">
-          <p className="academic-eyebrow">Académico</p>
-          <details className="academic-nav-group" open>
-            <summary><CaretRightIcon className="academic-nav-group__caret" size={12} aria-hidden="true" /><GraduationCapIcon size={17} weight="regular" aria-hidden="true" /><span>Nutrición y Dietética</span></summary>
-            <div className="academic-nav-group__items"><NavLink to="/academico" onClick={() => { if (mobile) setSidebarCollapsed(true); }} className={({ isActive }) => `academic-nav-item${isActive ? ' academic-nav-item--active' : ''}`}>
-              {({ isActive }) => <><SquaresFourIcon size={17} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" />Malla curricular</>}
-            </NavLink></div>
-          </details>
-        </nav>
-        <div className="academic-sidebar__bottom">
-          <button className="academic-nav-item" type="button" onClick={() => { void auth.logout(); }}><SignOutIcon size={17} weight="regular" aria-hidden="true" />Cerrar sesión</button>
-          <div className="academic-account"><span className="academic-account__avatar" aria-hidden="true">{account.name.trim().charAt(0)}</span><div><strong>{account.name}</strong><span>{role}</span></div></div>
-        </div>
-        </div>
-      </aside>
-      <div ref={panel} className="academic-main">
-        <header className="academic-toolbar cenit-page-enter">
-          <div className="academic-toolbar__title">
-            <button ref={toggle} type="button" className="academic-sidebar-toggle cenit-button cenit-button--icon" aria-label={sidebarCollapsed ? 'Mostrar navegación' : 'Ocultar navegación'} aria-expanded={!sidebarCollapsed} aria-controls="academic-navigation" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}><SidebarSimpleIcon size={20} weight="regular" aria-hidden="true" /></button>
-            <div><h1 ref={heading} tabIndex={-1}>Malla curricular</h1><p className="academic-toolbar__subtitle">{plan?.name ?? 'Nutrición y Dietética'}</p></div>
-          </div>
-          <div className="academic-toolbar__tools">
-            <div className="academic-toolbar__meta">
-              {version && (available!.versions.length > 1 ? <label className="academic-version">Versión<select aria-label="Versión del plan" value={version} onChange={event => { setDetail(null); setSelectedVersion(event.target.value); }}>{available!.versions.map(v => <option value={v.version} key={v.version}>{v.version}</option>)}</select></label> : <span className="academic-version">Versión {version}</span>)}
-              <span className="academic-tag">Demostración</span>
-            </div>
-            <p className="academic-mobile-account">{account.name} · {role}</p>
-            <button type="button" className="academic-mobile-logout cenit-button cenit-button--icon" aria-label="Cerrar sesión" onClick={() => { void auth.logout(); }}><SignOutIcon size={18} aria-hidden="true" /></button>
-          </div>
-        </header>
+  return <WorkspaceShell sidebarState={sidebarState} className={`academic-workspace${pointerFocus ? ' academic-workspace--pointer' : ''}`}
+    rootProps={{ onPointerDownCapture: () => setPointerFocus(true), onKeyDownCapture: () => setPointerFocus(false) }}
+    skip={{ href: '#academic-content', label: 'Ir a la malla' }} navigationId="academic-navigation" navigationLabel="Área académica"
+    account={{ name: account.name, role }} logout={auth.logout}
+    brand={<div className="workspace-brand">Cenit<span>Consulta académica</span></div>}
+    navigation={<nav className="workspace-nav" aria-label="Navegación académica">
+      <p className="workspace-eyebrow">Académico</p>
+      <details className="academic-nav-group" open>
+        <summary><CaretRightIcon className="academic-nav-group__caret" size={12} aria-hidden="true" /><GraduationCapIcon size={18} weight="regular" aria-hidden="true" /><span>Nutrición y Dietética</span></summary>
+        <div className="academic-nav-group__items"><NavLink to="/academico" onClick={() => { if (mobile) setSidebarCollapsed(true); }} className={({ isActive }) => `workspace-nav-item${isActive ? ' workspace-nav-item--active' : ''}`}>
+          {({ isActive }) => <><SquaresFourIcon size={18} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" />Malla curricular</>}
+        </NavLink></div>
+      </details>
+    </nav>}
+    toolbarClassName="academic-toolbar cenit-page-enter"
+    toolbarStart={<div><h1 ref={heading} tabIndex={-1}>Malla curricular</h1><p className="academic-toolbar__subtitle">{plan?.name ?? 'Nutrición y Dietética'}</p></div>}
+    toolbarEnd={<>
+      <div className="academic-toolbar__meta">
+        {version && (available!.versions.length > 1 ? <label className="academic-version">Versión<select aria-label="Versión del plan" value={version} onChange={event => { setDetail(null); setSelectedVersion(event.target.value); }}>{available!.versions.map(v => <option value={v.version} key={v.version}>{v.version}</option>)}</select></label> : <span className="academic-version">Versión {version}</span>)}
+        <span className="academic-tag">Demostración</span>
+      </div>
+      {sidebarCollapsed && <p className="academic-mobile-account">{account.name} · {role}</p>}
+    </>}>
         <main id="academic-content" className="academic-content" tabIndex={-1}>
           <SessionWarning expiresAt={auth.session!.expiresAt} logout={auth.logout} />
           {loading && !error && <div className="academic-state"><span className="academic-loading" aria-hidden="true" /><p role="status">Cargando la malla…</p></div>}
@@ -199,8 +182,6 @@ export function Academic() {
             {relationOrigin && <div className="academic-relation-legend" aria-label="Relaciones resaltadas"><span className="academic-relation-key academic-relation-key--origin">Origen</span><span className="academic-relation-key academic-relation-key--direct">Directa</span><span className="academic-relation-key academic-relation-key--indirect">Indirecta</span>{!plan.isExample && <span>Relaciones de referencia</span>}</div>}
           </>}
         </main>
-      </div>
-    </div>
     {detail !== null && plan && !error && <CatalogDetails key={detail.code} course={detail} plan={plan} progress={!progress.error ? courseProgress.get(detail.code) : undefined} student={matchingProgress?.student} onClose={() => setDetail(null)} />}
-  </div>;
+  </WorkspaceShell>;
 }
