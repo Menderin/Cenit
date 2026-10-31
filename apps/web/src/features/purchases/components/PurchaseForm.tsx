@@ -78,18 +78,18 @@ export function PurchaseForm({ draft, onChange, lineKeys, onLineKeysChange, oper
     <fieldset><legend>Ítems de la solicitud <span className="purchase-count">{draft.lines.length}</span></legend>
       {!draft.lines.length ? <div className="purchase-items-empty"><p>Agrega productos o servicios si aparecen en el documento.</p><span>Opcional · Hasta 100 ítems</span></div> : draft.lines.map((line, index) => <details className="purchase-item" key={lineKeys[index]} open={!lineKeys[index]?.startsWith('capture-') && !initialKeys.current.has(lineKeys[index]!)}>
         <summary><CaretRightIcon className="purchase-chevron" size={16} aria-hidden="true" /><span className="purchase-item__number">Ítem {index + 1}</span><span className="purchase-item__description">{line.description || 'Nuevo ítem'}</span><span className="purchase-item__provider">{line.provider || 'Sin proveedor'}</span><span className="purchase-item__amount">{amountLabel(line.amount)}</span></summary>
-        <div className="purchase-item__body"><div className="purchase-input-grid">{Object.entries(line).map(([key, value]) => field('lines', key, value, index))}</div><button type="button" disabled={disabled || mutation.isPending} onClick={() => {
+        <div className="purchase-item__body"><div className="purchase-input-grid">{Object.entries(line).map(([key, value]) => field('lines', key, value, index))}</div><button className="cenit-button" type="button" disabled={disabled || mutation.isPending} onClick={() => {
           onChange({ ...draft, lines: draft.lines.filter((_, i) => i !== index) }); onLineKeysChange(lineKeys.filter((_, i) => i !== index)); setProblems([]); mutation.reset();
         }}>Eliminar ítem {index + 1}</button></div>
       </details>)}
-      <button type="button" disabled={disabled || mutation.isPending || draft.lines.length >= 100} onClick={() => {
+      <button className="cenit-button" type="button" disabled={disabled || mutation.isPending || draft.lines.length >= 100} onClick={() => {
         onChange({ ...draft, lines: [...draft.lines, emptyLine()] }); onLineKeysChange([...lineKeys, crypto.randomUUID()]); setProblems([]); mutation.reset();
       }}><PlusIcon size={16} aria-hidden="true" />Agregar ítem</button>
     </fieldset>
     <details className="purchase-item purchase-disclosure"><summary><CaretRightIcon className="purchase-chevron" size={16} aria-hidden="true" /><span>Seguimiento administrativo</span><span className="purchase-section-hint">Opcional</span></summary><div className="purchase-item__body"><div className="purchase-input-grid">{Object.entries(draft.administrative).map(([key, value]) => field('administrative', key, value))}</div></div></details>
     {problems.length > 0 && <div className="purchase-error-summary" role="alert"><p>Completa o corrige los campos indicados.</p><ul>{problems.map((problem, index) => <li key={index}><strong>{purchaseProblemLabel(problem.path)}</strong>: {problem.message}</li>)}</ul></div>}
     {mutation.isError && <p role="alert">{mutation.error.message} El formulario conserva tus datos.</p>}
-    <div className="purchase-form-footer"><button className="purchase-save" type="submit" disabled={disabled || mutation.isPending || (!!edit && !dirty)}><FloppyDiskIcon size={18} aria-hidden="true" />{mutation.isPending ? (edit ? 'Guardando cambios…' : 'Guardando…') : edit ? 'Guardar cambios' : 'Guardar registro'}</button>
-      <button type="button" disabled={mutation.isPending} onClick={event => { event.currentTarget.focus({ preventScroll: true }); guard.request(() => navigate(returnTo, edit ? { state: { purchasesReturnTo: edit.returnToList } } : undefined), event.currentTarget); }}>Cancelar</button>{dirty && <span>Borrador sin guardar</span>}</div>
+    <div className="purchase-form-footer"><button className="cenit-button cenit-button--primary" type="submit" disabled={disabled || mutation.isPending || (!!edit && !dirty)}><FloppyDiskIcon size={18} aria-hidden="true" />{mutation.isPending ? (edit ? 'Guardando cambios…' : 'Guardando…') : edit ? 'Guardar cambios' : 'Guardar registro'}</button>
+      <button className="cenit-button" type="button" disabled={mutation.isPending} onClick={event => { event.currentTarget.focus({ preventScroll: true }); guard.request(() => navigate(returnTo, edit ? { state: { purchasesReturnTo: edit.returnToList } } : undefined), event.currentTarget); }}>Cancelar</button>{dirty && <span>Borrador sin guardar</span>}</div>
   </form>;
 }

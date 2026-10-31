@@ -31,11 +31,11 @@ export function CapturePreview({ selected, regions, activePath, onSelect }: {
   return <figure className={`capture-preview${expanded ? ' capture-preview--expanded' : ''}`}>
     <figcaption><strong>{selected.file.name}</strong><span>{selected.width} × {selected.height} px · {(selected.file.size / 1024).toFixed(0)} KiB</span></figcaption>
     <div className="capture-preview__toolbar" role="group" aria-label="Vista de la captura">
-      <button type="button" aria-label="Alejar imagen" disabled={zoom === 1} onClick={() => setZoom(value => Math.max(1, value - .5))}><MagnifyingGlassMinusIcon size={18} aria-hidden="true" /></button>
-      <button type="button" onClick={() => setZoom(1)}>Ajustar</button>
-      <button type="button" aria-label="Acercar imagen" disabled={zoom === 4} onClick={() => setZoom(value => Math.min(4, value + .5))}><MagnifyingGlassPlusIcon size={18} aria-hidden="true" /></button>
-      <button type="button" aria-pressed={showRegions} onClick={() => setShowRegions(value => !value)}>{showRegions ? 'Ocultar recuadros' : 'Mostrar recuadros'}</button>
-      <button type="button" className="capture-preview__expand" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? 'Reducir vista' : 'Ampliar vista'}</button>
+      <button className="cenit-button" type="button" aria-label="Alejar imagen" disabled={zoom === 1} onClick={() => setZoom(value => Math.max(1, value - .5))}><MagnifyingGlassMinusIcon size={18} aria-hidden="true" /></button>
+      <button className="cenit-button" type="button" onClick={() => setZoom(1)}>Ajustar</button>
+      <button className="cenit-button" type="button" aria-label="Acercar imagen" disabled={zoom === 4} onClick={() => setZoom(value => Math.min(4, value + .5))}><MagnifyingGlassPlusIcon size={18} aria-hidden="true" /></button>
+      <button className="cenit-button" type="button" aria-pressed={showRegions} onClick={() => setShowRegions(value => !value)}>{showRegions ? 'Ocultar recuadros' : 'Mostrar recuadros'}</button>
+      <button type="button" className="cenit-button capture-preview__expand" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? 'Reducir vista' : 'Ampliar vista'}</button>
     </div>
     <div ref={viewer} className="capture-preview__viewport" tabIndex={0} role="region" aria-label="Imagen y datos extraídos">
       <div className="capture-preview__stage" style={{ width: Math.max(size.width, width), height: Math.max(size.height, height) }}>
