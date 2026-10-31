@@ -183,7 +183,9 @@
 .purchase-list-skeleton { display: grid; gap: 12px; color: var(--admin-muted); }
 .purchase-list-skeleton i { height: 52px; border-radius: 8px; background: #f0f0f3; }
 .purchase-technical { margin-top: 14px; color: var(--admin-muted); font-size: 12px; }
-.purchase-technical summary { cursor: pointer; padding-block: 8px; }
+.purchase-technical summary { display: flex; align-items: center; gap: 6px; cursor: pointer; padding-block: 8px; list-style: none; }
+.purchase-technical summary::-webkit-details-marker { display: none; }
+.purchase-technical[open] > summary > .purchase-chevron { transform: rotate(90deg); }
 .purchase-detail-meta { gap: 18px 28px; }
 @media (max-width: 1275px) { .purchase-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 760px) {

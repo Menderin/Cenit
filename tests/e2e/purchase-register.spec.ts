@@ -41,7 +41,7 @@ test('registro: una lista histórica sin segunda revisión, conservando ambos es
   await choose(page, 'Ordenar por fecha de envío', 'Más antiguas');
   await expect(list.getByText('Página 1 de 2', { exact: true })).toBeVisible();
   await list.getByRole('button', { name: 'Página 2', exact: true }).click();
-  await list.getByRole('link', { name: 'Ver detalles', exact: true }).first().click();
+  await list.getByRole('link', { name: /^Ver detalles/ }).first().click();
   await expect(page.locator('.purchase-status')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Validar registro', exact: true })).toHaveCount(0);
   await page.getByRole('link', { name: 'Volver al registro', exact: true }).click();

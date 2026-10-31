@@ -53,7 +53,9 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(number);
 
-  await page.getByRole('row').filter({ hasText: number }).getByRole('link', { name: 'Ver detalles' }).click();
+  const reviewedDetail = page.getByRole('region', { name: 'Revisados en Cenit', exact: true }).getByRole('row').filter({ hasText: number }).getByRole('link', { name: `Ver detalles de ${number}`, exact: true });
+  await expect(reviewedDetail).toHaveAttribute('aria-disabled', 'false');
+  await reviewedDetail.click();
   await page.getByRole('button', { name: 'Eliminar', exact: true }).click();
   await expect(dialog(page)).toContainText('no se puede deshacer');
   await dialog(page).getByRole('button', { name: 'Eliminar registro', exact: true }).click();

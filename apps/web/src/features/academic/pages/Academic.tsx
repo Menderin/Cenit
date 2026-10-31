@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { NavLink } from 'react-router';
-import { BookOpen, CaretLeft, CaretRight, GraduationCap, Info, SidebarSimple, SignOut, SquaresFour, X } from '@phosphor-icons/react';
+import { BookOpenIcon } from '@phosphor-icons/react/dist/csr/BookOpen';
+import { CaretLeftIcon } from '@phosphor-icons/react/dist/csr/CaretLeft';
+import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
+import { GraduationCapIcon } from '@phosphor-icons/react/dist/csr/GraduationCap';
+import { InfoIcon } from '@phosphor-icons/react/dist/csr/Info';
+import { SidebarSimpleIcon } from '@phosphor-icons/react/dist/csr/SidebarSimple';
+import { SignOutIcon } from '@phosphor-icons/react/dist/csr/SignOut';
+import { SquaresFourIcon } from '@phosphor-icons/react/dist/csr/SquaresFour';
+import { XIcon } from '@phosphor-icons/react/dist/csr/X';
 import type { AcademicCourse, AcademicPlan } from '@cenit/contracts/academic';
 import { useAuth } from '../../auth/model/session.js';
 import { SessionWarning } from '../../auth/components/SessionWarning.js';
@@ -72,25 +80,25 @@ export function Academic() {
     return () => { observer.disconnect(); element.removeEventListener('scroll', update); };
   }, [plan]);
 
-  return <main className={`academic-workspace${pointerFocus ? ' academic-workspace--pointer' : ''}`} onPointerDownCapture={() => setPointerFocus(true)} onKeyDownCapture={() => setPointerFocus(false)}>
+  return <div className={`academic-workspace${pointerFocus ? ' academic-workspace--pointer' : ''}`} onPointerDownCapture={() => setPointerFocus(true)} onKeyDownCapture={() => setPointerFocus(false)}>
     <a className="academic-skip" href="#academic-content">Ir a la malla</a>
     <div className={`academic-shell${sidebarCollapsed ? ' academic-shell--collapsed' : ''}`}>
       {mobile && mounted && <div className={`workspace-nav-overlay${closing ? ' workspace-nav-overlay--closing' : ''}`} aria-hidden="true" onClick={() => setSidebarCollapsed(true)} />}
       <aside ref={sidebar} id="academic-navigation" className="academic-sidebar" aria-label="Área académica" inert={sidebarCollapsed} aria-hidden={sidebarCollapsed} role={mobile ? 'dialog' : undefined} aria-modal={mobile && !sidebarCollapsed ? true : undefined}>
         <div className="workspace-sidebar-content">
-        <button type="button" className="workspace-nav-close academic-icon-button" aria-label="Cerrar navegación" onClick={() => setSidebarCollapsed(true)}><X size={20} aria-hidden="true" /></button>
+        <button type="button" className="workspace-nav-close academic-icon-button" aria-label="Cerrar navegación" onClick={() => setSidebarCollapsed(true)}><XIcon size={20} aria-hidden="true" /></button>
         <div className="academic-brand">Cenit</div>
         <nav className="academic-navigation" aria-label="Navegación académica">
           <p className="academic-eyebrow">Académico</p>
           <details className="academic-nav-group" open>
-            <summary><CaretRight className="academic-nav-group__caret" size={12} aria-hidden="true" /><GraduationCap size={17} weight="regular" aria-hidden="true" /><span>Nutrición y Dietética</span></summary>
+            <summary><CaretRightIcon className="academic-nav-group__caret" size={12} aria-hidden="true" /><GraduationCapIcon size={17} weight="regular" aria-hidden="true" /><span>Nutrición y Dietética</span></summary>
             <div className="academic-nav-group__items"><NavLink to="/academico" onClick={() => { if (mobile) setSidebarCollapsed(true); }} className={({ isActive }) => `academic-nav-item${isActive ? ' academic-nav-item--active' : ''}`}>
-              {({ isActive }) => <><SquaresFour size={17} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" />Malla curricular</>}
+              {({ isActive }) => <><SquaresFourIcon size={17} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" />Malla curricular</>}
             </NavLink></div>
           </details>
         </nav>
         <div className="academic-sidebar__bottom">
-          <button className="academic-nav-item" type="button" onClick={() => { void auth.logout(); }}><SignOut size={17} weight="regular" aria-hidden="true" />Cerrar sesión</button>
+          <button className="academic-nav-item" type="button" onClick={() => { void auth.logout(); }}><SignOutIcon size={17} weight="regular" aria-hidden="true" />Cerrar sesión</button>
           <div className="academic-account"><span className="academic-account__avatar" aria-hidden="true">{account.name.trim().charAt(0)}</span><div><strong>{account.name}</strong><span>{role}</span></div></div>
         </div>
         </div>
@@ -98,21 +106,23 @@ export function Academic() {
       <div ref={panel} className="academic-main">
         <header className="academic-toolbar cenit-page-enter">
           <div className="academic-toolbar__title">
-            <button ref={toggle} type="button" className="academic-sidebar-toggle academic-icon-button" aria-label={sidebarCollapsed ? 'Mostrar navegación' : 'Ocultar navegación'} aria-expanded={!sidebarCollapsed} aria-controls="academic-navigation" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}><SidebarSimple size={20} weight="regular" aria-hidden="true" /></button>
+            <button ref={toggle} type="button" className="academic-sidebar-toggle academic-icon-button" aria-label={sidebarCollapsed ? 'Mostrar navegación' : 'Ocultar navegación'} aria-expanded={!sidebarCollapsed} aria-controls="academic-navigation" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}><SidebarSimpleIcon size={20} weight="regular" aria-hidden="true" /></button>
             <div><h1 ref={heading} tabIndex={-1}>Malla curricular</h1><p className="academic-toolbar__subtitle">{plan?.name ?? 'Nutrición y Dietética'}</p></div>
           </div>
           <div className="academic-toolbar__tools">
-            {version && (available!.versions.length > 1 ? <label className="academic-version">Versión<select aria-label="Versión del plan" value={version} onChange={event => { setDetail(null); setSelectedVersion(event.target.value); }}>{available!.versions.map(v => <option value={v.version} key={v.version}>{v.version}</option>)}</select></label> : <span className="academic-version">Versión {version}</span>)}
-            <span className="academic-tag">Demostración</span>
-            <button type="button" className="academic-mobile-logout academic-icon-button" aria-label="Cerrar sesión" onClick={() => { void auth.logout(); }}><SignOut size={18} aria-hidden="true" /></button>
+            <div className="academic-toolbar__meta">
+              {version && (available!.versions.length > 1 ? <label className="academic-version">Versión<select aria-label="Versión del plan" value={version} onChange={event => { setDetail(null); setSelectedVersion(event.target.value); }}>{available!.versions.map(v => <option value={v.version} key={v.version}>{v.version}</option>)}</select></label> : <span className="academic-version">Versión {version}</span>)}
+              <span className="academic-tag">Demostración</span>
+            </div>
+            <p className="academic-mobile-account">{account.name} · {role}</p>
+            <button type="button" className="academic-mobile-logout academic-icon-button" aria-label="Cerrar sesión" onClick={() => { void auth.logout(); }}><SignOutIcon size={18} aria-hidden="true" /></button>
           </div>
-          <p className="academic-mobile-account">{account.name} · {role}</p>
         </header>
-        <div id="academic-content" className="academic-content" tabIndex={-1}>
+        <main id="academic-content" className="academic-content" tabIndex={-1}>
           <SessionWarning expiresAt={auth.session!.expiresAt} logout={auth.logout} />
           {loading && !error && <div className="academic-state"><span className="academic-loading" aria-hidden="true" /><p role="status">Cargando la malla…</p></div>}
-          {error && <div className="academic-state"><Info size={24} aria-hidden="true" /><h2>{error instanceof HttpError && error.status === 403 ? 'Acceso no autorizado' : 'No pudimos cargar la malla'}</h2><p role="alert">{error.message}</p><button className="academic-button" type="button" onClick={() => { void (plans.error ? plans.refetch() : catalog.refetch()); }}>Reintentar</button></div>}
-          {!loading && !error && !version && <div className="academic-state"><BookOpen size={28} weight="regular" aria-hidden="true" /><h2>La malla todavía no está disponible</h2><p>No hay una versión publicada de Nutrición y Dietética para consultar.</p><button className="academic-button" type="button" onClick={() => { void plans.refetch(); }}>Volver a consultar</button></div>}
+          {error && <div className="academic-state"><InfoIcon size={24} aria-hidden="true" /><h2>{error instanceof HttpError && error.status === 403 ? 'Acceso no autorizado' : 'No pudimos cargar la malla'}</h2><p role="alert">{error.message}</p><button className="academic-button" type="button" onClick={() => { void (plans.error ? plans.refetch() : catalog.refetch()); }}>Reintentar</button></div>}
+          {!loading && !error && !version && <div className="academic-state"><BookOpenIcon size={28} weight="regular" aria-hidden="true" /><h2>La malla todavía no está disponible</h2><p>No hay una versión publicada de Nutrición y Dietética para consultar.</p><button className="academic-button" type="button" onClick={() => { void plans.refetch(); }}>Volver a consultar</button></div>}
           {!error && plan && <>
             <div className="academic-board-context">
             <section className="academic-progress-context" aria-label="Avance curricular">
@@ -126,8 +136,8 @@ export function Academic() {
             </section>
             {(boardScroll.previous || boardScroll.next) && <div className="academic-board-actions" role="group" aria-label="Navegación de semestres">
               <span className="academic-board-hint">Arrastra para recorrer</span>
-              <button className="academic-icon-button" type="button" aria-label="Ver semestres anteriores" aria-controls="academic-semesters" disabled={!boardScroll.previous} onClick={() => board.current?.scrollBy({ left: -board.current.clientWidth * .8 })}><CaretLeft size={16} weight="regular" aria-hidden="true" /></button>
-              <button className="academic-icon-button" type="button" aria-label="Ver semestres siguientes" aria-controls="academic-semesters" disabled={!boardScroll.next} onClick={() => board.current?.scrollBy({ left: board.current.clientWidth * .8 })}><CaretRight size={16} weight="regular" aria-hidden="true" /></button>
+              <button className="academic-icon-button" type="button" aria-label="Ver semestres anteriores" aria-controls="academic-semesters" disabled={!boardScroll.previous} onClick={() => board.current?.scrollBy({ left: -board.current.clientWidth * .8 })}><CaretLeftIcon size={16} weight="regular" aria-hidden="true" /></button>
+              <button className="academic-icon-button" type="button" aria-label="Ver semestres siguientes" aria-controls="academic-semesters" disabled={!boardScroll.next} onClick={() => board.current?.scrollBy({ left: board.current.clientWidth * .8 })}><CaretRightIcon size={16} weight="regular" aria-hidden="true" /></button>
             </div>}
             </div>
             <p id="academic-scroll-hint" className="academic-sr-only">Asignaturas por semestre. Abre una asignatura para consultar su nombre completo, historial y prerrequisitos. Arrastra con el mouse o usa los controles de semestres y las flechas del teclado para recorrer el tablero cuando no quepa completo.</p>
@@ -158,9 +168,9 @@ export function Academic() {
               onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setRelationPreview(null); }}>
               <div className={`academic-columns${relationOrigin ? ' academic-columns--relations' : ''}`} style={{ '--semester-count': groups.length } as CSSProperties}>
                 {groups.map(group => {
-                  const title = semesterLabel(group.semester, group.semesterEnd);
+                  const title = semesterLabel(group.semester, group.semesterEnd), numeral = title.replace(/^Semestres? /, '');
                   return <section className="academic-semester" key={`${group.semester}-${group.semesterEnd}`} aria-label={title}>
-                    <header className="academic-semester__header"><h2 aria-label={title}>{title.replace(/^Semestres? /, '')}</h2></header>
+                    <header className="academic-semester__header"><h2 aria-label={title} data-prefix={title.slice(0, title.length - numeral.length)}>{numeral}</h2></header>
                     <ul>{group.courses.map(course => {
                       const record = !progress.error ? courseProgress.get(course.code) : undefined;
                       const label = courseLabel(course.name);
@@ -186,11 +196,11 @@ export function Academic() {
                 })}
               </div>
             </div>
-            {relationOrigin && <div className="academic-relation-legend" aria-label="Relaciones resaltadas"><span className="academic-relation-key academic-relation-key--origin">Origen</span><span className="academic-relation-key academic-relation-key--direct">Directa</span><span className="academic-relation-key academic-relation-key--indirect">Indirecta</span>{!plan.isExample && <span>Relaciones por confirmar</span>}</div>}
+            {relationOrigin && <div className="academic-relation-legend" aria-label="Relaciones resaltadas"><span className="academic-relation-key academic-relation-key--origin">Origen</span><span className="academic-relation-key academic-relation-key--direct">Directa</span><span className="academic-relation-key academic-relation-key--indirect">Indirecta</span>{!plan.isExample && <span>Relaciones de referencia</span>}</div>}
           </>}
-        </div>
+        </main>
       </div>
     </div>
     {detail !== null && plan && !error && <CatalogDetails key={detail.code} course={detail} plan={plan} progress={!progress.error ? courseProgress.get(detail.code) : undefined} student={matchingProgress?.student} onClose={() => setDetail(null)} />}
-  </main>;
+  </div>;
 }

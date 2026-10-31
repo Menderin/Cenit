@@ -192,7 +192,7 @@ for (const role of ['docente', 'estudiante']) {
   });
 }
 for (const role of ['docente', 'estudiante']) {
-  test(`catálogo PostgreSQL, recarga y trazabilidad de API: ${role}`, async ({ page }) => {
+  test(`catálogo PostgreSQL, recarga y trazabilidad de API: ${role}`, async ({ page }, testInfo) => {
     await login(page, role);
     await expect(courses(page)).toHaveCount(52);
     const internados = page.getByRole('region', { name: 'Semestres IX–X', exact: true });
@@ -204,6 +204,25 @@ for (const role of ['docente', 'estudiante']) {
     expect(data.courses).toHaveLength(52);
     expect(data.courses.filter((course: { semester: number }) => course.semester === 9).reduce((sum: number, course: { credits: number }) => sum + course.credits, 0)).toBe(65);
     expect(data.sources.map((source: { validationStatus: string }) => source.validationStatus)).toEqual(['teamReviewed', 'teamReviewed']);
+    await page.getByRole('button', { name: 'Ver asignatura: Inocuidad alimentaria', exact: true }).click();
+    const detail = page.getByRole('dialog', { name: 'Inocuidad alimentaria', exact: true });
+    await expect(detail.locator('#academic-rule-title + p')).toHaveText('Ciencia de los alimentos');
+    await detail.locator('summary').filter({ hasText: 'Información del plan' }).click();
+    const sources = detail.getByLabel('Fuentes del catálogo');
+    for (const source of data.sources) await expect(sources).toContainText(source.title);
+    await expect(sources.getByText('Revisada por el equipo. Validación institucional pendiente.', { exact: true })).toHaveCount(2);
+    await expect(sources.locator('time')).toHaveText(['20/10/2026', '20/10/2026']);
+    await expect(detail).not.toContainText('Validada institucionalmente.');
+    await expect(page.getByLabel('Relaciones resaltadas')).toContainText('Relaciones de referencia');
+    await expect(page.getByLabel('Relaciones resaltadas')).not.toContainText('Relaciones por confirmar');
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await sources.scrollIntoViewIfNeeded();
+      await expect(sources).toBeVisible();
+      expect(await detail.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+      await detail.screenshot({ path: testInfo.outputPath(`fuentes-${role}-${width}.png`), animations: 'disabled' });
+    }
+    await page.keyboard.press('Escape');
     await page.reload(); await expect(courses(page)).toHaveCount(52);
   });
 }
@@ -384,6 +403,12 @@ test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezcl
   await results.getByRole('button', { name: /^Camila Demo/ }).click();
   await expect(page.getByRole('region', { name: 'Avance curricular', exact: true })).toContainText('Camila Demo');
   const first = page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true });
+  await expectLatestGrade(page, '6,5');
+  await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
+  await expect(page.locator('.academic-students__heading')).toContainText('Camila Demo');
+  await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await expect(page.locator('#academic-students-search')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Cambiar estudiante', exact: true })).toBeFocused();
   await expectLatestGrade(page, '6,5');
   await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
   await page.getByLabel('Nombre', { exact: true }).fill('Estudiante');

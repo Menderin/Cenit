@@ -38,7 +38,7 @@ export function DeleteRecord({ id, version, requestNumber, fallbackFocus, onDele
   }}><TrashIcon size={16} aria-hidden="true" /></button>
     <ContextualConfirm open={confirming} origin={trigger.current} fallbackFocus={fallbackFocus} title={`¿Eliminar ${requestNumber}?`}
       description={`Se eliminarán definitivamente esta copia de Cenit y todos sus ítems.${sheetsSyncEnabled ? ' También se retirará su copia de Google Sheets cuando se complete la sincronización.' : ''} Esta acción no se puede deshacer.`}
-      caution confirmLabel="Eliminar registro" cancelLabel="Cancelar" busy={mutation.isPending} busyLabel="Eliminando…"
+      caution destructive confirmLabel="Eliminar registro" cancelLabel="Cancelar" busy={mutation.isPending} busyLabel="Eliminando…"
       onConfirm={() => {
         if (sending.current || !confirming) return;
         if (!trigger.current?.isConnected || selected.current.id !== id || selected.current.version !== version) { setConfirming(false); return; }
