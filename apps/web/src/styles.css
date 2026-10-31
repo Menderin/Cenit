@@ -81,6 +81,10 @@
   --color-progress-failed: #af5a6a;
   --color-progress-ongoing: #8263b4;
   --color-progress-pending: #7191b5;
+  --color-progress-passed-ink: #30634e;
+  --color-progress-failed-ink: #893e50;
+  --color-progress-ongoing-ink: #63468b;
+  --color-progress-pending-ink: #4c607c;
   --radius-xs: 5px;
   --radius-sm: 7px;
   --radius-md: 9px;

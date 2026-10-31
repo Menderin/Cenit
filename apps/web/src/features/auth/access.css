@@ -1,23 +1,23 @@
-.cenit-access { padding: 16px; min-height: 100svh; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #202124; background: #f5f5f7; color-scheme: light; font-synthesis: none; -webkit-font-smoothing: antialiased; }
+.cenit-access { padding: 16px; min-height: 100svh; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--color-ink); background: var(--color-canvas-access); color-scheme: light; font-synthesis: none; -webkit-font-smoothing: antialiased; }
 .cenit-access button, .cenit-access input { font-family: inherit; }
 .cenit-access button { cursor: pointer; }
 .cenit-access button:disabled { cursor: wait; }
-.cenit-access__shell { --access-inset: clamp(64px, 10vw, 240px); position: relative; isolation: isolate; min-height: calc(100svh - 32px); border: 1px solid #e6e6e9; border-radius: 18px; background: #fff; overflow: clip; box-shadow: 0 2px 4px #20212403; }
-.cenit-access__badge { position: absolute; top: 28px; right: 28px; z-index: 2; padding: 4px 8px; border: 1px solid #e5e5e9; border-radius: 6px; color: #73737d; background: #ffffffeb; font-size: 11px; line-height: 1.4; font-weight: 500; letter-spacing: .01em; }
+.cenit-access__shell { --access-inset: clamp(64px, 10vw, 240px); position: relative; isolation: isolate; min-height: calc(100svh - 32px); border: 1px solid var(--color-shell-line); border-radius: 18px; background: var(--color-surface); overflow: clip; box-shadow: 0 2px 4px #20212403; }
+.cenit-access__badge { position: absolute; top: 28px; right: 28px; z-index: 2; padding: 4px 8px; border: 1px solid var(--color-line); border-radius: 6px; color: var(--color-ink-subtle); background: #ffffffeb; font-size: 12px; line-height: 1.4; font-weight: 500; letter-spacing: .01em; }
 .cenit-access__landscape { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .cenit-access__topography { position: absolute; height: max(960px, 120%); width: auto; max-width: none; left: max(32%, calc(var(--access-inset) + 236px)); top: clamp(24px, 5vh, 60px); user-select: none; }
-.cenit-access__location { position: absolute; right: 32px; bottom: 28px; z-index: 2; color: #764b2b; font-size: 13px; font-weight: 600; line-height: 1.5; letter-spacing: .01em; padding: 7px 11px; border: 1px solid #e7d8cb; border-radius: 6px; background: #fffaf6; box-shadow: 0 1px 3px #5b3e2410; }
+.cenit-access__location { position: absolute; right: 32px; bottom: 28px; z-index: 2; color: var(--color-place); font-size: 13px; font-weight: 600; line-height: 1.5; letter-spacing: .01em; padding: 7px 11px; border: 1px solid var(--color-place-line); border-radius: 6px; background: var(--color-place-soft); box-shadow: 0 1px 3px #5b3e2410; }
 .cenit-access__access { position: relative; z-index: 1; display: flex; align-items: center; min-height: calc(100svh - 34px); padding: 64px var(--access-inset); }
 .cenit-access__content { width: 100%; max-width: 336px; }
 .cenit-access__brand { font-size: 27px; font-weight: 600; line-height: 1.2; letter-spacing: -1.15px; margin: 0 0 50px; }
 .cenit-access__heading { margin-bottom: 30px; }
 .cenit-access h1 { font-size: 23px; font-weight: 550; letter-spacing: -.65px; line-height: 1.35; margin: 0 0 9px; }
-.cenit-access__intro { color: #73737d; font-size: 13px; line-height: 1.6; margin: 0; }
+.cenit-access__intro { color: var(--color-ink-subtle); font-size: 13px; line-height: 1.6; margin: 0; }
 .cenit-access__form { display: grid; gap: 20px; }
-.cenit-access__field label { display: block; color: #36363d; font-size: 12px; line-height: 1.5; font-weight: 500; margin-bottom: 8px; }
+.cenit-access__field label { display: block; color: var(--color-ink); font-size: 12px; line-height: 1.5; font-weight: 500; margin-bottom: 8px; }
 .cenit-access__password { position: relative; }
 .cenit-access__password input { padding-right: 60px; }
-.cenit-access__reveal { display: grid; place-items: center; position: absolute; right: 1px; top: 1px; min-width: 40px; height: 40px; padding: 0; background: transparent; color: #62626c; border: 0; border-radius: 7px; font-size: 11px; }
+.cenit-access__reveal { display: grid; place-items: center; position: absolute; right: 1px; top: 1px; min-width: 40px; height: 40px; padding: 0; background: transparent; color: var(--color-ink-muted); border: 0; border-radius: 7px; font-size: 12px; }
 .cenit-access__eye { grid-area: 1 / 1; display: grid; place-items: center; opacity: 0; transition: opacity 300ms cubic-bezier(0.2, 0, 0, 1); pointer-events: none; }
 .cenit-access__eye[data-visible="true"] { opacity: 1; }
 @media (prefers-reduced-motion: no-preference) {
@@ -27,12 +27,12 @@
 .cenit-button.cenit-access__primary { width: 100%; margin-top: 4px; font-weight: 500; }
 .cenit-button.cenit-access__primary:disabled { opacity: 1; border-color: var(--color-primary-hover); background: var(--color-primary-hover); }
 .cenit-access button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
-.cenit-access__error { margin: 7px 0 0; color: #a44135; font-size: 12px; line-height: 1.5; }
+.cenit-access__error { margin: 7px 0 0; color: var(--color-danger-icon); font-size: 12px; line-height: 1.5; }
 .cenit-access__institution { display: flex; align-items: center; gap: 24px; margin-top: 44px; }
 .cenit-access__institution img { flex: none; object-fit: contain; }
 .cenit-access__completion .cenit-access__primary { margin-top: 28px; }
 .cenit-access__completion h1:focus { outline: none; }
-.cenit-access__spinner { height: 14px; width: 14px; border: 1.5px solid #ffffff55; border-top-color: #fff; border-radius: 50%; animation: cenit-spin 700ms linear infinite; }
+.cenit-access__spinner { height: 14px; width: 14px; border: 1.5px solid #ffffff55; border-top-color: var(--color-surface); border-radius: 50%; animation: cenit-spin 700ms linear infinite; }
 .cenit-access__sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @keyframes cenit-spin { to { transform: rotate(360deg); } }
 
@@ -62,10 +62,10 @@
   .cenit-access__spinner { animation: none; }
 }
 @media (hover: hover) {
-  .cenit-access__reveal:hover:not(:disabled) { color: #27272f; background: #f5f5f7; }
+  .cenit-access__reveal:hover:not(:disabled) { color: var(--color-ink); background: var(--color-canvas-access); }
 }
 
 .cenit-access__notice { margin: 0 0 20px; font-size: 13px; line-height: 1.6; }
-.cenit-access__account { display: grid; gap: 4px; margin: 24px 0; color: #73737d; font-size: 13px; line-height: 1.6; }
+.cenit-access__account { display: grid; gap: 4px; margin: 24px 0; color: var(--color-ink-subtle); font-size: 13px; line-height: 1.6; }
 
 @media (max-width: 760px) { .cenit-access__password input { min-height: 46px; padding-right: 50px; } .cenit-access__reveal { min-width: 44px; height: 44px; } }
