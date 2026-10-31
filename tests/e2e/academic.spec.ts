@@ -537,6 +537,18 @@ test('40 coincidencias se recorren en páginas de seis y un filtro nuevo vuelve 
   await expect(results.getByRole('button')).toHaveCount(6);
   await expect(page.getByRole('status')).toContainText('40 estudiantes encontrados · Mostrando 1–6');
   await expect(page.getByRole('button', { name: 'Anterior', exact: true })).toBeDisabled();
+  await results.getByRole('button', { name: /^Estudiante de prueba 1 / }).click();
+  await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
+  await page.getByRole('button', { name: 'Siguiente', exact: true }).click();
+  await expect(page.locator('.academic-students__pagination')).toContainText('Página 2 de 7');
+  await expect(page.locator('.academic-students__heading')).toContainText('Estudiante de prueba 1');
+  await page.getByRole('button', { name: 'Anterior', exact: true }).click();
+  await expect(page.locator('.academic-students__pagination')).toContainText('Página 1 de 7');
+  await page.getByLabel('Nombre', { exact: true }).press('Enter');
+  await expect(page.locator('.academic-students__heading')).toContainText('Estudiante de prueba 1');
+  await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Cambiar estudiante', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
   for (let current = 2; current <= 7; current++) {
     await page.getByRole('button', { name: 'Siguiente', exact: true }).click();
     await expect(page.locator('.academic-students__pagination')).toContainText(`Página ${current} de 7`);

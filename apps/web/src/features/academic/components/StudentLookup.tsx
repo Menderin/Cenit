@@ -40,7 +40,7 @@ export function StudentLookup({ accountId, selected, onSelect }: { accountId: st
   const dropStudent = () => { setExpanded(true); onSelect(null); nameInput.current?.focus(); };
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!validation) { onSelect(null); setSearch(input); }
+    if (!validation) setSearch(input);
   };
   const changeRut = (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
@@ -72,7 +72,7 @@ export function StudentLookup({ accountId, selected, onSelect }: { accountId: st
     {!validation && !waiting && !query.isFetching && !query.error && query.data && <>
       <p className="academic-students__count" role="status">{query.data.totalItems === 0 ? 'No hay estudiantes que coincidan con la búsqueda.' : `${query.data.totalItems} ${query.data.totalItems === 1 ? 'estudiante encontrado' : 'estudiantes encontrados'}${query.data.totalItems > search.pageSize ? ` · Mostrando ${(search.page - 1) * search.pageSize + 1}–${Math.min(search.page * search.pageSize, query.data.totalItems)}` : ''}`}</p>
       <ul className="academic-students__results">{query.data.data.map(student => <li key={student.id}><button type="button" aria-pressed={selected?.id === student.id} onClick={() => { setExpanded(false); onSelect(student); }}><UserIcon size={17} weight={selected?.id === student.id ? 'fill' : 'regular'} aria-hidden="true" /><span><strong>{student.name}</strong><small>{student.rut}</small></span></button></li>)}</ul>
-      {query.data.totalItems > search.pageSize && <div className="academic-students__pagination"><button className="cenit-button" disabled={search.page === 1} onClick={() => { onSelect(null); setSearch({ ...search, page: search.page - 1 }); }}>Anterior</button><span>Página {search.page} de {Math.ceil(query.data.totalItems / search.pageSize)}</span><button className="cenit-button" disabled={search.page * search.pageSize >= query.data.totalItems} onClick={() => { onSelect(null); setSearch({ ...search, page: search.page + 1 }); }}>Siguiente</button></div>}
+      {query.data.totalItems > search.pageSize && <div className="academic-students__pagination"><button className="cenit-button" disabled={search.page === 1} onClick={() => setSearch({ ...search, page: search.page - 1 })}>Anterior</button><span>Página {search.page} de {Math.ceil(query.data.totalItems / search.pageSize)}</span><button className="cenit-button" disabled={search.page * search.pageSize >= query.data.totalItems} onClick={() => setSearch({ ...search, page: search.page + 1 })}>Siguiente</button></div>}
     </>}
     </div>
   </section>;
