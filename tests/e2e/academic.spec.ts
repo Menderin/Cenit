@@ -192,7 +192,7 @@ for (const role of ['docente', 'estudiante']) {
   });
 }
 for (const role of ['docente', 'estudiante']) {
-  test(`catálogo PostgreSQL, recarga y trazabilidad de API: ${role}`, async ({ page }) => {
+  test(`catálogo PostgreSQL, recarga y trazabilidad de API: ${role}`, async ({ page }, testInfo) => {
     await login(page, role);
     await expect(courses(page)).toHaveCount(52);
     const internados = page.getByRole('region', { name: 'Semestres IX–X', exact: true });
@@ -204,6 +204,25 @@ for (const role of ['docente', 'estudiante']) {
     expect(data.courses).toHaveLength(52);
     expect(data.courses.filter((course: { semester: number }) => course.semester === 9).reduce((sum: number, course: { credits: number }) => sum + course.credits, 0)).toBe(65);
     expect(data.sources.map((source: { validationStatus: string }) => source.validationStatus)).toEqual(['teamReviewed', 'teamReviewed']);
+    await page.getByRole('button', { name: 'Ver asignatura: Inocuidad alimentaria', exact: true }).click();
+    const detail = page.getByRole('dialog', { name: 'Inocuidad alimentaria', exact: true });
+    await expect(detail.locator('#academic-rule-title + p')).toHaveText('Ciencia de los alimentos');
+    await detail.locator('summary').filter({ hasText: 'Información del plan' }).click();
+    const sources = detail.getByLabel('Fuentes del catálogo');
+    for (const source of data.sources) await expect(sources).toContainText(source.title);
+    await expect(sources.getByText('Revisada por el equipo. Validación institucional pendiente.', { exact: true })).toHaveCount(2);
+    await expect(sources.locator('time')).toHaveText(['20/10/2026', '20/10/2026']);
+    await expect(detail).not.toContainText('Validada institucionalmente.');
+    await expect(page.getByLabel('Relaciones resaltadas')).toContainText('Relaciones de referencia');
+    await expect(page.getByLabel('Relaciones resaltadas')).not.toContainText('Relaciones por confirmar');
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await sources.scrollIntoViewIfNeeded();
+      await expect(sources).toBeVisible();
+      expect(await detail.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+      await detail.screenshot({ path: testInfo.outputPath(`fuentes-${role}-${width}.png`), animations: 'disabled' });
+    }
+    await page.keyboard.press('Escape');
     await page.reload(); await expect(courses(page)).toHaveCount(52);
   });
 }
@@ -386,6 +405,12 @@ test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezcl
   const first = page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true });
   await expectLatestGrade(page, '6,5');
   await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
+  await expect(page.locator('.academic-students__heading')).toContainText('Camila Demo');
+  await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await expect(page.locator('#academic-students-search')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Cambiar estudiante', exact: true })).toBeFocused();
+  await expectLatestGrade(page, '6,5');
+  await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
   await page.getByLabel('Nombre', { exact: true }).fill('Estudiante');
   await expect(page.getByRole('status')).toContainText('No hay estudiantes que coincidan');
   await expect(first).not.toContainText('Aprobada');
@@ -512,6 +537,18 @@ test('40 coincidencias se recorren en páginas de seis y un filtro nuevo vuelve 
   await expect(results.getByRole('button')).toHaveCount(6);
   await expect(page.getByRole('status')).toContainText('40 estudiantes encontrados · Mostrando 1–6');
   await expect(page.getByRole('button', { name: 'Anterior', exact: true })).toBeDisabled();
+  await results.getByRole('button', { name: /^Estudiante de prueba 1 / }).click();
+  await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
+  await page.getByRole('button', { name: 'Siguiente', exact: true }).click();
+  await expect(page.locator('.academic-students__pagination')).toContainText('Página 2 de 7');
+  await expect(page.locator('.academic-students__heading')).toContainText('Estudiante de prueba 1');
+  await page.getByRole('button', { name: 'Anterior', exact: true }).click();
+  await expect(page.locator('.academic-students__pagination')).toContainText('Página 1 de 7');
+  await page.getByLabel('Nombre', { exact: true }).press('Enter');
+  await expect(page.locator('.academic-students__heading')).toContainText('Estudiante de prueba 1');
+  await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Cambiar estudiante', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
   for (let current = 2; current <= 7; current++) {
     await page.getByRole('button', { name: 'Siguiente', exact: true }).click();
     await expect(page.locator('.academic-students__pagination')).toContainText(`Página ${current} de 7`);
@@ -622,8 +659,8 @@ test('malla y detalle legibles al redimensionar sin overflow del documento', asy
     if ([1920, 1440, 390].includes(width)) {
       const height = width === 1920 ? 1080 : width === 1440 ? 900 : 844;
       await page.setViewportSize({ width, height });
-      await expect(page.locator('.academic-shell')).toHaveCount(1);
-      await expect.poll(() => page.locator('.academic-shell').evaluate(element => Math.round(element.getBoundingClientRect().height))).toBe(height - (width <= 720 ? 20 : 32));
+      await expect(page.locator('.workspace-shell')).toHaveCount(1);
+      await expect.poll(() => page.locator('.workspace-shell').evaluate(element => Math.round(element.getBoundingClientRect().height))).toBe(height - (width <= 760 ? 16 : 32));
       await page.evaluate(() => { document.querySelector('.academic-content')!.scrollTop = 0; document.querySelector('.academic-board')!.scrollLeft = 0; });
       await page.getByRole('heading', { name: 'Malla curricular', exact: true }).focus();
       await page.mouse.move(0, 0);

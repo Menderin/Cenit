@@ -33,18 +33,18 @@ export function DeleteRecord({ id, version, requestNumber, fallbackFocus, onDele
     await new Promise(resolve => window.setTimeout(resolve, 150));
     if (active.current) { mutation.reset(); await client.invalidateQueries({ queryKey: ['purchases'] }); }
   }
-  return <><button type="button" className="purchase-delete" ref={trigger} disabled={mutation.isPending} aria-label="Eliminar" title="Eliminar registro" aria-haspopup="dialog" aria-expanded={confirming} onClick={event => {
+  return <><button type="button" className="cenit-button cenit-button--icon cenit-button--quiet" ref={trigger} disabled={mutation.isPending} aria-label="Eliminar" title="Eliminar registro" aria-haspopup="dialog" aria-expanded={confirming} onClick={event => {
     event.currentTarget.focus({ preventScroll: true }); selected.current = { id, version }; mutation.reset(); setConfirming(true);
   }}><TrashIcon size={16} aria-hidden="true" /></button>
     <ContextualConfirm open={confirming} origin={trigger.current} fallbackFocus={fallbackFocus} title={`¿Eliminar ${requestNumber}?`}
       description={`Se eliminarán definitivamente esta copia de Cenit y todos sus ítems.${sheetsSyncEnabled ? ' También se retirará su copia de Google Sheets cuando se complete la sincronización.' : ''} Esta acción no se puede deshacer.`}
-      caution confirmLabel="Eliminar registro" cancelLabel="Cancelar" busy={mutation.isPending} busyLabel="Eliminando…"
+      caution destructive confirmLabel="Eliminar registro" cancelLabel="Cancelar" busy={mutation.isPending} busyLabel="Eliminando…"
       onConfirm={() => {
         if (sending.current || !confirming) return;
         if (!trigger.current?.isConnected || selected.current.id !== id || selected.current.version !== version) { setConfirming(false); return; }
         sending.current = true; mutation.mutate(selected.current);
       }} onCancel={() => { setConfirming(false); mutation.reset(); }}>
-      {mutation.isError && <div className="cenit-dialog-error" role="alert"><p>{mutation.error.message}</p><button className="cenit-ui-button" type="button" onClick={() => { void refresh(); }}>Actualizar datos</button></div>}
+      {mutation.isError && <div className="cenit-dialog-error" role="alert"><p>{mutation.error.message}</p><button className="cenit-button cenit-button--outline" type="button" onClick={() => { void refresh(); }}>Actualizar datos</button></div>}
     </ContextualConfirm>
   </>;
 }

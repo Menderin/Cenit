@@ -1,10 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, BookOpen } from '@phosphor-icons/react';
+import { BookOpenIcon } from '@phosphor-icons/react/dist/csr/BookOpen';
+import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
+import { XIcon } from '@phosphor-icons/react/dist/csr/X';
 import type { AcademicCourse, AcademicPlan, Prerequisite } from '@cenit/contracts/academic';
 import { semesterLabel } from '../model/group-by-semester.js';
 import { progressLabels, type CourseProgress } from '../model/progress-presentation.js';
 import type { Student } from './StudentLookup.js';
 import { courseRelations } from '../model/course-relations.js';
+import { displayDate } from '../../../shared/lib/dates.js';
+
+const sourceStatusLabels = {
+  example: 'Fuente de demostración.',
+  teamReviewed: 'Revisada por el equipo. Validación institucional pendiente.',
+  clientValidated: 'Validada institucionalmente.',
+};
 
 function Rule({ rule, plan }: { rule: Prerequisite; plan: AcademicPlan }) {
   if (rule.kind === 'pending') return <><p>Pendientes de confirmación.</p><p className="academic-detail__explanation">{rule.description}</p></>;
@@ -36,7 +45,7 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
     if (event.target === event.currentTarget) setClosing(true);
   }}>
     <div className="academic-detail__surface">
-      <header className="academic-detail__bar"><span><BookOpen size={16} weight="regular" aria-hidden="true" />Asignatura</span><button type="button" className="academic-icon-button" aria-label="Cerrar detalle" autoFocus onClick={() => setClosing(true)}><X size={18} aria-hidden="true" /></button></header>
+      <header className="academic-detail__bar"><span><BookOpenIcon size={16} weight="regular" aria-hidden="true" />Asignatura</span><button type="button" className="cenit-button cenit-button--icon" aria-label="Cerrar detalle" autoFocus onClick={() => setClosing(true)}><XIcon size={18} aria-hidden="true" /></button></header>
       <div className="academic-detail__body">
         <h2 id="academic-detail-title">{course.name}</h2>
           <dl className="academic-facts">
@@ -54,20 +63,24 @@ export function CatalogDetails({ course, plan, progress, student, onClose }: { c
                 <span>{plan.courses.find(c => c.code === (group.from ? edge.fromCode : edge.toCode))?.name}</span>
               </li>)}</ul>
             </div>)}
-            {indirect.length > 0 && <details className="academic-relations academic-disclosure"><summary>Más adelante en la cadena <span>{indirect.length}</span></summary><ul>{indirect.map(([code, relation]) => <li key={code}>
+            {indirect.length > 0 && <details className="academic-relations academic-disclosure"><summary><CaretRightIcon className="academic-disclosure__caret" size={12} aria-hidden="true" />Más adelante en la cadena <span>{indirect.length}</span></summary><ul>{indirect.map(([code, relation]) => <li key={code}>
               <span>{plan.courses.find(item => item.code === code)?.name}</span><span className="academic-relations__via">A través de {plan.courses.find(item => item.code === relation.via)?.name}</span>
             </li>)}</ul></details>}
             {pending && incoming.length + outgoing.length === 0 && <p className="academic-detail__explanation">Todavía no hay información de prerrequisitos para esta asignatura.</p>}
           </section>
           {progress && student && <details className="academic-detail__section academic-disclosure">
-            <summary>Historial de intentos <span>{progress.attemptCount}</span></summary>
+            <summary><CaretRightIcon className="academic-disclosure__caret" size={12} aria-hidden="true" />Historial de intentos <span>{progress.attemptCount}</span></summary>
             <p className="academic-detail__explanation">{student.name} · {student.rut}</p>
             <dl className="academic-facts academic-history-facts"><div><dt>Última nota aprobatoria</dt><dd>{progress.passingGrade ?? 'Sin aprobación registrada'}</dd></div></dl>
             {progress.attempts.length === 0 ? <p className="academic-note">Sin intentos registrados para esta asignatura.</p> : <table className="academic-history-table"><caption className="academic-sr-only">Intentos de esta asignatura</caption><thead><tr><th scope="col">Intento</th><th scope="col">Estado</th><th scope="col">Nota</th></tr></thead><tbody>{progress.attempts.map(attempt => <tr key={attempt.attemptNumber}><td>{attempt.attemptNumber}</td><td>{progressLabels[attempt.status]}</td><td>{attempt.grade ?? 'Sin nota'}</td></tr>)}</tbody></table>}
           </details>}
           <details className="academic-detail__section academic-disclosure academic-plan-info">
-            <summary>Información del plan</summary>
+            <summary><CaretRightIcon className="academic-disclosure__caret" size={12} aria-hidden="true" />Información del plan</summary>
             <dl className="academic-facts"><div><dt>Plan</dt><dd>{plan.name}</dd></div><div><dt>Versión</dt><dd>{plan.version}</dd></div><div><dt>Código interno</dt><dd>{course.code}</dd></div>{course.officialCode && <div><dt>Código oficial</dt><dd>{course.officialCode}</dd></div>}</dl>
+            <dl className="academic-facts academic-plan-sources" aria-label="Fuentes del catálogo">{plan.sources.map(source => <div key={source.sourceId}>
+              <dt>{source.title}</dt><dd>{sourceStatusLabels[source.validationStatus]}</dd>
+              {source.reviewedAt && <dd>Revisada el <time dateTime={source.reviewedAt}>{displayDate(source.reviewedAt)}</time></dd>}
+            </div>)}</dl>
           </details>
       </div>
     </div>
