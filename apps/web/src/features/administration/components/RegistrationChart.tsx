@@ -37,6 +37,7 @@ export function RegistrationChart({ days }: { days: { date: string; count: numbe
     <div className="dashboard-chart">
       <div ref={frame} className="dashboard-chart-canvas">
         {size.width > 0 && <svg width={size.width} height={size.height} tabIndex={0} role="img" aria-label="Compras incorporadas por día"
+          onPointerDown={event => { if (event.pointerType === 'touch') event.currentTarget.focus({ preventScroll: true }); pointer(event); }}
           onPointerMove={pointer} onPointerLeave={() => { if (!focused.current) setActive(null); }}
           onFocus={() => { focused.current = true; setActive(current => current ?? 0); }} onBlur={() => { focused.current = false; setActive(null); }} onKeyDown={keyboard}>
           {ticks.map(tick => <g key={tick}>
