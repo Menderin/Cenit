@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import topography from '../../../assets/coquimbo-topografia.png';
+import topography from '../../../assets/coquimbo-topografia.webp';
 import ucnLogo from '../../../assets/ucn-escudo-negro.png';
 import '../access.css';
 

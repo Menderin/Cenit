@@ -53,7 +53,6 @@
 .academic-relation-key--indirect::before { border-style: dashed; background: var(--color-course-tint); }
 .academic-relations__via { display: block; margin-top: 4px; color: var(--color-ink-subtle); font-size: 12px; }
 .academic-state { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 70px 18px; text-align: center; color: var(--color-ink-subtle); }
-.academic-state h2 { color: var(--color-ink); font-size: 16px; font-weight: 500; }
 .academic-state p { max-width: 440px; line-height: 1.7; }
 .academic-loading { width: 20px; height: 20px; border: 2px solid var(--color-line); border-top-color: var(--color-ink-subtle); border-radius: 50%; animation: academic-spin 800ms linear infinite; }
 @keyframes academic-spin { to { transform: rotate(360deg); } }

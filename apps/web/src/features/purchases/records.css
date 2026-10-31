@@ -166,9 +166,6 @@
 .purchase-row-actions__controls [aria-disabled="true"] { opacity: .5; cursor: progress; }
 .purchase-list { position: relative; }
 .purchase-updating { color: var(--admin-muted); font-size: 12px; margin: 0 0 10px; }
-.purchase-empty { padding: 40px 20px; border: 1px dashed var(--color-line-dashed); border-radius: 12px; text-align: center; color: var(--admin-muted); }
-.purchase-empty svg { margin-bottom: 14px; color: var(--color-icon); }
-.purchase-empty p { margin: 6px 0 0; font-size: 13px; }
 .purchase-list-skeleton { display: grid; gap: 12px; color: var(--admin-muted); }
 .purchase-list-skeleton i { height: 52px; border-radius: 8px; background: var(--color-surface-muted); }
 .purchase-technical { margin-top: 14px; color: var(--admin-muted); font-size: 12px; }

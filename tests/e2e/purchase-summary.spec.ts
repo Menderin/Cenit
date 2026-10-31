@@ -81,8 +81,8 @@ test('Inicio reúne cinco altas e indicadores en una pantalla de escritorio y se
   await expect(page.getByRole('region', { name: 'Sincronización con Google Sheets' })).toContainText('Pendiente de sincronización');
   await expect(page.locator('.dashboard-kpis > div').nth(0).locator('dd').first()).toHaveText('48');
   await expect(page.locator('.dashboard-kpis > div').nth(2).locator('dd').first()).toHaveText(amountLabel('3520000'));
-  const graph = page.locator('.dashboard-chart .recharts-surface');
-  // Recharts gives pointer hover priority over keyboard interaction.
+  const graph = page.locator('.dashboard-chart svg');
+  // The pointer would move the tooltip, so keep it outside the chart while testing the keyboard.
   await page.mouse.move(0, 0);
   await graph.focus();
   await expect(page.locator('.dashboard-chart-tooltip')).toContainText('23/09/2026');
@@ -91,7 +91,7 @@ test('Inicio reúne cinco altas e indicadores en una pantalla de escritorio y se
   await expect(page.locator('.dashboard-chart-tooltip')).toContainText('24/09/2026');
   await expect(page.locator('.dashboard-chart-tooltip')).toContainText('1 compra incorporada');
   await page.getByRole('link', { name: 'Abrir Compras' }).focus();
-  await page.locator('.recharts-bar-rectangle').filter({ has: page.locator('path') }).first().hover();
+  await page.locator('.dashboard-chart-bar').first().hover();
   await expect(page.locator('.dashboard-chart-tooltip')).toBeVisible();
   await expect(page.locator('.dashboard-chart-tooltip')).toContainText('24/09/2026');
   for (const width of [1280, 1366, 1440]) {
