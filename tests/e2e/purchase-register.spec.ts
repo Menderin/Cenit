@@ -139,7 +139,8 @@ test('historial de 800 compras: períodos, orden, páginas acotadas y tamaño co
   await expect(month).toBeEnabled(); await month.focus(); await page.keyboard.press('ArrowDown'); await page.keyboard.press('f');
   await expect(page.getByRole('option', { name: 'Febrero', exact: true })).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(new RegExp(`dateFrom=${historicalYear}-02-01&dateTo=${historicalYear}-02-29`));
+  const lastFebruaryDay = new Date(Date.UTC(historicalYear, 2, 0)).getUTCDate();
+  await expect(page).toHaveURL(new RegExp(`dateFrom=${historicalYear}-02-01&dateTo=${historicalYear}-02-${lastFebruaryDay}`));
   await expect(list.locator('tbody tr')).toHaveCount(17);
   await choose(page, 'Ordenar por fecha de envío', 'Más antiguas');
   await expect(list.locator('.purchase-sent-date').first()).toHaveText(`01/02/${historicalYear}`);
