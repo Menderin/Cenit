@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
-import { credential, login } from './support/browser.js';
+import { credential, login, selectCalendarDate } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 import { amountLabel, dateLabel } from '../../apps/web/src/features/purchases/model/fields.js';
 
@@ -294,10 +294,7 @@ test('filtros automáticos aplican un día específico, agrupan escritura y cons
   await page.clock.install(); await page.clock.pauseAt(new Date());
   await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
   await page.getByRole('button', { name: 'Abrir calendario: Fecha de envío', exact: true }).click();
-  while (await page.locator('.cenit-calendar [data-day="2026-10-12"] .rdp-day_button').count() === 0) {
-    await page.locator('.cenit-calendar .rdp-button_previous').click();
-  }
-  await page.locator('.cenit-calendar [data-day="2026-10-12"] .rdp-day_button').click();
+  await selectCalendarDate(page, '2026-10-12');
   await page.clock.runFor(249);
   expect(queries).toHaveLength(0); await page.clock.runFor(1); await page.clock.resume();
   await expect(page).toHaveURL(/dateFrom=2026-10-12&dateTo=2026-10-12$/);

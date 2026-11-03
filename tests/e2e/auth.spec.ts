@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { credential, login } from './support/browser.js';
+import { credential, login, selectCalendarDate } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 
 async function navigateAdministration(page: Page, name: string) {
@@ -676,10 +676,7 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
   await page.getByLabel('Código de proyecto', { exact: true }).fill('000X');
   const datePicker = page.getByLabel('Fecha de envío', { exact: true });
   await page.getByRole('button', { name: 'Abrir calendario: Fecha de envío', exact: true }).click();
-  while (await page.locator('.cenit-calendar [data-day="2027-02-01"] .rdp-day_button').count() === 0) {
-    await page.locator('.cenit-calendar .rdp-button_next').click();
-  }
-  await page.locator('.cenit-calendar [data-day="2027-02-01"] .rdp-day_button').click();
+  await selectCalendarDate(page, '2027-02-01');
   await expect(page).toHaveURL(/dateFrom=2027-02-01&dateTo=2027-02-01/);
   await search.fill('100%_\\');
   for (const table of [pending, reviewed]) await expect(table.getByText('1 registro', { exact: true })).toBeVisible();
