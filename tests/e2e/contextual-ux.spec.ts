@@ -294,6 +294,9 @@ test('filtros automáticos aplican un día específico, agrupan escritura y cons
   await page.clock.install(); await page.clock.pauseAt(new Date());
   await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
   await page.getByRole('button', { name: 'Abrir calendario: Fecha de envío', exact: true }).click();
+  while (await page.locator('.cenit-calendar [data-day="2026-10-12"] .rdp-day_button').count() === 0) {
+    await page.locator('.cenit-calendar .rdp-button_previous').click();
+  }
   await page.locator('.cenit-calendar [data-day="2026-10-12"] .rdp-day_button').click();
   await page.clock.runFor(249);
   expect(queries).toHaveLength(0); await page.clock.runFor(1); await page.clock.resume();

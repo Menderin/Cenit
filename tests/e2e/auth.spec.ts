@@ -676,7 +676,9 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
   await page.getByLabel('Código de proyecto', { exact: true }).fill('000X');
   const datePicker = page.getByLabel('Fecha de envío', { exact: true });
   await page.getByRole('button', { name: 'Abrir calendario: Fecha de envío', exact: true }).click();
-  for (let month = 0; month < 4; month++) await page.locator('.cenit-calendar .rdp-button_next').click();
+  while (await page.locator('.cenit-calendar [data-day="2027-02-01"] .rdp-day_button').count() === 0) {
+    await page.locator('.cenit-calendar .rdp-button_next').click();
+  }
   await page.locator('.cenit-calendar [data-day="2027-02-01"] .rdp-day_button').click();
   await expect(page).toHaveURL(/dateFrom=2027-02-01&dateTo=2027-02-01/);
   await search.fill('100%_\\');
