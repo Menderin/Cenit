@@ -1,0 +1,171 @@
+{
+  "date": "2026-11-03",
+  "processorVersion": "tesseract5-spa-grid8-layout-v1",
+  "purpose": "Reference 8-column Oracle layout evaluation with Tesseract 5 (spa) + OpenCV morphological grid/header segmentation",
+  "sourceHashes": {
+    "extractor.py": "a22074d76dd65501ccd7fa3e2241f42db4258e31827f5d1d10fd2220a300fcff",
+    "server.py": "96aea0093c586c15a65401e1c900c5a6829cb919474fb1135dfea03c87454ce0"
+  },
+  "generatorSha256": "834c1eb44a2a4c252257b6702c1bce41712952f0d80f3ec59ab41aef561a2a9f",
+  "fontSha256": "30328e88b08753dc63b14d84ce882ce504d53e27a56e637f5a068fdedc6ae385",
+  "counts": {
+    "exact": 124,
+    "wrong": 31,
+    "missing": 9
+  },
+  "medianSeconds": 2.8545,
+  "maxSeconds": 4.128,
+  "byField": {
+    "requestNumber": {
+      "exact": 8,
+      "wrong": 0,
+      "missing": 0
+    },
+    "oracleId": {
+      "exact": 8,
+      "wrong": 0,
+      "missing": 0
+    },
+    "sender": {
+      "exact": 8,
+      "wrong": 0,
+      "missing": 0
+    },
+    "recipient": {
+      "exact": 8,
+      "wrong": 0,
+      "missing": 0
+    },
+    "sentDate": {
+      "exact": 8,
+      "wrong": 0,
+      "missing": 0
+    },
+    "sentTime": {
+      "exact": 8,
+      "wrong": 0,
+      "missing": 0
+    },
+    "description": {
+      "exact": 4,
+      "wrong": 16,
+      "missing": 0
+    },
+    "totalAmount": {
+      "exact": 8,
+      "wrong": 0,
+      "missing": 0
+    },
+    "taxAmount": {
+      "exact": 0,
+      "wrong": 0,
+      "missing": 8
+    },
+    "attachmentReference": {
+      "exact": 6,
+      "wrong": 2,
+      "missing": 0
+    },
+    "provider": {
+      "exact": 0,
+      "wrong": 12,
+      "missing": 0
+    },
+    "costCenter": {
+      "exact": 12,
+      "wrong": 0,
+      "missing": 0
+    },
+    "lineUnit": {
+      "exact": 12,
+      "wrong": 0,
+      "missing": 0
+    },
+    "quantity": {
+      "exact": 12,
+      "wrong": 0,
+      "missing": 0
+    },
+    "price": {
+      "exact": 11,
+      "wrong": 1,
+      "missing": 0
+    },
+    "amount": {
+      "exact": 11,
+      "wrong": 0,
+      "missing": 1
+    }
+  },
+  "samples": [
+    {
+      "case": "01-completa",
+      "httpStatus": 200,
+      "seconds": 2.692,
+      "rowsExpected": 1,
+      "rowsActual": 1,
+      "imageSha256": "e9b58def024c797fc39aef9a373b30e3ef69ac5f2bdc1f84fdf0f6105a73af31"
+    },
+    {
+      "case": "02-dos-items",
+      "httpStatus": 200,
+      "seconds": 3.427,
+      "rowsExpected": 2,
+      "rowsActual": 2,
+      "imageSha256": "925fbf32299b6dbfe80b7a3b61f15ef07cfeb7e8451296d62388544ac173b0d2"
+    },
+    {
+      "case": "03-tres-items",
+      "httpStatus": 200,
+      "seconds": 4.128,
+      "rowsExpected": 3,
+      "rowsActual": 3,
+      "imageSha256": "195b49a0b4edff225ae9fa3e1db6c4d30bd1a90fb7a3bd017e6f6eaee691f4d4"
+    },
+    {
+      "case": "04-jpeg",
+      "httpStatus": 200,
+      "seconds": 2.859,
+      "rowsExpected": 1,
+      "rowsActual": 1,
+      "imageSha256": "34c9f9397d61943dc2eb67d6af9e923c3dc47ccdd0e787283c788f4ab2860b46"
+    },
+    {
+      "case": "05-reducida",
+      "httpStatus": 200,
+      "seconds": 2.831,
+      "rowsExpected": 1,
+      "rowsActual": 1,
+      "imageSha256": "c74cc4bb95736bc8a4bc87bd0b8ecab8eabd23b4720d1d279cac9ab76e4e72f6"
+    },
+    {
+      "case": "06-ampliada",
+      "httpStatus": 200,
+      "seconds": 3.727,
+      "rowsExpected": 2,
+      "rowsActual": 2,
+      "imageSha256": "86e8b328c10702f8484f94f0a1577b8361049a182181d27f37447bb6a0c5c2ca"
+    },
+    {
+      "case": "07-grises",
+      "httpStatus": 200,
+      "seconds": 2.85,
+      "rowsExpected": 1,
+      "rowsActual": 1,
+      "imageSha256": "ca6f3d44cecdd5449010a88667fd9ceca1ee4a3ea612175f930a40ae76c9d3b1"
+    },
+    {
+      "case": "08-cabecera-recortada",
+      "httpStatus": 200,
+      "seconds": 2.708,
+      "rowsExpected": 1,
+      "rowsActual": 1,
+      "imageSha256": "d43835507cb4ec881d10bc6bf0b5739ad9e3622b009559376cf1770ea6a9a1ac"
+    }
+  ],
+  "limitations": [
+    "Synthetic variations from oracle_format.py using DejaVuSans as Arial fallback in container; not customer captures",
+    "Tesseract spa reads isolated 0 CLP in Impuesto as O CLP, which money() marks as ambiguous (null value, rawText preserved) rather than guessing digits",
+    "Charge account excluded from field scoring because it is visually clipped in the 8-column layout"
+  ]
+}

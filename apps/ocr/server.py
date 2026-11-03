@@ -108,13 +108,14 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':
-    # Fail startup on absent/altered models, before accepting any capture.
-    from extractor import WEIGHTS
+    # Fail startup on absent/altered OCR runtime or models, before accepting any capture.
+    from extractor import WEIGHTS, load_engine
     import hashlib
     from pathlib import Path
     for name, expected in WEIGHTS.items():
         if hashlib.sha256((Path('/models')/name).read_bytes()).hexdigest() != expected:
             raise RuntimeError('Model hash mismatch')
+    load_engine('/models')
     mp.set_start_method('spawn')
     server = ThreadingHTTPServer(('0.0.0.0', int(os.environ.get('PORT', '8090'))), Handler)
     server.daemon_threads = True

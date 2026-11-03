@@ -1,9 +1,9 @@
 {
-  "date": "2026-10-14",
+  "date": "2026-11-03",
   "purpose": "Real OCR layout regression; not an independent accuracy holdout",
   "sourceHashes": {
-    "extractor.py": "2c8a983c92629e46bb8215a3d03d0911a1388e92f4929092c68d4a1b2436d837",
-    "server.py": "1ae77282561d3530efd2d28f91689a640ac7abddfa029071696f38006d61b971"
+    "extractor.py": "a22074d76dd65501ccd7fa3e2241f42db4258e31827f5d1d10fd2220a300fcff",
+    "server.py": "96aea0093c586c15a65401e1c900c5a6829cb919474fb1135dfea03c87454ce0"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
       "actual": "compatible",
       "status": 200,
       "matches": true,
-      "seconds": 8.66590290000022,
-      "imageSha256": "72a273211c8e0485ce3c1cac9e917a507c7bb0374084ee12896e921db20a0d92"
+      "seconds": 2.3010588710003503,
+      "imageSha256": "c08a0ec9b7ce088de097595cf60b0c7831977caf233b72c63f7855f3f2555905"
     },
     {
       "case": "grayscale",
@@ -21,8 +21,8 @@
       "actual": "compatible",
       "status": 200,
       "matches": true,
-      "seconds": 8.150949399999263,
-      "imageSha256": "a7b43b0cdd478c56be743dc2ca59e069ab6d03f6ac3bfa15b46a97709adc698f"
+      "seconds": 2.262696259000222,
+      "imageSha256": "8078ebacd20255bfc9f7f4c89232700be79e0d933fd74a8c1a4f5f4b56c2ebe3"
     },
     {
       "case": "without-branding",
@@ -30,8 +30,8 @@
       "actual": "compatible",
       "status": 200,
       "matches": true,
-      "seconds": 8.489722600000277,
-      "imageSha256": "6962a9b062e33eecae7937d3b95141fffd7d472e54bad64455e298a5cc071e74"
+      "seconds": 2.190908077000131,
+      "imageSha256": "09573507150d38f074bcd7e11d09b0d416b749b222590cb60084902a58f9bdb6"
     },
     {
       "case": "header-only",
@@ -39,8 +39,8 @@
       "actual": "partial",
       "status": 200,
       "matches": true,
-      "seconds": 5.79398190000029,
-      "imageSha256": "ab641098ac9184bf5a6280ae2f16085657e5e49e72036287d52be745a5b52656"
+      "seconds": 1.5531091890006792,
+      "imageSha256": "0594ed26bd7c231f6fa333692a2aadd4808045135f7c80034a54438384b2ae7b"
     },
     {
       "case": "table-only",
@@ -48,8 +48,8 @@
       "actual": "partial",
       "status": 200,
       "matches": true,
-      "seconds": 8.004793699999937,
-      "imageSha256": "77627ea3810048d0e4fe400f23d0990f7dc193a80e22645f965f16bc61cd0931"
+      "seconds": 1.0087087740012066,
+      "imageSha256": "6152a943a2f12cbc8a28ccce3bcd6e0191d15347011e5b9ccd9368d60657600b"
     },
     {
       "case": "no-grid",
@@ -57,8 +57,8 @@
       "actual": "partial",
       "status": 200,
       "matches": true,
-      "seconds": 4.081569299999501,
-      "imageSha256": "218f90dbe2c463ae73ff15aa153c5a12a705d7e3ad0f46c8d67ecf8eb9778de9"
+      "seconds": 1.8228889820002223,
+      "imageSha256": "868620ac2a8555f254be2c8352eb3892edaf9e6588427a37b324cb8f6fdbb44f"
     },
     {
       "case": "blue-only",
@@ -66,8 +66,8 @@
       "actual": "UNSUPPORTED_CAPTURE_LAYOUT",
       "status": 422,
       "matches": true,
-      "seconds": 1.7592695000003005,
-      "imageSha256": "4c9005f66db3850560400ba87299a78cb6bc656484f15f88ea6923921ab7a60c"
+      "seconds": 0.37796347999938007,
+      "imageSha256": "98263a7ad86bcd181f8279c669a31cb1ba5b78b1bce377fa6c49aacd352f2990"
     },
     {
       "case": "logo-only",
@@ -75,8 +75,8 @@
       "actual": "UNSUPPORTED_CAPTURE_LAYOUT",
       "status": 422,
       "matches": true,
-      "seconds": 1.9543839999996635,
-      "imageSha256": "c7c896b1ff633578c69c48fda20d221e9ecfdff18f1e0f989531c5ee4c6c93d1"
+      "seconds": 0.38452388499899826,
+      "imageSha256": "1dbef6da0e319633a7a48740c2ffd11d0b683670c7b98c6abddcf90a6b3e8f35"
     },
     {
       "case": "landscape",
@@ -84,8 +84,8 @@
       "actual": "UNSUPPORTED_CAPTURE_LAYOUT",
       "status": 422,
       "matches": true,
-      "seconds": 2.317588199999591,
-      "imageSha256": "61a29d04bfc8a2afaa2f57fd28686519ea7a55fbea65db9e139aa45fd968b5eb"
+      "seconds": 0.40588895799919555,
+      "imageSha256": "96dec4d23c45e7c60fa36f663e2e3098825aaa94ddd3bdd1d2c89949f391e097"
     },
     {
       "case": "title-only",
@@ -93,8 +93,9 @@
       "actual": "UNSUPPORTED_CAPTURE_LAYOUT",
       "status": 422,
       "matches": true,
-      "seconds": 2.1830313999998907,
-      "imageSha256": "e6cf7f61e80f9cf23f6ea08c048ce4d4f82d1fe6088131252fe468581f925121"
+      "seconds": 0.5293737030006014,
+      "imageSha256": "9ba70198a0523cde0fddf042e30990c51f67c6010a3bda9a1d7b87a1d52f88a8"
     }
-  ]
+  ],
+  "processorVersion": "tesseract5-spa-grid8-layout-v1"
 }

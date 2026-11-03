@@ -1,13 +1,13 @@
 {
   "split": "holdout",
   "sourceHashes": {
-    "extractor.py": "7b49218e9c207eb5a636551f221b6dce4d404de69f558f0d24aaa2fa0ac3f5a7",
-    "server.py": "1ae77282561d3530efd2d28f91689a640ac7abddfa029071696f38006d61b971"
+    "extractor.py": "a22074d76dd65501ccd7fa3e2241f42db4258e31827f5d1d10fd2220a300fcff",
+    "server.py": "96aea0093c586c15a65401e1c900c5a6829cb919474fb1135dfea03c87454ce0"
   },
-  "exact": 133,
+  "exact": 117,
   "fields": 144,
-  "medianSeconds": 4.5706672999995135,
-  "maxSeconds": 6.357232500000464,
+  "medianSeconds": 2.262016118000247,
+  "maxSeconds": 2.8172692520001874,
   "byField": {
     "requestNumber": {
       "exact": 8,
@@ -45,19 +45,19 @@
       "wrong": 0
     },
     "totalAmount": {
-      "exact": 8,
-      "missing": 0,
+      "exact": 7,
+      "missing": 1,
       "wrong": 0
     },
     "taxAmount": {
-      "exact": 8,
-      "missing": 0,
+      "exact": 0,
+      "missing": 8,
       "wrong": 0
     },
     "attachmentReference": {
-      "exact": 7,
+      "exact": 0,
       "missing": 0,
-      "wrong": 1
+      "wrong": 8
     },
     "provider": {
       "exact": 6,
@@ -95,74 +95,73 @@
       "wrong": 0
     }
   },
-  "date": "2026-10-14",
-  "processorVersion": "ppocr5-latin-grid8-v1",
-  "environment": "Notebook, Podman Linux/amd64, CPU only, 1 CPU / 1 GiB, inference subprocess initialized per request",
+  "date": "2026-11-03",
+  "processorVersion": "tesseract5-spa-grid8-layout-v1",
+  "environment": "Podman Linux/amd64 container (os-teseract), Ubuntu 24.04, Tesseract 5.3.4 (spa), OpenCV 5.0.0.93, Python 3.12, CPU only",
   "samples": [
     {
       "case": "clear",
-      "imageSha256": "34aff88f064052fcd4688bb513bba34dfc7a283c9c5b8ec7f60141619859192d",
-      "seconds": 5.170686600000408,
+      "imageSha256": "1a5fc33c9e01e2a456165475b6cf3580f2c9fc6d637ebc39401e2a12f607e254",
+      "seconds": 2.237875189999613,
       "rowsExpected": 1,
       "rowsActual": 1
     },
     {
       "case": "multiline",
-      "imageSha256": "7dac57b8f01ea8754c340cca07f8cafb4554680fcda98827302af2e5ab7a90c3",
-      "seconds": 5.345469899999443,
+      "imageSha256": "02e3c4aacdd1777071c766baec67cf4a68bedc77784b2612fc79023890dd7e1e",
+      "seconds": 2.8172692520001874,
       "rowsExpected": 2,
       "rowsActual": 2
     },
     {
       "case": "jpeg",
-      "imageSha256": "58873713d67b74cf1ebb63e1c341fe2f0efae13a6c01b5f2cc6faa0f79a7bb6a",
-      "seconds": 4.523960200000147,
+      "imageSha256": "a7bc609cf2f59f6018c4483a703b1848ae9bc4c2b8940ec94f7ddde2e5439754",
+      "seconds": 2.3316255930003535,
       "rowsExpected": 1,
       "rowsActual": 1
     },
     {
       "case": "small",
-      "imageSha256": "92ae3582bf0f24e760ac0101cd405ed09ec2f1efcb927681c1f996135caab6ed",
-      "seconds": 4.531337799999164,
+      "imageSha256": "e5e28463a2223902de151383407d78fd0e0674facfa1dbb772b5e103e212fa26",
+      "seconds": 2.2451968509994913,
       "rowsExpected": 1,
       "rowsActual": 1
     },
     {
       "case": "margin",
-      "imageSha256": "210ea115dfaff0060a7415ce5d891183ef97babd17441b488a689d8a72fb56c0",
-      "seconds": 4.516451599998618,
+      "imageSha256": "683312a8dd56af866a7c6fd8a01c16f87a739242e1dd3197aaf450ef4a80edf4",
+      "seconds": 2.3495034360003046,
       "rowsExpected": 1,
       "rowsActual": 1
     },
     {
       "case": "zero",
-      "imageSha256": "1d9aee2c7aa72fea85dfbc7d3dc7e9abe7d1cadbe2b336c63adce430ca9ac904",
-      "seconds": 4.609996799999863,
+      "imageSha256": "78db9f2512d058ccb20bea2ed684c69ebeaa00e0cde8426028cdb4d50ef65930",
+      "seconds": 2.2788353850010026,
       "rowsExpected": 1,
       "rowsActual": 1
     },
     {
       "case": "partial",
-      "imageSha256": "d27518f930367c0da8e886b6d1246c7f66f9cc8a60c3cb0911ddae7267400ecc",
-      "seconds": 6.357232500000464,
+      "imageSha256": "2cb0908100885994aa1826d16cf42d4fd7b3709eb66eaae34a3e487a338a2c43",
+      "seconds": 1.560507330999826,
       "rowsExpected": 0,
       "rowsActual": 0
     },
     {
       "case": "no-grid",
-      "imageSha256": "41e0bb6ada11f77ee82f4901e5d8a59b3bdacf432395f76334ed2ef5deb568bd",
-      "seconds": 4.459353300000657,
+      "imageSha256": "aeec70a5cbc865d4231064408e2bff2033e434e6b5f3e5b8af6ca5db33459fac",
+      "seconds": 1.812128968000252,
       "rowsExpected": 1,
       "rowsActual": 0
     }
   ],
-  "containerMemoryPeakBytes": 638697472,
   "fixtureGeneratorSha256": "784acb568ad9ac50e472c4be499019c910c918be4380bc20f8f819b2463edc80",
   "evaluatorSha256": "605685a212663af6690cbdea23df2b9a6bc3598868ac13f23122aed9a0064d40",
   "limitations": [
     "Synthetic variations from the same generator, not independent customer captures",
     "Raw exact field matches; not an institutional accuracy guarantee",
     "No-grid retains the header and reports table structure unavailable",
-    "No fitting or weight changes; eight-column parser frozen before holdout"
+    "Tesseract spa reads isolated 0 CLP as O CLP, which money() marks as ambiguous (null value, rawText preserved) without inventing digits"
   ]
 }

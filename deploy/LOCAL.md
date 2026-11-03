@@ -151,15 +151,15 @@ Para OCR desde desarrollo, preparar la clave e imagen según la siguiente secci�
 
 ## Ejecutar el build de demostración con OCR
 
-Los dos modelos ONNX de runtime están en `apps/ocr/models`; comprobarlos con los hashes de [Modelos](../apps/ocr/MODELS.md). No se descargan durante una solicitud. Si faltan, preparar y verificar los pesos con las herramientas existentes; no sustituirlos por archivos sin verificar.
+El procesador OCR integrado (`tesseract5-spa-grid8-layout-v1`) instala `tesseract-ocr`, `tesseract-ocr-spa` y OpenCV dentro de su propia imagen de contenedor ([`apps/ocr/Containerfile`](../apps/ocr/Containerfile)); no descarga modelos durante una solicitud ni requiere pesos ONNX externos (ver [Modelos y motor OCR](../apps/ocr/MODELS.md)).
 
-En Bash, el preparador usado por la entrega descarga y verifica los pesos fijados (necesita conexión sólo durante esta preparación):
+En Bash, el verificador de preparación usado por la entrega comprueba `WEIGHTS` en `apps/ocr/extractor.py` (sin descargas externas cuando `WEIGHTS` está vacío):
 
 ```sh
 python3 deploy/azure/prepare-ocr-models.py
 ```
 
-Esta ejecución escribe modelos ignorados por Git en `apps/ocr/models`; no despliega recursos Azure.
+Esta comprobación no despliega recursos Azure.
 
 Crear la clave de procedencia sólo si todavía no existe:
 

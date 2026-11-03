@@ -33,3 +33,5 @@ __pycache__/
 /experiments/**/*.pt
 /apps/ocr/models/
 /apps/ocr/.venv/
+/ocr/
+/Entrenamiento/
