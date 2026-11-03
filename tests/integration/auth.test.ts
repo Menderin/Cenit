@@ -13,6 +13,8 @@ import { buildAcademicApp } from '../../apps/api/src/app.js';
 import { AcademicRepository } from '../../apps/api/src/modules/academic/repositories/academic.js';
 import { AuthRepository } from '../../apps/api/src/modules/auth/repositories/auth.js';
 import { AuthService, sessionHash } from '../../apps/api/src/modules/auth/services/auth.js';
+import { PurchaseRepository } from '../../apps/api/src/modules/purchases/repositories/purchases.js';
+import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 import { createDemoCredentials, demoPasswordKeys, demoPasswordsFromEnv, prepareDemoAccounts, privateDemoCredentials, type DemoPasswords } from '../../db/seeds/auth-demo.js';
 import { loadCatalog, readCatalog } from '../../db/seeds/load-academic.js';
 
@@ -37,7 +39,7 @@ const origin = 'http://127.0.0.1:3000';
 let now = new Date('2026-10-11T22:00:00.000Z');
 let app: ReturnType<typeof buildAcademicApp>;
 const service = () => new AuthService(new AuthRepository(runtimes[0]!), () => new Date(now));
-const build = (secure = false) => buildAcademicApp({ repository: new AcademicRepository(runtimes[0]!), auth: { service: service(), config: { allowedOrigins: [origin], cookieSecure: secure } } });
+const build = (secure = false) => buildAcademicApp({ repository: new AcademicRepository(runtimes[0]!), purchases: new PurchaseRepository(runtimes[0]!), purchaseCapabilities: { secondReviewEnabled: true, sheetsSyncEnabled: false }, auth: { service: service(), config: { allowedOrigins: [origin], cookieSecure: secure } } });
 let ipCounter = 1;
 const login = (role = 'docente', body?: Record<string, unknown>, cookie?: string, remoteAddress?: string) => {
   const credential = credentials.find(c => c.role === role)!;
@@ -216,6 +218,46 @@ describe('login real, permisos y sesión', () => {
     }
     expect((await app.inject({ url: '/api/v1/academic/plans', headers: { cookie } })).statusCode).toBe(401);
     expect((await app.inject({ method: 'POST', url: '/api/v1/auth/logout', headers: { origin }, payload: {} })).statusCode).toBe(204);
+  });
+  it.each(['cerrada', 'vencida', 'sustituida'] as const)('una sesión %s rechaza lecturas y escrituras sin modificar compras', async state => {
+    const start = new Date(now);
+    const loggedIn = await login('administrativo'), cookie = cookieFrom(loggedIn);
+    const headers = { origin, cookie };
+    const input = { ...structuredClone(manualPurchaseExample), operationId: randomUUID() };
+    const created = await app.inject({ method: 'POST', url: '/api/v1/purchases', headers, payload: input });
+    expect(created.statusCode).toBe(201);
+    const saved = created.json().data;
+    const repository = new PurchaseRepository(runtimes[0]!);
+    const counts = async () => (await runtimes[0]!.query('SELECT (SELECT count(*) FROM cenit.purchase_requests) AS requests, (SELECT count(*) FROM cenit.purchase_request_lines) AS lines')).rows[0];
+    const before = await counts();
+    try {
+      if (state === 'cerrada') {
+        expect((await app.inject({ method: 'POST', url: '/api/v1/auth/logout', headers, payload: {} })).statusCode).toBe(204);
+      } else if (state === 'vencida') {
+        now = new Date(start.getTime() + 7200000);
+      } else {
+        expect((await login('docente', undefined, cookie)).statusCode).toBe(200);
+      }
+      // Reuse the actual old cookie: an anonymous request would not prove invalidation.
+      const routes: ['GET' | 'POST' | 'PUT' | 'DELETE', string, unknown?][] = [
+        ['GET', '/api/v1/auth/session'], ['GET', '/api/v1/academic/plans'],
+        ['GET', '/api/v1/purchases'], ['GET', '/api/v1/purchases/summary'],
+        ['GET', `/api/v1/purchases/${saved.id}`],
+        ['POST', '/api/v1/purchases', { ...input, operationId: randomUUID() }],
+        ['PUT', `/api/v1/purchases/${saved.id}`, { expectedVersion: 1, header: { ...input.header, description: 'Cambio que debe rechazarse' }, administrative: input.administrative, lines: [] }],
+        ['POST', `/api/v1/purchases/${saved.id}/validation`, { expectedVersion: 1 }],
+        ['DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: 1 }],
+      ];
+      for (const [method, url, payload] of routes) {
+        const response = await app.inject({ method, url, headers, ...(payload === undefined ? {} : { payload: payload as Record<string, unknown> }) });
+        expect(response.statusCode, `${state}: ${method} ${url}`).toBe(401);
+        expect(Value.Check(ErrorResponseSchema, response.json())).toBe(true);
+        expect(response.json().error.code).toBe('AUTHENTICATION_REQUIRED');
+        expect(response.headers['cache-control']).toBe('no-store');
+      }
+      expect(await counts()).toEqual(before);
+      expect(await repository.get(saved.id)).toEqual(saved);
+    } finally { now = start; }
   });
   it('nuevo login sustituye sesión del navegador; rol y activación se leen del servidor', async () => {
     const previous = cookieFrom(await login('docente'));
