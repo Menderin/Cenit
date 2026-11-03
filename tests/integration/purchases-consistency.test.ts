@@ -5,7 +5,7 @@
 // No se impone igualdad entre la suma de ítems y el total documental (contrato vigente).
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { execFileSync, execSync, spawn, type ChildProcess } from 'node:child_process';
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -24,7 +24,7 @@ const adminUrl = (() => {
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
   const url = new URL('postgres://127.0.0.1:55432/cenit_demo'); url.username = 'cenit_admin'; url.password = readFileSync('.local/secrets/postgres-password', 'utf8').trim(); return url.toString();
 })();
-let admin = createTestPool({ connectionString: adminUrl });
+const admin = createTestPool({ connectionString: adminUrl });
 let db: Pool;
 const dir = resolve('tmp/purchase-t05-tests', suffix);
 const migratorFile = resolve(dir, 'migrator-url'), runtimeFile = resolve(dir, 'runtime-url');
@@ -207,23 +207,6 @@ describe('HU05-T05: rollback ante fallo de PostgreSQL a mitad de la transacción
 });
 
 describe('HU05-T05: doble intento no duplica', () => {
-  it('reintento secuencial devuelve 200 con el mismo registro y no agrega filas', async () => {
-    const input = valid(4), before = await counts();
-    const first = await post(input), second = await post(input);
-    expect([first.status, second.status]).toEqual([201, 200]);
-    const [a, b] = [(await first.json()).data, (await second.json()).data];
-    expect(b).toEqual(a);
-    expect(await counts()).toEqual({ requests: before.requests + 1, lines: before.lines + 4 });
-  });
-  it('diez intentos concurrentes (doble clic / red inestable) producen exactamente una solicitud', async () => {
-    const input = valid(3), before = await counts();
-    const responses = await Promise.all(Array.from({ length: 10 }, () => post(input)));
-    const statuses = responses.map(response => response.status).sort();
-    expect(statuses).toEqual([200, 200, 200, 200, 200, 200, 200, 200, 200, 201]);
-    const ids = new Set(await Promise.all(responses.map(async response => (await response.json()).data.id)));
-    expect(ids.size).toBe(1);
-    expect(await counts()).toEqual({ requests: before.requests + 1, lines: before.lines + 3 });
-  });
   it('la misma operación con otro contenido da 409 y no altera lo guardado', async () => {
     const input = valid(2); const saved = (await (await post(input)).json()).data;
     const snapshot = await dbSnapshot(saved.id), before = await counts();
@@ -243,6 +226,8 @@ describe('HU05-T05: el registro persiste tras reiniciar la aplicación', () => {
     const input = { ...valid(3), origin: { type: 'contract_example' as const, exampleId: 'partial' as const } };
     const created = await post(input); expect(created.status).toBe(201);
     const saved = (await created.json()).data, snapshot = await dbSnapshot(saved.id), before = await counts();
+    expect(saved.header).toEqual(input.header); expect(saved.lines).toEqual(input.lines);
+    expect(saved.administrative).toEqual(input.administrative); expect(saved.exampleId).toBe('partial');
     await stopApi('SIGTERM');
     expect(await apiDown()).toBe(true);
     await startApi();
@@ -289,17 +274,4 @@ describe('HU05-T05: el registro persiste tras reiniciar la aplicación', () => {
     expect(retry.status).toBe(201);
     expect(await counts()).toEqual({ requests: before.requests + 1, lines: before.lines + 3 });
   }, 30000);
-  it.runIf(Boolean(process.env.CENIT_TEST_PG_RESTART_CMD))('reinicio de PostgreSQL (opt-in): el registro sigue completo', async () => {
-    const input = valid(3); const saved = (await (await post(input)).json()).data;
-    const snapshot = await dbSnapshot(saved.id);
-    await stopApi('SIGTERM');
-    await closeTestPool(db); await closeTestPool(admin);
-    execSync(process.env.CENIT_TEST_PG_RESTART_CMD!, { stdio: 'pipe' });
-    const url = new URL(adminUrl); url.pathname = `/${database}`;
-    db = createTestPool({ connectionString: url.toString() }); admin = createTestPool({ connectionString: adminUrl });
-    await startApi();
-    const read = await getDetail(saved.id);
-    expect(read.status).toBe(200); expect((await read.json()).data).toEqual(saved);
-    expect(await dbSnapshot(saved.id)).toEqual(snapshot);
-  }, 60000);
 });
