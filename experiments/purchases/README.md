@@ -100,7 +100,7 @@ El reemplazo del motor `ppocr5-latin-grid8-layout-v3`/`v4` (RapidOCR con modelos
 - **Versión del procesador**: `tesseract5-spa-grid8-layout-v1`
 - **Entorno de ejecución**: Contenedor Linux/amd64 (`Ubuntu 24.04`, `Python 3.12.3`, `tesseract 5.3.4` con `spa`, `opencv-python 5.0.0.93`, `Pillow 12.3.0`/`13.0.0`, `numpy 2.4.6`/`2.5.4`), inferencia secuencial en `http://127.0.0.1:8090`, sin conexión a PostgreSQL ni credenciales de API.
 - **Hashes SHA-256 de código y activos**:
-  - [`apps/ocr/extractor.py`](../../apps/ocr/extractor.py): `a22074d76dd65501ccd7fa3e2241f42db4258e31827f5d1d10fd2220a300fcff`
+  - [`apps/ocr/extractor.py`](../../apps/ocr/extractor.py): `b4c6dd0ea9adf1bc2abdb75308f764cbfb60c15d3b9c247293e6c354699e5230`
   - [`apps/ocr/server.py`](../../apps/ocr/server.py): `96aea0093c586c15a65401e1c900c5a6829cb919474fb1135dfea03c87454ce0`
   - [`experiments/purchases/oracle_format.py`](oracle_format.py): `834c1eb44a2a4c252257b6702c1bce41712952f0d80f3ec59ab41aef561a2a9f`
   - [`tests/ocr/fixtures.py`](../../tests/ocr/fixtures.py): `784acb568ad9ac50e472c4be499019c910c918be4380bc20f8f819b2463edc80`
@@ -111,7 +111,7 @@ El reemplazo del motor `ppocr5-latin-grid8-layout-v3`/`v4` (RapidOCR con modelos
 ### Comandos ejecutados
 
 ```sh
-# 1. Pruebas unitarias del extractor y mapeo de candidatos (15/15 OK)
+# 1. Pruebas unitarias del extractor, segmentación morfológica y mapeo de candidatos (21/21 OK)
 PYTHONPATH=apps/ocr python3 -m unittest discover -s tests/ocr -v
 
 # 2. Verificación de layout (compatible, partial y 422 UNSUPPORTED_CAPTURE_LAYOUT: 10/10 OK)

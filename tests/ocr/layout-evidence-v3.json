@@ -2,7 +2,7 @@
   "date": "2026-11-03",
   "purpose": "Real OCR layout regression; not an independent accuracy holdout",
   "sourceHashes": {
-    "extractor.py": "a22074d76dd65501ccd7fa3e2241f42db4258e31827f5d1d10fd2220a300fcff",
+    "extractor.py": "b4c6dd0ea9adf1bc2abdb75308f764cbfb60c15d3b9c247293e6c354699e5230",
     "server.py": "96aea0093c586c15a65401e1c900c5a6829cb919474fb1135dfea03c87454ce0"
   },
   "cases": [

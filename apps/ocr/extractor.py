@@ -162,7 +162,7 @@ def ocr_celda(celda_bgr, recortar_borde=True):
     gray = np.min(crop, axis=2) if crop.ndim == 3 else crop.copy()
     gray = _limpiar_tooltip_en_celda(gray)
 
-    if np.min(gray) > 185 or np.sum(gray < 165) < 5:
+    if np.min(gray) > 185 or np.sum(gray < 165) < 5 or float(np.percentile(gray, 85)) < 180:
         return ""
 
     scale = 3.0 if h < 60 else 2.0
@@ -213,18 +213,6 @@ def grouped(words):
 
 
 def tokens(engine, image):
-    if engine is not None and not getattr(engine, 'is_tesseract', False) and callable(engine):
-        result = engine(image, use_det=True, use_cls=False, return_word_box=True)
-        words = []
-        if getattr(result, 'boxes', None) is None:
-            return words
-        entries = [(box, text) for line in result.word_results for text, _, box in line] if getattr(result, 'word_results', None) else zip(result.boxes, result.txts)
-        for box, text in entries:
-            x, y = np.min(box, axis=0)
-            right, bottom = np.max(box, axis=0)
-            words.append({'text': text, 'x': float(x), 'y': float(y), 'w': float(right - x), 'h': float(bottom - y)})
-        return words
-
     arr = np.array(image)
     gray = np.min(arr, axis=2) if arr.ndim == 3 else arr
     if np.min(gray) > 200 or np.sum(gray < 180) < 5:
@@ -251,31 +239,6 @@ def tokens(engine, image):
 
 
 def read_cell(engine, image, detect=False):
-    if engine is not None and not getattr(engine, 'is_tesseract', False) and callable(engine):
-        if detect:
-            enlarged = ImageOps.expand(image.resize((image.width * 3, image.height * 3), Image.Resampling.LANCZOS), border=12, fill='white')
-            reading = engine(enlarged, use_det=True, use_cls=False, return_word_box=False)
-            return ' '.join(reading.txts or []).strip() or None
-        ink = np.array(image.convert('L')) < 150
-        active = np.flatnonzero(ink.sum(axis=1) > 0)
-        bands = []
-        for y in active:
-            if not bands or y - bands[-1][-1] > 3:
-                bands.append([int(y)])
-            else:
-                bands[-1].append(int(y))
-        texts = []
-        for band in bands:
-            crop = image.crop((0, band[0], image.width, band[-1] + 1))
-            ys, xs = np.where(np.array(crop.convert('L')) < 150)
-            if not len(xs):
-                continue
-            crop = ImageOps.expand(crop.crop((int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1)), border=3, fill='white')
-            crop = crop.resize((max(3, round(crop.width * 48 / crop.height)), 48), Image.Resampling.LANCZOS)
-            result = engine(crop, use_det=False, use_cls=False, return_word_box=False)
-            texts.extend(result.txts or [])
-        return ' '.join(texts).strip() or None
-
     arr = cv2.cvtColor(np.array(image.convert('RGB')), cv2.COLOR_RGB2BGR)
     text = ocr_celda(arr, recortar_borde=False)
     return text.strip() or None
@@ -632,8 +595,8 @@ def header(groups, engine=None, image=None, regions=None):
     result = {}
     recorded_paths = set()
 
-    # 1. When image and Tesseract runtime are available, run cell-level header partitioning
-    if image is not None and (engine is None or getattr(engine, 'is_tesseract', False)):
+    # 1. When image is available, run cell-level header partitioning
+    if image is not None:
         img = cv2.cvtColor(np.array(image.convert('RGB')), cv2.COLOR_RGB2BGR)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32)
         scale = gray.shape[1] / 1700.0
@@ -898,7 +861,7 @@ def extraer_tablas_solicitud(ruta_imagen):
     Interna y Secuencia de Aprobación), aplica OCR celda por celda y retorna un
     diccionario de tablas.
     """
-    img = cv2.imread(str(ruta_imagen))
+    img = ruta_imagen.copy() if isinstance(ruta_imagen, np.ndarray) else cv2.imread(str(ruta_imagen))
     if img is None:
         raise FileNotFoundError(f"No se pudo cargar la imagen: {ruta_imagen}")
 
