@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router';
 import { FunnelSimpleIcon } from '@phosphor-icons/react/dist/csr/FunnelSimple';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass';
@@ -11,6 +11,7 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import { validatePurchaseListQuery, type PurchaseFilters, type PurchaseListQuery } from '@cenit/contracts/purchases';
 import { downloadPurchaseExport, listPurchases } from '../api/purchases.js';
 import { HttpError } from '../../../shared/lib/http.js';
+import { useAuth } from '../../auth/model/session.js';
 import { usePurchaseCapabilities } from '../model/capabilities.js';
 import { SheetsSyncStatus } from '../components/SheetsSyncStatus.js';
 import { ValidateRecord } from '../components/ValidateRecord.js';
@@ -66,10 +67,15 @@ function RequestTable({ state, title, filters, page, setPage, view, setPageSize,
 }
 
 export function Purchases() {
+  const { status, session } = useAuth();
   const { secondReviewEnabled } = usePurchaseCapabilities();
   const [params, setParams] = useSearchParams(), location = useLocation();
   const [exporting, setExporting] = useState(false);
   const exportBusy = useRef(false);
+  const exportController = useRef<AbortController | null>(null);
+  useLayoutEffect(() => {
+    return () => { exportController.current?.abort(); };
+  }, [status, session?.account.id]);
   const readInputs = (): FilterInput => ({ q: params.get('q') ?? '', dateFrom: params.get('dateFrom') ?? '', dateTo: params.get('dateTo') ?? '', unitCode: params.get('unitCode') ?? '', projectCode: params.get('projectCode') ?? '' });
   const [inputs, setInputs] = useState(readInputs), [touched, setTouched] = useState<string[]>([]);
   const inferDateMode = (values: FilterInput) => selectedPeriod(values).year === 'custom' ? (values.dateFrom === values.dateTo ? 'exact' : 'range') : null;
@@ -194,23 +200,28 @@ export function Purchases() {
   function setPage(state: 'pending' | 'reviewed' | 'all', value: number) { setParams(previous => { const next = new URLSearchParams(previous), key = state === 'all' ? 'page' : `${state}Page`; if (value === 1) next.delete(key); else next.set(key, String(value)); return next; }); }
   async function downloadExport() {
     if (exportBusy.current) return;
+    const controller = new AbortController();
+    exportController.current = controller;
     exportBusy.current = true;
     setExporting(true);
     toast.dismiss('purchase-export');
     try {
-      await downloadPurchaseExport(filters, view);
+      await downloadPurchaseExport(filters, view, controller.signal);
+      controller.signal.throwIfAborted();
       toast.success('Archivo descargado', { id: 'purchase-export', description: 'La exportación de compras está lista.' });
     } catch (error) {
+      if (controller.signal.aborted) return;
       if (error instanceof HttpError && error.status === 401) toast.error('La sesión venció', { description: 'Inicia sesión nuevamente para descargar el archivo.' });
       else toast.error('No se pudo descargar el archivo', { description: error instanceof Error ? error.message : 'Intenta nuevamente.' });
     } finally {
+      exportController.current = null;
       setExporting(false);
       exportBusy.current = false;
     }
   }
   return <section className="purchase-records"><div className="purchase-page-heading"><div><p className="admin-section-label">Compras</p><h1>Registro de compras</h1><p>Compras aprobadas en Oracle, conservadas en Cenit.</p></div><div className="purchase-heading-actions">
-    <button type="button" disabled={exporting} aria-busy={exporting} aria-live="polite" onClick={() => void downloadExport()}><DownloadSimpleIcon size={18} aria-hidden="true" />{exporting ? 'Generando Excel…' : 'Descargar Excel'}</button>
-    <Link className="admin-button" to="/administracion/compras/nueva" state={{ purchasesReturnTo: returnTo }}>Registrar manualmente</Link><Link className="admin-primary" to="/administracion/compras/captura" state={{ purchasesReturnTo: returnTo }}><UploadSimpleIcon size={18} aria-hidden="true" />Subir captura</Link>
+    <button className="cenit-button" type="button" disabled={exporting} aria-busy={exporting} aria-live="polite" onClick={() => void downloadExport()}><DownloadSimpleIcon size={18} aria-hidden="true" />{exporting ? 'Generando Excel…' : 'Descargar Excel'}</button>
+    <Link className="cenit-button" to="/administracion/compras/nueva" state={{ purchasesReturnTo: returnTo }}>Registrar manualmente</Link><Link className="cenit-button cenit-button--primary" to="/administracion/compras/captura" state={{ purchasesReturnTo: returnTo }}><UploadSimpleIcon size={18} aria-hidden="true" />Subir captura</Link>
   </div></div><SheetsSyncStatus />
     <form className="purchase-filters" noValidate aria-label="Filtros de solicitudes" onSubmit={event => event.preventDefault()}>
       <div className="purchase-search-bar">{input('q')}

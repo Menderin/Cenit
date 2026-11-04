@@ -4,7 +4,12 @@ import { PurchaseRepository } from '../repositories/purchases.js';
 import type { CaptureReceipts } from './capture-receipts.js';
 import { defaultPurchaseCapabilities } from './config.js';
 import type { PurchaseCapabilities } from '@cenit/contracts/purchases';
-import { createPurchaseWorkbook } from './export.js';
+import { writePurchaseWorkbook } from './export.js';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { finished } from 'node:stream/promises';
 
 export class PurchaseService {
   constructor(private readonly repository: PurchaseRepository, private readonly receipts?: CaptureReceipts, private readonly capabilities: PurchaseCapabilities = defaultPurchaseCapabilities) {}
@@ -28,11 +33,25 @@ export class PurchaseService {
     if (validatePurchaseListQuery(query).length) throw new ApiError(400, 'INVALID_FILTER', 'Revisa las fechas y los filtros de búsqueda.');
     return this.repository.list(query);
   }
-  async export(query: PurchaseListQuery) {
+  async export(query: PurchaseListQuery, signal: AbortSignal) {
     if (validatePurchaseListQuery(query).length) throw new ApiError(400, 'INVALID_FILTER', 'Revisa las fechas y los filtros de búsqueda.');
-    const result = await this.repository.export(query);
-    const workbook = await createPurchaseWorkbook(result.rows as Parameters<typeof createPurchaseWorkbook>[0], result.documentTotal, { query, generatedAt: new Date().toISOString() });
-    return workbook.xlsx.writeBuffer();
+    signal.throwIfAborted();
+    const directory = await mkdtemp(join(tmpdir(), 'cenit-export-'));
+    const cleanup = () => rm(directory, { recursive: true, force: true, maxRetries: 3 });
+    const filename = join(directory, 'compras.xlsx');
+    const output = createWriteStream(filename, { flags: 'wx', mode: 0o600, signal });
+    const completed = finished(output);
+    const generation = writePurchaseWorkbook(output, consume => this.repository.export(query, consume, signal), { query, generatedAt: new Date().toISOString() });
+    try {
+      await Promise.all([completed, generation]);
+      signal.throwIfAborted();
+      return { stream: createReadStream(filename, { signal }), cleanup };
+    } catch (error) {
+      output.destroy();
+      await Promise.allSettled([completed, generation]);
+      await cleanup();
+      throw error;
+    }
   }
   async get(id: string) {
     const record = await this.repository.get(id);

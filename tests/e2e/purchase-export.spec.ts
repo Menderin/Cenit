@@ -19,7 +19,7 @@ test('descarga por teclado, conserva filtros pendientes y informa fallos sin éx
     }
     const workbook = new ExcelJS.Workbook();
     workbook.addWorksheet('Compras');
-    await route.fulfill({ status: 200, contentType: xlsxType, body: await workbook.xlsx.writeBuffer() });
+    await route.fulfill({ status: 200, contentType: xlsxType, body: Buffer.from(await workbook.xlsx.writeBuffer()) });
   });
   await page.route('**/api/v1/purchases*', async route => {
     const url = new URL(route.request().url());
@@ -90,6 +90,7 @@ test('descarga de varias páginas exporta todas las compras y se adapta a móvil
   await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click();
   const file = await download;
   expect(file.suggestedFilename()).toBe('compras.xlsx');
+  await file.saveAs('tmp/purchase-export/compras-ficticias.xlsx');
   const path = await file.path();
   expect(path).toBeTruthy();
   const workbook = await new ExcelJS.Workbook().xlsx.readFile(path!);
@@ -97,4 +98,71 @@ test('descarga de varias páginas exporta todas las compras y se adapta a móvil
   expect(sheet).toBeTruthy();
   const exported = sheet!.getColumn(2).values.slice(1).filter((value): value is string => typeof value === 'string');
   for (let i = 0; i < 21; i++) expect(exported).toContain(`${prefix}-${i}`);
+});
+
+for (const exit of ['logout', 'expiry-and-account-change'] as const) {
+  test(`descarga pendiente se descarta ante ${exit}`, async ({ page }) => {
+    let release!: () => void;
+    let completed!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const handled = new Promise<void>(resolve => { completed = resolve; });
+    let requests = 0, downloads = 0;
+    page.on('download', () => downloads++);
+    await page.route('**/api/v1/purchases/export.xlsx*', async route => {
+      requests++;
+      await gate;
+      try { await route.fulfill({ contentType: xlsxType, body: Buffer.from('respuesta tardía ficticia') }); }
+      catch { /* The request was cancelled when the protected screen unmounted. */ }
+      finally { completed(); }
+    });
+    await login(page, 'administrativo');
+    await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+    const requested = page.waitForRequest(request => request.url().includes('/export.xlsx'));
+    await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click();
+    await requested;
+    const busy = page.getByRole('button', { name: 'Generando Excel…', exact: true });
+    await expect(busy).toBeDisabled();
+    await busy.evaluate((button: HTMLButtonElement) => button.click());
+    expect(requests).toBe(1);
+    if (exit === 'logout') {
+      await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+    } else {
+      await page.evaluate(() => window.dispatchEvent(new Event('cenit:unauthenticated')));
+      await expect(page.getByLabel('Correo electrónico', { exact: true })).toBeVisible();
+      // Client-side invalidation is simulated; explicitly revoke its server cookie before changing account.
+      expect((await page.request.post('/api/v1/auth/logout', { headers: { Origin: new URL(page.url()).origin }, data: {} })).status()).toBe(204);
+      await login(page, 'docente');
+    }
+    release();
+    await handled;
+    await expect(page.getByText('Archivo descargado', { exact: true })).toHaveCount(0);
+    expect(downloads).toBe(0);
+  });
+}
+
+test('fechas incompletas o invertidas conservan los últimos filtros válidos al exportar', async ({ page }) => {
+  await page.route(/\/api\/v1\/purchases\?/, route => route.fulfill({ json: {
+    data: [], pagination: { page: 1, pageSize: 20, total: 0 }, availableYears: [2026],
+    totals: { currency: 'CLP', documentTotal: '0' },
+  } }));
+  const queries: URLSearchParams[] = [];
+  await page.route('**/api/v1/purchases/export.xlsx*', route => {
+    queries.push(new URL(route.request().url()).searchParams);
+    return route.fulfill({ status: 503, json: { error: { code: 'SERVICE_UNAVAILABLE', message: 'Fallo ficticio', requestId: 'export-date-review' } } });
+  });
+  await login(page, 'administrativo');
+  await page.goto('/administracion/compras?dateFrom=2026-10-01&dateTo=2026-10-31');
+  await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
+  await page.getByLabel('Rango de fechas: desde, año', { exact: true }).fill('202');
+  await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click();
+  await expect.poll(() => queries.length).toBe(1);
+  expect(queries[0]!.get('dateFrom')).toBe('2026-10-01');
+  expect(queries[0]!.get('dateTo')).toBe('2026-10-31');
+  await page.getByLabel('Rango de fechas: desde, mes', { exact: true }).fill('11');
+  await page.getByLabel('Rango de fechas: desde, año', { exact: true }).fill('2026');
+  await expect(page.getByRole('button', { name: 'Descargar Excel', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click();
+  await expect.poll(() => queries.length).toBe(2);
+  expect(queries[1]!.get('dateFrom')).toBe('2026-10-01');
+  expect(queries[1]!.get('dateTo')).toBe('2026-10-31');
 });

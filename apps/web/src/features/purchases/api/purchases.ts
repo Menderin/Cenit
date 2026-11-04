@@ -12,10 +12,11 @@ export const listPurchases = async (state: 'pending' | 'reviewed' | 'all', page:
   const query = new URLSearchParams({ reviewStatus: state, page: String(page), pageSize: String(view.pageSize), ...(view.sort ? { sort: view.sort } : {}), ...filters });
   return read(PurchaseListResponseSchema, await api(`/purchases?${query}`, { signal }));
 };
-export const downloadPurchaseExport = async (filters: PurchaseFilters = {}, view: Pick<PurchaseListQuery, 'sort'> = {}) => {
+export const downloadPurchaseExport = async (filters: PurchaseFilters, view: Pick<PurchaseListQuery, 'sort'>, signal: AbortSignal) => {
   const query = new URLSearchParams({ reviewStatus: 'all', page: '1', pageSize: '100', ...(view.sort ? { sort: view.sort } : {}), ...filters });
-  const response = await api(`/purchases/export.xlsx?${query}`);
+  const response = await api(`/purchases/export.xlsx?${query}`, { signal });
   const blob = await response.blob();
+  signal.throwIfAborted();
   if (blob.type !== 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') throw new HttpError(0, 'El servidor no devolvió un archivo Excel válido.');
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

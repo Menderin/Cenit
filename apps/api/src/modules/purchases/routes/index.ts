@@ -78,7 +78,7 @@ export async function purchaseRoutes(app: FastifyInstance, options: { service: P
       for (const key of ['page', 'pageSize']) if (typeof query[key] === 'string' && /^[1-9][0-9]*$/.test(query[key])) query[key] = Number(query[key]);
     },
   }, request => options.service.list(request.query));
-  app.get<{ Querystring: PurchaseListQuery }>('/export.xlsx', { schema: { querystring: PurchaseListQuerySchema }, onRequest: access,
+  app.get<{ Querystring: PurchaseListQuery }>('/export.xlsx', { schema: { querystring: PurchaseListQuerySchema, response: errors }, onRequest: access,
     preValidation: async request => {
       const query = request.query as unknown as Record<string, unknown>;
       query.page ??= 1; query.pageSize ??= 100;
@@ -86,11 +86,22 @@ export async function purchaseRoutes(app: FastifyInstance, options: { service: P
       for (const key of ['page', 'pageSize']) if (typeof query[key] === 'string' && /^[1-9][0-9]*$/.test(query[key])) query[key] = Number(query[key]);
     },
   }, async (request, reply) => {
-    const buffer = await options.service.export(request.query);
+    const controller = new AbortController();
+    const cancel = () => controller.abort();
+    const detach = () => { request.raw.off('aborted', cancel); reply.raw.off('close', cancel); };
+    request.raw.once('aborted', cancel);
+    reply.raw.once('close', cancel);
+    let file;
+    try { file = await options.service.export(request.query, controller.signal); }
+    catch (error) { detach(); throw error; }
+    file.stream.once('close', () => {
+      detach();
+      void file.cleanup().catch(error => request.log.error({ err: error }, 'No se pudo retirar el archivo temporal de exportación.'));
+    });
     return reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
       .header('Content-Disposition', 'attachment; filename="compras.xlsx"')
       .header('Cache-Control', 'no-store')
-      .send(buffer);
+      .send(file.stream);
   });
   app.get<{ Params: { id: string } }>('/:id', { schema: { params: PurchaseParamsSchema, response: { 200: PurchaseResponseSchema, ...errors } }, onRequest: access }, request => options.service.get(request.params.id));
   app.post<{ Params: { id: string }; Body: { expectedVersion: number } }>('/:id/validation', { schema: { params: PurchaseParamsSchema, body: PurchaseValidationSchema, response: { 200: PurchaseResponseSchema, ...errors } }, onRequest: write }, request => options.service.validate(request.params.id, request.body.expectedVersion, actors.get(request)!));
