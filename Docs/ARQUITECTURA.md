@@ -223,6 +223,25 @@ El journal conjunto conserva las migraciones de compras y añade el SQL académi
 
 El catálogo publicado es inmutable; su carga valida códigos, fuentes, referencias, profundidad y ciclos antes de publicar en una transacción. El historial académico mantiene FK a `cenit.accounts.id`, sin duplicar identidades para desbloquear un recorrido.
 
+### Datos, salidas y protección
+
+La siguiente tabla describe los flujos visibles y de salida comprobados. PDF y evidencias se generan mediante impresión o adjuntos de revisión; no existe una exportación PDF/PDFX implementada por Cenit.
+
+| Datos | Destino | Acceso comprobado | Protección comprobada |
+| --- | --- | --- | --- |
+| Cuentas: correo, nombre, rol, hash de contraseña y identificador de sesión | Pantalla de acceso, menú y sesiones | Login local, rol por cuenta, sesión de dos horas; la pantalla no recibe el hash ni el token de sesión | Contraseña sólo como hash scrypt; las sesiones sólo conservan su hash; credenciales no aparecen en respuestas públicas ni artefactos |
+| Compras: cabecera, ítems, procedencia, estado, RUT/BI y referencias documentales | Pantalla, Excel descargado y Sheets opcional | Sólo administrativo; el API revalida sesión y el Excel usa descarga autenticada con `Cache-Control: no-store` | PostgreSQL controla la copia principal; Excel contiene los campos seleccionados sin cifrado propio conocido; Sheets usa cuenta de servicio dedicada y no entrega su credencial al navegador |
+| Compras seleccionadas | PDF impreso desde el navegador | Conserva las restricciones de sesión y rol de la pantalla | Un PDF generado fuera de Cenit no recibe cifrado automático por cifrar el servidor o PostgreSQL |
+| Académico: catálogo, relaciones, curso, avance ficticio, nombre y RUT de estudiante | Pantalla de catálogo y avance | Catálogo y avance según las rutas de docente/estudiante; el avance propio queda limitado a la cuenta y la búsqueda queda limitada a docente | Acceso por rol en API; demo/QA usa datos ficticios. El PDF o captura creado en el navegador queda bajo el control de ese dispositivo o servicio |
+| Capturas OCR, borradores y errores/evidencias | Pantalla y artefactos temporales de revisión | Sólo la cuenta que inició la sesión puede recuperar su borrador temporal | El borrador vive en memoria, ligado a cuenta y pestaña, y se descarta al abandonar, cerrar, recargar, cerrar sesión, vencer o cambiar de cuenta. No se persiste ni viaja en URL |
+| Ejecuciones y exportaciones de prueba | `tmp/`, `test-results/`, `playwright-report/` y logs técnicos | Entorno de desarrollo/QA; directorios excluidos de Git | No deben contener formularios completos, capturas privadas, claves, tokens ni respuestas completas con datos de usuarios |
+
+El cifrado del servidor, el volumen o PostgreSQL protege los datos almacenados y los respaldos según se haya configurado el destino; no cifra automáticamente un XLSX/PDF descargado ni una copia de Sheets creada por otro servicio. Compartir o descargar esos artefactos requiere controles adicionales en el archivo, el dispositivo, el almacenamiento o el proveedor. La existencia del cifrado de infraestructura no demuestra protección de esos destinos.
+
+La aplicación del cifrado adicional debe analizarse por campo. El correo, nombre, rol y clave normalizada de búsqueda pueden necesitar texto utilizable para acceso, vistas y consultas; también puede ser necesario convertir identificadores como RUT. Cifrar RUT, notas, calificaciones o datos documentales sensibles puede impedir orden, rangos y coincidencias normales. Requiere cifrado determinista para búsquedas exactas o cifrado en aplicación con índices protegidos y consultas de texto/fecha limitadas. Esta evaluación técnica no define qué campos son sensibles ni establece políticas institucionales.
+
+Los registros públicos responden con código, mensaje acotado, ID de solicitud y estado HTTP; el manejador no serializa el cuerpo completo ni variables de autenticación. Las entregas de Sheets guardan sólo un error acotado. OCR y capturas temporales se procesan como candidatos y se liberan sus buffers al terminar. Las evidencias se revisan antes de adjuntarlas y usan datos ficticios.
+
 ## Entornos y mantenimiento
 
 [Desarrollo y demostración local](../deploy/LOCAL.md) explican configuración, preparación ficticia y arranque. `npm run dev` comprueba/verifica las tres cuentas de demo con los secretos locales antes de iniciar API/Vite; no migra ni carga catálogo o historiales. Esta preparación existente es exclusiva del arranque local. Las demás preparaciones son comandos explícitos y no se ejecutan desde CD.
