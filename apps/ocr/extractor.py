@@ -558,7 +558,7 @@ def table(engine, image, groups, regions=None):
     for position, (top, bottom) in enumerate(body_rows):
         row = {}
         for i, (key, _) in enumerate(COLUMNS):
-            bounds = (xs[i] + 3, top + 3, xs[i + 1] - 3, bottom - 3)
+            bounds = (xs[i] + 2, top + 2, xs[i + 1] - 2, bottom - 2)
             row[key] = read_cell(engine, image.crop(bounds), detect=i < 3)
             if row[key]:
                 add_region(regions, f'/lines/{position}/{key}', bounds, image)
@@ -765,7 +765,14 @@ def candidates(raw_header, raw_lines, metadata):
 
 
 def extract(engine, content, name, mime):
-    image = decode(content, mime)
+    try:
+        image = decode(content, mime)
+    except ProcessingError as error:
+        if error.code == 'UNSUPPORTED_MEDIA_TYPE' and name and name.lower().endswith(('.jpg', '.jpeg', '.png')) and mime in ('image/jpeg', 'image/png'):
+            alt_mime = 'image/png' if mime == 'image/jpeg' else 'image/jpeg'
+            image = decode(content, alt_mime)
+        else:
+            raise
     groups = grouped(tokens(engine, image))
     regions = []
     try:
