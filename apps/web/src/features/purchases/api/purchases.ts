@@ -12,6 +12,20 @@ export const listPurchases = async (state: 'pending' | 'reviewed' | 'all', page:
   const query = new URLSearchParams({ reviewStatus: state, page: String(page), pageSize: String(view.pageSize), ...(view.sort ? { sort: view.sort } : {}), ...filters });
   return read(PurchaseListResponseSchema, await api(`/purchases?${query}`, { signal }));
 };
+export const downloadPurchaseExport = async (filters: PurchaseFilters = {}, view: Pick<PurchaseListQuery, 'sort'> = {}) => {
+  const query = new URLSearchParams({ reviewStatus: 'all', page: '1', pageSize: '100', ...(view.sort ? { sort: view.sort } : {}), ...filters });
+  const response = await api(`/purchases/export.xlsx?${query}`);
+  const blob = await response.blob();
+  if (blob.type !== 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') throw new HttpError(0, 'El servidor no devolvió un archivo Excel válido.');
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'compras.xlsx';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+};
 export const getPurchaseCapabilities = async (signal: AbortSignal) => read(PurchaseCapabilitiesResponseSchema, await api('/purchases/capabilities', { signal }));
 export const getPurchaseSheetsStatus = async (signal: AbortSignal, purchaseId?: string) => read(PurchaseSheetsResponseSchema, await api(`/purchases/sheets-sync${purchaseId ? `?purchaseId=${encodeURIComponent(purchaseId)}` : ''}`, { signal }));
 export const getPurchase = async (id: string, signal: AbortSignal) => read(PurchaseResponseSchema, await api(`/purchases/${id}`, { signal }));
