@@ -41,7 +41,7 @@ test('registro: una lista histórica sin segunda revisión, conservando ambos es
   await choose(page, 'Ordenar por fecha de envío', 'Más antiguas');
   await expect(list.getByText('Página 1 de 2', { exact: true })).toBeVisible();
   await list.getByRole('button', { name: 'Página 2', exact: true }).click();
-  await list.getByRole('link', { name: 'Ver detalles', exact: true }).first().click();
+  await list.getByRole('link', { name: /^Ver detalles/ }).first().click();
   await expect(page.locator('.purchase-status')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Validar registro', exact: true })).toHaveCount(0);
   await page.getByRole('link', { name: 'Volver al registro', exact: true }).click();
@@ -139,7 +139,8 @@ test('historial de 800 compras: períodos, orden, páginas acotadas y tamaño co
   await expect(month).toBeEnabled(); await month.focus(); await page.keyboard.press('ArrowDown'); await page.keyboard.press('f');
   await expect(page.getByRole('option', { name: 'Febrero', exact: true })).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(new RegExp(`dateFrom=${historicalYear}-02-01&dateTo=${historicalYear}-02-29`));
+  const lastFebruaryDay = new Date(Date.UTC(historicalYear, 2, 0)).getUTCDate();
+  await expect(page).toHaveURL(new RegExp(`dateFrom=${historicalYear}-02-01&dateTo=${historicalYear}-02-${lastFebruaryDay}`));
   await expect(list.locator('tbody tr')).toHaveCount(17);
   await choose(page, 'Ordenar por fecha de envío', 'Más antiguas');
   await expect(list.locator('.purchase-sent-date').first()).toHaveText(`01/02/${historicalYear}`);

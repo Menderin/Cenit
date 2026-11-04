@@ -41,7 +41,7 @@ export function PurchaseReview() {
       guard.request(() => navigate(returnTo), event.currentTarget);
     }}><ArrowLeftIcon size={13} aria-hidden="true" />Volver al registro</Link>
     <div className="purchase-page-heading"><div><h1>Revisar datos</h1><p>Revisa y completa la información antes de continuar.</p></div><span className="purchase-origin-badge">Ejemplo de demostración</span></div>
-    <div className="purchase-review__toolbar"><div><label htmlFor="review-example">Datos de ejemplo</label><select id="review-example" value={exampleId} onChange={event => {
+    <div className="purchase-review__toolbar"><div><label htmlFor="review-example">Datos de ejemplo</label><select className="cenit-input" id="review-example" value={exampleId} onChange={event => {
       const next = event.target.value;
       guard.request(() => select(next), event.currentTarget, { title: 'Cambiar ejemplo', description: 'Se descartarán tus correcciones y se cargarán los datos del otro ejemplo.', confirmLabel: 'Descartar y cambiar' });
     }}>

@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
-import { credential, login } from './support/browser.js';
+import { credential, login, selectCalendarDate } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 import { amountLabel, dateLabel } from '../../apps/web/src/features/purchases/model/fields.js';
 
@@ -53,7 +53,9 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(number);
 
-  await page.getByRole('row').filter({ hasText: number }).getByRole('link', { name: 'Ver detalles' }).click();
+  const reviewedDetail = page.getByRole('region', { name: 'Revisados en Cenit', exact: true }).getByRole('row').filter({ hasText: number }).getByRole('link', { name: `Ver detalles de ${number}`, exact: true });
+  await expect(reviewedDetail).toHaveAttribute('aria-disabled', 'false');
+  await reviewedDetail.click();
   await page.getByRole('button', { name: 'Eliminar', exact: true }).click();
   await expect(dialog(page)).toContainText('no se puede deshacer');
   await dialog(page).getByRole('button', { name: 'Eliminar registro', exact: true }).click();
@@ -292,7 +294,7 @@ test('filtros automáticos aplican un día específico, agrupan escritura y cons
   await page.clock.install(); await page.clock.pauseAt(new Date());
   await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
   await page.getByRole('button', { name: 'Abrir calendario: Fecha de envío', exact: true }).click();
-  await page.locator('.cenit-calendar [data-day="2026-10-12"] .rdp-day_button').click();
+  await selectCalendarDate(page, '2026-10-12');
   await page.clock.runFor(249);
   expect(queries).toHaveLength(0); await page.clock.runFor(1); await page.clock.resume();
   await expect(page).toHaveURL(/dateFrom=2026-10-12&dateTo=2026-10-12$/);
@@ -362,7 +364,7 @@ test('marco y navegación permanecen visibles al desplazar listas/formularios, c
     await page.locator('#admin-content').evaluate(e => { e.scrollTop = e.scrollHeight; });
     await insideViewport(page, toolbar(page));
     expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(height);
-    expect(await page.locator('.admin-shell').evaluate(e => e.getBoundingClientRect().bottom)).toBeLessThanOrEqual(height - 15);
+    expect(await page.locator('.workspace-shell').evaluate(e => e.getBoundingClientRect().bottom)).toBeLessThanOrEqual(height - 15);
     expect(await page.locator('.purchase-table-scroll').first().evaluate(e => e.scrollHeight - e.clientHeight)).toBeLessThanOrEqual(1);
   }
   await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
@@ -401,8 +403,8 @@ test('reapertura durante salida, ancla retirada y movimiento reducido conservan 
 
 test('navegación: ancho fijo del contenido durante apertura/cierre, inversión y panel móvil con foco', async ({ page }) => {
   await login(page, 'administrativo');
-  const content = page.locator('.admin-sidebar .workspace-sidebar-content');
-  const label = page.locator('.admin-sidebar a[href="/administracion/compras"] span');
+  const content = page.locator('.workspace-sidebar .workspace-sidebar-content');
+  const label = page.locator('.workspace-sidebar a[href="/administracion/compras"] span');
   const dimensions = () => label.evaluate(e => ({ width: e.getBoundingClientRect().width, height: e.getBoundingClientRect().height }));
   const before = await dimensions();
   const expectStableDimensions = async () => {
@@ -426,7 +428,7 @@ test('navegación: ancho fijo del contenido durante apertura/cierre, inversión 
   expect((await manual.boundingBox())!.height).toBe((await capture.boundingBox())!.height);
   expect((await capture.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await page.setViewportSize({ width: 390, height: 844 });
-  const position = () => page.locator('.admin-main').evaluate(e => ({ top: (e as HTMLElement).offsetTop, width: (e as HTMLElement).offsetWidth, height: (e as HTMLElement).offsetHeight }));
+  const position = () => page.locator('.workspace-main').evaluate(e => ({ top: (e as HTMLElement).offsetTop, width: (e as HTMLElement).offsetWidth, height: (e as HTMLElement).offsetHeight }));
   const beforeDrawer = await position();
   await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
   const drawer = page.getByRole('dialog', { name: 'Navegación administrativa' });

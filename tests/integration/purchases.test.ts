@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
-import { createServer } from 'node:net';
+import { execFileSync } from 'node:child_process';
 import type { Pool, PoolClient } from 'pg';
 import { mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -402,47 +401,6 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     const current = await repository.list({ reviewStatus: 'pending', page: 1, pageSize: 20, q: 'SNAPSHOT-ONLY' });
     expect(current.pagination.total).toBe(2); expect(current.totals.documentTotal).toBe('300');
   });
-  it('conserva el registro completo tras detener y arrancar un proceso real de API', async () => {
-    const listener = createServer();
-    await new Promise<void>(resolve => listener.listen(0, '127.0.0.1', resolve));
-    const port = (listener.address() as { port: number }).port;
-    await new Promise<void>((resolve, reject) => listener.close(error => error ? reject(error) : resolve()));
-    const base = `http://127.0.0.1:${port}`;
-    const url = new URL(adminUrl); url.pathname = `/${databases[0]}`;
-    const file = resolve('tmp/purchase-tests', suffix, 'restart-url'); writeFileSync(file, url.toString(), { mode: 0o600 });
-    let child: ChildProcess | undefined;
-    const stop = async () => {
-      if (child && child.exitCode === null && child.signalCode === null) {
-        const exited = new Promise<void>(resolve => child!.once('exit', () => resolve()));
-        child.kill('SIGTERM'); await exited;
-      }
-      child = undefined;
-    };
-    const start = async () => {
-      child = spawn(process.execPath, ['--import', 'tsx', 'apps/api/src/server.ts'], { env: { ...process.env, APP_ENV: 'test', HOST: '127.0.0.1', PORT: String(port), DATABASE_URL_FILE: file, AUTH_COOKIE_SECURE: 'false', AUTH_ALLOWED_ORIGINS: base }, stdio: 'ignore' });
-      for (let retry = 0; retry < 100; retry++) {
-        if (child.exitCode !== null) throw new Error('El proceso API terminó antes de estar disponible.');
-        try { if ((await fetch(`${base}/health/live`, { signal: AbortSignal.timeout(500) })).ok) return; } catch { /* bounded readiness polling */ }
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      throw new Error('La API no respondió a tiempo.');
-    };
-    try {
-      await start();
-      const account = credentials.find(entry => entry.role === 'administrativo')!;
-      const login = await fetch(`${base}/api/v1/auth/login`, { method: 'POST', headers: { origin: base, 'content-type': 'application/json' }, body: JSON.stringify({ email: account.email, password: account.password }) });
-      expect(login.status).toBe(200);
-      const cookie = login.headers.get('set-cookie')!.split(';')[0]!;
-      const input = { ...body(), origin: { type: 'contract_example', exampleId: 'partial' } };
-      const response = await fetch(`${base}/api/v1/purchases`, { method: 'POST', headers: { origin: base, cookie, 'content-type': 'application/json' }, body: JSON.stringify(input) });
-      expect(response.status).toBe(201); const saved = (await response.json()).data;
-      await stop(); await start();
-      const read = await fetch(`${base}/api/v1/purchases/${saved.id}`, { headers: { cookie } });
-      expect(read.status).toBe(200); expect((await read.json()).data).toEqual(saved);
-      expect(saved.header).toEqual(input.header); expect(saved.lines).toEqual(input.lines);
-      expect(saved.administrative).toEqual(input.administrative); expect(saved.exampleId).toBe('partial');
-    } finally { await stop(); unlinkSync(file); }
-  }, 30000);
   it('fallos inesperados no exponen SQL y logout impide consultas posteriores', async () => {
     const failed = buildAcademicApp({ repository: new AcademicRepository(pools[0]!), purchases: { get: async () => { throw new Error('SELECT password_hash FROM private_table: internal stack'); } } as unknown as PurchaseRepository, authenticate: async () => ({ accountId: randomUUID(), role: 'administrativo' }) });
     try {

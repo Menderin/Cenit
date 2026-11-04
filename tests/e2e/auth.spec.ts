@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { credential, login } from './support/browser.js';
+import { credential, login, selectCalendarDate } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 
 async function navigateAdministration(page: Page, name: string) {
@@ -34,11 +34,16 @@ for (const role of ['administrativo', 'docente', 'estudiante']) {
   test(`login, recarga y aislamiento de rutas: ${role}`, async ({ page }) => {
     const account = await login(page, role), path = role === 'administrativo' ? '/administracion' : '/academico';
     await expect(page).toHaveURL(new RegExp(`${path}$`));
-    await expect(page.locator('.academic-account, .admin-account').getByText(account.name, { exact: true })).toBeVisible();
-    await page.reload(); await expect(page.locator('.academic-account, .admin-account').getByText(account.name, { exact: true })).toBeVisible();
+    await expect(page.locator('.workspace-account').getByText(account.name, { exact: true })).toBeVisible();
+    await page.reload(); await expect(page.locator('.workspace-account').getByText(account.name, { exact: true })).toBeVisible();
     await page.goto(path === '/administracion' ? '/academico' : '/administracion');
     await expect(page).toHaveURL(new RegExp(`${path}$`));
     await expect(page.getByRole('heading', { name: role === 'administrativo' ? 'Inicio' : 'Malla curricular', exact: true })).toBeVisible();
+    if (role !== 'administrativo') {
+      const id = crypto.randomUUID(), detail = `/administracion/compras/${id}`;
+      expect((await page.request.get(`/api/v1/purchases/${id}`)).status()).toBe(403);
+      await page.goto(detail); await expect(page).toHaveURL(/\/academico$/);
+    }
     if (role !== 'administrativo') await expect(page.getByRole('region', { name: 'Asignaturas por semestre' })).toBeVisible();
     else await expect(page.getByRole('link', { name: 'Ver registros', exact: true })).toBeVisible();
     await page.goto('/prototipo.html'); await expect(page).toHaveURL(new RegExp(`${path}$`));
@@ -47,6 +52,9 @@ for (const role of ['administrativo', 'docente', 'estudiante']) {
   });
 }
 test('sin sesión no muestra módulos y credenciales incorrectas no ingresan', async ({ page }) => {
+  const id = crypto.randomUUID();
+  expect((await page.request.get(`/api/v1/purchases/${id}`)).status()).toBe(401);
+  await page.goto(`/administracion/compras/${id}`); await expect(page).toHaveURL(/\/login$/);
   await page.goto('/compras'); await expect(page).toHaveURL(/\/login$/);
   await page.getByLabel('Correo electrónico', { exact: true }).fill(credential('docente').email);
   await page.getByLabel('Contraseña', { exact: true }).fill('incorrecta');
@@ -58,7 +66,7 @@ test('logout invalida cookie, atrás no restaura cuenta y permite otra identidad
   const account = await login(page, 'administrativo');
   // Leave a real protected document in history, rather than returning to about:blank.
   await page.goto('/administracion?prueba=historial');
-  await expect(page.locator('.academic-account, .admin-account').getByText(account.name, { exact: true })).toBeVisible();
+  await expect(page.locator('.workspace-account').getByText(account.name, { exact: true })).toBeVisible();
   const cookie = (await context.cookies()).find(c => c.name === 'cenit_session')!;
   await page.getByRole('button', { name: 'Cerrar sesión' }).click();
   await expect(page).toHaveURL(/\/login$/);
@@ -67,7 +75,7 @@ test('logout invalida cookie, atrás no restaura cuenta y permite otra identidad
   await page.goBack(); await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
   await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
   const second = await login(page, 'estudiante');
-  await expect(page.locator('.academic-account').getByText(second.name, { exact: true })).toBeVisible();
+  await expect(page.locator('.workspace-account').getByText(second.name, { exact: true })).toBeVisible();
   await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
 });
 test('expiración del reloj del navegador oculta cuenta y pide login', async ({ page }) => {
@@ -668,8 +676,7 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
   await page.getByLabel('Código de proyecto', { exact: true }).fill('000X');
   const datePicker = page.getByLabel('Fecha de envío', { exact: true });
   await page.getByRole('button', { name: 'Abrir calendario: Fecha de envío', exact: true }).click();
-  for (let month = 0; month < 4; month++) await page.locator('.cenit-calendar .rdp-button_next').click();
-  await page.locator('.cenit-calendar [data-day="2027-02-01"] .rdp-day_button').click();
+  await selectCalendarDate(page, '2027-02-01');
   await expect(page).toHaveURL(/dateFrom=2027-02-01&dateTo=2027-02-01/);
   await search.fill('100%_\\');
   for (const table of [pending, reviewed]) await expect(table.getByText('1 registro', { exact: true })).toBeVisible();

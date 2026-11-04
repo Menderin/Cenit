@@ -63,6 +63,31 @@ test('Inicio muestra error y permite reintentar hasta un resumen vacío', async 
   await expect(page.getByRole('link', { name: /Subir captura/ })).toHaveCount(0);
 });
 
+test.describe('gráfico táctil', () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+  test('muestra la fecha y cantidad del día tocado', async ({ page }) => {
+    await page.route('**/api/v1/purchases/summary', async route => {
+      const response = await route.fetch();
+      const body = await response.json();
+      body.data.overview.registrationDays = [
+        { date: '2026-10-01', count: 1 }, { date: '2026-10-02', count: 2 }, { date: '2026-10-03', count: 3 },
+      ];
+      await route.fulfill({ response, json: body });
+    });
+    await login(page, 'administrativo');
+    const bars = page.locator('.dashboard-chart-bar'), tooltip = page.locator('.dashboard-chart-tooltip');
+    await expect(bars).toHaveCount(3);
+    for (const [index, date, count] of [[2, '03/10/2026', 3], [1, '02/10/2026', 2], [0, '01/10/2026', 1]] as const) {
+      const bar = bars.nth(index);
+      await bar.scrollIntoViewIfNeeded();
+      const bounds = (await bar.boundingBox())!;
+      await page.touchscreen.tap(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+      await expect(tooltip).toContainText(date);
+      await expect(tooltip).toContainText(`${count} ${count === 1 ? 'compra incorporada' : 'compras incorporadas'}`);
+    }
+  });
+});
+
 test('Inicio reúne cinco altas e indicadores en una pantalla de escritorio y se adapta a móvil', async ({ page }) => {
   await page.route('**/api/v1/purchases/capabilities', route => route.fulfill({ json: { data: { secondReviewEnabled: true, sheetsSyncEnabled: true } } }));
   await page.route('**/api/v1/purchases/sheets-sync*', route => route.fulfill({ json: { data: { status: 'pending', pending: 2, lastSyncedAt: '2026-10-22T14:00:00.000Z', url: 'https://docs.google.com/spreadsheets/d/qa_only/edit' } } }));
@@ -81,8 +106,8 @@ test('Inicio reúne cinco altas e indicadores en una pantalla de escritorio y se
   await expect(page.getByRole('region', { name: 'Sincronización con Google Sheets' })).toContainText('Pendiente de sincronización');
   await expect(page.locator('.dashboard-kpis > div').nth(0).locator('dd').first()).toHaveText('48');
   await expect(page.locator('.dashboard-kpis > div').nth(2).locator('dd').first()).toHaveText(amountLabel('3520000'));
-  const graph = page.locator('.dashboard-chart .recharts-surface');
-  // Recharts gives pointer hover priority over keyboard interaction.
+  const graph = page.locator('.dashboard-chart svg');
+  // The pointer would move the tooltip, so keep it outside the chart while testing the keyboard.
   await page.mouse.move(0, 0);
   await graph.focus();
   await expect(page.locator('.dashboard-chart-tooltip')).toContainText('23/09/2026');
@@ -91,7 +116,7 @@ test('Inicio reúne cinco altas e indicadores en una pantalla de escritorio y se
   await expect(page.locator('.dashboard-chart-tooltip')).toContainText('24/09/2026');
   await expect(page.locator('.dashboard-chart-tooltip')).toContainText('1 compra incorporada');
   await page.getByRole('link', { name: 'Abrir Compras' }).focus();
-  await page.locator('.recharts-bar-rectangle').filter({ has: page.locator('path') }).first().hover();
+  await page.locator('.dashboard-chart-bar').first().hover();
   await expect(page.locator('.dashboard-chart-tooltip')).toBeVisible();
   await expect(page.locator('.dashboard-chart-tooltip')).toContainText('24/09/2026');
   for (const width of [1280, 1366, 1440]) {
