@@ -474,12 +474,13 @@ class CandidateMapping(unittest.TestCase):
             'accountingCode': None,
         }])
         self.assertEqual(draft['administrative'], {
+            'document': None,
+            'documentType': None,
             'bi': None,
-            'oc': None,
+            'rut': None,
+            'unitName': None,
+            'item': None,
             'paymentSituation': None,
-            'hes': None,
-            'invoiceNumber': None,
-            'observations': None,
         })
 
     def test_crear_borrador_formulario_keeps_ambiguous_and_missing_fields_as_null(self):

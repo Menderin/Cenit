@@ -89,12 +89,13 @@ function buildOcrExtractionResponse(): ExtractionResponse {
         },
       ],
       administrative: {
+        document: { status: 'missing', value: null, rawText: null },
+        documentType: { status: 'missing', value: null, rawText: null },
         bi: { status: 'missing', value: null, rawText: null },
-        oc: { status: 'missing', value: null, rawText: null },
+        rut: { status: 'missing', value: null, rawText: null },
+        unitName: { status: 'missing', value: null, rawText: null },
+        item: { status: 'missing', value: null, rawText: null },
         paymentSituation: { status: 'missing', value: null, rawText: null },
-        hes: { status: 'missing', value: null, rawText: null },
-        invoiceNumber: { status: 'missing', value: null, rawText: null },
-        observations: { status: 'missing', value: null, rawText: null },
       },
       issues: [
         {
@@ -125,9 +126,9 @@ describe('montos y formatos de presentación del formulario de compras', () => {
   it('formatea fechas ISO como DD/MM/AAAA y traduce etiquetas de problemas del formulario', () => {
     expect(dateLabel('2025-12-08')).toBe('08/12/2025');
     expect(purchaseProblemLabel('/header/requestNumber')).toBe('Nº Documento / solicitud');
-    expect(purchaseProblemLabel('/administrative/paymentSituation')).toBe('Situación de pago');
+    expect(purchaseProblemLabel('/administrative/paymentSituation')).toBe('Situación de pago declarada');
     expect(purchaseProblemLabel('/lines/0/price')).toBe('Ítem 1 · Precio (CLP)');
-    expect(purchaseProblemLabel('/lines/2/chargeAccount')).toBe('Ítem 3 · Cuenta de cargo');
+    expect(purchaseProblemLabel('/lines/2/chargeAccount')).toBe('Ítem 3 · Cuenta del cargo completa');
     expect(purchaseProblemLabel('/lines')).toBe('Ítems de la solicitud');
     expect(purchaseExampleLabel('recovered')).toBe('Completo');
     expect(purchaseExampleLabel('ambiguous')).toBe('Por aclarar');
@@ -201,12 +202,13 @@ describe('llenado del formulario de compras desde el OCR y envío a la web app',
 
     // Seguimiento administrativo permanece en null hasta intervención humana
     expect(draft.administrative).toEqual({
+      document: null,
+      documentType: null,
       bi: null,
-      oc: null,
+      rut: null,
+      unitName: null,
+      item: null,
       paymentSituation: null,
-      hes: null,
-      invoiceNumber: null,
-      observations: null,
     });
   });
 
