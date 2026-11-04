@@ -69,17 +69,69 @@ test('detalle coincide con la API, conserva revisión y se recorre con teclado e
   await check();
 });
 
-test('detalle inexistente y fallo temporal no muestran datos y permiten recuperar', async ({ page }) => {
-  await login(page, 'administrativo');
-  const record = await createRecord(page);
-  await page.goto(`/administracion/compras/${crypto.randomUUID()}`);
-  await expect(page.getByRole('alert')).toContainText('Solicitud inexistente');
-  await expect(page.getByRole('heading', { name: 'Datos principales' })).toHaveCount(0);
-  await page.route(`**/api/v1/purchases/${record.id}`, route => route.fulfill({ status: 503, json: { error: { code: 'SERVICE_UNAVAILABLE', message: 'Detalle temporalmente indisponible', requestId: 'test' } } }));
-  await page.goto(`/administracion/compras/${record.id}`);
-  await expect(page.getByRole('alert')).toContainText('Detalle temporalmente indisponible');
-  await expect(page.getByRole('heading', { name: 'Datos principales' })).toHaveCount(0);
-  await page.unroute(`**/api/v1/purchases/${record.id}`);
-  await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
-  await expect(page.getByRole('heading', { name: `Solicitud ${record.header.requestNumber}` })).toBeVisible();
-});
+for (const editing of [false, true]) {
+  const screen = editing ? 'edición' : 'detalle', suffix = editing ? '/editar' : '';
+  test(`${screen}: enlace inválido e inexistente vuelven al registro con teclado y filtros`, async ({ page }) => {
+    await login(page, 'administrativo');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/administracion/compras/enlace-invalido${suffix}`);
+    const alert = page.getByRole('alert');
+    await expect(alert).toContainText('El enlace de esta compra no es válido.');
+    await expect(page.getByRole('button', { name: 'Reintentar', exact: true })).toHaveCount(0);
+    const back = alert.getByRole('link', { name: 'Volver al registro', exact: true });
+    await expect(back).toHaveAttribute('href', '/administracion/compras');
+    await expect(page.locator('.cenit-page-enter')).toHaveCSS('opacity', '1');
+    await page.screenshot({ path: `tmp/scrum-106/${editing ? 'edicion' : 'detalle'}-400-1440.png`, animations: 'disabled' });
+    await back.focus(); await expect(back).toBeFocused(); await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/administracion\/compras$/);
+
+    const record = await createRecord(page);
+    const returnTo = `/administracion/compras?q=${record.header.requestNumber}&allYears=1&sort=sentDateAsc&pageSize=50`;
+    await page.goto(returnTo);
+    const detail = page.getByRole('link', { name: `Ver detalles de ${record.header.requestNumber}`, exact: true });
+    await expect(detail).toHaveAttribute('aria-disabled', 'false');
+    if (editing) {
+      await detail.click();
+      await expect(page.getByRole('link', { name: 'Editar', exact: true })).toBeVisible();
+    }
+    const deleted = await page.request.delete(`/api/v1/purchases/${record.id}`, {
+      headers: { Origin: new URL(page.url()).origin }, data: { expectedVersion: record.version },
+    });
+    expect(deleted.status()).toBe(200);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await (editing ? page.getByRole('link', { name: 'Editar', exact: true }) : detail).click();
+    await expect(alert).toContainText('No encontramos esta compra.');
+    await expect(page.getByRole('button', { name: 'Reintentar', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Datos principales' })).toHaveCount(0);
+    await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await expect(back).toHaveAttribute('href', returnTo);
+    await expect(page.locator('.cenit-page-enter')).toHaveCSS('opacity', '1');
+    await page.screenshot({ path: `tmp/scrum-106/${editing ? 'edicion' : 'detalle'}-404-390.png`, animations: 'disabled' });
+    await back.focus(); await expect(back).toBeFocused(); await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(new URL(returnTo, page.url()).href);
+    await expect(page.getByLabel('Buscar solicitudes', { exact: true })).toHaveValue(record.header.requestNumber);
+  });
+
+  test(`${screen}: error temporal y fallo de red conservan el reintento sin mostrar datos`, async ({ page }) => {
+    await login(page, 'administrativo');
+    const record = await createRecord(page);
+    const endpoint = `**/api/v1/purchases/${record.id}`;
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const network of [false, true]) {
+      await page.route(endpoint, route => network ? route.abort('failed') : route.fulfill({ status: 503, json: { error: { code: 'SERVICE_UNAVAILABLE', message: 'Detalle temporalmente indisponible', requestId: 'test' } } }));
+      await page.goto(`/administracion/compras/${record.id}${suffix}`);
+      const alert = page.getByRole('alert');
+      await expect(alert).toContainText(network ? 'No se pudo conectar con el servidor.' : 'Detalle temporalmente indisponible');
+      await expect(page.getByRole('heading', { name: 'Datos principales' })).toHaveCount(0);
+      await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveCount(0);
+      const retry = alert.getByRole('button', { name: 'Reintentar', exact: true });
+      await retry.focus(); await expect(retry).toBeFocused();
+      await page.unroute(endpoint);
+      await page.keyboard.press('Enter');
+      await expect(page.getByRole('heading', { name: editing ? 'Editar compra' : `Solicitud ${record.header.requestNumber}`, exact: true })).toBeVisible();
+      if (editing) await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveValue(record.header.requestNumber);
+    }
+  });
+}
