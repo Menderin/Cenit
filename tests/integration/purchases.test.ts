@@ -133,9 +133,14 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(response.rawPayload as unknown as ExcelJS.Buffer);
     const sheet = workbook.getWorksheet('Compras');
+    const summary = workbook.getWorksheet('Resumen');
+    const items = workbook.getWorksheet('Ítems');
     expect(sheet).toBeDefined();
+    expect(summary).toBeDefined();
+    expect(items).toBeDefined();
     const list = (await request('GET', '/api/v1/purchases?reviewStatus=all&page=1&pageSize=100')).json();
-    expect(sheet!.getCell('G' + (sheet!.actualRowCount)).value).toBe(list.totals.documentTotal);
+    const totalRow = summary!.getColumn(1).values.findIndex(value => value === 'Total documental');
+    expect(summary!.getCell(totalRow, 2).value).toBe(list.totals.documentTotal);
   });
   it('guarda una solicitud y varios proveedores sin perder ceros, montos ni opcionales', async () => {
     const input = body(), response = await request('POST', '/api/v1/purchases', input);

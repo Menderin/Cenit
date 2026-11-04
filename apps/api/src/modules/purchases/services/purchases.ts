@@ -31,7 +31,7 @@ export class PurchaseService {
   async export(query: PurchaseListQuery) {
     if (validatePurchaseListQuery(query).length) throw new ApiError(400, 'INVALID_FILTER', 'Revisa las fechas y los filtros de búsqueda.');
     const result = await this.repository.export(query);
-    const workbook = await createPurchaseWorkbook(result.rows as Parameters<typeof createPurchaseWorkbook>[0], result.documentTotal);
+    const workbook = await createPurchaseWorkbook(result.rows as Parameters<typeof createPurchaseWorkbook>[0], result.documentTotal, { query, generatedAt: new Date().toISOString() });
     return workbook.xlsx.writeBuffer();
   }
   async get(id: string) {

@@ -195,6 +195,7 @@ export class PurchaseRepository {
       if (codes.length) predicates.push(`EXISTS (SELECT 1 FROM cenit.purchase_request_lines l WHERE l.request_id=p.id AND ${codes.join(' AND ')})`);
       const where = predicates.join(' AND ');
       const count = await db.query<{ total: number; amount: string }>(`SELECT count(*)::int AS total,coalesce(sum(p.total_amount),0)::text AS amount FROM cenit.purchase_requests p WHERE ${where}`, values);
+      if (count.rows[0]!.total > 10_000) throw new ApiError(413, 'EXPORT_LIMIT', 'La exportación supera el límite de 10.000 compras.');
       const direction = query.sort === 'sentDateAsc' ? 'ASC' : 'DESC';
       const rows: Array<Record<string, unknown>> = [];
       for (let offset = 0; offset < count.rows[0]!.total; offset += batchSize) {
