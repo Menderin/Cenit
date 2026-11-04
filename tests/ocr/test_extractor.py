@@ -16,6 +16,7 @@ from extractor import (
     add_region,
     candidates,
     capture_layout,
+    crear_borrador_formulario,
     decode,
     extract,
     extraer_tablas_solicitud,
@@ -442,6 +443,106 @@ class CandidateMapping(unittest.TestCase):
         self.assertEqual(len(data['lines']), 1)
         self.assertEqual(data['lines'][0]['costCenter']['value'], '270101-Facultad Demo')
         self.assertEqual(len(data['regions']), 18)
+
+        # Verificación de llenado del borrador del formulario (header, lines, administrative)
+        draft = crear_borrador_formulario(response)
+        self.assertEqual(draft['header'], {
+            'requestNumber': '908640',
+            'oracleId': '00329000',
+            'sender': 'PERSONA FICTICIA, ALFA',
+            'recipient': 'PERSONA SINTÉTICA, BETA',
+            'sentDate': '2026-10-12',
+            'sentTime': '16:35:54',
+            'description': 'SERVICIO DE PRUEBA',
+            'totalAmount': '440000',
+            'taxAmount': '0',
+            'attachmentReference': 'ANEXO_DEMO.pdf',
+        })
+        self.assertEqual(draft['lines'], [{
+            'description': 'SERVICIO DE PRUEBA',
+            'provider': 'PROVEEDOR DEMO SPA',
+            'costCenter': '270101-Facultad Demo',
+            'lineUnit': '1',
+            'quantity': '1',
+            'price': '440000',
+            'amount': '440000',
+            'chargeAccount': '01.02.270101.0000000.410103',
+            'universityCode': None,
+            'campusCode': None,
+            'unitCode': None,
+            'projectCode': None,
+            'accountingCode': None,
+        }])
+        self.assertEqual(draft['administrative'], {
+            'bi': None,
+            'oc': None,
+            'paymentSituation': None,
+            'hes': None,
+            'invoiceNumber': None,
+            'observations': None,
+        })
+
+    def test_crear_borrador_formulario_keeps_ambiguous_and_missing_fields_as_null(self):
+        response = candidates(
+            {
+                'requestNumber': '908640',
+                'sentDate': '08-Dic-2025 16:35:54',
+                'totalAmount': '440.000 CLP',
+                'taxAmount': 'O CLP',
+                'description': 'SERVICIO CON IMPUESTO AMBIGUO',
+            },
+            [{
+                'description': 'SERVICIO DOCENTE',
+                'provider': 'PROVEEDOR DEMO SPA',
+                'costCenter': '270101-Facultad de Medicina / 00000000-Sin Proyecto',
+                'lineUnit': '1',
+                'quantity': '1',
+                'price': '440000',
+                'amount': '440000',
+                'chargeAccount': '01.02.270101.00000000.410103',
+            }],
+            {'name': 'captura_solicitud.jpg', 'mimeType': 'image/jpeg', 'bytes': 1024, 'width': 1841, 'height': 947},
+        )
+        draft = crear_borrador_formulario(response)
+        self.assertEqual(draft['header']['requestNumber'], '908640')
+        self.assertEqual(draft['header']['sentDate'], '2025-12-08')
+        self.assertEqual(draft['header']['sentTime'], '16:35:54')
+        self.assertEqual(draft['header']['totalAmount'], '440000')
+        # El impuesto leído como 'O CLP' es ambiguo: el formulario recibe None y la respuesta conserva rawText + incidencia
+        self.assertIsNone(draft['header']['taxAmount'])
+        self.assertEqual(response['data']['header']['taxAmount']['status'], 'ambiguous')
+        self.assertEqual(response['data']['header']['taxAmount']['rawText'], 'O CLP')
+        self.assertEqual(draft['lines'][0]['chargeAccount'], '01.02.270101.00000000.410103')
+        self.assertIsNone(draft['lines'][0]['unitCode'])
+        self.assertIsNone(draft['lines'][0]['projectCode'])
+
+    def test_extract_accepts_png_bytes_when_filename_has_jpg_extension(self):
+        image = build_synthetic_oracle_image()
+        buf = io.BytesIO()
+        image.save(buf, format='PNG')
+        raw_bytes = buf.getvalue()
+
+        fake_data = {
+            'text': ['Solicitud', 'Interna', 'de', 'Compra', '908640', 'Desde', 'Enviado', 'Líneas', 'de', 'Solicitud', 'Interna'],
+            'conf': ['95', '95', '95', '95', '95', '95', '95', '95', '95', '95', '95'],
+            'left': [40, 120, 200, 240, 320, 90, 90, 40, 120, 160, 260],
+            'top': [136, 136, 136, 136, 136, 204, 280, 380, 380, 380, 380],
+            'width': [70, 70, 30, 70, 70, 50, 60, 70, 30, 70, 70],
+            'height': [24, 24, 24, 24, 24, 20, 20, 24, 24, 24, 24],
+        }
+        cell_outputs = iter([
+            'SERVICIO DE PRUEBA', 'PROVEEDOR DEMO', '270101-Demo', '1', '1', '440000', '440000', '01.02.270101.00000000.410103',
+            'Solicitud Interna de Compra 908640', 'Desde', 'ALFA', 'A', 'BETA', 'Enviado', '08-Dic-2025 16:35:54',
+            'ID', '00325486', 'Descripción', 'SERVICIO DE PRUEBA', 'Total', '440.000 CLP', 'Impuesto', '0 CLP', 'Anexos', 'ANEXO.pdf',
+        ])
+        with patch('extractor.pytesseract.image_to_data', return_value=fake_data), \
+             patch('extractor.ocr_celda', side_effect=lambda *args, **kwargs: next(cell_outputs, '')):
+            response = extract(None, raw_bytes, 'captura_solicitud.jpg', 'image/jpeg')
+
+        self.assertEqual(response['data']['input']['name'], 'captura_solicitud.jpg')
+        self.assertEqual(response['data']['input']['mimeType'], 'image/jpeg')
+        self.assertEqual(response['data']['header']['requestNumber']['value'], '908640')
+        self.assertEqual(response['data']['lines'][0]['chargeAccount']['value'], '01.02.270101.00000000.410103')
 
 
 if __name__ == '__main__':

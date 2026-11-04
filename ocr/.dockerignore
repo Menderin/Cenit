@@ -1,0 +1,6 @@
+os-teseracr.tar
+*.tar
+.venv
+__pycache__
+*.pyc
+.git

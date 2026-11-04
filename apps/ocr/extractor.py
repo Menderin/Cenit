@@ -796,6 +796,21 @@ def extract(engine, content, name, mime):
     return result
 
 
+def crear_borrador_formulario(response):
+    """
+    Transforma el contrato `ExtractionResponse` (`{"data": ...}`) en el borrador
+    editable del formulario de compras (`ExtractionReviewDraft`: `header`, `lines`,
+    `administrative`), equivalente a `createReviewDraft` en `@cenit/contracts/purchases`.
+    """
+    data = response['data'] if isinstance(response, dict) and 'data' in response else response
+    return {
+        'header': {k: data['header'][k]['value'] for k in HEADER},
+        'lines': [{k: row[k]['value'] for k in LINES} for row in data.get('lines', [])],
+        'administrative': {k: data['administrative'][k]['value'] for k in ADMIN},
+    }
+
+
+
 def formatear_tabla_ascii(df, max_ancho_col=48):
     """Devuelve una representación en tabla con bordes Unicode de cada celda del DataFrame."""
     if df is None or ( df.empty and len(df.columns) == 0 ):

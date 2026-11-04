@@ -2,20 +2,33 @@ name: ${COMPOSE_PROJECT_NAME:-cenit-local}
 
 services:
   ocr:
-    profiles: [ocr]
     image: localhost/cenit-ocr:adapter1
     build:
-      context: ./apps/ocr
-      dockerfile: Containerfile
-    ports: ["127.0.0.1:8090:8090"]
+      context: ./ocr
+      dockerfile: Dockerfile
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8090"
+    ports:
+      - "127.0.0.1:8090:8090"
+      - "127.0.0.1:8000:8090"
     networks: [cenit]
     read_only: true
     tmpfs: ["/tmp:rw,size=64m,mode=1777"]
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health/live', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
     mem_limit: 1g
     cpus: 1
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
-    restart: "no"
+    restart: unless-stopped
 
   db:
     image: docker.io/library/postgres:17.11-alpine3.24@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
@@ -101,13 +114,19 @@ services:
       AUTH_COOKIE_SECURE: "false"
       AUTH_ALLOWED_ORIGINS: "http://127.0.0.1:${CENIT_HTTP_PORT:-8081},http://localhost:${CENIT_HTTP_PORT:-8081}"
       DATABASE_URL_FILE: /run/secrets/app-url
+      OCR_URL: http://ocr:8090
+      CAPTURE_RECEIPT_KEY_FILE: /run/secrets/capture-receipt-key
       CENIT_PURCHASE_SECOND_REVIEW_ENABLED: ${CENIT_PURCHASE_SECOND_REVIEW_ENABLED:-false}
-    secrets: [app-url]
+    secrets:
+      - app-url
+      - capture-receipt-key
     networks:
       cenit:
         aliases: [cenit-app]
     depends_on:
       db:
+        condition: service_healthy
+      ocr:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
@@ -129,3 +148,5 @@ secrets:
     file: ./.local/secrets/app-url
   migrator-url:
     file: ./.local/secrets/migrator-url
+  capture-receipt-key:
+    file: ./.local/secrets/capture-receipt-key
