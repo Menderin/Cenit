@@ -4,6 +4,7 @@ import { PurchaseRepository } from '../repositories/purchases.js';
 import type { CaptureReceipts } from './capture-receipts.js';
 import { defaultPurchaseCapabilities } from './config.js';
 import type { PurchaseCapabilities } from '@cenit/contracts/purchases';
+import { createPurchaseWorkbook } from './export.js';
 
 export class PurchaseService {
   constructor(private readonly repository: PurchaseRepository, private readonly receipts?: CaptureReceipts, private readonly capabilities: PurchaseCapabilities = defaultPurchaseCapabilities) {}
@@ -26,6 +27,12 @@ export class PurchaseService {
   list(query: PurchaseListQuery) {
     if (validatePurchaseListQuery(query).length) throw new ApiError(400, 'INVALID_FILTER', 'Revisa las fechas y los filtros de búsqueda.');
     return this.repository.list(query);
+  }
+  async export(query: PurchaseListQuery) {
+    if (validatePurchaseListQuery(query).length) throw new ApiError(400, 'INVALID_FILTER', 'Revisa las fechas y los filtros de búsqueda.');
+    const result = await this.repository.export(query);
+    const workbook = await createPurchaseWorkbook(result.rows as Parameters<typeof createPurchaseWorkbook>[0], result.documentTotal);
+    return workbook.xlsx.writeBuffer();
   }
   async get(id: string) {
     const record = await this.repository.get(id);

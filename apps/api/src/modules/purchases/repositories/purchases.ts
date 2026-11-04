@@ -176,6 +176,42 @@ export class PurchaseRepository {
       return { data: rows, pagination: { page: query.page, pageSize: query.pageSize, total: count.rows[0].total }, availableYears: count.rows[0].years, totals: { currency: 'CLP', documentTotal: count.rows[0].amount } };
     }, true);
   }
+  async export(query: PurchaseListQuery, batchSize = 100) {
+    return this.transaction(async db => {
+      const values: unknown[] = [];
+      const parameter = (value: unknown) => { values.push(value); return `$${values.length}`; };
+      const predicates = [query.reviewStatus === 'all' ? 'TRUE' : `p.review_status=${parameter(query.reviewStatus)}`];
+      if (query.dateFrom) predicates.push(`p.sent_date >= ${parameter(query.dateFrom)}::date`);
+      if (query.dateTo) predicates.push(`p.sent_date <= ${parameter(query.dateTo)}::date`);
+      if (query.q) {
+        const escaped = query.q.replace(/[\\%_]/g, '\\$&');
+        const pattern = `('%' || cenit.normalize_purchase_search(${parameter(escaped)}) || '%')`;
+        predicates.push(`(p.request_number_search LIKE ${pattern} ESCAPE chr(92) OR p.description_search LIKE ${pattern} ESCAPE chr(92)
+          OR EXISTS (SELECT 1 FROM cenit.purchase_request_lines s WHERE s.request_id=p.id AND s.provider_search LIKE ${pattern} ESCAPE chr(92)))`);
+      }
+      const codes: string[] = [];
+      if (query.unitCode) codes.push(`l.unit_code=${parameter(query.unitCode)}`);
+      if (query.projectCode) codes.push(`l.project_code=${parameter(query.projectCode)}`);
+      if (codes.length) predicates.push(`EXISTS (SELECT 1 FROM cenit.purchase_request_lines l WHERE l.request_id=p.id AND ${codes.join(' AND ')})`);
+      const where = predicates.join(' AND ');
+      const count = await db.query<{ total: number; amount: string }>(`SELECT count(*)::int AS total,coalesce(sum(p.total_amount),0)::text AS amount FROM cenit.purchase_requests p WHERE ${where}`, values);
+      const direction = query.sort === 'sentDateAsc' ? 'ASC' : 'DESC';
+      const rows: Array<Record<string, unknown>> = [];
+      for (let offset = 0; offset < count.rows[0]!.total; offset += batchSize) {
+        const batch = await db.query(`SELECT p.id,p.request_number AS "requestNumber",p.sent_date::text AS "sentDate",p.description,p.total_amount AS "totalAmount",p.document_type AS "documentType",p.review_status AS "reviewStatus"
+          FROM cenit.purchase_requests p WHERE ${where} ORDER BY p.sent_date ${direction},p.id ${direction} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`, [...values, batchSize, offset]);
+        const ids = batch.rows.map(row => row.id);
+        if (!ids.length) break;
+        const lines = await db.query(`SELECT l.request_id AS "requestId",l.position,${lineKeys.map(key => `l.${column(key)} AS "${key}"`).join(',')}
+          FROM cenit.purchase_request_lines l WHERE l.request_id=ANY($1::uuid[]) ORDER BY l.request_id,l.position`, [ids]);
+        for (const purchase of batch.rows) {
+          const purchaseLines = lines.rows.filter(line => line.requestId === purchase.id);
+          rows.push(...(purchaseLines.length ? purchaseLines.map(line => ({ ...purchase, line })) : [{ ...purchase, line: null }]));
+        }
+      }
+      return { rows, documentTotal: count.rows[0]!.amount };
+    }, true);
+  }
   async validate(id: string, expectedVersion: number, accountId: string): Promise<PurchaseRecord> {
     return this.transaction(async db => {
       const result = await db.query('SELECT review_status,version FROM cenit.purchase_requests WHERE id=$1 FOR UPDATE', [id]);

@@ -24,6 +24,7 @@ import { extractionExamples } from '../../packages/contracts/src/purchases/examp
 import { PurchaseSheetsRepository } from '../../apps/api/src/modules/purchases/repositories/sheets.js';
 import { GoogleSheetsWriter } from '../../apps/api/src/modules/purchases/services/sheets.js';
 import { FakeGoogleSheets } from '../support/google-sheets.js';
+import ExcelJS from 'exceljs';
 
 const suffix = randomBytes(6).toString('hex');
 const databases = [`cenit_purchase_test_${suffix}_empty`, `cenit_purchase_test_${suffix}_existing`];
@@ -115,13 +116,26 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     }
   });
   it('sesión, roles y Origin se comprueban en todos los recursos', async () => {
-    const routes: ['GET' | 'POST' | 'DELETE', string, unknown?][] = [['GET', '/api/v1/purchases?reviewStatus=pending'], ['GET', '/api/v1/purchases/summary'], ['DELETE', `/api/v1/purchases/${randomUUID()}`, { expectedVersion: 1 }], ['POST', '/api/v1/purchases', body()], ['GET', `/api/v1/purchases/${randomUUID()}`], ['POST', `/api/v1/purchases/${randomUUID()}/validation`, { expectedVersion: 1 }]];
+    const routes: ['GET' | 'POST' | 'DELETE', string, unknown?][] = [['GET', '/api/v1/purchases?reviewStatus=pending'], ['GET', '/api/v1/purchases/export.xlsx?reviewStatus=pending'], ['GET', '/api/v1/purchases/summary'], ['DELETE', `/api/v1/purchases/${randomUUID()}`, { expectedVersion: 1 }], ['POST', '/api/v1/purchases', body()], ['GET', `/api/v1/purchases/${randomUUID()}`], ['POST', `/api/v1/purchases/${randomUUID()}/validation`, { expectedVersion: 1 }]];
     for (const [method, url, payload] of routes) {
       expect((await request(method, url, payload, '')).statusCode).toBe(401);
       for (const role of ['docente', 'estudiante']) expect((await request(method, url, payload, cookies[role])).statusCode).toBe(403);
     }
     expect((await request('POST', '/api/v1/purchases', body(), cookies.administrativo, 'http://invalid.example')).statusCode).toBe(403);
     for (const suppliedOrigin of ['', 'http://invalid.example']) expect((await request('DELETE', `/api/v1/purchases/${randomUUID()}`, { expectedVersion: 1 }, cookies.administrativo, suppliedOrigin)).statusCode).toBe(403);
+  });
+  it('exporta XLSX con descarga, caché seguro y totales exactos', async () => {
+    const response = await request('GET', '/api/v1/purchases/export.xlsx?reviewStatus=all&page=1&pageSize=100');
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    expect(response.headers['content-disposition']).toBe('attachment; filename="compras.xlsx"');
+    expect(response.headers['cache-control']).toBe('no-store');
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(response.rawPayload as unknown as ExcelJS.Buffer);
+    const sheet = workbook.getWorksheet('Compras');
+    expect(sheet).toBeDefined();
+    const list = (await request('GET', '/api/v1/purchases?reviewStatus=all&page=1&pageSize=100')).json();
+    expect(sheet!.getCell('G' + (sheet!.actualRowCount)).value).toBe(list.totals.documentTotal);
   });
   it('guarda una solicitud y varios proveedores sin perder ceros, montos ni opcionales', async () => {
     const input = body(), response = await request('POST', '/api/v1/purchases', input);
