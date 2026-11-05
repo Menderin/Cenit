@@ -7,6 +7,8 @@ Este mapa contrasta:
 - El levantamiento [CENIT PERSONAL.pdf](CENIT%20PERSONAL.pdf), secciones 3.2 y 6-8.
 - [Formulario Comision de Servicios.xlsm](Formulario%20Comision%20de%20Servicios.xlsm).
 
+Los archivos citados deben adjuntarse a la revisión o quedar identificados por su ubicación institucional acordada antes de aprobar el recorrido; su mera referencia no acredita disponibilidad ni correspondencia de esta copia. La matriz de [pruebas de aceptación](../PRUEBAS-Y-ACEPTACION.md#comisión-de-servicios) convierte los campos confirmados en una propuesta. Hasta recibir la revisión de Ignacio/PERSONAL, los casos siguen pendientes y no se declara aprobada la historia.
+
 ## Estado de obligatoriedad
 
 Se confirmó el siguiente nivel de obligatoriedad con el levantamiento de Personal y la plantilla:
