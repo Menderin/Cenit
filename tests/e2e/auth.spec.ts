@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { credential, login } from './support/browser.js';
+import { credential, login, selectCalendarDate } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 
 async function navigateAdministration(page: Page, name: string) {
@@ -676,10 +676,7 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
   await page.getByLabel('Código de proyecto', { exact: true }).fill('000X');
   const datePicker = page.getByLabel('Fecha de envío', { exact: true });
   await page.getByRole('button', { name: 'Abrir calendario: Fecha de envío', exact: true }).click();
-  while (await page.locator('.cenit-calendar [data-day="2027-02-01"] .rdp-day_button').count() === 0) {
-    await page.locator('.cenit-calendar .rdp-button_next').click();
-  }
-  await page.locator('.cenit-calendar [data-day="2027-02-01"] .rdp-day_button').click();
+  await selectCalendarDate(page, '2027-02-01');
   await expect(page).toHaveURL(/dateFrom=2027-02-01&dateTo=2027-02-01/);
   await search.fill('100%_\\');
   for (const table of [pending, reviewed]) await expect(table.getByText('1 registro', { exact: true })).toBeVisible();
@@ -718,7 +715,14 @@ test('listado: validación, error/reintento, carga y filtros descartados al camb
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
   await expect(page).toHaveURL(/\/compras$/);
   await page.route('**/api/v1/purchases?**', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'filter-error' } }) }));
+  const filteredFailure = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return url.pathname === '/api/v1/purchases' && url.searchParams.get('q') === 'PRIVATE-FILTER'
+      && url.searchParams.get('reviewStatus') === 'pending' && response.status() === 503;
+  });
   await search.fill('PRIVATE-FILTER');
+  await expect(page).toHaveURL(/q=PRIVATE-FILTER/);
+  await filteredFailure;
   const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
   await expect(pending.getByRole('alert')).toContainText('No disponible');
   await expect(pending.getByRole('table')).toHaveCount(0);

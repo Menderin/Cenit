@@ -150,7 +150,7 @@ export async function seedPurchaseDemo(pool: Pool, accountId: string) {
   for (const [index, { input, reviewed }] of purchaseDemoExamples.entries()) {
     const result = await service.create(input, accountId);
     if (result.created) created++;
-    seededRecords.push({ id: result.record.id, index, operationId: operationId(index), requestNumber: input.header.requestNumber, source: 'manual', exampleId: null });
+    if (result.created) seededRecords.push({ id: result.record.id, index, operationId: operationId(index), requestNumber: input.header.requestNumber, source: 'manual', exampleId: null });
     // Repeating a local review preserves its first reviewer, timestamp and version.
     if (reviewed && result.created) await service.validate(result.record.id, result.record.version, accountId);
   }
