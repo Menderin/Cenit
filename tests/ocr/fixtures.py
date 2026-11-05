@@ -4,7 +4,12 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 def font(size):
-    paths = ['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 'C:/Windows/Fonts/arial.ttf']
+    paths = [
+        'tmp/ocr-fonts/arial.ttf',
+        '/usr/share/fonts/liberation-sans-fonts/LiberationSans-Regular.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        'C:/Windows/Fonts/arial.ttf',
+    ]
     return ImageFont.truetype(next(p for p in paths if Path(p).exists()), size)
 
 
