@@ -29,6 +29,8 @@ Al iniciar una rama, partir de `develop` actualizado con avance rápido. Si hay 
 
 Los commits describen el resultado, por ejemplo `fix: conservar el filtro al volver del detalle` o `docs: explicar la preparación del entorno local`. Después del commit, el push de la rama ejecuta CI; un commit sólo local no tiene comprobaciones remotas. CI se ejecuta en ramas de tarea y en PR hacia `develop`/`main`, y vuelve a comprobar el SHA integrado. Un CI correcto de una rama no sustituye la revisión del PR ni autoriza por sí solo una entrega.
 
+El filtro de push también admite las ramas `SCRUM-*` y `scrum-*`. Los PR vuelven a ejecutar CI al abrirse, recibir commits, reabrirse, editarse —incluido un cambio de destino— o pasar a revisión. Configurar `CI required` como obligatorio tanto en `develop` como en `main`; comprobar únicamente GitGuardian no acredita las pruebas de la aplicación.
+
 ## Revisión e integración
 
 El PR describe problema y resultado, alcance, criterios satisfechos, verificación y pendientes. Incluir capturas cuando ayuden a revisar una interfaz. Un PR en borrador sirve para coordinar y no se considera listo para integrar.

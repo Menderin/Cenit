@@ -3,8 +3,9 @@ name: Cenit CI
 on:
   pull_request:
     branches: [develop, main]
+    types: [opened, synchronize, reopened, edited, ready_for_review]
   push:
-    branches: [develop, main, 'feat/**', 'fix/**', 'test/**', 'docs/**', 'codex/**']
+    branches: [develop, main, 'feat/**', 'fix/**', 'test/**', 'docs/**', 'codex/**', 'SCRUM-*', 'scrum-*']
   workflow_dispatch:
   workflow_call:
 
