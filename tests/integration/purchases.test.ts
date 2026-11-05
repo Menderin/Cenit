@@ -23,6 +23,7 @@ import { extractionExamples } from '../../packages/contracts/src/purchases/examp
 import { PurchaseSheetsRepository } from '../../apps/api/src/modules/purchases/repositories/sheets.js';
 import { GoogleSheetsWriter } from '../../apps/api/src/modules/purchases/services/sheets.js';
 import { FakeGoogleSheets } from '../support/google-sheets.js';
+import ExcelJS from 'exceljs';
 
 const suffix = randomBytes(6).toString('hex');
 const databases = [`cenit_purchase_test_${suffix}_empty`, `cenit_purchase_test_${suffix}_existing`];
@@ -114,13 +115,102 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     }
   });
   it('sesión, roles y Origin se comprueban en todos los recursos', async () => {
-    const routes: ['GET' | 'POST' | 'DELETE', string, unknown?][] = [['GET', '/api/v1/purchases?reviewStatus=pending'], ['GET', '/api/v1/purchases/summary'], ['DELETE', `/api/v1/purchases/${randomUUID()}`, { expectedVersion: 1 }], ['POST', '/api/v1/purchases', body()], ['GET', `/api/v1/purchases/${randomUUID()}`], ['POST', `/api/v1/purchases/${randomUUID()}/validation`, { expectedVersion: 1 }]];
+    const routes: ['GET' | 'POST' | 'DELETE', string, unknown?][] = [['GET', '/api/v1/purchases?reviewStatus=pending'], ['GET', '/api/v1/purchases/export.xlsx?reviewStatus=pending'], ['GET', '/api/v1/purchases/summary'], ['DELETE', `/api/v1/purchases/${randomUUID()}`, { expectedVersion: 1 }], ['POST', '/api/v1/purchases', body()], ['GET', `/api/v1/purchases/${randomUUID()}`], ['POST', `/api/v1/purchases/${randomUUID()}/validation`, { expectedVersion: 1 }]];
     for (const [method, url, payload] of routes) {
       expect((await request(method, url, payload, '')).statusCode).toBe(401);
       for (const role of ['docente', 'estudiante']) expect((await request(method, url, payload, cookies[role])).statusCode).toBe(403);
     }
     expect((await request('POST', '/api/v1/purchases', body(), cookies.administrativo, 'http://invalid.example')).statusCode).toBe(403);
     for (const suppliedOrigin of ['', 'http://invalid.example']) expect((await request('DELETE', `/api/v1/purchases/${randomUUID()}`, { expectedVersion: 1 }, cookies.administrativo, suppliedOrigin)).statusCode).toBe(403);
+  });
+  it('exporta XLSX con descarga, caché seguro y totales exactos', async () => {
+    const response = await request('GET', '/api/v1/purchases/export.xlsx?reviewStatus=all&page=1&pageSize=100');
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    expect(response.headers['content-disposition']).toBe('attachment; filename="compras.xlsx"');
+    expect(response.headers['cache-control']).toBe('no-store');
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(response.rawPayload as unknown as ExcelJS.Buffer);
+    const sheet = workbook.getWorksheet('Compras');
+    const summary = workbook.getWorksheet('Resumen');
+    const items = workbook.getWorksheet('Ítems');
+    expect(sheet).toBeDefined();
+    expect(summary).toBeDefined();
+    expect(items).toBeDefined();
+    const list = (await request('GET', '/api/v1/purchases?reviewStatus=all&page=1&pageSize=100')).json();
+    const totalRow = summary!.getColumn(1).values.findIndex(value => value === 'Total documental');
+    expect(summary!.getCell(totalRow, 2).value).toBe(list.totals.documentTotal);
+  });
+  it('exporta lotes completos con filtros del mismo ítem, orden y total documental exacto', async () => {
+    const actor = (await pools[0]!.query("SELECT id FROM cenit.accounts WHERE role='administrativo'")).rows[0].id;
+    // More than one database batch and a total larger than JavaScript's safe integer.
+    await pools[0]!.query(`INSERT INTO cenit.purchase_requests(id,operation_id,payload_hash,request_number,sent_date,description,total_amount,created_by)
+      SELECT gen_random_uuid(),gen_random_uuid(),repeat('a',64),'000-EXPORT-' || n,'2026-10-15','EXPORT-LOTES',9007199254740993,$1
+      FROM generate_series(1,105) n`, [actor]);
+    await pools[0]!.query(`INSERT INTO cenit.purchase_request_lines(id,request_id,position,provider,unit_code,project_code,amount)
+      SELECT gen_random_uuid(),p.id,v.position,'=Proveedor ficticio',v.unit,v.project,0
+      FROM cenit.purchase_requests p CROSS JOIN (VALUES (1,'00A','00X'),(2,'00B','00Y')) v(position,unit,project)
+      WHERE p.description='EXPORT-LOTES'`);
+    try {
+      for (const sort of ['sentDateAsc', 'sentDateDesc']) {
+        const query = `reviewStatus=all&q=EXPORT-LOTES&unitCode=00A&projectCode=00X&dateFrom=2026-10-15&dateTo=2026-10-15&sort=${sort}`;
+        const response = await request('GET', `/api/v1/purchases/export.xlsx?${query}&page=99&pageSize=1`);
+        expect(response.statusCode).toBe(200);
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(response.rawPayload as unknown as ExcelJS.Buffer);
+        const purchases = workbook.getWorksheet('Compras')!, items = workbook.getWorksheet('Ítems')!, summary = workbook.getWorksheet('Resumen')!;
+        expect(purchases.actualRowCount).toBe(106); expect(items.actualRowCount).toBe(211);
+        const first = (await request('GET', `/api/v1/purchases?${query}&pageSize=100`)).json();
+        const second = (await request('GET', `/api/v1/purchases?${query}&pageSize=100&page=2`)).json();
+        expect(purchases.getColumn(1).values.slice(2)).toEqual([...first.data, ...second.data].map((row: { id: string }) => row.id));
+        expect(purchases.getCell('B2').value).toMatch(/^000-EXPORT-/);
+        expect(purchases.getCell('G2').value).toBe('9007199254740993');
+        const totalRow = summary.getColumn(1).values.findIndex(value => value === 'Total documental');
+        expect(summary.getCell(totalRow, 2).value).toBe((105n * 9007199254740993n).toString());
+      }
+      const absent = await request('GET', '/api/v1/purchases/export.xlsx?reviewStatus=all&q=EXPORT-LOTES&unitCode=00A&projectCode=00Y');
+      const empty = new ExcelJS.Workbook(); await empty.xlsx.load(absent.rawPayload as unknown as ExcelJS.Buffer);
+      expect(empty.getWorksheet('Compras')!.actualRowCount).toBe(1);
+      for (const filter of ['dateFrom=2026-02-30', 'dateFrom=2026-10-16&dateTo=2026-10-15', 'q=', 'unknown=1']) {
+        expect((await request('GET', `/api/v1/purchases/export.xlsx?reviewStatus=all&${filter}`)).statusCode).toBe(400);
+      }
+    } finally {
+      await pools[0]!.query("DELETE FROM cenit.purchase_request_lines WHERE request_id IN (SELECT id FROM cenit.purchase_requests WHERE description='EXPORT-LOTES')");
+      await pools[0]!.query("DELETE FROM cenit.purchase_requests WHERE description='EXPORT-LOTES'");
+    }
+  });
+  it('rechaza el límite de exportación sin iniciar un archivo parcial', async () => {
+    const actor = (await pools[0]!.query("SELECT id FROM cenit.accounts WHERE role='administrativo'")).rows[0].id;
+    await pools[0]!.query(`INSERT INTO cenit.purchase_requests(id,operation_id,payload_hash,request_number,sent_date,description,total_amount,created_by)
+      SELECT gen_random_uuid(),gen_random_uuid(),repeat('b',64),'EXPORT-LIMIT-' || n,'2026-10-15','EXPORT-LIMIT',0,$1 FROM generate_series(1,10001) n`, [actor]);
+    try {
+      const response = await request('GET', '/api/v1/purchases/export.xlsx?reviewStatus=all&q=EXPORT-LIMIT');
+      expect(response.statusCode).toBe(413); expect(response.json().error.code).toBe('EXPORT_LIMIT');
+      expect(response.headers['content-type']).toContain('application/json');
+      expect(response.headers['content-disposition']).toBeUndefined();
+    } finally { await pools[0]!.query("DELETE FROM cenit.purchase_requests WHERE description='EXPORT-LIMIT'"); }
+  });
+  it('exportación mantiene cabeceras, ítems y total en el mismo snapshot ante altas concurrentes', async () => {
+    const input = body(); input.header.description = 'EXPORT-SNAPSHOT'; input.header.totalAmount = '100';
+    const saved = (await request('POST', '/api/v1/purchases', input)).json().data;
+    const batches: import('../../apps/api/src/modules/purchases/services/export.js').PurchaseExportBatch[] = [];
+    try {
+      await repository.export({ reviewStatus: 'all', page: 1, pageSize: 20, q: 'EXPORT-SNAPSHOT' }, async batch => {
+        batches.push(batch);
+        if (batch.kind === 'summary') {
+          const later = body(); later.header.description = 'EXPORT-SNAPSHOT'; later.header.totalAmount = '200';
+          await repository.create(later, saved.createdBy.id);
+        }
+      }, new AbortController().signal);
+      expect(batches[0]).toMatchObject({ kind: 'summary', purchaseCount: 1, itemCount: input.lines.length, documentTotal: '100' });
+      expect(batches.flatMap(batch => batch.kind === 'purchases' ? batch.rows.map(row => row.id) : [])).toEqual([saved.id]);
+      expect(batches.flatMap(batch => batch.kind === 'items' ? batch.rows.map(row => row.requestId) : [])).toEqual(input.lines.map(() => saved.id));
+      expect((await repository.list({ reviewStatus: 'all', page: 1, pageSize: 20, q: 'EXPORT-SNAPSHOT' })).pagination.total).toBe(2);
+    } finally {
+      await pools[0]!.query("DELETE FROM cenit.purchase_sheets_outbox WHERE purchase_id IN (SELECT id FROM cenit.purchase_requests WHERE description='EXPORT-SNAPSHOT')");
+      await pools[0]!.query("DELETE FROM cenit.purchase_request_lines WHERE request_id IN (SELECT id FROM cenit.purchase_requests WHERE description='EXPORT-SNAPSHOT')");
+      await pools[0]!.query("DELETE FROM cenit.purchase_requests WHERE description='EXPORT-SNAPSHOT'");
+    }
   });
   it('guarda una solicitud y varios proveedores sin perder ceros, montos ni opcionales', async () => {
     const input = body(), response = await request('POST', '/api/v1/purchases', input);
