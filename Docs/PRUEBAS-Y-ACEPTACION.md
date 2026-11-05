@@ -95,6 +95,12 @@ Para revisar el mockup, comparar las capturas `prerrequisito-<estado>-<ancho>.pn
 
 ## Revisión de documentación y operación
 
+### Esquema administrativo — SCRUM-86
+
+El [diccionario y único diagrama administrativo](ARQUITECTURA.md#esquema-administrativo) se cotejan con `db/schema/auth.ts`, `db/schema/purchases.ts`, el journal de migraciones y los contratos de autenticación/compras. Revisar las seis tablas, PK/FK y asociaciones lógicas sin FK; separar restricciones SQL de validaciones del API y comportamientos del repositorio. Comprobar montos exactos, procedencia y nulos, alta atómica, idempotencia, edición/versiones y entrega durable a Sheets. Los casos ejecutables existentes están en [contratos de persistencia](../packages/contracts/src/purchases/records.test.ts), [contratos de extracción](../packages/contracts/src/purchases/extraction.test.ts), [API/PostgreSQL](../tests/integration/purchases.test.ts) y [consistencia y persistencia](../tests/integration/purchases-consistency.test.ts).
+
+El cotejo documental del 04/11/2026 se realizó sobre `develop` base `9500bf4`. Las 29 pruebas de contratos de persistencia/extracción pasaron en esta revisión. Se comprobaron las rutas locales del entregable y la cobertura de columnas contra el snapshot SQL; el diagrama Mermaid se revisó por lectura. Esta tarea no volvió a ejecutar migraciones ni acredita una instalación del esquema en Azure. Mantener la revisión documental de Gael pendiente hasta obtenerla. Ante la ausencia de una referencia recuperable del entregable anterior de Andrés, el líder confirmó elaborar el esquema desde el código y los contratos vigentes, conservando el historial existente del repositorio.
+
 Para revisar cambios de arquitectura/operación, usar [SDD y componentes](ARQUITECTURA.md#componentes-y-límites), [configuración y arranque local](../deploy/LOCAL.md), [flujo de entrega](../deploy/azure/README.md#flujo-de-una-entrega-y-controles) y [diagnóstico/recuperación](../deploy/azure/README.md#diagnóstico-y-recuperación). El formato confirmado y el índice de consulta están en [README](../README.md).
 
 - Contrastar módulos, roles, rutas y estados con contratos y código; distinguir herramientas preparadas de operaciones comprobadas en un destino.
