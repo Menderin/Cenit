@@ -715,7 +715,14 @@ test('listado: validación, error/reintento, carga y filtros descartados al camb
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
   await expect(page).toHaveURL(/\/compras$/);
   await page.route('**/api/v1/purchases?**', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'filter-error' } }) }));
+  const filteredFailure = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return url.pathname === '/api/v1/purchases' && url.searchParams.get('q') === 'PRIVATE-FILTER'
+      && url.searchParams.get('reviewStatus') === 'pending' && response.status() === 503;
+  });
   await search.fill('PRIVATE-FILTER');
+  await expect(page).toHaveURL(/q=PRIVATE-FILTER/);
+  await filteredFailure;
   const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
   await expect(pending.getByRole('alert')).toContainText('No disponible');
   await expect(pending.getByRole('table')).toHaveCount(0);

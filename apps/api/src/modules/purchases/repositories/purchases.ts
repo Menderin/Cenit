@@ -4,6 +4,7 @@ import type { CreatePurchase, PurchasePayload, PurchaseRecord, PurchaseListQuery
 import { headerFields, lineFields, administrativeFields } from '@cenit/contracts/purchases';
 import { ApiError } from '../../../infrastructure/errors.js';
 import { enqueuePurchaseSheets } from './sheets.js';
+import type { PurchaseExportRow, PurchaseExportBatch } from '../services/export.js';
 
 // Column names come exclusively from the versioned contract, never request keys.
 const column = (key: string) => key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
@@ -14,6 +15,27 @@ const canonical = (input: PurchasePayload) => JSON.stringify({
   lines: input.lines.map(line => lineKeys.map(key => line[key as keyof typeof line])),
 });
 type Db = Pick<PoolClient, 'query'>;
+
+function purchaseFilters(query: PurchaseListQuery) {
+  const values: unknown[] = [];
+  const parameter = (value: unknown) => { values.push(value); return `$${values.length}`; };
+  const predicates = [query.reviewStatus === 'all' ? 'TRUE' : `p.review_status=${parameter(query.reviewStatus)}`];
+  if (query.dateFrom) predicates.push(`p.sent_date >= ${parameter(query.dateFrom)}::date`);
+  if (query.dateTo) predicates.push(`p.sent_date <= ${parameter(query.dateTo)}::date`);
+  if (query.q) {
+    const escaped = query.q.replace(/[\\%_]/g, '\\$&');
+    const pattern = `('%' || cenit.normalize_purchase_search(${parameter(escaped)}) || '%')`;
+    predicates.push(`(p.request_number_search LIKE ${pattern} ESCAPE chr(92) OR p.description_search LIKE ${pattern} ESCAPE chr(92)
+      OR EXISTS (SELECT 1 FROM cenit.purchase_request_lines s WHERE s.request_id=p.id AND s.provider_search LIKE ${pattern} ESCAPE chr(92)))`);
+  }
+  const codes: string[] = [];
+  if (query.unitCode) codes.push(`l.unit_code=${parameter(query.unitCode)}`);
+  if (query.projectCode) codes.push(`l.project_code=${parameter(query.projectCode)}`);
+  if (codes.length) predicates.push(`EXISTS (SELECT 1 FROM cenit.purchase_request_lines l WHERE l.request_id=p.id AND ${codes.join(' AND ')})`);
+  const where = predicates.join(' AND ');
+  return { where, values };
+}
+
 export class PurchaseRepository {
   constructor(private readonly pool: Pool) {}
   private async transaction<T>(run: (db: PoolClient) => Promise<T>, readOnly = false): Promise<T> {
@@ -149,22 +171,7 @@ export class PurchaseRepository {
   }
   async list(query: PurchaseListQuery): Promise<PurchaseListResponse> {
     return this.transaction(async db => {
-      const values: unknown[] = [];
-      const parameter = (value: unknown) => { values.push(value); return `$${values.length}`; };
-      const predicates = [query.reviewStatus === 'all' ? 'TRUE' : `p.review_status=${parameter(query.reviewStatus)}`];
-      if (query.dateFrom) predicates.push(`p.sent_date >= ${parameter(query.dateFrom)}::date`);
-      if (query.dateTo) predicates.push(`p.sent_date <= ${parameter(query.dateTo)}::date`);
-      if (query.q) {
-        const escaped = query.q.replace(/[\\%_]/g, '\\$&');
-        const pattern = `('%' || cenit.normalize_purchase_search(${parameter(escaped)}) || '%')`;
-        predicates.push(`(p.request_number_search LIKE ${pattern} ESCAPE chr(92) OR p.description_search LIKE ${pattern} ESCAPE chr(92)
-          OR EXISTS (SELECT 1 FROM cenit.purchase_request_lines s WHERE s.request_id=p.id AND s.provider_search LIKE ${pattern} ESCAPE chr(92)))`);
-      }
-      const codes: string[] = [];
-      if (query.unitCode) codes.push(`l.unit_code=${parameter(query.unitCode)}`);
-      if (query.projectCode) codes.push(`l.project_code=${parameter(query.projectCode)}`);
-      if (codes.length) predicates.push(`EXISTS (SELECT 1 FROM cenit.purchase_request_lines l WHERE l.request_id=p.id AND ${codes.join(' AND ')})`);
-      const where = predicates.join(' AND ');
+      const { where, values } = purchaseFilters(query);
       // EXISTS preserves one row per request. Both statements share this transaction's snapshot.
       const count = await db.query(`SELECT count(*)::int AS total,coalesce(sum(p.total_amount),0)::text AS amount,
         ARRAY(SELECT DISTINCT extract(year FROM sent_date)::int FROM cenit.purchase_requests ORDER BY 1 DESC) AS years
@@ -174,6 +181,36 @@ export class PurchaseRepository {
         CASE WHEN p.source='image_capture' THEN json_build_object('type','image_capture','extractionId',p.extraction_id,'processorVersion',p.processor_version,'processedAt',to_char(p.processed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) ELSE NULL END AS capture
         FROM cenit.purchase_requests p WHERE ${where} ORDER BY p.sent_date ${direction},p.id ${direction} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`, [...values, query.pageSize, (query.page - 1) * query.pageSize]);
       return { data: rows, pagination: { page: query.page, pageSize: query.pageSize, total: count.rows[0].total }, availableYears: count.rows[0].years, totals: { currency: 'CLP', documentTotal: count.rows[0].amount } };
+    }, true);
+  }
+  async export(query: PurchaseListQuery, consume: (batch: PurchaseExportBatch) => Promise<void>, signal: AbortSignal) {
+    return this.transaction(async db => {
+      const { where, values } = purchaseFilters(query);
+      signal.throwIfAborted();
+      const count = await db.query<{ total: number; amount: string }>(`SELECT count(*)::int AS total,coalesce(sum(p.total_amount),0)::text AS amount FROM cenit.purchase_requests p WHERE ${where}`, values);
+      if (count.rows[0]!.total > 10_000) throw new ApiError(413, 'EXPORT_LIMIT', 'La exportación supera el límite de 10.000 compras.');
+      const items = await db.query<{ total: number }>(`SELECT count(*)::int AS total FROM cenit.purchase_request_lines l JOIN cenit.purchase_requests p ON p.id=l.request_id WHERE ${where}`, values);
+      await consume({ kind: 'summary', purchaseCount: count.rows[0]!.total, itemCount: items.rows[0]!.total, documentTotal: count.rows[0]!.amount });
+      const direction = query.sort === 'sentDateAsc' ? 'ASC' : 'DESC';
+      for (let offset = 0; offset < count.rows[0]!.total; offset += 100) {
+        signal.throwIfAborted();
+        const batch = await db.query<Omit<PurchaseExportRow, 'line'>>(`SELECT p.id,p.request_number AS "requestNumber",p.sent_date::text AS "sentDate",p.description,p.total_amount AS "totalAmount",p.document_type AS "documentType",p.review_status AS "reviewStatus"
+          FROM cenit.purchase_requests p WHERE ${where} ORDER BY p.sent_date ${direction},p.id ${direction} LIMIT 100 OFFSET $${values.length + 1}`, [...values, offset]);
+        await consume({ kind: 'purchases', rows: batch.rows });
+      }
+      await consume({ kind: 'purchasesComplete' });
+      // A cursor bounds item batches independently of the number of lines in each purchase.
+      await db.query(`DECLARE purchase_export_items NO SCROLL CURSOR FOR SELECT l.request_id AS "requestId",l.position,${lineKeys.map(key => `l.${column(key)} AS "${key}"`).join(',')}
+        FROM cenit.purchase_request_lines l JOIN cenit.purchase_requests p ON p.id=l.request_id WHERE ${where}
+        ORDER BY p.sent_date ${direction},p.id ${direction},l.position`, values);
+      while (true) {
+        signal.throwIfAborted();
+        const batch = await db.query<NonNullable<PurchaseExportRow['line']> & { requestId: string }>('FETCH FORWARD 100 FROM purchase_export_items');
+        if (!batch.rows.length) break;
+        await consume({ kind: 'items', rows: batch.rows });
+      }
+      await db.query('CLOSE purchase_export_items');
+      signal.throwIfAborted();
     }, true);
   }
   async validate(id: string, expectedVersion: number, accountId: string): Promise<PurchaseRecord> {
