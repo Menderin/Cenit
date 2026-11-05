@@ -1,6 +1,7 @@
 """Release gates must reject the scaffold and partial application setup."""
 
 import importlib.util
+import fnmatch
 import json
 from pathlib import Path
 import tempfile
@@ -156,6 +157,28 @@ class ReadinessTests(unittest.TestCase):
         (self.root / "tests/e2e/auth.spec.ts").unlink()
         with self.assertRaisesRegex(ValueError, "Missing frontend"):
             READINESS.check(self.root, "develop")
+
+
+class WorkflowTriggerTests(unittest.TestCase):
+    def setUp(self):
+        workflow = SCRIPT.parents[2] / ".github/workflows/ci.yml"
+        self.triggers = workflow.read_text(encoding="utf-8").split("permissions:", 1)[0]
+
+    def test_push_includes_existing_scrum_branches(self):
+        push = self.triggers.split("  push:\n", 1)[1].split("  workflow_dispatch:", 1)[0]
+        patterns = push.split("[", 1)[1].split("]", 1)[0]
+        patterns = [pattern.strip().strip("'\"") for pattern in patterns.split(",")]
+        for branch in ("SCRUM-47", "SCRUM-115", "SCRUM-133", "scrum-47", "scrum-115", "scrum-133", "fix/ci-ramas-scrum", "develop", "main"):
+            with self.subTest(branch=branch):
+                self.assertTrue(any(fnmatch.fnmatchcase(branch, pattern) for pattern in patterns))
+
+    def test_pull_requests_run_again_after_retargeting(self):
+        pull_request = self.triggers.split("  pull_request:\n", 1)[1].split("  push:", 1)[0]
+        self.assertIn("branches: [develop, main]", pull_request)
+        events = pull_request.split("types: [", 1)[1].split("]", 1)[0].split(", ")
+        for event in ("opened", "synchronize", "reopened", "edited", "ready_for_review"):
+            with self.subTest(event=event):
+                self.assertIn(event, events)
 
 
 if __name__ == "__main__":

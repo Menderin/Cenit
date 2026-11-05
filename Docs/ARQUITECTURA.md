@@ -116,6 +116,7 @@ Los montos se almacenan exactamente en PostgreSQL y se intercambian como cadenas
 | --- | --- |
 | Guardar | `POST /api/v1/purchases`: cabecera e ítems en una transacción; 201 al crear, 200 al repetir la misma operación |
 | Listar | `GET /api/v1/purchases`: estado `all`, `pending` o `reviewed`, filtros, página y total documental de coincidencias |
+| Exportar | `GET /api/v1/purchases/export.xlsx`: las coincidencias y el mismo orden/filtros del listado, como descarga Excel administrativa. El libro contiene `Resumen`, `Compras` e `Ítems`; los ítems se relacionan con su compra mediante el ID Cenit. Se rechaza con un error comprensible una exportación superior a 10.000 compras y nunca se entrega un archivo parcial. |
 | Resumen de Inicio | `GET /api/v1/purchases/summary`: `requests`, `pending`, `currency`, `pendingAmount`, `days` y `overview` (agregados, actividad y altas recientes) |
 | Capacidades | `GET /api/v1/purchases/capabilities`: `secondReviewEnabled` y `sheetsSyncEnabled`; requiere sesión administrativa |
 | Estado de Sheets | `GET /api/v1/purchases/sheets-sync`, opcional `purchaseId`: estado, cantidad pendiente, último éxito y enlace a la planilla |
@@ -140,9 +141,13 @@ Inicio muestra tres indicadores: compras con fecha documental del año, compras 
 
 El resumen reúne los últimos treinta días de incorporación, incluidos días sin actividad y lectura textual accesible, y las cinco altas más recientes con acceso al detalle. El gráfico de barras sigue la composición de shadcn con Recharts, cargado al mostrar la actividad: presenta ejes y fecha/cantidad al pasar el cursor, navegar con flechas del teclado o usar el toque. La escala vertical deja margen hasta el siguiente múltiplo de cinco y limita las marcas a una cantidad legible. Su altura ocupa el espacio disponible de la tarjeta, sin reservar un vacío debajo del gráfico. Evita tarjetas que repitan los accesos de la barra lateral y conteos de ejemplos. Personal y Bienes siguen disponibles sólo como páginas en preparación desde la barra; sus indicadores requieren definición. La bienvenida y las superficies son compactas para mostrar todo en escritorio desde 1280×720 con datos habituales; móvil, zoom y valores extensos conservan desplazamiento sin ocultar información. La segunda revisión y Sheets se muestran junto a la actividad sólo cuando están habilitados. Inicio se actualiza al volver después de guardar, corregir, validar o eliminar; muestra carga, vacío y error con reintento sin cifras ficticias.
 
+La exportación reutiliza los predicados del listado y mantiene conteos, total documental, cabeceras e ítems en una transacción de lectura `REPEATABLE READ`. Lee lotes de cien cabeceras y un cursor de cien ítems; cada hoja se escribe y libera antes de abrir la siguiente. El libro completo se prepara en un directorio temporal privado y se transmite sólo después de completar la generación. Se retira al cerrar la descarga, cancelar o fallar. Los filtros eligen compras completas; la hoja Ítems incluye todos los ítems de esas compras, aunque sólo uno haya provocado la coincidencia. No calcula totales imputados. La pantalla usa el último conjunto válido de filtros y orden, impide envíos duplicados y cancela al salir, invalidarse la sesión o cambiar de cuenta, sin descargar respuestas tardías ni anunciar éxito.
+
 ### Interfaz y borradores
 
 El formulario presenta primero los cuatro datos obligatorios y agrupa los complementarios. Los ítems pueden desplegarse; los nuevos o con errores quedan abiertos y la validación lleva el foco al primer campo incorrecto. Las pantallas distinguen carga, vacío y error, tienen etiquetas visibles y no dependen sólo del color.
+
+En detalle y edición, un enlace inválido (400) muestra «El enlace de esta compra no es válido» y una copia inexistente (404), «No encontramos esta compra». Ambos ofrecen volver al registro con sus filtros, orden y paginación conservados cuando se llegó desde el listado; un enlace directo vuelve al registro inicial. Esos errores no ofrecen reintentar la misma consulta. Los fallos temporales del servidor o de red conservan «Reintentar» y ocultan los datos y el formulario hasta recuperar la consulta.
 
 «Guardar registro» confirma una copia de una compra ya aprobada fuera de Cenit. La condición es una precondición del proceso, no una aprobación certificada por el sistema. El formulario manual se presenta como «Registrar manualmente». El detalle ofrece «Editar» para corregir una copia ingresada manualmente o revisada desde captura; los ejemplos de demostración son de sólo lectura. Corregir modifica sólo la copia en Cenit, conserva la procedencia y no cambia Oracle. Guardar, corregir y, cuando esté habilitada, validar sólo muestran éxito tras la respuesta del servidor. Una confirmación contextual permite cancelar descartes, validaciones y eliminación; el fondo permanece bloqueado y el foco vuelve al control correspondiente. La eliminación se ofrece únicamente mediante un ícono con nombre accesible en el detalle.
 
@@ -218,6 +223,160 @@ Los historiales de demostración distinguen aprobada, reprobada, en curso y no c
 
 ## Persistencia y contratos
 
+### Esquema administrativo
+
+El diccionario y el diagrama siguientes corresponden al esquema `cenit` implementado en [autenticación](../db/schema/auth.ts) y [compras](../db/schema/purchases.ts). Las fuentes ejecutables son las migraciones SQL y los contratos [de autenticación](../packages/contracts/src/auth/index.ts) y [de compras](../packages/contracts/src/purchases/records.ts). SQL usa `snake_case` y el API `camelCase`. Una cuenta contiene un único rol textual; las autorizaciones se comprueban en servidor. Personal y Bienes conservan definición pendiente y carecen de tablas de negocio en este modelo.
+
+#### Relaciones administrativas
+
+```mermaid
+erDiagram
+    accounts ||--o{ sessions : "account_id"
+    accounts ||--o{ purchase_requests : "created_by"
+    accounts o|--o{ purchase_requests : "reviewed_by"
+    purchase_requests ||--o{ purchase_request_lines : "request_id"
+    purchase_sheets_outbox ||..o{ purchase_sheets_delivery : "purchase_id logico"
+    accounts {
+        uuid id PK
+        text email UK
+        text role
+        boolean active
+        text password_hash
+    }
+    sessions {
+        text token_hash PK
+        uuid account_id FK
+        timestamptz created_at
+        timestamptz expires_at
+        timestamptz revoked_at
+    }
+    purchase_requests {
+        uuid id PK
+        uuid created_by FK
+        uuid reviewed_by FK
+        uuid operation_id
+        text payload_hash
+        numeric total_amount
+        text source
+        text review_status
+        integer version
+    }
+    purchase_request_lines {
+        uuid id PK
+        uuid request_id FK
+        integer position
+        text provider
+        text unit_code
+        text project_code
+        numeric amount
+    }
+    purchase_sheets_outbox {
+        uuid purchase_id PK
+        integer generation
+    }
+    purchase_sheets_delivery {
+        text spreadsheet_id PK
+        uuid purchase_id PK
+        integer header_row
+        integer_array item_rows
+        integer synced_generation
+    }
+```
+
+Las relaciones con cuentas e ítems son FK con `NO ACTION`. El borrado de una compra elimina explícitamente sus ítems en la misma transacción. `purchase_sheets_outbox.purchase_id` conserva una identidad lógica, incluso después de borrar la compra. La relación punteada entre outbox y delivery expresa esa asociación lógica; ninguna de las dos tablas tiene FK a la compra ni existe FK entre ellas. Esto permite completar la retirada de la copia de Sheets después del borrado local. Las claves compuestas y restricciones adicionales se detallan abajo.
+
+#### Cuentas y sesiones
+
+| Tabla y campos | Tipo, nulabilidad y restricciones | Significado |
+| --- | --- | --- |
+| `accounts.id` | UUID, PK | Identidad compartida por módulos |
+| `email` | Texto obligatorio, único; 3–254 caracteres, minúsculas, sin espacios exteriores ni internos y formato de correo | Correo normalizado de acceso |
+| `name` | Texto obligatorio de 1–200 caracteres, con contenido no vacío | Nombre mostrado |
+| `role`, `active` | Texto obligatorio entre `docente`, `estudiante`, `administrativo`; boolean obligatorio, por defecto `true` | Un rol por cuenta; autenticación exige cuenta activa |
+| `password_hash` | Texto obligatorio con formato scrypt-v1 fijado por el CHECK SQL | Hash de contraseña; el API no expone este campo |
+| `created_at`, `updated_at` | `timestamptz` obligatorios, por defecto `now()`; actualización igual o posterior a creación | Fechas de la cuenta; actualizar exige escribir la nueva fecha en código, sin trigger automático |
+| `sessions.token_hash` | Texto PK, SHA-256 hexadecimal de 64 caracteres | Hash del token de sesión; el token original viaja en cookie protegida |
+| `account_id` | UUID obligatorio, FK a `accounts.id`; índice por cuenta | Cuenta autenticada |
+| `created_at`, `expires_at` | `timestamptz` obligatorios; CHECK de expiración exactamente dos horas después de creación; índice de expiración | Plazo fijo, sin renovación por actividad |
+| `revoked_at` | `timestamptz` nullable; si existe, igual o posterior a creación | Cierre o invalidación. La consulta de sesión exige ausencia de revocación y vigencia; el CHECK no ejecuta la expiración ni elimina filas |
+
+La política de sesión y limpieza de borradores se mantiene en [Autenticación y sesión](#autenticación-y-sesión). Los perfiles académicos referencian la misma tabla de cuentas y se documentan en [Académico](#académico).
+
+#### Cabecera de compras
+
+Los campos de negocio siguientes viven en `purchase_requests`. Salvo indicación contraria, los opcionales admiten `NULL`, no cadenas vacías. Las cuatro propiedades obligatorias del ingreso son número, fecha, descripción y total; la estructura JSON completa se define en el contrato, incluyendo propiedades opcionales representadas como `null`.
+
+| Campos SQL | Tipo y restricciones | Origen y tratamiento |
+| --- | --- | --- |
+| `id` | UUID PK | Identificador interno generado por Cenit |
+| `operation_id`, `payload_hash` | UUID y texto obligatorios; UNIQUE(`created_by`, `operation_id`); hash SHA-256 hexadecimal de 64 caracteres | Identidad de operación y resumen del contenido de alta para reintentos |
+| `request_number` | Texto obligatorio, 1–255 caracteres con contenido | Número documental recuperado o ingresado; conserva ceros y puntuación |
+| `oracle_id`, `sender`, `recipient`, `attachment_reference` | Texto nullable, 1–255 caracteres con contenido cuando existe | ID visible, remitente, destinatario y referencia textual de anexos. Referencia no equivale a un archivo almacenado |
+| `sent_date`, `sent_time` | Fecha obligatoria entre 0001-01-01 y 9999-12-31; hora textual nullable con formato `HH:mm:ss` | Fecha y hora documentales separadas; no se asigna zona institucional |
+| `description` | Texto obligatorio de 1–1.000 caracteres con contenido | Descripción general de la solicitud |
+| `total_amount`, `tax_amount` | `numeric(255,0)`, total obligatorio e impuesto nullable; no negativos, cero permitido y `NaN` rechazado | Montos documentales exactos en CLP; se comunican como cadenas de dígitos |
+| `document`, `document_type`, `bi`, `rut`, `unit_name`, `item`, `payment_situation` | Texto nullable, 1–255 caracteres con contenido cuando existe | Seguimiento administrativo. Su almacenamiento textual no valida un significado o catálogo institucional |
+| `source`, `example_id` | Origen obligatorio; ejemplo nullable y restringido por procedencia | `manual` sin identificador; `contract_example` exige `recovered`, `partial` o `ambiguous` |
+| `extraction_id`, `processor_version`, `processed_at` | UUID, texto y `timestamptz`, nullables según procedencia | `image_capture` exige los tres y ausencia de `example_id`; versión de procesador de 1–100 caracteres permitidos y fecha finita. Manual/ejemplo requieren estos tres nulos |
+| `review_status`, `version` | Estado obligatorio y versión entera positiva, valores iniciales `pending` y `1` | Estado de revisión de la copia en Cenit y control de concurrencia |
+| `created_by`, `created_at` | UUID FK obligatorio y `timestamptz` obligatorio por defecto `now()` | Creador y fecha de incorporación a Cenit |
+| `reviewed_by`, `reviewed_at` | UUID FK y `timestamptz`, ambos nullables | `pending` exige ambos nulos; `reviewed` exige ambos informados y fecha no anterior a creación |
+| `request_number_search`, `description_search` | Texto generado por PostgreSQL con `normalize_purchase_search` | Claves auxiliares de búsqueda; el original se conserva. El cliente no las escribe |
+
+El índice `purchase_list` ordena estado, fecha documental e ID. Número de solicitud e ID de Oracle no tienen restricción de unicidad institucional. `review_status` representa la copia local; la validación posterior sólo se ofrece cuando la capacidad correspondiente está habilitada. La FK acredita existencia de una cuenta; el permiso administrativo lo exige la aplicación.
+
+#### Ítems de compras
+
+Cada compra contiene de cero a cien ítems. Su posición es técnica y no corresponde al campo administrativo `item` de la cabecera.
+
+| Campos de `purchase_request_lines` | Tipo y restricciones | Origen y tratamiento |
+| --- | --- | --- |
+| `id`, `request_id`, `position` | UUID PK, UUID FK obligatorio y entero obligatorio entre 1 y 100; UNIQUE(`request_id`, `position`) | ID técnico generado, compra asociada y orden del ítem. El repositorio asigna posiciones consecutivas desde 1 |
+| `description` | Texto nullable de 1–1.000 caracteres con contenido | Descripción propia de la línea |
+| `provider`, `cost_center`, `line_unit`, `quantity`, `charge_account` | Texto nullable de 1–255 caracteres con contenido | Proveedor, centro de costos, unidad, cantidad y cuenta de cargo visibles; cantidad y unidad conservan texto |
+| `university_code`, `campus_code`, `unit_code`, `project_code`, `accounting_code` | Texto nullable de 1–255 caracteres con contenido | Componentes de código, sólo cuando se reciben o confirman; no se deducen equivalencias institucionales |
+| `price`, `amount` | `numeric(255,0)` nullable; no negativo, finito, cero permitido | Precio e importe exactos, cadenas en JSON |
+| `provider_search` | Texto generado con `normalize_purchase_search` | Búsqueda auxiliar, sin modificar el nombre original |
+
+Los proveedores permanecen separados por ítem. Unidad y proyecto se filtran sobre el mismo ítem mediante `EXISTS`. La suma documental toma cada cabecera una vez. No existe regla que exija igualdad entre suma de ítems y total, ni tablas de imputaciones presupuestarias en esta implementación.
+
+#### Cola y seguimiento de Sheets
+
+| Tabla y campos | Tipo y restricciones | Función |
+| --- | --- | --- |
+| `purchase_sheets_outbox.purchase_id`, `generation` | UUID PK sin FK; entero obligatorio positivo, inicialmente 1 | Última generación de la copia que debe proyectarse; se incrementa dentro de la transacción local |
+| `purchase_sheets_delivery.spreadsheet_id`, `purchase_id` | Texto y UUID obligatorios; PK compuesta | Seguimiento independiente por planilla y compra, sin FK para conservar bajas pendientes |
+| `header_row`, `item_rows` | Entero nullable, si existe ≥2; arreglo de enteros obligatorio, por defecto vacío; UNIQUE(`spreadsheet_id`, `header_row`) | Filas asignadas para sobrescribir la misma proyección en reintentos. SQL no comprueba cada elemento de `item_rows`; los asigna el worker |
+| `synced_generation`, `attempts` | Enteros obligatorios no negativos, inicialmente 0 | Última generación confirmada y contador de fallos |
+| `next_attempt_at`, `last_synced_at`, `last_error` | `timestamptz` obligatorio por defecto `now()`; `timestamptz` nullable; texto nullable | Próximo intento, última confirmación y código de fallo. El worker guarda `SHEETS_SYNC_FAILED`, sin respuesta privada de Google |
+
+El [repositorio de Sheets](../apps/api/src/modules/purchases/repositories/sheets.ts) usa un lock advisory para serializar entregas y procesa hasta diez trabajos por lote. Persiste las filas asignadas antes del HTTP. Si se pierde una respuesta, el reintento sobrescribe las mismas celdas. Registra la generación enviada, de modo que un cambio local posterior continúa pendiente. Un fallo conserva el trabajo y programa backoff con jitter; el guardado local ya confirmado permanece válido. La proyección se habilita explícitamente y su operación se explica en [Copia automática en Google Sheets](#copia-automática-en-google-sheets).
+
+#### Transacciones, conflictos y procedencia
+
+El [repositorio de compras](../apps/api/src/modules/purchases/repositories/purchases.ts) implementa las siguientes garantías. Son comportamientos del servidor además de las restricciones de tablas; los CHECK SQL no sustituyen la validación de contratos ni los permisos.
+
+| Operación | Comportamiento implementado |
+| --- | --- |
+| Alta completa | Inserta cabecera, todos los ítems y generación de outbox en una transacción. Un fallo revierte todo. El API devuelve `201` sólo tras el éxito |
+| Reintento de alta | La unicidad por cuenta/operación serializa reintentos concurrentes. El mismo contenido devuelve la copia existente con `200`; otro contenido devuelve `409 OPERATION_CONFLICT`. El hash de alta conserva la serialización histórica manual y añade procedencia para ejemplos y capturas |
+| Edición | `PUT` exige `expectedVersion` y bloquea la cabecera. Reemplaza datos e ítems, incrementa versión y outbox, conserva identidad/procedencia y vuelve a `pending`, retirando revisión anterior. Una versión distinta devuelve `409 VERSION_CONFLICT`; un reintento con versión anterior y contenido idéntico al vigente devuelve ese registro. Los ejemplos se rechazan con `EXAMPLE_READ_ONLY` |
+| Revisión local | La primera validación registra revisor/fecha e incrementa versión y outbox. Si ya está revisada, devuelve el estado existente conservando al primer revisor. Para una copia pendiente, una versión distinta produce conflicto |
+| Eliminación | Exige versión esperada; elimina ítems y cabecera y encola retirada de Sheets en la misma transacción. Al borrar desaparece también la identidad de alta, por lo que reenviar luego esa operación puede crear otra copia |
+| Captura | Extraer produce candidatos y un comprobante firmado asociado a la cuenta; no inserta una compra. Un alta posterior verifica procedencia y vigencia para operaciones nuevas. Se conservan metadatos de procesamiento, sin almacenar comprobante, imagen ni texto OCR completo en estas tablas |
+
+El hash de alta se conserva al editar. Por eso un reintento del POST original identifica la misma operación y devuelve el estado actual de la copia, no una revisión histórica del contenido. La versión es un contador de concurrencia, no una tabla de auditoría de ediciones.
+
+#### Ejemplos ficticios y límites del cotejo
+
+Un folio `000125`, el código de unidad `00.027` y el proyecto `000000` se conservan como texto. Un total JSON `"9007199254740993"` se almacena exactamente como `numeric(255,0)` y vuelve como cadena; una suma de varias compras puede superar los 255 dígitos y se calcula con `sum(numeric)` sin convertir a número JavaScript. Un impuesto `"0"` es válido y un dato desconocido permanece `null`. El total `"1000"` con dos ítems de `"300"` y `"400"` es admisible porque esa igualdad documental no ha sido acordada como requisito.
+
+Los [ejemplos completos validables](../packages/contracts/src/purchases/record-examples.ts) y [schemas de extracción](../packages/contracts/src/purchases/extraction.ts) conservan la forma JSON compartida; los valores anteriores son ilustraciones de campos, no una solicitud completa. Candidatos con estado y texto original pertenecen al contrato de revisión; la persistencia recibe valores revisados y procedencia. BI, ITEM, RUT y situación de pago siguen con significado institucional pendiente; Nº Documento mantiene una correspondencia provisional y los componentes de códigos requieren confirmación. No se completa información desde aprobaciones ni se crean catálogos institucionales por inferencia.
+
+Este cotejo usa el SQL aplicado hasta `0009_purchase_sheets_sync`, Drizzle, contratos y repositorios del `develop` tomado como base de SCRUM-86. El [journal](../db/migrations/meta/_journal.json) y [aliases legados](../db/migrations/meta/_legacy.json) determinan el historial completo, incluido `0003_academic_progress` con su numeración original. El diccionario y el diagrama se elaboraron desde esas fuentes vigentes al no disponer de una referencia recuperable del entregable anterior mencionado en Jira. Se conservan el historial de Git y las contribuciones previas disponibles. La revisión documental de Gael y la aceptación de significados institucionales permanecen pendientes y son distintas de las garantías técnicas descritas.
+
+Las migraciones administrativas relevantes son [cuentas/sesiones](../db/migrations/0002_auth_accounts_sessions.sql), [compras/ítems](../db/migrations/0003_purchase_requests.sql), [montos finitos](../db/migrations/0004_purchase_finite_amounts.sql), [origen de ejemplo](../db/migrations/0005_purchase_example_origin.sql), [búsqueda](../db/migrations/0006_purchase_search_keys.sql), [origen de captura](../db/migrations/0008_purchase_capture_origin.sql) y [Sheets](../db/migrations/0009_purchase_sheets_sync.sql). Se consultaron como evidencia y permanecen intactas.
+
 Los objetos de negocio viven en el esquema PostgreSQL `cenit`. Cuentas, sesiones, compras, catálogo, perfiles, adscripciones e intentos tienen FKs y restricciones propias. Los repositorios usan consultas parametrizadas y transacciones; los montos no pierden precisión ni se duplican por joins.
 
 Las respuestas del API y sus entradas se definen en `packages/contracts`. Los errores usan `{error:{code,message,requestId}}` y `X-Request-Id`, sin SQL ni trazas internas. Las respuestas protegidas llevan `Cache-Control: no-store`. Los consumidores validan el JSON; los tipos de TypeScript no reemplazan esa validación ni los permisos del servidor.
@@ -227,6 +386,25 @@ El runtime usa una credencial limitada; el migrador, otra separada. El esquema s
 El journal conjunto conserva las migraciones de compras y añade el SQL académico original `0003_academic_progress` como entrada 7; `meta/_legacy.json` reconoce su timestamp/hash anterior. No se exige que un historial previo sea un prefijo del journal combinado; entradas desconocidas, alteradas o duplicadas se rechazan. Las migraciones posteriores mantienen esa compatibilidad. Las migraciones y CD no crean cuentas, catálogo ni datos de demo.
 
 El catálogo publicado es inmutable; su carga valida códigos, fuentes, referencias, profundidad y ciclos antes de publicar en una transacción. El historial académico mantiene FK a `cenit.accounts.id`, sin duplicar identidades para desbloquear un recorrido.
+
+### Datos, salidas y protección
+
+La siguiente tabla describe los flujos visibles y de salida comprobados. PDF y evidencias se generan mediante impresión o adjuntos de revisión; no existe una exportación PDF/PDFX implementada por Cenit.
+
+| Datos | Destino | Acceso comprobado | Protección comprobada |
+| --- | --- | --- | --- |
+| Cuentas: correo, nombre, rol, hash de contraseña y identificador de sesión | Pantalla de acceso, menú y sesiones | Login local, rol por cuenta, sesión de dos horas; la pantalla no recibe el hash ni el token de sesión | Contraseña sólo como hash scrypt; las sesiones sólo conservan su hash; credenciales no aparecen en respuestas públicas ni artefactos |
+| Compras: cabecera, ítems, procedencia, estado, RUT/BI y referencias documentales | Pantalla, Excel descargado y Sheets opcional | Sólo administrativo; el API revalida sesión y el Excel usa descarga autenticada con `Cache-Control: no-store` | PostgreSQL controla la copia principal; Excel contiene los campos seleccionados sin cifrado propio conocido; Sheets usa cuenta de servicio dedicada y no entrega su credencial al navegador |
+| Compras seleccionadas | PDF impreso desde el navegador | Conserva las restricciones de sesión y rol de la pantalla | Un PDF generado fuera de Cenit no recibe cifrado automático por cifrar el servidor o PostgreSQL |
+| Académico: catálogo, relaciones, curso, avance ficticio, nombre y RUT de estudiante | Pantalla de catálogo y avance | Catálogo y avance según las rutas de docente/estudiante; el avance propio queda limitado a la cuenta y la búsqueda queda limitada a docente | Acceso por rol en API; demo/QA usa datos ficticios. El PDF o captura creado en el navegador queda bajo el control de ese dispositivo o servicio |
+| Capturas OCR, borradores y errores/evidencias | Pantalla y artefactos temporales de revisión | Sólo la cuenta que inició la sesión puede recuperar su borrador temporal | El borrador vive en memoria, ligado a cuenta y pestaña, y se descarta al abandonar, cerrar, recargar, cerrar sesión, vencer o cambiar de cuenta. No se persiste ni viaja en URL |
+| Ejecuciones y exportaciones de prueba | `tmp/`, `test-results/`, `playwright-report/` y logs técnicos | Entorno de desarrollo/QA; directorios excluidos de Git | No deben contener formularios completos, capturas privadas, claves, tokens ni respuestas completas con datos de usuarios |
+
+El cifrado del servidor, el volumen o PostgreSQL protege los datos almacenados y los respaldos según se haya configurado el destino; no cifra automáticamente un XLSX/PDF descargado ni una copia de Sheets creada por otro servicio. Compartir o descargar esos artefactos requiere controles adicionales en el archivo, el dispositivo, el almacenamiento o el proveedor. La existencia del cifrado de infraestructura no demuestra protección de esos destinos.
+
+La aplicación del cifrado adicional debe analizarse por campo. El correo, nombre, rol y clave normalizada de búsqueda pueden necesitar texto utilizable para acceso, vistas y consultas; también puede ser necesario convertir identificadores como RUT. Cifrar RUT, notas, calificaciones o datos documentales sensibles puede impedir orden, rangos y coincidencias normales. Requiere cifrado determinista para búsquedas exactas o cifrado en aplicación con índices protegidos y consultas de texto/fecha limitadas. Esta evaluación técnica no define qué campos son sensibles ni establece políticas institucionales.
+
+Los registros públicos responden con código, mensaje acotado, ID de solicitud y estado HTTP; el manejador no serializa el cuerpo completo ni variables de autenticación. Las entregas de Sheets guardan sólo un error acotado. OCR y capturas temporales se procesan como candidatos y se liberan sus buffers al terminar. Las evidencias se revisan antes de adjuntarlas y usan datos ficticios.
 
 ## Entornos y mantenimiento
 
