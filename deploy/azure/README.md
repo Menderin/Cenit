@@ -58,11 +58,11 @@ El workflow comprueba readiness por HTTPS al terminar. Sin DNS/certificado váli
 
 ```mermaid
 flowchart TD
-    Rama["Rama de tarea"] --> PR["PR y revisión independiente"]
+    Rama["Rama de tarea"] --> PR["PR hacia develop y revisión independiente"]
     PR --> CI["ci.yml: tipos, lint, pruebas y build"]
     CI --> Gate{"CI required correcto"}
     Gate -->|No| Bloqueo["Corregir; no integrar ni desplegar"]
-    Gate -->|Sí| Merge["Líder integra en develop o main"]
+    Gate -->|Sí| Merge["Líder integra en develop"]
     Merge --> Release["release.yml: CI del SHA integrado"]
     Release --> Imagenes["Construir y verificar API/web y OCR"]
     Imagenes --> Registro["GHCR: dos imágenes por digest"]
@@ -74,8 +74,13 @@ flowchart TD
     Activar --> Estado["Registrar current.json"]
     Estado --> HTTPS["Comprobar readiness por HTTPS público"]
     HTTPS --> Recorridos["Verificar recorridos y aceptación del incremento"]
+    Recorridos --> Promocion["PR de promoción develop → main"]
+    Promocion --> Origen["Main source branch y CI required"]
+    Origen --> Release
     Operador["Operador: carga de catálogo por separado"] -.-> Lock
 ```
+
+Las ramas de tarea se integran únicamente en `develop`, que despliega staging. Producción demo recibe sólo el PR de promoción desde `develop` del mismo repositorio; ese PR debe pasar `Main source branch` ([main-source.yml](../../.github/workflows/main-source.yml)) y `CI required` antes de integrarse, y su push a `main` repite el flujo con destino producción. Ver [CONTRIBUTING](../../CONTRIBUTING.md#ramas-y-commits).
 
 `ci.yml` se ejecuta para PR hacia `develop`/`main`, pushes de las ramas configuradas y llamadas reutilizables. `CI required` reúne los resultados aplicables de Prerequisites, Infrastructure y Application; Academic foundation es una variante histórica condicionada por el verificador. Un job omitido sólo es válido si el gate lo permite; no equivale a una prueba ejecutada. La aplicación completa se comprueba con tipos, lint, unitarias, integración PostgreSQL, build, navegador compilado y verificación de imagen. La publicación añade el ensayo OCR real sin red con muestras ficticias.
 
