@@ -321,7 +321,8 @@ test('contrato de compras: revisar ejemplos, corregir sin alterar original y res
   await expect(field.locator('details dd').first()).toHaveText('000125');
   await expandPurchaseSection(page, 'Seguimiento administrativo');
   await page.getByLabel('BI', { exact: true }).fill('S/N');
-  await page.getByLabel('Monto total (CLP)', { exact: true }).fill('200.000');
+  // «200.000» se normaliza al salir del campo; una coma decimal sigue siendo inválida.
+  await page.getByLabel('Monto total (CLP)', { exact: true }).fill('200,5');
   await page.getByRole('button', { name: 'Comprobar datos' }).click();
   await expect(page.getByRole('alert')).toContainText('Revisa los campos indicados.');
   await page.getByLabel('Monto total (CLP)', { exact: true }).fill('');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { amountLabel } from './fields.js';
+import { amountLabel, normalizeAmountInput } from './fields.js';
 
 describe('montos de presentación de compras', () => {
   it('conserva enteros superiores al límite de precisión de Number', () => {
@@ -10,5 +10,21 @@ describe('montos de presentación de compras', () => {
     expect(amountLabel(null)).toBe('Sin dato');
     expect(amountLabel('1,20')).toBe('1,20');
     expect(amountLabel('001')).toBe('001');
+  });
+});
+
+describe('normalización de montos escritos', () => {
+  it('acepta separadores de miles y signo peso', () => {
+    expect(normalizeAmountInput('$1.250.000')).toBe('1250000');
+    expect(normalizeAmountInput(' $ 1.250 ')).toBe('1250');
+    expect(normalizeAmountInput('1 250 000')).toBe('1250000');
+    expect(normalizeAmountInput('$200000')).toBe('200000');
+  });
+  it('no adivina formatos ambiguos o inválidos', () => {
+    expect(normalizeAmountInput('1,5')).toBe('1,5');
+    expect(normalizeAmountInput('1.25')).toBe('1.25');
+    expect(normalizeAmountInput('12.50.000')).toBe('12.50.000');
+    expect(normalizeAmountInput('-1.000')).toBe('-1.000');
+    expect(normalizeAmountInput('')).toBe('');
   });
 });
