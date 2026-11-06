@@ -345,7 +345,10 @@ test('cambiar filtros reinicia páginas, limpiar evita duplicados y el no cambio
   await page.goto('/administracion/compras?q=CONTEXTUAL-PAGES&pendingPage=2&reviewedPage=2');
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill('CONTEXTUAL-UPDATED');
   await expect(page).toHaveURL(/compras\?q=CONTEXTUAL-UPDATED$/);
-  await expect(page.getByText(/^Página 1 de /)).toHaveCount(2);
+  // Sin resultados no hay paginación; el vacío ofrece quitar los filtros en ambas tablas.
+  await expect(page.getByText('No encontramos compras con estos filtros', { exact: true })).toHaveCount(2);
+  await expect(page.getByRole('button', { name: 'Quitar filtros', exact: true })).toHaveCount(2);
+  await expect(page.getByText(/^Página \d+ de /)).toHaveCount(0);
   await page.route('**/api/v1/purchases?**', route => route.fulfill({ status: 503, json: { error: { code: 'SERVICE_UNAVAILABLE', message: 'Servicio temporalmente indisponible', requestId: 'ctx-filters' } } }));
   await page.goto('/administracion/compras?q=CONTEXTUAL-ERROR');
   await expect(pending(page).getByRole('button', { name: 'Reintentar' })).toBeVisible();

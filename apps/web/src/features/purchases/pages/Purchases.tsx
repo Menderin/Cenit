@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Link, useLocation, useSearchParams } from 'react-router';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { FunnelSimpleIcon } from '@phosphor-icons/react/dist/csr/FunnelSimple';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass';
-import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/csr/ArrowUpRight';
 import { UploadSimpleIcon } from '@phosphor-icons/react/dist/csr/UploadSimple';
 import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/csr/DownloadSimple';
 import { XIcon } from '@phosphor-icons/react/dist/csr/X';
@@ -30,8 +29,9 @@ const currentSantiagoYear = () => new Intl.DateTimeFormat('en', { timeZone: 'Ame
 type ListView = Pick<PurchaseListQuery, 'sort' | 'pageSize'>;
 type FilterInput = { q: string; dateFrom: string; dateTo: string; unitCode: string; projectCode: string };
 type FilterChip = { key: keyof FilterInput | 'period'; label: string };
-function RequestTable({ state, title, filters, page, setPage, view, setPageSize, onYears, valid, searching, returnTo }: {
+function RequestTable({ state, title, filters, page, setPage, view, setPageSize, onYears, valid, searching, returnTo, onClearFilters }: {
   state: 'pending' | 'reviewed' | 'all'; title: string; filters: PurchaseFilters; page: number; setPage: (page: number) => void; valid: boolean; searching: boolean; returnTo: string;
+  onClearFilters?: () => void;
   view: ListView; setPageSize: (size: number) => void; onYears: (years: number[] | undefined) => void;
 }) {
   const query = useQuery({ queryKey: ['purchases', 'list', state, filters, page, view], queryFn: ({ signal }) => listPurchases(state, page, signal, filters, view), enabled: valid, placeholderData: keepPreviousData });
@@ -50,18 +50,25 @@ function RequestTable({ state, title, filters, page, setPage, view, setPageSize,
     if (filtersChanged) return;
     heading.current?.focus({ preventScroll: true }); heading.current?.scrollIntoView({ block: 'start' });
   }, [page, view.pageSize, updating, query.isError, filterKey]);
-  const actions = (record: NonNullable<typeof data>['data'][number]) => <div className="purchase-row-actions__controls"><Link to={`/administracion/compras/${record.id}`} aria-disabled={updating} onClick={event => { if (updating) event.preventDefault(); }} state={{ purchasesReturnTo: returnTo }}>Ver detalles<span className="purchase-sr-only"> de {record.requestNumber}</span><ArrowUpRightIcon size={16} aria-hidden="true" /></Link>{state === 'pending' && !updating && <ValidateRecord id={record.id} version={record.version} requestNumber={record.requestNumber} fallbackFocus={heading} />}</div>;
+  const navigate = useNavigate(), hasActions = state === 'pending';
+  const detail = (id: string) => `/administracion/compras/${id}`;
+  // The whole row opens the detail for pointer users; keyboard and screen readers use the request-number link.
+  function openRow(event: MouseEvent<HTMLTableRowElement>, id: string) {
+    if (updating || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const target = event.target as HTMLElement;
+    if (!event.currentTarget.contains(target) || target.closest('a, button, input') || window.getSelection()?.toString()) return;
+    navigate(detail(id), { state: { purchasesReturnTo: returnTo } });
+  }
   return <section className="purchase-list" aria-label={title} aria-busy={updating}>
     <div className="purchase-list-heading"><h2 ref={heading} tabIndex={-1}>{title}</h2>{data && !query.isError && <><span className="purchase-count">{data.pagination.total} {data.pagination.total === 1 ? 'registro' : 'registros'}</span><span className="purchase-total">Total documental · CLP <strong>{amountLabel(data.totals.documentTotal)}</strong></span></>}</div>
     {updating && <p className="purchase-updating" role="status">Actualizando resultados…</p>}
     {!valid ? <p className="purchase-state">Corrige los filtros para consultar las compras.</p> : query.isPending ? <div className="purchase-list-skeleton" role="status">Cargando compras…<i /><i /><i /></div> : query.isError ? <div className="purchase-state" role="alert"><p>{query.error.message}</p><button className="cenit-button" onClick={() => { void query.refetch(); }}>Reintentar</button></div> : data && <>
-      {!data.data.length ? <div className="cenit-empty cenit-empty--bordered"><span className="cenit-empty__icon"><MagnifyingGlassIcon size={26} aria-hidden="true" /></span><h3>{page > 1 ? 'Esta página ya no tiene compras' : Object.keys(filters).length ? 'No encontramos compras con estos filtros' : 'Aún no hay compras registradas'}</h3><p>{page > 1 ? 'Vuelve al inicio del listado para ver los resultados disponibles.' : Object.keys(filters).length ? 'Prueba con otro período, número o código.' : 'Sube una captura o registra la primera compra manualmente.'}</p>{page > 1 && <button className="cenit-button" type="button" disabled={updating} onClick={() => setPage(1)}>Ir a la primera página</button>}</div> : <>
-      <div className="purchase-table-scroll" tabIndex={0} role="region" aria-label={`Tabla: ${title}`}><table><caption className="purchase-sr-only">{title}</caption><thead><tr><th scope="col">Nº Solicitud</th><th scope="col">Fecha de envío</th><th scope="col">Detalle</th><th scope="col">Tipo de documento</th><th scope="col" className="purchase-money">Monto · CLP</th><th scope="col">Acciones</th></tr></thead>
-        <tbody>{data.data.map(record => <tr key={record.id}><th scope="row" className="purchase-request-number">{record.requestNumber}</th><td className="purchase-sent-date" data-label="Fecha de envío">{dateLabel(record.sentDate)}</td><td className="purchase-description"><span>{record.description}</span><p className="purchase-origin-notice">{record.source === 'image_capture' ? 'Desde captura' : record.source === 'contract_example' ? 'Ejemplo de demostración' : 'Ingreso manual'}</p></td><td className="purchase-document-type" data-label="Documento">{record.documentType ?? 'Sin dato'}</td><td className="purchase-money">{amountLabel(record.totalAmount)}</td><td className="purchase-row-actions">{actions(record)}</td></tr>)}</tbody>
+      {!data.data.length ? <div className="cenit-empty cenit-empty--bordered"><span className="cenit-empty__icon"><MagnifyingGlassIcon size={26} aria-hidden="true" /></span><h3>{page > 1 ? 'Esta página ya no tiene compras' : Object.keys(filters).length ? 'No encontramos compras con estos filtros' : 'Aún no hay compras registradas'}</h3><p>{page > 1 ? 'Vuelve al inicio del listado para ver los resultados disponibles.' : Object.keys(filters).length ? 'Prueba con otro período, número o código.' : 'Sube una captura o registra la primera compra manualmente.'}</p>{page > 1 ? <button className="cenit-button" type="button" disabled={updating} onClick={() => setPage(1)}>Ir a la primera página</button> : onClearFilters && <button className="cenit-button" type="button" disabled={updating} onClick={onClearFilters}>Quitar filtros</button>}</div> : <>
+      <div className="purchase-table-scroll" tabIndex={0} role="region" aria-label={`Tabla: ${title}`}><table className={hasActions ? 'purchase-table--actions' : undefined}><caption className="purchase-sr-only">{title}</caption><thead><tr><th scope="col">Nº Solicitud</th><th scope="col">Fecha de envío</th><th scope="col">Detalle</th><th scope="col">Tipo de documento</th><th scope="col" className="purchase-money">Monto · CLP</th>{hasActions && <th scope="col"><span className="purchase-sr-only">Acciones</span></th>}</tr></thead>
+        <tbody>{data.data.map(record => <tr key={record.id} className="purchase-row" onClick={event => openRow(event, record.id)}><th scope="row" className="purchase-request-number"><Link to={detail(record.id)} aria-disabled={updating} onClick={event => { if (updating) event.preventDefault(); }} state={{ purchasesReturnTo: returnTo }} aria-label={`Ver detalles de ${record.requestNumber}`}>{record.requestNumber}</Link></th><td className="purchase-sent-date" data-label="Fecha de envío">{dateLabel(record.sentDate)}</td><td className="purchase-description"><span>{record.description}</span>{record.source !== 'manual' && <span className="purchase-origin-tag">{record.source === 'image_capture' ? 'Desde captura' : 'Ejemplo de demostración'}</span>}</td><td className="purchase-document-type" data-label="Documento">{record.documentType ?? 'Sin dato'}</td><td className="purchase-money">{amountLabel(record.totalAmount)}</td>{hasActions && <td className="purchase-row-actions">{!updating && <ValidateRecord id={record.id} version={record.version} requestNumber={record.requestNumber} fallbackFocus={heading} />}</td>}</tr>)}</tbody>
       </table></div>
-
       </>}
-      <PurchasePagination title={title} page={page} pageSize={data.pagination.pageSize} total={data.pagination.total} updating={updating} setPage={setPage} setPageSize={setPageSize} />
+      {data.pagination.total > 0 && <PurchasePagination title={title} page={page} pageSize={data.pagination.pageSize} total={data.pagination.total} updating={updating} setPage={setPage} setPageSize={setPageSize} />}
     </>}
   </section>;
 }
@@ -235,6 +242,6 @@ export function Purchases() {
       {expanded && !availableYears?.length && <p className="purchase-filter-feedback">{yearsUnavailable ? 'No se pudieron cargar los años del historial.' : availableYears ? 'Las fechas estarán disponibles cuando haya compras registradas.' : 'Cargando años del historial…'}{yearsUnavailable && <button className="cenit-button" type="button" onClick={() => { void queryClient.invalidateQueries({ queryKey: ['purchases', 'list'] }); }}>Reintentar</button>}</p>}
       {!expanded && activeFilters.some(filter => filter.key !== 'q') && <div className="purchase-filter-chips" aria-label="Filtros activos">{activeFilters.filter(filter => filter.key !== 'q').map(filter => <button className="cenit-button" type="button" key={filter.key} aria-label={`Quitar filtro: ${filter.label}`} onClick={() => remove(filter.key)}>{filter.label}<XIcon size={14} aria-hidden="true" /></button>)}</div>}
     </form>
-    {(secondReviewEnabled ? [{ state: 'pending' as const, title: 'Por revisar en Cenit' }, { state: 'reviewed' as const, title: 'Revisados en Cenit' }] : [{ state: 'all' as const, title: 'Compras registradas' }]).map(list => <RequestTable key={list.state} {...list} filters={filters} page={page(list.state)} setPage={value => setPage(list.state, value)} view={view} setPageSize={size => setView('pageSize', String(size))} onYears={receiveYears} valid={valid} searching={changed && !errors.length} returnTo={returnTo} />)}
+    {(secondReviewEnabled ? [{ state: 'pending' as const, title: 'Por revisar en Cenit' }, { state: 'reviewed' as const, title: 'Revisados en Cenit' }] : [{ state: 'all' as const, title: 'Compras registradas' }]).map(list => <RequestTable key={list.state} {...list} filters={filters} page={page(list.state)} setPage={value => setPage(list.state, value)} view={view} setPageSize={size => setView('pageSize', String(size))} onYears={receiveYears} valid={valid} searching={changed && !errors.length} returnTo={returnTo} onClearFilters={hasNonDefaultQuickPeriod || activeFilters.length > 0 ? () => remove() : undefined} />)}
   </section>;
 }
