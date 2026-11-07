@@ -43,7 +43,7 @@ resource ip 'Microsoft.Network/publicIPAddresses@2024-05-01' = {
   location: location
   tags: tags
   sku: { name: 'Standard' }
-  properties: { publicIPAllocationMethod: 'Static', publicIPAddressVersion: 'IPv4' }
+  properties: { publicIPAllocationMethod: 'Static', publicIPAddressVersion: 'IPv4', dnsSettings: { domainNameLabel: 'cenit-famed' } }
 }
 resource nic 'Microsoft.Network/networkInterfaces@2024-05-01' = {
   name: '${vmName}-nic'

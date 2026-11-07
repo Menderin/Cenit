@@ -1,0 +1,7 @@
+cenit.dpdns.org {
+  reverse_proxy 127.0.0.1:8081
+}
+develop.cenit.dpdns.org, cenit-famed.chilecentral.cloudapp.azure.com {
+  header X-Robots-Tag "noindex, nofollow"
+  reverse_proxy 127.0.0.1:8082
+}
