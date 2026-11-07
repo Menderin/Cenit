@@ -56,11 +56,11 @@ Los enlaces de las pruebas llevan al código que automatiza cada comprobación. 
 
 ## Consulta académica
 
-La fuente vigente y las aclaraciones de dirección/conjunción están en el [cotejo](COTEJO-CATALOGO-ACADEMICO.md). Las pruebas de PostgreSQL verifican convivencia con `2027-r1`, repetición, inmutabilidad, rollback y conservación de adscripciones; no necesitan releer el PDF histórico retirado. El selector y el aviso de historial incompatible se comprueban con una segunda versión controlada en el navegador. Los resultados locales de esta modificación se informan con su revisión; no sustituyen Actions ni aceptación del cliente.
+La fuente vigente y las aclaraciones de dirección/conjunción están en el [cotejo](COTEJO-CATALOGO-ACADEMICO.md). Las pruebas de PostgreSQL verifican convivencia con `2027-r1`, repetición, inmutabilidad, rollback y conservación de adscripciones; no necesitan releer el PDF histórico retirado. En el navegador se comprueba que se muestra `diagrama-r2` sin selector y no se aplica un historial incompatible. Los resultados locales de esta modificación se informan con su revisión; no sustituyen Actions ni aceptación del cliente.
 
 | Caso y criterio | Preparación y entrada | Resultado esperado | Pruebas existentes | Evidencia disponible | Pendiente |
 | --- | --- | --- | --- | --- | --- |
-| Mostrar malla y versión — SCRUM-64 | Catálogo de Nutrición diagrama-r2, sin año oficial confirmado, con 52 asignaturas, 305 SCT y cuatro internados IX–X | Nombres, créditos y distribución corresponden a la fuente revisada. IX–X permanece unido, sin inventar orden entre rotaciones | [Catálogo](../apps/api/src/modules/academic/services/catalog.test.ts), [agrupación](../apps/web/src/features/academic/model/group-by-semester.test.ts), [malla en navegador](../tests/e2e/academic.spec.ts) | Unitarias y navegador correctos | Cotejo y aceptación del contenido curricular |
+| Mostrar malla vigente — SCRUM-64 | Catálogo de Nutrición diagrama-r2, sin año oficial confirmado, con 52 asignaturas, 305 SCT y cuatro internados IX–X | Nombres, créditos y distribución corresponden a la fuente revisada. IX–X permanece unido, sin inventar orden entre rotaciones | [Catálogo](../apps/api/src/modules/academic/services/catalog.test.ts), [agrupación](../apps/web/src/features/academic/model/group-by-semester.test.ts), [malla en navegador](../tests/e2e/academic.spec.ts) | Unitarias y navegador correctos | Cotejo y aceptación del contenido curricular |
 | Consultar con teclado, móvil y fallos de carga — SCRUM-64 | Abrir una asignatura con teclado; cerrar con Escape; probar vacío, respuesta inválida y servicio no disponible; redimensionar | Detalle legible y retorno de foco. Vacío y error se distinguen; se puede reintentar sin mostrar un catálogo inventado | [Lectura del API](../apps/web/src/features/academic/api/academic.test.ts), [detalle y adaptación de pantalla](../tests/e2e/academic.spec.ts) | Unitarias y navegador correctos | Revisión de comprensión y lector de pantalla |
 | Buscar estudiantes y consultar su avance — SCRUM-64/77 | Docente busca nombre/RUT combinados, un RUT inválido y resultados paginados; estudiante consulta su propio historial | Historial y notas coinciden con los datos ficticios preparados. No se mezclan respuestas de distintos estudiantes; el estudiante no consulta a otro | [Búsqueda y permisos](../tests/integration/academic.test.ts), [recorrido académico](../tests/e2e/academic.spec.ts) | Integración y navegador correctos | Validación de las fuentes que se usarán fuera de los historiales de prueba |
 | Consultar prerrequisitos oficiales — SCRUM-70 | Fuente recibida, autorizada y cotejada; reglas de la misma versión del plan | Reglas trazables a la fuente y visibles para docente/estudiante | [Cotejo y grafo exacto](../apps/api/src/modules/academic/services/catalog-cotejo.test.ts), [publicación y permisos](../tests/integration/academic.test.ts), [consulta en navegador](../tests/e2e/academic.spec.ts) | diagrama-r2 representa la interpretación del equipo: 43 relaciones, 26 simples, ocho conjuntos y 18 pendientes; no acredita aceptación institucional | Validación institucional de la fuente y aceptación de la historia; no se cierran dependencias de otras personas |
@@ -72,6 +72,29 @@ La fuente vigente y las aclaraciones de dirección/conjunción están en el [cot
 
 El caso «diez semestres» del [recorrido académico](../tests/e2e/academic.spec.ts) comprueba acceso completo al semestre X a 1280/1440/1470 px mediante los controles y Enter, arrastre desde las tarjetas en ambas direcciones sin abrir detalles (también al salir del tablero), conservación del clic normal, movimiento reducido, desaparición de los controles a 1920 px y consulta del último ramo a 390/320 px sin desbordamiento del documento. Usa la malla ficticia de 50 ramos; no acredita una prueba en dispositivo físico.
 
+### Preparar la revisión académica — SCRUM-112
+
+Para preparar la demo ficticia, seguir la [guía local](../deploy/LOCAL.md#preparar-postgresql-y-las-cuentas). `academic:prepare-demo` publica `diagrama-r2` y prepara los historiales ficticios cuando son compatibles. Si existen historiales de otro catálogo, usar la carga explícita que indica la guía y conservarlos sin trasladarlos. Registrar el SHA y el catálogo probados, sin incluir credenciales ni datos personales.
+
+Comprobar el acceso ficticio de docente y estudiante, requisitos simples, conjuntos y pendientes, fuentes, navegación con teclado y retorno de foco. La [evaluación de comprensión](#evaluación-de-comprensión-de-la-malla--scrum-96) se registra por separado. Una revisión técnica local no acredita por sí sola la evaluación de comprensión, la aceptación institucional ni una entrega operativa en Azure.
+
+### Evaluación de comprensión de la malla — SCRUM-96
+
+Observa si se entiende la consulta académica con las cuentas ficticias de docente y estudiante. No valida el currículo ni sus reglas: eso depende de la fuente institucional (SCRUM-71). Las observaciones son de usabilidad y se registran en SCRUM-96, no en este documento.
+
+**Preparación.** Usar el entorno de [SCRUM-112](https://totofamed.atlassian.net/browse/SCRUM-112), preparado según la [guía local](../deploy/LOCAL.md), con el catálogo `diagrama-r2` y las cuentas ficticias de docente y estudiante. Anotar en el registro técnico el commit y el catálogo probados, además del navegador y el dispositivo. Un historial de otro catálogo no debe mostrarse sobre la malla vigente. Participantes: códigos anónimos (P1, P2…), sin nombres, correos ni RUT reales. Se pide que piensen en voz alta; quien conduce no explica la pantalla hasta terminar cada tarea.
+
+| Tarea (se dice con estas palabras) | Se observa | Señal de comprensión |
+| --- | --- | --- |
+| 1. «Encuentre *Bioestadística aplicada a la nutrición* y diga en qué semestre está.» | Cómo recorre la malla y si usa los controles de semestres | Llega sin ayuda y nombra el semestre III |
+| 2. «¿Qué necesita haber aprobado antes de *Diagnóstico nutricional integrado*?» | Si abre el detalle y distingue «Todos los siguientes» de un requisito único | Nombra los dos ramos y dice que se exigen ambos |
+| 3. «Abra *Bioestadística*. ¿Tiene requisitos?» | Qué entiende por «Pendientes de confirmación» | Dice que aún no está confirmado; no dice «no tiene» ni «es libre» |
+| 4. «Muestre qué ramos dependen de *Nutrición básica*.» | Si encuentra la cadena con mouse o teclado y entiende la diferencia entre directos e indirectos con la leyenda | Señala al menos un ramo directo y uno indirecto, y ve que la cadena no dice si puede inscribir |
+| 5. «¿De dónde sale esta información y qué revisión ha tenido?» | Si encuentra «Información del plan» | Nombra la fuente y dice que la validación institucional sigue pendiente |
+
+Realizar la evaluación en **escritorio** y repetir las tareas 1, 2 y 5 **solo con teclado** (Tab, Enter, Escape; el foco debe volver al ramo de origen). La evaluación con participantes en pantalla móvil se posterga y no es requisito de esta revisión. Si se usa lector de pantalla, anotar cuál.
+
+Por cada tarea registrar: completada sin ayuda, con ayuda o no completada; dudas o frases textuales relevantes; y gravedad (bloquea, confunde, menor). Cierre breve: «¿Qué entendió que significaba *pendiente*?» y «¿Qué cambiaría?». Las observaciones se convierten en acciones con responsable en SCRUM-96 y se revisan con Víctor. Si no hubo participantes, se dejan este guion y el motivo del bloqueo sin afirmar resultados.
 ## Ejecutar las pruebas
 
 Las pruebas usan datos ficticios. Las de integración y navegador crean y eliminan sus propias bases y roles en PostgreSQL; por eso necesitan una instancia exclusiva de pruebas. No deben recibir una conexión administrativa de una base real.
@@ -120,6 +143,7 @@ La evidencia anterior al mockup corresponde al código de aplicación de `82452b
 
 | Ejecución | Fecha | Resultado | Alcance |
 | --- | --- | --- | --- |
+| Preparación y recorrido técnico académico — SCRUM-112, sobre `1f44a65` | 06/11/2026 | Catálogo y build correctos; 24 recorridos académicos correctos en 1,4 min | Node 24.21.0/npm 11.19.0, Chromium y PostgreSQL 17 exclusivo de QA. `diagrama-r2`: 52 asignaturas, 43 relaciones y 18 pendientes; tres historiales ficticios. El arnés eliminó sus bases y roles. No acredita evaluación de comprensión, aceptación institucional ni entrega en Azure |
 | [CI de la versión integrada](https://github.com/Menderin/Cenit/actions/runs/39157939078) | 18/10/2026 | 89 unitarias, 97 de integración y 77 recorridos correctos; un recorrido omitido | Entorno Node 24.21.0/npm 11.19.0; el omitido fue el ensayo optativo de OCR real |
 | Comprobación local de reglas, persistencia y navegador | 19/10/2026 | 89 unitarias, 97 de integración y 77 recorridos correctos; un recorrido omitido | PostgreSQL 17 descartable, Chromium y build de producción; Node 24.16.0/npm 11.13.0 |
 | OCR real, ejecutado por separado | 19/10/2026 | Un recorrido correcto, 38,2 s incluyendo preparación | Extracción, revisión, guardado y recarga de una captura ficticia; no es un benchmark de exactitud ni de rendimiento de la VM |

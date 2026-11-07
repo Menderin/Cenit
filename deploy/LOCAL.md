@@ -115,11 +115,13 @@ La preparación conserva cuentas compatibles y no rota sus claves; una discrepan
 
 Para disponer de la malla y tres historiales ficticios:
 
+El [recorrido de revisión académica](../Docs/PRUEBAS-Y-ACEPTACION.md#preparar-la-revisión-académica--scrum-112) indica qué comprobar y registrar después de esta preparación.
+
 ```sh
 APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run academic:prepare-demo
 ```
 
-El catálogo predeterminado es `diagrama-r2`, basado en la imagen y el cotejo del equipo, sin año oficial confirmado. `npm run catalog:check` verifica sus fuentes antes de cargarlo. Si ya hay historiales adscritos a `2027-r1`, la preparación rechaza trasladarlos: para consultar la nueva versión, usar la carga explícita `APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run catalog:load` y el selector existente. Esta operación no altera historiales; no ejecutar sobre una base ajena a la demo local. El PDF retirado sólo es referencia histórica del catálogo anterior.
+El catálogo de trabajo es `diagrama-r2`, basado en la imagen y el cotejo del equipo, sin año oficial confirmado. `npm run catalog:check` verifica sus fuentes antes de cargarlo. Si ya hay historiales adscritos a `2027-r1`, la preparación rechaza trasladarlos: para consultar la malla vigente, usar la carga explícita `APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run catalog:load`. Esta operación no altera historiales; los de otra versión no se muestran sobre la malla. No ejecutar sobre una base ajena a la demo local. El PDF retirado sólo es referencia histórica del catálogo anterior.
 
 El comando publica el catálogo de trabajo, conserva las tres cuentas originales y crea sólo dos estudiantes adicionales únicos. Repetirlo conserva identidades e intentos. Si una demo antigua tiene los RUT ficticios anteriores, la opción explícita `--normalize-ruts` corrige únicamente los valores anteriores esperados; no es una operación pública de edición de perfiles.
 
