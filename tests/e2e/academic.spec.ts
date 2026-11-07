@@ -178,7 +178,7 @@ for (const role of ['docente', 'estudiante']) {
         await page.keyboard.press('Tab');
         await expect(dialog.locator('summary').last()).toBeFocused();
         await page.keyboard.press('Enter');
-        await expect(dialog.getByText(prerequisitePlan.version, { exact: true })).toBeVisible();
+        await expect(dialog.getByText(prerequisitePlan.version, { exact: true })).toHaveCount(0);
         await page.keyboard.press('Enter');
         await page.keyboard.press('Shift+Tab'); await expect(close).toBeFocused();
         expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
@@ -613,24 +613,33 @@ test('malla compacta conserva contexto, espacio de lectura y navegación plegabl
   expect(allVisible).toBe(true);
 });
 
-test('selector sólo con varias versiones y un historial no se aplica a otra versión', async ({ page }) => {
+test('malla vigente sin selector y sin aplicar historiales de otra malla', async ({ page }) => {
   await page.route('**/api/v1/academic/plans', async route => {
     const response = await route.fetch(); const body = await response.json();
-    body.data[0].versions.push({ version: 'otra-version-ejemplo', isExample: true });
+    body.data[0].versions.unshift({ version: 'otra-version-ejemplo', isExample: true });
     await route.fulfill({ json: body });
   });
-  await page.route('**/api/v1/academic/plans/nutricion-dietetica/versions/otra-version-ejemplo', async route => {
-    const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/diagrama-r2');
-    const body = await response.json(); body.data.version = 'otra-version-ejemplo'; body.data.isExample = true;
+  await page.route('**/api/v1/academic/me/progress', async route => {
+    const response = await route.fetch(); const body = await response.json();
+    body.data.plan.version = 'otra-version-ejemplo';
     await route.fulfill({ json: body });
   });
   await login(page, 'estudiante');
-  await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
-  await page.getByLabel('Versión del plan', { exact: true }).selectOption('otra-version-ejemplo');
-  await expect(page.getByRole('status')).toContainText('El historial pertenece a la versión diagrama-r2');
+  await expect(courses(page)).toHaveCount(52);
+  await expect(page.getByLabel('Versión del plan', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('El historial disponible corresponde a otra malla y no se muestra aquí.')).toHaveCount(0);
   await expect(page.locator('.academic-progress-badge')).toHaveCount(0);
-  await page.getByLabel('Versión del plan', { exact: true }).selectOption('diagrama-r2');
-  await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
+});
+
+test('no sustituye la malla vigente cuando no está publicada', async ({ page }) => {
+  await page.route('**/api/v1/academic/plans', async route => {
+    const response = await route.fetch(); const body = await response.json();
+    body.data[0].versions = [{ version: 'otra-version-ejemplo', isExample: true }];
+    await route.fulfill({ json: body });
+  });
+  await login(page, 'estudiante');
+  await expect(page.getByRole('heading', { name: 'La malla todavía no está disponible' })).toBeVisible();
+  await expect(courses(page)).toHaveCount(0);
 });
 
 test('malla y detalle legibles al redimensionar sin overflow del documento', async ({ page }, testInfo) => {

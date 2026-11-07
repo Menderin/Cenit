@@ -7,6 +7,8 @@ La demostración se entrega en Azure **Chile Central** mediante GitHub Actions, 
 | `main` | Producción de la demostración | `https://cenit.dpdns.org` |
 | `develop` | Staging | `https://develop.cenit.dpdns.org` |
 
+Staging también puede accederse por `https://cenit-famed.chilecentral.cloudapp.azure.com`, nombre DNS de la IPv4 estática de Azure. El nombre de Azure debe estar asociado a `cenit-ip` antes de entregar el cambio; Caddy solicita y renueva su certificado. La disponibilidad desde la red UCN depende de sus políticas y de la confianza en su inspección HTTPS, y debe verificarse desde esa red.
+
 Una sola B2als v2, Linux/amd64, 2 vCPU y 4 GiB; SSD estándar de 64 GiB e IPv4 fija. Ambos entornos tienen contenedores, redes, volúmenes PostgreSQL, contraseñas y claves de procedencia independientes. Cada uno incluye su propia versión OCR. Se usa Docker Compose en esta VM dedicada para reutilizar el inicializador y los secretos del Compose ya ensayado; la instalación Podman de la VM compartida y el entorno local se conservan durante la transición. Caddy del host termina HTTPS y renueva certificados. Sólo 80/443 tienen entrada pública; API, PostgreSQL y OCR no publican puertos externos. Administración mediante el agente Azure.
 
 ## Costos consultados
@@ -25,7 +27,7 @@ Los límites suman 3,25 GiB para los seis contenedores; los procesos normalmente
 
 ## Infraestructura reproducible
 
-`main.bicep` contiene red, NSG, IPv4, VM, identidad y federación. `cloud-init.yaml` prepara Docker Compose y Caddy desde paquetes Ubuntu. El script no instala runners de PR en la VM ni hace builds allí.
+`main.bicep` contiene red, NSG, IPv4 y su nombre DNS, VM, identidad y federación. `cloud-init.yaml` prepara Docker Compose y Caddy desde paquetes Ubuntu. En cada entrega de staging se valida e instala el `Caddyfile` versionado y se recarga Caddy; ante un fallo del script se intenta recuperar el archivo anterior. El script no instala runners de PR en la VM ni hace builds allí.
 
 Con Azure CLI autenticado en la cuenta y suscripción del proyecto, comprobar el destino antes de aprovisionar:
 
@@ -58,11 +60,11 @@ El workflow comprueba readiness por HTTPS al terminar. Sin DNS/certificado váli
 
 ```mermaid
 flowchart TD
-    Rama["Rama de tarea"] --> PR["PR y revisión independiente"]
+    Rama["Rama de tarea"] --> PR["PR hacia develop y revisión independiente"]
     PR --> CI["ci.yml: tipos, lint, pruebas y build"]
     CI --> Gate{"CI required correcto"}
     Gate -->|No| Bloqueo["Corregir; no integrar ni desplegar"]
-    Gate -->|Sí| Merge["Líder integra en develop o main"]
+    Gate -->|Sí| Merge["Líder integra en develop"]
     Merge --> Release["release.yml: CI del SHA integrado"]
     Release --> Imagenes["Construir y verificar API/web y OCR"]
     Imagenes --> Registro["GHCR: dos imágenes por digest"]
@@ -74,8 +76,13 @@ flowchart TD
     Activar --> Estado["Registrar current.json"]
     Estado --> HTTPS["Comprobar readiness por HTTPS público"]
     HTTPS --> Recorridos["Verificar recorridos y aceptación del incremento"]
+    Recorridos --> Promocion["PR de promoción develop → main"]
+    Promocion --> Origen["Main source branch y CI required"]
+    Origen --> Release
     Operador["Operador: carga de catálogo por separado"] -.-> Lock
 ```
+
+Las ramas de tarea se integran únicamente en `develop`, que despliega staging. Producción demo recibe sólo el PR de promoción desde `develop` del mismo repositorio; ese PR debe pasar `Main source branch` ([main-source.yml](../../.github/workflows/main-source.yml)) y `CI required` antes de integrarse, y su push a `main` repite el flujo con destino producción. Ver [CONTRIBUTING](../../CONTRIBUTING.md#ramas-y-commits).
 
 `ci.yml` se ejecuta para PR hacia `develop`/`main`, pushes de las ramas configuradas y llamadas reutilizables. `CI required` reúne los resultados aplicables de Prerequisites, Infrastructure y Application; Academic foundation es una variante histórica condicionada por el verificador. Un job omitido sólo es válido si el gate lo permite; no equivale a una prueba ejecutada. La aplicación completa se comprueba con tipos, lint, unitarias, integración PostgreSQL, build, navegador compilado y verificación de imagen. La publicación añade el ensayo OCR real sin red con muestras ficticias.
 
@@ -90,7 +97,7 @@ No copiar `.env` local a Azure. `deploy.sh` genera en cada directorio privado la
 | Configuración | Staging | Producción demo |
 | --- | --- | --- |
 | `CENIT_ENV` | `staging` | `production` |
-| `CENIT_ORIGIN` / `AUTH_ALLOWED_ORIGINS` | `https://develop.cenit.dpdns.org` | `https://cenit.dpdns.org` |
+| `CENIT_ORIGIN` / `AUTH_ALLOWED_ORIGINS` | `https://develop.cenit.dpdns.org,https://cenit-famed.chilecentral.cloudapp.azure.com` | `https://cenit.dpdns.org` |
 | `CENIT_HTTP_PORT` en loopback | `8082` | `8081` |
 | Directorio privado | `/opt/cenit/staging` | `/opt/cenit/production` |
 | `CENIT_APP_IMAGE`, `CENIT_OCR_IMAGE` | Digests verificados de la entrega de `develop` | Digests verificados de la entrega de `main` |
