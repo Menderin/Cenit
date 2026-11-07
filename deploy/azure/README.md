@@ -109,6 +109,103 @@ No copiar `.env` local a Azure. `deploy.sh` genera en cada directorio privado la
 
 Los archivos privados no se incluyen en Git, imágenes ni artefactos públicos. El runtime no recibe las claves ficticias de login para arrancar. Antes de usar una cuenta en un entorno nuevo, su preparación/transferencia debe comprobarse de forma explícita; el deploy no acredita que exista.
 
+## Verificar seguridad del entorno
+
+El operador consulta la configuración efectiva y registra entorno, fecha y SHA instalado de `current.json`. Los bloques siguientes muestran metadatos seleccionados de Azure y de la VM. Compartir únicamente la salida acotada; evitar dumps completos de `.env`, `docker inspect` o logs privados.
+
+Comprobar HTTPS con validación normal del certificado en cada dirección configurada, salud, rechazo de Origin ajeno y cookie `Secure`, `HttpOnly` y `SameSite=Lax` con una cuenta ficticia autorizada. Revisar por separado la cookie de inicio y su borrado al cerrar sesión. Ante un fallo TLS, contrastar DNS, certificado y configuración instalada de Caddy conservando la validación del certificado.
+
+### Consultas de Azure para el operador
+
+En **Azure Cloud Shell, Bash**, con la sesión del operador y el destino de `config.json`, ejecutar:
+
+```bash
+CENIT_SUBSCRIPTION=cf3ca67f-590d-41ab-9ca9-e22406de4baa
+az vm show --subscription "$CENIT_SUBSCRIPTION" -g cenit-azure -n cenit \
+  --query '{name:name,size:hardwareProfile.vmSize,encryptionAtHost:securityProfile.encryptionAtHost,osDisk:storageProfile.osDisk,dataDisks:storageProfile.dataDisks}' -o json
+CENIT_DISK_ID=$(az vm show --subscription "$CENIT_SUBSCRIPTION" -g cenit-azure -n cenit --query storageProfile.osDisk.managedDisk.id -o tsv)
+az disk show --ids "$CENIT_DISK_ID" \
+  --query '{name:name,encryption:encryption,securityProfile:securityProfile}' -o json
+az network nic list-effective-nsg --subscription "$CENIT_SUBSCRIPTION" \
+  -g cenit-azure -n cenit-nic -o json
+az network public-ip show --subscription "$CENIT_SUBSCRIPTION" \
+  -g cenit-azure -n cenit-ip --query '{fqdn:dnsSettings.fqdn,state:provisioningState}' -o json
+```
+
+Registrar también el cifrado de cada disco de datos que devuelva la VM, si existe, usando `az disk show --ids` con su ID. Contrastar las reglas efectivas de la NIC con la entrada pública necesaria de 80/443 y con las publicaciones del host. Una consulta sin permisos o un valor ausente queda pendiente de comprobar.
+
+El cifrado del disco administrado, su tipo de clave, la caché y los discos temporales se evalúan por separado. El Bicep actual no declara `encryptionAtHost`; su valor efectivo requiere la consulta anterior. Las claves de plataforma las gestiona Microsoft. El cifrado en el host tiene requisitos propios y puede requerir desasignar y reasignar una VM existente; cualquier cambio requiere una ventana acordada y revisión de compatibilidad/costo. Fuentes oficiales de [cifrado de discos](https://learn.microsoft.com/en-us/azure/virtual-machines/disk-encryption) y [cifrado en el host](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/disks-enable-host-based-encryption-cli).
+
+### Diagnóstico acotado en la VM
+
+En **VM → Run command → RunShellScript**, ejecutar este bloque. Consulta ambos entornos y sólo imprime los campos seleccionados. Requiere que las entregas y Docker Compose ya existan.
+
+```bash
+python3 <<'CENIT_SECURITY'
+import json, stat, subprocess
+from pathlib import Path
+from urllib.parse import unquote, urlsplit
+
+def command(args):
+    return subprocess.check_output(args, stderr=subprocess.DEVNULL, timeout=20).decode()
+
+for environment in ('staging', 'production'):
+    root = Path('/opt/cenit') / environment
+    report = {'environment': environment}
+    try:
+        if any(path.is_symlink() for path in (root, root / '.local', root / '.local/secrets')):
+            raise ValueError('Directorio privado enlazado')
+        current = json.loads((root / 'current.json').read_text())
+        report['release'] = {key: current.get(key) for key in ('commit', 'image', 'ocrImage')}
+        dc = ['docker', 'compose', '--env-file', str(root / '.env'), '-f', str(root / 'compose.yaml')]
+        report['services'] = {}
+        for service in ('app', 'db', 'ocr'):
+            ids = command(dc + ['ps', '-q', service]).split()
+            if not ids:
+                report['services'][service] = {'running': False}
+                continue
+            item = json.loads(command(['docker', 'inspect', ids[0]]))[0]
+            data = {'running': item['State']['Running'], 'ports': item['NetworkSettings']['Ports'], 'networks': list(item['NetworkSettings']['Networks'])}
+            if service == 'app':
+                env = dict(value.split('=', 1) for value in item['Config'].get('Env', []) if '=' in value)
+                data['auth'] = {key: env.get(key) for key in ('AUTH_COOKIE_SECURE', 'AUTH_ALLOWED_ORIGINS')}
+                data['sheetsEnabled'] = env.get('CENIT_PURCHASE_SHEETS_SYNC_ENABLED', 'false')
+                data['sheetsKeyFileConfigured'] = bool(env.get('CENIT_PURCHASE_SHEETS_KEY_FILE'))
+            report['services'][service] = data
+        report['permissions'] = {}
+        for relative in ('.', '.local', '.local/secrets', 'backups', '.local/secrets/app-url', '.local/secrets/migrator-url', '.local/secrets/capture-receipt-key'):
+            path = root / relative
+            if path.exists():
+                info = path.lstat()
+                report['permissions'][relative] = {'mode': oct(stat.S_IMODE(info.st_mode)), 'uid': info.st_uid, 'gid': info.st_gid, 'symlink': path.is_symlink()}
+        paths = [root / '.local/secrets' / name for name in ('app-url', 'migrator-url')]
+        if all(path.is_file() and not path.is_symlink() for path in paths):
+            app_url, migrator_url = [urlsplit(path.read_text().strip()) for path in paths]
+            report['databaseCredentials'] = {'appRole': app_url.username, 'migratorRole': migrator_url.username, 'distinctRoles': app_url.username != migrator_url.username, 'nonEmptyPasswords': bool(app_url.password and migrator_url.password), 'distinctPasswords': unquote(app_url.password or '') != unquote(migrator_url.password or '')}
+        query = "SELECT json_agg(json_build_object('role',rolname,'superuser',rolsuper,'createDatabase',rolcreatedb,'createRole',rolcreaterole,'bypassRls',rolbypassrls)) FROM pg_roles WHERE rolname IN ('cenit_app','cenit_migrator');"
+        report['databaseRoles'] = json.loads(command(dc + ['exec', '-T', 'db', 'psql', '-X', '-U', 'cenit_admin', '-d', 'cenit_demo', '-At', '-v', 'ON_ERROR_STOP=1', '-c', query]))
+        report['localDumpCount'] = len(list((root / 'backups').glob('*.dump')))
+    except Exception as error:
+        report['incomplete'] = type(error).__name__
+    print(json.dumps(report, ensure_ascii=False))
+CENIT_SECURITY
+```
+
+Esperado en la instalación descrita: aplicación publicada sólo en `127.0.0.1:8082`/`8081`, PostgreSQL y OCR sin bindings públicos, redes diferentes por entorno, cookie segura y Origins exactos, directorios privados de root y roles distintos sin superusuario, creación de bases/roles ni bypass RLS. Revisar la cadena de directorios junto al archivo montado; un archivo 0644 dentro de directorios 0700 debe evaluarse con esa cadena completa. Los datos de archivos y roles no acreditan por sí solos que sus contraseñas autentiquen correctamente. Completar con readiness y login ficticio autorizado del runtime.
+
+### Custodia y cambios de secretos
+
+| Secreto o credencial | Referencia y consumidor | Acceso y cambios |
+| --- | --- | --- |
+| PostgreSQL | `.local/secrets/postgres-password`, `app-password`, `migrator-password`, `app-url`, `migrator-url`, separados por entorno; API y migrador reciben archivos distintos | Operador con acceso privado de root. Rotar exige coordinar contraseña del rol y archivos/URLs, y verificar el servicio; editar sólo el archivo no cambia PostgreSQL |
+| Procedencia de captura | `.local/secrets/capture-receipt-key`, montada sólo en API | Operador y responsable backend. Cambiarla invalida comprobantes firmados con la clave anterior; acordar el momento y comprobar extracción/revisión |
+| Google Sheets | `CENIT_PURCHASE_SHEETS_KEY_FILE`, cuando la integración está habilitada; el Compose Azure versionado no declara esa credencial | Comprobar si hay un montaje privado adicional y quién puede leerlo. Rotar la clave en Google y actualizar el archivo requiere verificar una planilla ficticia autorizada |
+| Acceso Google | Adaptador de acceso pendiente; consultar el alcance vigente de autenticación en Arquitectura | Documentar ubicación, acceso y eventual credencial cuando se incorpore el proveedor |
+| Publicación y Azure | Token GHCR efímero y OIDC; la identidad federada puede ejecutar sobre la VM | Revisar accesos efectivos a la VM y sujetos federados. Las ramas permanentes comparten esa capacidad operativa sobre el host |
+| Respaldos | `backups/*.dump` privado por entorno; `deploy.sh` ejecuta `pg_dump -Fc` y verifica su índice | El código revisado no aplica cifrado de archivo ni define una clave de respaldo. El cifrado de archivo, la copia privada fuera de la VM y la restauración comprobada requieren su procedimiento operativo |
+
+Registrar el resultado de las consultas y los accesos autorizados en la evidencia de revisión del entorno. Mantener explícitos los valores que no se pudieron comprobar. Contrastar el resultado con esta guía antes de decidir cambios de red, cifrado o credenciales.
+
 ## Publicar el catálogo académico (operación explícita)
 
 Responsable: quien opera el despliegue Azure, con revisión del catálogo por el equipo académico/backend. La entrega instala el cargador compilado, `diagrama-r2` y sólo sus fuentes de imagen/cotejo en la misma imagen de aplicación. No necesita `tsx`, dependencias de desarrollo, clonar el repositorio ni compilar en la VM. El servicio `catalog` usa un perfil explícito y la credencial de `cenit_migrator`; no se ejecuta al arrancar la aplicación ni durante CD.
