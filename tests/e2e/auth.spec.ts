@@ -419,12 +419,13 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/admin-home-${width}.png` });
   }
-  for (const [name, path] of [['Sistema de personal', 'personal'], ['Sistema de bienes', 'bienes']] as const) {
+  for (const [name, path] of [['Personal', 'personal'], ['Bienes', 'bienes']] as const) {
+    const heading = `${name} todavía no está disponible`;
     await navigateAdministration(page, name);
     await expect(page).toHaveURL(new RegExp(`/administracion/${path}$`));
-    await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
-    await expect(page.getByText('En preparación', { exact: true })).toBeVisible();
-    await page.reload(); await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+    await expect(page.getByText('Próximamente', { exact: true }).last()).toBeVisible();
+    await page.reload(); await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
   }
   await navigateAdministration(page, 'Registro de compras');
   await expect(page.getByRole('link', { name: 'Revisar ejemplo' })).toHaveCount(0);

@@ -180,3 +180,26 @@
   .academic-board--scrollable .academic-course { cursor: inherit; }
   .academic-board--dragging { cursor: grabbing; }
 }
+
+/* Docente: quién es el estudiante y cuánto ha aprobado, antes de la malla. */
+.academic-student-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px; margin: 12px 0 4px; padding: 14px 16px; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface-subtle); }
+.academic-student-summary__person { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.academic-student-summary__person > span { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--color-selection); color: var(--color-on-selection); font-size: 13px; font-weight: 600; }
+.academic-student-summary__person strong { display: block; color: var(--color-ink); font-size: 15px; font-weight: 600; }
+.academic-student-summary__person small { color: var(--color-ink-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.academic-student-summary__credits { flex: 1 1 240px; min-width: 200px; }
+.academic-student-summary__credits > p { display: flex; justify-content: space-between; gap: 12px; margin: 0; color: var(--color-ink-label); font-size: 12px; font-variant-numeric: tabular-nums; }
+.academic-student-summary__credits strong { color: var(--color-ink); font-size: 15px; }
+.academic-student-summary__bar { display: flex; gap: 2px; height: 8px; margin-top: 6px; border-radius: 999px; overflow: hidden; background: var(--color-surface-muted); }
+.academic-student-summary__bar > [data-status="passed"] { background: var(--color-progress-passed); }
+.academic-student-summary__bar > [data-status="inProgress"] { background: var(--color-progress-ongoing); }
+.academic-student-summary__counts { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; color: var(--color-ink-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.academic-student-summary__counts strong { margin-right: 4px; color: var(--color-ink); }
+.academic-student-summary__counts [data-status="passed"] strong { color: var(--color-progress-passed-ink); }
+.academic-student-summary__counts [data-status="failed"] strong { color: var(--color-progress-failed-ink); }
+/* The summary card already names the student; the lookup keeps only its actions. */
+.academic-progress-context:has(.academic-student-summary) .academic-students .academic-student-identity { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* With a student selected the context takes the whole row; the board arrows drop below it, aligned right. */
+.academic-board-context:has(.academic-student-summary) > .academic-progress-context { flex-basis: 100%; }
+.academic-board-context:has(.academic-student-summary) > .academic-board-actions { margin-left: auto; }
+.academic-progress-context:has(.academic-student-summary) .academic-students__heading { margin-bottom: 0; }

@@ -16,6 +16,7 @@ import { groupBySemester, semesterLabel } from '../model/group-by-semester.js';
 import { courseLabel } from '../model/course-label.js';
 import { CatalogDetails } from '../components/CatalogDetails.js';
 import { StudentLookup, type Student } from '../components/StudentLookup.js';
+import { StudentProgressSummary } from '../components/StudentProgressSummary.js';
 import { progressLabels } from '../model/progress-presentation.js';
 import { courseRelations } from '../model/course-relations.js';
 import { useSidebar } from '../../../shared/lib/use-sidebar.js';
@@ -113,6 +114,7 @@ export function Academic() {
               {hasStudent && <>
               {progress.isPending && <p role="status">Cargando el avance curricular…</p>}
               {progress.error && <div className="academic-inline-error"><p role="alert">{progress.error instanceof HttpError && progress.error.status === 404 ? 'Este estudiante aún no tiene un perfil académico preparado.' : progress.error.message}</p><button className="cenit-button" onClick={() => { void progress.refetch(); }}>Reintentar historial</button></div>}
+              {!progress.error && matchingProgress && account.role === 'docente' && <StudentProgressSummary plan={plan} progress={matchingProgress} />}
               {!progress.error && matchingProgress && <>{account.role === 'estudiante' && <p className="academic-student-identity"><strong>{matchingProgress.student.name}</strong><span>RUT {matchingProgress.student.rut}</span></p>}<ul className="academic-progress-legend" aria-label="Estados del historial">{Object.entries(progressLabels).map(([status, label]) => <li key={status}><span className={`academic-progress-dot academic-progress-dot--${status}`} aria-hidden="true" />{label}</li>)}</ul></>}
               {!progress.error && progress.data && !matchingProgress && <p role="status">El historial pertenece a la versión {progress.data.plan.version}. Selecciona esa versión para consultarlo sobre la malla.</p>}
               </>}

@@ -168,7 +168,7 @@ test('captura real: subir, revisar, guardar y recargar mediante OCR del notebook
   await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page).toHaveURL(/\/compras\/[0-9a-f-]{36}$/);
   await page.reload();
-  await expect(page.locator('.purchase-detail-meta').first()).toContainText('Captura procesada y revisada');
+  await expect(page.locator('.purchase-detail-summary')).toContainText('Captura procesada y revisada');
   await expect(page.getByText('Captura ficticia revisada desde el navegador', { exact: true }).first()).toBeVisible();
 });
 

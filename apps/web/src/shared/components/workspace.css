@@ -18,6 +18,8 @@
 .workspace-eyebrow { margin: 0 0 12px; padding: 0 10px; color: var(--color-ink-subtle); font-size: 12px; }
 .workspace-nav-item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; margin: 5px 0; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--color-ink-secondary); font-size: 13px; line-height: 18px; text-align: left; text-decoration: none; cursor: pointer; transition: background-color 150ms ease-out, opacity 150ms ease-out; }
 .workspace-nav-item svg { flex: none; color: var(--color-icon); }
+.workspace-eyebrow--section { margin-top: 22px; }
+.workspace-nav-item--soon { color: var(--color-ink-subtle); }
 .workspace-nav-item--active { border-color: var(--color-line-soft); background: var(--color-surface); box-shadow: var(--shadow-nav); }
 .workspace-nav-item--active svg { color: var(--color-icon-active); }
 .workspace-sidebar__bottom { margin-top: auto; padding-top: 48px; }

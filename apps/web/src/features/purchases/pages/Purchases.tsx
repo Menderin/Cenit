@@ -1,26 +1,24 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { FunnelSimpleIcon } from '@phosphor-icons/react/dist/csr/FunnelSimple';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass';
 import { UploadSimpleIcon } from '@phosphor-icons/react/dist/csr/UploadSimple';
-import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/csr/DownloadSimple';
 import { XIcon } from '@phosphor-icons/react/dist/csr/X';
-import { toast } from 'sonner';
+import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { validatePurchaseListQuery, type PurchaseFilters, type PurchaseListQuery } from '@cenit/contracts/purchases';
-import { downloadPurchaseExport, listPurchases } from '../api/purchases.js';
-import { HttpError } from '../../../shared/lib/http.js';
-import { useAuth } from '../../auth/model/session.js';
+import { listPurchases } from '../api/purchases.js';
 import { usePurchaseCapabilities } from '../model/capabilities.js';
 import { SheetsSyncStatus } from '../components/SheetsSyncStatus.js';
 import { ValidateRecord } from '../components/ValidateRecord.js';
 import { PurchasePagination } from '../components/PurchasePagination.js';
 import { Select } from '../../../shared/components/Select.js';
-import { dateLabel, amountLabel } from '../model/fields.js';
+import { dateLabel, amountLabel, sentenceCase } from '../model/fields.js';
 import { periodRange, selectedPeriod } from '../model/list.js';
 import { DateField } from '../../../shared/components/DateField.js';
 import { useExitPresence } from '../../../shared/lib/use-exit-presence.js';
 import { PurchaseDateRangeField } from '../components/PurchaseDateRangeField.js';
+import { ExportExcel } from '../components/ExportExcel.js';
 import '../records.css';
 
 const labels = { q: 'Buscar solicitudes', unitCode: 'Código de unidad', projectCode: 'Código de proyecto' };
@@ -64,8 +62,8 @@ function RequestTable({ state, title, filters, page, setPage, view, setPageSize,
     {updating && <p className="purchase-updating" role="status">Actualizando resultados…</p>}
     {!valid ? <p className="purchase-state">Corrige los filtros para consultar las compras.</p> : query.isPending ? <div className="purchase-list-skeleton" role="status">Cargando compras…<i /><i /><i /></div> : query.isError ? <div className="purchase-state" role="alert"><p>{query.error.message}</p><button className="cenit-button" onClick={() => { void query.refetch(); }}>Reintentar</button></div> : data && <>
       {!data.data.length ? <div className="cenit-empty cenit-empty--bordered"><span className="cenit-empty__icon"><MagnifyingGlassIcon size={26} aria-hidden="true" /></span><h3>{page > 1 ? 'Esta página ya no tiene compras' : Object.keys(filters).length ? 'No encontramos compras con estos filtros' : 'Aún no hay compras registradas'}</h3><p>{page > 1 ? 'Vuelve al inicio del listado para ver los resultados disponibles.' : Object.keys(filters).length ? 'Prueba con otro período, número o código.' : 'Sube una captura o registra la primera compra manualmente.'}</p>{page > 1 ? <button className="cenit-button" type="button" disabled={updating} onClick={() => setPage(1)}>Ir a la primera página</button> : onClearFilters && <button className="cenit-button" type="button" disabled={updating} onClick={onClearFilters}>Quitar filtros</button>}</div> : <>
-      <div className="purchase-table-scroll" tabIndex={0} role="region" aria-label={`Tabla: ${title}`}><table className={hasActions ? 'purchase-table--actions' : undefined}><caption className="purchase-sr-only">{title}</caption><thead><tr><th scope="col">Nº Solicitud</th><th scope="col">Fecha de envío</th><th scope="col">Detalle</th><th scope="col">Tipo de documento</th><th scope="col" className="purchase-money">Monto · CLP</th>{hasActions && <th scope="col"><span className="purchase-sr-only">Acciones</span></th>}</tr></thead>
-        <tbody>{data.data.map(record => <tr key={record.id} className="purchase-row" onClick={event => openRow(event, record.id)}><th scope="row" className="purchase-request-number"><Link to={detail(record.id)} aria-disabled={updating} onClick={event => { if (updating) event.preventDefault(); }} state={{ purchasesReturnTo: returnTo }} aria-label={`Ver detalles de ${record.requestNumber}`}>{record.requestNumber}</Link></th><td className="purchase-sent-date" data-label="Fecha de envío">{dateLabel(record.sentDate)}</td><td className="purchase-description"><span>{record.description}</span>{record.source !== 'manual' && <span className="purchase-origin-tag">{record.source === 'image_capture' ? 'Desde captura' : 'Ejemplo de demostración'}</span>}</td><td className="purchase-document-type" data-label="Documento">{record.documentType ?? 'Sin dato'}</td><td className="purchase-money">{amountLabel(record.totalAmount)}</td>{hasActions && <td className="purchase-row-actions">{!updating && <ValidateRecord id={record.id} version={record.version} requestNumber={record.requestNumber} fallbackFocus={heading} />}</td>}</tr>)}</tbody>
+      <div className="purchase-table-scroll" tabIndex={0} role="region" aria-label={`Tabla: ${title}`}><table className={hasActions ? 'purchase-table--actions' : undefined}><caption className="purchase-sr-only">{title}</caption><thead><tr><th scope="col">Nº Solicitud</th><th scope="col">Fecha de envío</th><th scope="col">Detalle</th><th scope="col">Tipo de documento</th><th scope="col" className="purchase-money">Monto · CLP</th>{hasActions && <th scope="col"><span className="purchase-sr-only">Acciones</span></th>}<th aria-hidden="true" className="purchase-row-caret" /></tr></thead>
+        <tbody>{data.data.map(record => <tr key={record.id} className="purchase-row" onClick={event => openRow(event, record.id)}><th scope="row" className="purchase-request-number"><Link to={detail(record.id)} aria-disabled={updating} onClick={event => { if (updating) event.preventDefault(); }} state={{ purchasesReturnTo: returnTo }} aria-label={`Ver detalles de ${record.requestNumber}`}>{record.requestNumber}</Link></th><td className="purchase-sent-date" data-label="Fecha de envío">{dateLabel(record.sentDate)}</td><td className="purchase-description"><span>{record.description}</span>{record.source !== 'manual' && <span className="purchase-origin-tag">{record.source === 'image_capture' ? 'Desde captura' : 'Ejemplo de demostración'}</span>}</td><td className="purchase-document-type" data-label="Documento">{record.documentType ? sentenceCase(record.documentType) : 'Sin dato'}</td><td className="purchase-money">{amountLabel(record.totalAmount)}</td>{hasActions && <td className="purchase-row-actions">{!updating && <ValidateRecord id={record.id} version={record.version} requestNumber={record.requestNumber} fallbackFocus={heading} />}</td>}<td aria-hidden="true" className="purchase-row-caret"><CaretRightIcon size={16} /></td></tr>)}</tbody>
       </table></div>
       </>}
       {data.pagination.total > 0 && <PurchasePagination title={title} page={page} pageSize={data.pagination.pageSize} total={data.pagination.total} updating={updating} setPage={setPage} setPageSize={setPageSize} />}
@@ -74,15 +72,8 @@ function RequestTable({ state, title, filters, page, setPage, view, setPageSize,
 }
 
 export function Purchases() {
-  const { status, session } = useAuth();
   const { secondReviewEnabled } = usePurchaseCapabilities();
   const [params, setParams] = useSearchParams(), location = useLocation();
-  const [exporting, setExporting] = useState(false);
-  const exportBusy = useRef(false);
-  const exportController = useRef<AbortController | null>(null);
-  useLayoutEffect(() => {
-    return () => { exportController.current?.abort(); };
-  }, [status, session?.account.id]);
   const readInputs = (): FilterInput => ({ q: params.get('q') ?? '', dateFrom: params.get('dateFrom') ?? '', dateTo: params.get('dateTo') ?? '', unitCode: params.get('unitCode') ?? '', projectCode: params.get('projectCode') ?? '' });
   const [inputs, setInputs] = useState(readInputs), [touched, setTouched] = useState<string[]>([]);
   const inferDateMode = (values: FilterInput) => selectedPeriod(values).year === 'custom' ? (values.dateFrom === values.dateTo ? 'exact' : 'range') : null;
@@ -205,29 +196,12 @@ export function Purchases() {
   }
   function page(state: 'pending' | 'reviewed' | 'all') { const value = Number(params.get(state === 'all' ? 'page' : `${state}Page`) ?? 1); return Number.isSafeInteger(value) && value > 0 ? value : 1; }
   function setPage(state: 'pending' | 'reviewed' | 'all', value: number) { setParams(previous => { const next = new URLSearchParams(previous), key = state === 'all' ? 'page' : `${state}Page`; if (value === 1) next.delete(key); else next.set(key, String(value)); return next; }); }
-  async function downloadExport() {
-    if (exportBusy.current) return;
-    const controller = new AbortController();
-    exportController.current = controller;
-    exportBusy.current = true;
-    setExporting(true);
-    toast.dismiss('purchase-export');
-    try {
-      await downloadPurchaseExport(filters, view, controller.signal);
-      controller.signal.throwIfAborted();
-      toast.success('Archivo descargado', { id: 'purchase-export', description: 'La exportación de compras está lista.' });
-    } catch (error) {
-      if (controller.signal.aborted) return;
-      if (error instanceof HttpError && error.status === 401) toast.error('La sesión venció', { description: 'Inicia sesión nuevamente para descargar el archivo.' });
-      else toast.error('No se pudo descargar el archivo', { description: error instanceof Error ? error.message : 'Intenta nuevamente.' });
-    } finally {
-      exportController.current = null;
-      setExporting(false);
-      exportBusy.current = false;
-    }
-  }
-  return <section className="purchase-records"><div className="purchase-page-heading"><div><p className="admin-section-label">Compras</p><h1>Registro de compras</h1><p>Compras aprobadas en Oracle, conservadas en Cenit.</p></div><div className="purchase-heading-actions">
-    <button className="cenit-button" type="button" disabled={exporting} aria-busy={exporting} aria-live="polite" onClick={() => void downloadExport()}><DownloadSimpleIcon size={18} aria-hidden="true" />{exporting ? 'Generando Excel…' : 'Descargar Excel'}</button>
+  // The export always uses the applied filters, never an unsaved draft in the inputs.
+  const appliedPeriod = filters.dateFrom && filters.dateTo ? (filters.dateFrom.endsWith('-01-01') && filters.dateTo === `${filters.dateFrom.slice(0, 4)}-12-31` ? `año ${filters.dateFrom.slice(0, 4)}` : filters.dateFrom === filters.dateTo ? dateLabel(filters.dateFrom) : `${dateLabel(filters.dateFrom)} – ${dateLabel(filters.dateTo)}`) : 'todos los años';
+  const appliedDetail = [`Fecha de envío: ${appliedPeriod}`, ...activeFilters.filter(filter => filter.key !== 'period').map(filter => filter.key === 'q' ? `Búsqueda: «${filter.label}»` : filter.label)].join(' · ');
+  const exportOptions = [{ id: 'current', label: 'Lo que estás viendo', detail: appliedDetail, filters }, ...(Object.keys(filters).length ? [{ id: 'all', label: 'Todo el historial', detail: 'Todas las compras registradas en Cenit, sin filtros.', filters: {} }] : [])];
+  return <section className="purchase-records"><div className="purchase-page-heading"><div><h1>Registro de compras</h1><p>Compras aprobadas en Oracle, conservadas en Cenit.</p></div><div className="purchase-heading-actions">
+    <ExportExcel iconOnly options={exportOptions} sort={sort} />
     <Link className="cenit-button" to="/administracion/compras/nueva" state={{ purchasesReturnTo: returnTo }}>Registrar manualmente</Link><Link className="cenit-button cenit-button--primary" to="/administracion/compras/captura" state={{ purchasesReturnTo: returnTo }}><UploadSimpleIcon size={18} aria-hidden="true" />Subir captura</Link>
   </div></div><SheetsSyncStatus />
     <form className="purchase-filters" noValidate aria-label="Filtros de solicitudes" onSubmit={event => event.preventDefault()}>

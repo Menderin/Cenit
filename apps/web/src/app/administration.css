@@ -31,3 +31,7 @@
   .admin-workspace input, .admin-workspace textarea, .admin-workspace select { font-size: 16px; }
 }
 .cenit-empty > .purchase-back-link { margin-top: 16px; }
+.admin-upcoming { min-height: calc(100% - 8px); }
+.admin-upcoming > h1 { max-width: 22ch; margin-top: 6px; font-size: 26px; letter-spacing: -.7px; }
+.admin-upcoming > p { font-size: 15px; }
+.admin-upcoming__badge { padding: 3px 10px; border-radius: 999px; background: var(--color-surface-chip); color: var(--color-ink-label); font-size: 12px; font-weight: 600; }

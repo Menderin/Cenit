@@ -23,3 +23,5 @@ export function normalizeAmountInput(value: string) {
   const digits = trimmed.replace(/[.\s]/g, '').replace(/^0+(?=\d)/, '');
   return digits;
 }
+// Oracle often stores types in capitals («COTIZACIÓN»); only the display is softened, the stored copy is untouched.
+export const sentenceCase = (value: string) => value === value.toLocaleUpperCase('es-CL') ? value.charAt(0) + value.slice(1).toLocaleLowerCase('es-CL') : value;
