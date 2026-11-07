@@ -408,11 +408,11 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   const indicators = page.getByRole('definition');
   const summary = (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
   await expect(indicators.nth(0)).toHaveText(String(summary.overview.registeredThisYear));
-  await expect(indicators.nth(2)).toHaveText(String(summary.overview.registeredThisMonth));
+  await expect(indicators.nth(2)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.overview.documentTotalThisYear)));
   await expect(indicators.nth(4)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.overview.documentTotalThisMonth)));
-  await expect(page.getByRole('table')).toHaveCount(0);
-  const chart = page.getByRole('list', { name: 'Detalle de compras incorporadas por día' });
-  await expect(chart.getByRole('listitem')).toHaveCount(30);
+  // The monthly chart is drawn with bars and repeated as a table for assistive technology.
+  await expect(page.getByRole('table', { name: 'Monto documental por mes de envío' })).toHaveCount(1);
+  await expect(page.locator('.dashboard-monthly__column')).toHaveCount(12);
   await expect(page.getByRole('button', { name: /aprobar/i })).toHaveCount(0);
   for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 900 });

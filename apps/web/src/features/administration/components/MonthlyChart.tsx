@@ -20,7 +20,8 @@ export function MonthlyChart({ months, current }: { months: { month: string; cou
         <span className={`dashboard-monthly__month${month.month === current ? ' dashboard-monthly__month--current' : ''}`}>{label(month.month, shortMonth)}</span>
       </div>;
     })}</div>
-    <table className="purchase-sr-only"><caption>Monto documental por mes de envío</caption><thead><tr><th scope="col">Mes</th><th scope="col">Compras</th><th scope="col">Monto</th></tr></thead>
-      <tbody>{months.filter(month => month.month <= current).map(month => <tr key={month.month}><th scope="row">{label(month.month, longMonth)}</th><td>{month.count}</td><td>{amountLabel(month.amount)}</td></tr>)}</tbody></table>
+    {/* Tables ignore a 1px width, so the hidden wrapper (not the table) carries the visually hidden style. */}
+    <div className="purchase-sr-only"><table><caption>Monto documental por mes de envío</caption><thead><tr><th scope="col">Mes</th><th scope="col">Compras</th><th scope="col">Monto</th></tr></thead>
+      <tbody>{months.filter(month => month.month <= current).map(month => <tr key={month.month}><th scope="row">{label(month.month, longMonth)}</th><td>{month.count}</td><td>{amountLabel(month.amount)}</td></tr>)}</tbody></table></div>
   </div>;
 }

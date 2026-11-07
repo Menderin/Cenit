@@ -45,8 +45,8 @@ export function Home() {
     {query.isPending ? <div className="dashboard-skeleton" role="status"><span>Cargando resumen…</span><i /><i /><i /></div> : query.isError ? <div className="purchase-state" role="alert"><p>{query.error.message}</p><button className="cenit-button" onClick={() => { void query.refetch(); }}>Reintentar</button></div> : data && <>
       <dl className="dashboard-kpis" aria-label="Resumen de compras">
         <div><dt>Compras en {year ?? 'el año'}</dt><dd>{overview?.registeredThisYear ?? '—'}</dd><dd className="dashboard-kpi-detail">Según fecha de envío</dd></div>
-        <div><dt>Monto en {year ?? 'el año'}</dt><dd>{overview?.documentTotalThisYear ? amountLabel(overview.documentTotalThisYear) : '—'}</dd><dd className="dashboard-kpi-detail">CLP · según fecha de envío</dd></div>
-        <div><dt>Monto en {month ?? 'el mes'}</dt><dd>{overview ? amountLabel(overview.documentTotalThisMonth) : '—'}</dd><dd className="dashboard-kpi-detail">{overview ? `${overview.registeredThisMonth} ${overview.registeredThisMonth === 1 ? 'compra' : 'compras'}` : 'Mes en curso'}</dd></div>
+        <div><dt>Monto en {year ?? 'el año'}</dt><dd title={overview?.documentTotalThisYear ? amountLabel(overview.documentTotalThisYear) : undefined}>{overview?.documentTotalThisYear ? amountLabel(overview.documentTotalThisYear) : '—'}</dd><dd className="dashboard-kpi-detail">CLP · según fecha de envío</dd></div>
+        <div><dt>Monto en {month ?? 'el mes'}</dt><dd title={overview ? amountLabel(overview.documentTotalThisMonth) : undefined}>{overview ? amountLabel(overview.documentTotalThisMonth) : '—'}</dd><dd className="dashboard-kpi-detail">{overview ? `${overview.registeredThisMonth} ${overview.registeredThisMonth === 1 ? 'compra' : 'compras'}` : 'Mes en curso'}</dd></div>
       </dl>
       {overview && <div className="dashboard-grid">
         <section className="dashboard-card dashboard-months" aria-labelledby="months-title"><div className="dashboard-section-heading"><h2 id="months-title">Monto por mes</h2><span>{year} · según fecha de envío</span></div>
@@ -55,13 +55,13 @@ export function Home() {
         <section className="dashboard-card dashboard-types" aria-labelledby="types-title"><div className="dashboard-section-heading"><h2 id="types-title">Por tipo de documento</h2><span>{year}</span></div>
           {typeTotal ? <div className="dashboard-types-body">
             <div className="dashboard-donut" role="img" aria-label={types.map(type => `${type.documentType ? sentenceCase(type.documentType) : 'Sin tipo'}: ${type.count}`).join(', ')} style={{ background: `conic-gradient(${donut})` }}><div><strong>{typeTotal}</strong><span>compras</span></div></div>
-            <ul className="dashboard-legend">{types.map((type, index) => <li key={type.documentType ?? 'none'}><i style={{ background: typeColors[index] }} aria-hidden="true" /><span>{type.documentType ? sentenceCase(type.documentType) : 'Sin tipo'}</span><small>{type.count}</small><b>{amountLabel(type.amount)}</b></li>)}</ul>
+            <ul className="dashboard-legend">{types.map((type, index) => <li key={type.documentType ?? 'none'}><i style={{ background: typeColors[index] }} aria-hidden="true" /><span>{type.documentType ? sentenceCase(type.documentType) : 'Sin tipo'}</span><small>{type.count}</small><b title={amountLabel(type.amount)}>{amountLabel(type.amount)}</b></li>)}</ul>
           </div> : <p className="dashboard-muted">Aún no hay compras con fecha de envío este año.</p>}
           {review}
           <SheetsSyncStatus />
         </section>
         <section className="dashboard-card dashboard-recent" aria-labelledby="recent-title"><div className="dashboard-section-heading"><h2 id="recent-title">Últimos registros</h2><Link to="/administracion/compras">Ver registros<ArrowUpRightIcon size={16} aria-hidden="true" /></Link></div>
-          {overview.recentRecords.length ? <ul>{overview.recentRecords.map(record => <li key={record.id}><Link to={`/administracion/compras/${record.id}`}><div><strong>{record.description}</strong><span>{record.requestNumber} · {sourceLabels[record.source]}</span></div><div className="dashboard-recent-amount"><b>{amountLabel(record.totalAmount)}</b><small><span className="purchase-sr-only">Incorporado el </span><time dateTime={record.createdAt}>{displayInstantDate(record.createdAt)}</time></small></div></Link></li>)}</ul>
+          {overview.recentRecords.length ? <ul>{overview.recentRecords.map(record => <li key={record.id}><Link to={`/administracion/compras/${record.id}`}><div><strong>{record.description}</strong><span>{record.requestNumber} · {sourceLabels[record.source]}</span></div><div className="dashboard-recent-amount"><b title={amountLabel(record.totalAmount)}>{amountLabel(record.totalAmount)}</b><small><span className="purchase-sr-only">Incorporado el </span><time dateTime={record.createdAt}>{displayInstantDate(record.createdAt)}</time></small></div></Link></li>)}</ul>
             : <div className="cenit-empty cenit-empty--compact"><span className="cenit-empty__icon"><FilesIcon size={26} aria-hidden="true" /></span><h3>Aún no hay compras registradas</h3><p>Sube una captura para registrar la primera.</p></div>}
         </section>
       </div>}

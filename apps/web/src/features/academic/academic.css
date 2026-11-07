@@ -180,9 +180,9 @@
 }
 
 /* Docente: quién es el estudiante y cuánto ha aprobado, antes de la malla. */
-.academic-student-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px; margin: 12px 0 4px; padding: 14px 16px; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface-subtle); }
+.academic-student-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; margin: 8px 0 0; padding: 10px 14px; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface-subtle); }
 .academic-student-summary__person { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.academic-student-summary__person > span { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--color-selection); color: var(--color-on-selection); font-size: 13px; font-weight: 600; }
+.academic-student-summary__person > span { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--color-selection); color: var(--color-on-selection); font-size: 13px; font-weight: 600; }
 .academic-student-summary__person strong { display: block; color: var(--color-ink); font-size: 15px; font-weight: 600; }
 .academic-student-summary__person small { color: var(--color-ink-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 .academic-student-summary__credits { flex: 1 1 240px; min-width: 200px; }
@@ -197,10 +197,15 @@
 .academic-student-summary__counts [data-status="failed"] strong { color: var(--color-progress-failed-ink); }
 /* The summary card already names the student; the lookup keeps only its actions. */
 .academic-progress-context:has(.academic-student-summary) .academic-students .academic-student-identity { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-/* With a student selected the context takes the whole row; the board arrows drop below it, aligned right. */
-.academic-board-context:has(.academic-student-summary) > .academic-progress-context { flex-basis: 100%; }
-.academic-board-context:has(.academic-student-summary) > .academic-board-actions { margin-left: auto; }
+/* With a student selected: summary card and its actions share one row, the legend and the board arrows share the next, so the board keeps its reading space. */
+.academic-board-context:has(.academic-student-summary) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; }
+.academic-board-context:has(.academic-student-summary) .academic-board-hint { display: none; }
+.academic-progress-context:has(.academic-student-summary):has(.academic-students--collapsed) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 16px; }
+.academic-progress-context:has(.academic-students--collapsed) > .academic-students { grid-column: 2; grid-row: 1; margin: 0; }
+.academic-progress-context:has(.academic-students--collapsed) > .academic-student-summary { grid-column: 1; grid-row: 1; margin: 0; }
+.academic-progress-context:has(.academic-students--collapsed) > :not(.academic-students, .academic-student-summary) { grid-column: 1 / -1; }
 .academic-progress-context:has(.academic-student-summary) .academic-students__heading { margin-bottom: 0; }
+.academic-progress-context:has(.academic-student-summary) .academic-progress-legend { margin-top: 8px; }
 
 /* Detalle de asignatura: cabecera que dice qué es y cómo va, secciones con títulos claros y fondo apenas atenuado para ver la malla. */
 .academic-detail { width: min(430px, calc(100vw - 32px)); box-shadow: var(--shadow-dialog); }
@@ -258,3 +263,17 @@
     .academic-detail--left[open] { translate: -40px 0; filter: none; }
   }
 }
+@media (min-width: 1001px) { .academic-student-summary { flex-wrap: nowrap; padding: 10px 14px; } }
+.academic-student-summary__credits { display: grid; gap: 6px; }
+.academic-student-summary__credits > .academic-student-summary__bar { margin-top: 0; }
+.academic-student-summary__counts { gap: 4px 14px; font-size: 12px; }
+.academic-student-summary__counts li { display: inline-flex; align-items: center; gap: 5px; }
+.academic-student-summary__counts strong { margin-right: 0; }
+/* The counts already explain the colors; the separate legend would only push the board down. */
+.academic-progress-context:has(.academic-student-summary) .academic-progress-legend { display: none; }
+@media (min-width: 1001px) {
+  .academic-student-summary { gap: 10px 18px; }
+  .academic-student-summary__credits { flex: 1; min-width: 0; }
+  .academic-student-summary__counts { flex-wrap: nowrap; gap: 4px 12px; white-space: nowrap; }
+}
+@media (min-width: 1001px) { .academic-student-summary { margin-top: 4px; padding-block: 7px; } .academic-student-summary__credits { gap: 4px; } }

@@ -17,10 +17,11 @@ export function StudentProgressSummary({ plan, progress }: { plan: AcademicPlan;
   const initials = progress.student.name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('es-CL');
   return <section className="academic-student-summary" aria-label={`Avance de ${progress.student.name}`}>
     <div className="academic-student-summary__person"><span aria-hidden="true">{initials}</span><div><strong>{progress.student.name}</strong><small>RUT {progress.student.rut}</small></div></div>
-    {known && total > 0 && <div className="academic-student-summary__credits">
-      <p><span>Créditos SCT aprobados</span><span><strong>{credits.format(passed)}</strong> de {credits.format(total)}</span></p>
-      <div className="academic-student-summary__bar" role="img" aria-label={`${credits.format(passed)} de ${credits.format(total)} créditos aprobados; ${credits.format(ongoing)} en curso`}><i data-status="passed" style={{ width: `${passed / total * 100}%` }} /><i data-status="inProgress" style={{ width: `${ongoing / total * 100}%` }} /></div>
-    </div>}
-    <ul className="academic-student-summary__counts">{order.map(key => <li key={key} data-status={key}><strong>{counts[key]}</strong>{progressLabels[key].toLocaleLowerCase('es-CL').replace(/a$/, counts[key] === 1 ? 'a' : 'as')}</li>)}</ul>
+    <div className="academic-student-summary__credits">
+      {known && total > 0 && <><p><span>Créditos SCT aprobados</span><span><strong>{credits.format(passed)}</strong> de {credits.format(total)}</span></p>
+      <div className="academic-student-summary__bar" role="img" aria-label={`${credits.format(passed)} de ${credits.format(total)} créditos aprobados; ${credits.format(ongoing)} en curso`}><i data-status="passed" style={{ width: `${passed / total * 100}%` }} /><i data-status="inProgress" style={{ width: `${ongoing / total * 100}%` }} /></div></>}
+      {/* Each count carries the status color, so it doubles as the legend for the board. */}
+      <ul className="academic-student-summary__counts" aria-label="Asignaturas por estado">{order.map(key => <li key={key} data-status={key}><span className={`academic-progress-dot academic-progress-dot--${key}`} aria-hidden="true" /><strong>{counts[key]}</strong>{progressLabels[key].toLocaleLowerCase('es-CL').replace(/a$/, counts[key] === 1 ? 'a' : 'as')}</li>)}</ul>
+    </div>
   </section>;
 }

@@ -38,18 +38,19 @@ test('descarga por teclado, conserva filtros pendientes y informa fallos sin éx
   await login(page, 'administrativo');
   await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
   const button = page.getByRole('button', { name: 'Descargar Excel', exact: true });
-  await button.focus();
+  await expect(page.getByRole('heading', { name: 'Registro de compras', exact: true })).toBeVisible();
   const download = page.waitForEvent('download');
-  await page.keyboard.press('Enter');
+  // press() focuses the button first, so the route change cannot steal focus before Enter.
+  await button.press('Enter');
   // The dialog explains the file and its scope before anything is requested.
   await expect(page.getByRole('alertdialog', { name: 'Descargar Excel' })).toContainText('Compras, Ítems y Resumen');
-  await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click();
+  await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click(); await expect(page.getByRole('alertdialog', { name: 'Descargar Excel' })).toHaveCount(0);
   expect((await download).suggestedFilename()).toBe('compras.xlsx');
   await expect(page.getByText('Archivo descargado', { exact: true })).toBeVisible();
 
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill('borrador-no-aplicado');
   const exportRequest = page.waitForRequest(request => request.url().includes('/export.xlsx'));
-  await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click();
+  await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click(); await expect(page.getByRole('alertdialog', { name: 'Descargar Excel' })).toHaveCount(0);
   const exportUrl = (await exportRequest).url();
   expect(new URL(exportUrl).searchParams.has('q')).toBe(false);
 
@@ -57,7 +58,7 @@ test('descarga por teclado, conserva filtros pendientes y informa fallos sin éx
   await page.waitForURL(/q=fallo/);
   await expect(button).toBeEnabled();
   const failedExport = page.waitForResponse(response => response.url().includes('/export.xlsx') && response.url().includes('q=fallo'));
-  await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click();
+  await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click(); await expect(page.getByRole('alertdialog', { name: 'Descargar Excel' })).toHaveCount(0);
   expect((await failedExport).status()).toBe(503);
   await expect(page.getByText('No se pudo descargar el archivo', { exact: true })).toBeVisible();
   await expect(page.getByText('Archivo descargado', { exact: true })).toHaveCount(0);
@@ -66,7 +67,7 @@ test('descarga por teclado, conserva filtros pendientes y informa fallos sin éx
   await page.waitForURL(/q=sesion/);
   await expect(button).toBeEnabled();
   const expiredExport = page.waitForResponse(response => response.url().includes('/export.xlsx') && response.url().includes('q=sesion'));
-  await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click();
+  await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click(); await expect(page.getByRole('alertdialog', { name: 'Descargar Excel' })).toHaveCount(0);
   expect((await expiredExport).status()).toBe(401);
   await expect(page.getByText('La sesión venció', { exact: true })).toBeVisible();
 });
@@ -90,7 +91,7 @@ test('descarga de varias páginas exporta todas las compras y se adapta a móvil
   await page.waitForTimeout(300);
   await expect(page.getByRole('button', { name: 'Descargar Excel', exact: true })).toBeVisible();
   const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click();
+  await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click(); await expect(page.getByRole('alertdialog', { name: 'Descargar Excel' })).toHaveCount(0);
   const file = await download;
   expect(file.suggestedFilename()).toBe('compras.xlsx');
   await file.saveAs('tmp/purchase-export/compras-ficticias.xlsx');
@@ -121,7 +122,7 @@ for (const exit of ['logout', 'expiry-and-account-change'] as const) {
     await login(page, 'administrativo');
     await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
     const requested = page.waitForRequest(request => request.url().includes('/export.xlsx'));
-    await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click();
+    await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click(); await expect(page.getByRole('alertdialog', { name: 'Descargar Excel' })).toHaveCount(0);
     await requested;
     const busy = page.getByRole('button', { name: 'Generando Excel…', exact: true });
     await expect(busy).toBeDisabled();
@@ -157,14 +158,14 @@ test('fechas incompletas o invertidas conservan los últimos filtros válidos al
   await page.goto('/administracion/compras?dateFrom=2026-10-01&dateTo=2026-10-31');
   await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
   await page.getByLabel('Rango de fechas: desde, año', { exact: true }).fill('202');
-  await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click();
+  await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click(); await expect(page.getByRole('alertdialog', { name: 'Descargar Excel' })).toHaveCount(0);
   await expect.poll(() => queries.length).toBe(1);
   expect(queries[0]!.get('dateFrom')).toBe('2026-10-01');
   expect(queries[0]!.get('dateTo')).toBe('2026-10-31');
   await page.getByLabel('Rango de fechas: desde, mes', { exact: true }).fill('11');
   await page.getByLabel('Rango de fechas: desde, año', { exact: true }).fill('2026');
   await expect(page.getByRole('button', { name: 'Descargar Excel', exact: true })).toBeEnabled();
-  await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click();
+  await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click(); await expect(page.getByRole('alertdialog', { name: 'Descargar Excel' })).toHaveCount(0);
   await expect.poll(() => queries.length).toBe(2);
   expect(queries[1]!.get('dateFrom')).toBe('2026-10-01');
   expect(queries[1]!.get('dateTo')).toBe('2026-10-31');

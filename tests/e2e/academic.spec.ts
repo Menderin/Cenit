@@ -13,7 +13,8 @@ async function chooseStudent(page: import('@playwright/test').Page, name: string
 
 async function expectLatestGrade(page: import('@playwright/test').Page, grade: string) {
   await page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true }).click();
-  await expect(page.getByRole('dialog').locator('.academic-facts').first().getByText(grade, { exact: true })).toBeVisible();
+  const latest = page.getByRole('dialog').locator('.academic-facts').first().locator('div').filter({ has: page.getByText('Última nota', { exact: true }) }).locator('dd');
+  await expect(latest).toHaveText(grade);
   await page.keyboard.press('Escape');
 }
 
@@ -427,7 +428,7 @@ test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezcl
   await expect(page.getByRole('dialog').locator('.academic-facts').first()).toContainText('2,5');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Ver asignatura: Inglés 1', exact: true }).click();
-  await page.getByRole('dialog').locator('summary').filter({ hasText: 'Historial de intentos' }).click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: /^Historial de intentos/ })).toBeVisible();
   await expect(page.getByRole('dialog')).toContainText('Sin intentos registrados');
   await page.keyboard.press('Escape');
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1920, height: 1080 }, { width: 390, height: 844 }]) {

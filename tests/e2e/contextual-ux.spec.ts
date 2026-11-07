@@ -17,9 +17,9 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
     await expect(review).toContainText(amountLabel(amount));
   };
   const before = await summary();
-  const today = before.overview.registrationDays.at(-1);
-  const beforeDay = today.count;
-  const chartCount = page.getByRole('list', { name: 'Detalle de compras incorporadas por día' }).getByRole('listitem').last();
+  const monthName = new Intl.DateTimeFormat('es-CL', { month: 'long', timeZone: 'UTC' }).format(new Date(`${before.overview.registrationMonth}-01T12:00:00Z`));
+  const beforeMonth = before.overview.monthlyTotals.find((month: { month: string }) => month.month === before.overview.registrationMonth).count;
+  const monthRow = page.getByRole('table', { name: 'Monto documental por mes de envío' }).getByRole('row').filter({ has: page.getByRole('rowheader', { name: monthName, exact: true }) });
   const number = `HOME-${crypto.randomUUID().slice(0, 8)}`;
   await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
   await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
@@ -32,7 +32,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   const id = new URL(page.url()).pathname.split('/').at(-1)!;
   await home();
   await check(before.overview.registeredThisYear + 1, before.pending + 1, (BigInt(before.pendingAmount) + 12345n).toString());
-  await expect(chartCount).toHaveText(`${dateLabel(today.date)}: ${beforeDay + 1} ${beforeDay + 1 === 1 ? 'compra' : 'compras'}`);
+  await expect(monthRow.getByRole('cell').first()).toHaveText(String(beforeMonth + 1));
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
@@ -48,7 +48,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   await dialog(page).getByRole('button', { name: 'Validar registro', exact: true }).click();
   await expect(row).toHaveCount(0);
   await home(); await check(before.overview.registeredThisYear + 1, before.pending, before.pendingAmount);
-  await expect(chartCount).toHaveText(`${dateLabel(today.date)}: ${beforeDay + 1} ${beforeDay + 1 === 1 ? 'compra' : 'compras'}`);
+  await expect(monthRow.getByRole('cell').first()).toHaveText(String(beforeMonth + 1));
   // Delete a reviewed record through its detail; the filtered list is preserved on return.
   await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(number);

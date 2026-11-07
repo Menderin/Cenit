@@ -18,11 +18,13 @@ export function ExportExcel({ options, sort = 'sentDateDesc', iconOnly = false, 
 }) {
   const { status, session } = useAuth();
   const [open, setOpen] = useState(false), [choice, setChoice] = useState(options[0]?.id ?? '');
+  // The scope is frozen when the dialog opens: the file holds exactly what the dialog described, even if a filter applies meanwhile.
+  const [shown, setShown] = useState(options);
   const [exporting, setExporting] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null), busy = useRef(false), controller = useRef<AbortController | null>(null);
   const name = useId();
   useLayoutEffect(() => () => { controller.current?.abort(); }, [status, session?.account.id]);
-  const selected = options.find(option => option.id === choice) ?? options[0];
+  const selected = shown.find(option => option.id === choice) ?? shown[0];
   async function run(filters: PurchaseFilters) {
     if (busy.current) return;
     const current = new AbortController();
@@ -40,14 +42,14 @@ export function ExportExcel({ options, sort = 'sentDateDesc', iconOnly = false, 
   const text = exporting ? 'Generando Excel…' : label;
   return <>
     <button ref={trigger} className={`cenit-button${iconOnly ? ' cenit-button--icon' : ''}`} type="button" disabled={disabled || exporting} aria-busy={exporting} aria-haspopup="dialog" aria-expanded={open}
-      aria-label={iconOnly ? text : undefined} title={iconOnly ? text : undefined} onClick={() => { setChoice(options[0]?.id ?? ''); setOpen(true); }}>
+      aria-label={iconOnly ? text : undefined} title={iconOnly ? text : undefined} onClick={() => { setShown(options); setChoice(options[0]?.id ?? ''); setOpen(true); }}>
       <DownloadSimpleIcon size={18} aria-hidden="true" />{!iconOnly && text}
     </button>
     <ContextualConfirm wide open={open} origin={trigger.current} title="Descargar Excel" confirmLabel="Descargar archivo" cancelLabel="Cancelar"
       description="Un archivo con tres hojas: Compras, Ítems y Resumen. Los montos van tal como están guardados en Cenit."
       onCancel={() => setOpen(false)} onConfirm={() => { if (!selected) return; setOpen(false); void run(selected.filters); }}>
-      {options.length > 1 ? <fieldset className="cenit-export-options"><legend>¿Qué compras incluir?</legend>
-        {options.map(option => <label key={option.id}><input type="radio" name={name} value={option.id} checked={choice === option.id} onChange={() => setChoice(option.id)} /><span><strong>{option.label}</strong><small>{option.detail}</small></span></label>)}
+      {shown.length > 1 ? <fieldset className="cenit-export-options"><legend>¿Qué compras incluir?</legend>
+        {shown.map(option => <label key={option.id}><input type="radio" name={name} value={option.id} checked={choice === option.id} onChange={() => setChoice(option.id)} /><span><strong>{option.label}</strong><small>{option.detail}</small></span></label>)}
       </fieldset> : selected && <p className="cenit-export-scope"><strong>{selected.label}</strong><small>{selected.detail}</small></p>}
     </ContextualConfirm>
   </>;

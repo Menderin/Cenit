@@ -263,14 +263,14 @@
 /* Formulario manual: el resumen ocupa el costado derecho y acompaña al desplazarse. */
 .purchase-form-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; align-items: start; gap: 28px; }
 .purchase-form-layout > .purchase-editor > fieldset:first-child { margin-top: 0; }
-.purchase-form-summary { position: sticky; top: 0; display: grid; gap: 14px; padding: 20px; border: 1px solid var(--admin-line); border-radius: var(--radius-lg); background: var(--color-surface-subtle); font-size: 13px; }
+.purchase-form-summary { min-width: 0; position: sticky; top: 0; display: grid; gap: 14px; padding: 20px; border: 1px solid var(--admin-line); border-radius: var(--radius-lg); background: var(--color-surface-subtle); font-size: 13px; }
 .purchase-form-summary > p { margin: 0; }
 .purchase-form-summary__label { color: var(--admin-muted); font-size: 12px; }
 .purchase-form-summary__amount { margin-top: -10px !important; font-size: 26px; font-weight: 600; letter-spacing: -.6px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .purchase-form-summary dl { display: grid; gap: 8px; margin: 0; padding-top: 12px; border-top: 1px solid var(--admin-line); }
 .purchase-form-summary dl > div { display: flex; justify-content: space-between; gap: 12px; }
 .purchase-form-summary dt { color: var(--admin-muted); }
-.purchase-form-summary dd { margin: 0; font-variant-numeric: tabular-nums; }
+.purchase-form-summary dd { min-width: 0; margin: 0; font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
 .purchase-form-summary__checks { display: grid; gap: 8px; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--admin-line); list-style: none; }
 .purchase-form-summary__checks li { display: flex; align-items: center; gap: 8px; color: var(--color-ink-muted); }
 .purchase-form-summary__checks li[data-done="true"] { color: var(--color-ink-secondary); }
