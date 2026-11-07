@@ -15,8 +15,11 @@ import './administration.css';
 const navigation = [
   { to: '/administracion', label: 'Inicio', end: true, icon: HouseIcon },
   { to: '/administracion/compras', label: 'Registro de compras', end: false, icon: ShoppingCartSimpleIcon },
-  { to: '/administracion/personal', label: 'Sistema de personal', end: false, icon: UsersIcon },
-  { to: '/administracion/bienes', label: 'Sistema de bienes', end: false, icon: PackageIcon },
+];
+// Modules named in the Charter but not yet defined: reachable, visibly secondary.
+const upcoming = [
+  { to: '/administracion/personal', label: 'Personal', end: false, icon: UsersIcon },
+  { to: '/administracion/bienes', label: 'Bienes', end: false, icon: PackageIcon },
 ];
 export function AdministrativeLayout({ account, expiresAt, logout, children }: {
   account: Account; expiresAt: string; logout: (origin?: HTMLElement) => Promise<void>; children: ReactNode;
@@ -51,7 +54,12 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
     guard.request(() => { if (mobile) setCollapsed(true); navigate(target.pathname + target.search); }, target);
   }
   const sidebarState = useSidebar(location.pathname), { collapsed, setCollapsed, mobile } = sidebarState;
-  const current = navigation.find(link => link.end ? location.pathname === link.to : location.pathname.startsWith(link.to));
+  function navItem({ icon: Icon, ...link }: typeof navigation[number], soon = false) {
+    return <NavLink key={link.to} to={link.to} end={link.end} onClick={follow} className={({ isActive }) => `workspace-nav-item${isActive ? ' workspace-nav-item--active' : ''}${soon ? ' workspace-nav-item--soon' : ''}`}>
+      {({ isActive }) => <><Icon size={18} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" /><span>{link.label}</span></>}
+    </NavLink>;
+  }
+  const current = [...navigation, ...upcoming].find(link => link.end ? location.pathname === link.to : location.pathname.startsWith(link.to));
   const page = location.pathname === '/administracion/compras/nueva' ? 'Registrar compra'
     : location.pathname === '/administracion/compras/captura' ? 'Registrar desde captura'
     : location.pathname === '/administracion/compras/laboratorio' ? 'Revisar datos'
@@ -68,9 +76,9 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
     brand={<NavLink to="/administracion" onClick={follow} className="workspace-brand" aria-label="Cenit, inicio administrativo">Cenit<span>Espacio administrativo</span></NavLink>}
     navigation={<nav className="workspace-nav" aria-label="Sistemas administrativos">
       <p className="workspace-eyebrow">Administración</p>
-      {navigation.map(({ icon: Icon, ...link }) => <NavLink key={link.to} to={link.to} end={link.end} onClick={follow} className={({ isActive }) => `workspace-nav-item${isActive ? ' workspace-nav-item--active' : ''}`}>
-        {({ isActive }) => <><Icon size={18} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" /><span>{link.label}</span></>}
-      </NavLink>)}
+      {navigation.map(link => navItem(link))}
+      <p className="workspace-eyebrow workspace-eyebrow--section">Próximamente</p>
+      {upcoming.map(link => navItem(link, true))}
     </nav>}
     toolbarStart={<nav className="admin-breadcrumb" aria-label="Ubicación"><NavLink to="/administracion" onClick={follow}>Administración</NavLink><CaretRightIcon size={12} aria-hidden="true" />{page !== current?.label && <><NavLink to={returnTo} onClick={follow}>Compras</NavLink><CaretRightIcon size={12} aria-hidden="true" /></>}<span aria-current="page" data-confirm-fallback tabIndex={-1}>{page}</span></nav>}>
     <main className={`admin-content${location.pathname === '/administracion/compras/captura' ? ' admin-content--capture' : ''}`} id="admin-content" ref={main} tabIndex={-1} onFocusCapture={event => revealFocus(event.target)}>

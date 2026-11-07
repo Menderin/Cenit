@@ -173,3 +173,17 @@ textarea.cenit-input { resize: vertical; }
 .cenit-calendar .rdp-caption_label { display: inline-block; font-size: 14px; font-weight: 550; }
 .cenit-calendar .rdp-caption_label::first-letter { text-transform: uppercase; }
 @media (max-width: 760px) { .purchase-input .cenit-date-input, .purchase-input .cenit-date-input > input, .cenit-date-mask { font-size: 16px; } }
+.cenit-confirm--wide { width: min(380px, calc(100vw - 32px)); }
+.cenit-confirm-summary { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; margin: 16px 0 0; padding: 12px 14px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface-subtle); font-variant-numeric: tabular-nums; }
+.cenit-confirm-summary > div { display: contents; }
+.cenit-confirm-summary dt { color: var(--color-ink-muted); }
+.cenit-confirm-summary dd { margin: 0; color: var(--color-ink); font-weight: 600; overflow-wrap: anywhere; }
+.cenit-export-options { display: grid; gap: 8px; margin: 16px 0 0; padding: 0; border: 0; }
+.cenit-export-options legend { margin-bottom: 8px; padding: 0; color: var(--color-ink); font-size: 13px; font-weight: 600; }
+.cenit-export-options label { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--color-line); border-radius: var(--radius-md); cursor: pointer; transition: border-color 150ms ease-out, background-color 150ms ease-out; }
+.cenit-export-options label:has(:checked) { border-color: var(--color-focus); background: var(--color-info-soft); }
+.cenit-export-options input { margin: 3px 0 0; accent-color: var(--color-focus); }
+.cenit-export-options :is(strong, small), .cenit-export-scope :is(strong, small) { display: block; }
+.cenit-export-options strong, .cenit-export-scope strong { color: var(--color-ink); font-weight: 600; }
+.cenit-export-options small, .cenit-export-scope small { color: var(--color-ink-muted); font-size: 12px; overflow-wrap: anywhere; }
+.cenit-export-scope { margin-top: 14px !important; padding: 10px 12px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface-subtle); }

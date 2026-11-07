@@ -321,7 +321,8 @@ test('contrato de compras: revisar ejemplos, corregir sin alterar original y res
   await expect(field.locator('details dd').first()).toHaveText('000125');
   await expandPurchaseSection(page, 'Seguimiento administrativo');
   await page.getByLabel('BI', { exact: true }).fill('S/N');
-  await page.getByLabel('Monto total (CLP)', { exact: true }).fill('200.000');
+  // «200.000» se normaliza al salir del campo; una coma decimal sigue siendo inválida.
+  await page.getByLabel('Monto total (CLP)', { exact: true }).fill('200,5');
   await page.getByRole('button', { name: 'Comprobar datos' }).click();
   await expect(page.getByRole('alert')).toContainText('Revisa los campos indicados.');
   await page.getByLabel('Monto total (CLP)', { exact: true }).fill('');
@@ -407,23 +408,24 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   const indicators = page.getByRole('definition');
   const summary = (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
   await expect(indicators.nth(0)).toHaveText(String(summary.overview.registeredThisYear));
-  await expect(indicators.nth(2)).toHaveText(String(summary.overview.registeredThisMonth));
+  await expect(indicators.nth(2)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.overview.documentTotalThisYear)));
   await expect(indicators.nth(4)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.overview.documentTotalThisMonth)));
-  await expect(page.getByRole('table')).toHaveCount(0);
-  const chart = page.getByRole('list', { name: 'Detalle de compras incorporadas por día' });
-  await expect(chart.getByRole('listitem')).toHaveCount(30);
+  // The monthly chart is drawn with bars and repeated as a table for assistive technology.
+  await expect(page.getByRole('table', { name: 'Monto documental por mes de envío' })).toHaveCount(1);
+  await expect(page.locator('.dashboard-monthly__column')).toHaveCount(12);
   await expect(page.getByRole('button', { name: /aprobar/i })).toHaveCount(0);
   for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 900 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/admin-home-${width}.png` });
   }
-  for (const [name, path] of [['Sistema de personal', 'personal'], ['Sistema de bienes', 'bienes']] as const) {
+  for (const [name, path] of [['Personal', 'personal'], ['Bienes', 'bienes']] as const) {
+    const heading = `${name} todavía no está disponible`;
     await navigateAdministration(page, name);
     await expect(page).toHaveURL(new RegExp(`/administracion/${path}$`));
-    await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
-    await expect(page.getByText('En preparación', { exact: true })).toBeVisible();
-    await page.reload(); await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+    await expect(page.getByText('Próximamente', { exact: true }).last()).toBeVisible();
+    await page.reload(); await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
   }
   await navigateAdministration(page, 'Registro de compras');
   await expect(page.getByRole('link', { name: 'Revisar ejemplo' })).toHaveCount(0);

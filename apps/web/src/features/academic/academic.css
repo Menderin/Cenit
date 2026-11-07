@@ -60,8 +60,6 @@
 .academic-detail { position: fixed; inset: 16px 16px 16px auto; margin: 0; padding: 0; width: min(410px, calc(100vw - 32px)); max-width: none; height: calc(100svh - 32px); max-height: none; border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-surface); color: var(--color-ink); box-shadow: -12px 0 40px #1a20301a; font: inherit; }
 .academic-detail::backdrop { background: #252a362e; }
 .academic-detail__surface { display: flex; flex-direction: column; height: 100%; }
-.academic-detail__bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex: none; min-height: 56px; padding: 10px 18px; border-bottom: 1px solid var(--color-line-soft); }
-.academic-detail__bar > span { display: flex; align-items: center; gap: 9px; color: var(--color-ink-subtle); font-size: 12px; }
 .academic-detail__body { overflow-y: auto; overscroll-behavior: contain; padding: 20px; }
 .academic-detail h2 { margin: 0 0 20px; font-size: 20px; line-height: 1.4; font-weight: 500; letter-spacing: -.4px; }
 .academic-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; margin: 0 0 18px; }
@@ -180,3 +178,102 @@
   .academic-board--scrollable .academic-course { cursor: inherit; }
   .academic-board--dragging { cursor: grabbing; }
 }
+
+/* Docente: quién es el estudiante y cuánto ha aprobado, antes de la malla. */
+.academic-student-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; margin: 8px 0 0; padding: 10px 14px; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface-subtle); }
+.academic-student-summary__person { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.academic-student-summary__person > span { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--color-selection); color: var(--color-on-selection); font-size: 13px; font-weight: 600; }
+.academic-student-summary__person strong { display: block; color: var(--color-ink); font-size: 15px; font-weight: 600; }
+.academic-student-summary__person small { color: var(--color-ink-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.academic-student-summary__credits { flex: 1 1 240px; min-width: 200px; }
+.academic-student-summary__credits > p { display: flex; justify-content: space-between; gap: 12px; margin: 0; color: var(--color-ink-label); font-size: 12px; font-variant-numeric: tabular-nums; }
+.academic-student-summary__credits strong { color: var(--color-ink); font-size: 15px; }
+.academic-student-summary__bar { display: flex; gap: 2px; height: 8px; margin-top: 6px; border-radius: 999px; overflow: hidden; background: var(--color-surface-muted); }
+.academic-student-summary__bar > [data-status="passed"] { background: var(--color-progress-passed); }
+.academic-student-summary__bar > [data-status="inProgress"] { background: var(--color-progress-ongoing); }
+.academic-student-summary__counts { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; color: var(--color-ink-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.academic-student-summary__counts strong { margin-right: 4px; color: var(--color-ink); }
+.academic-student-summary__counts [data-status="passed"] strong { color: var(--color-progress-passed-ink); }
+.academic-student-summary__counts [data-status="failed"] strong { color: var(--color-progress-failed-ink); }
+/* The summary card already names the student; the lookup keeps only its actions. */
+.academic-progress-context:has(.academic-student-summary) .academic-students .academic-student-identity { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* With a student selected: summary card and its actions share one row, the legend and the board arrows share the next, so the board keeps its reading space. */
+.academic-board-context:has(.academic-student-summary) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; }
+.academic-board-context:has(.academic-student-summary) .academic-board-hint { display: none; }
+.academic-progress-context:has(.academic-student-summary):has(.academic-students--collapsed) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 16px; }
+.academic-progress-context:has(.academic-students--collapsed) > .academic-students { grid-column: 2; grid-row: 1; margin: 0; }
+.academic-progress-context:has(.academic-students--collapsed) > .academic-student-summary { grid-column: 1; grid-row: 1; margin: 0; }
+.academic-progress-context:has(.academic-students--collapsed) > :not(.academic-students, .academic-student-summary) { grid-column: 1 / -1; }
+.academic-progress-context:has(.academic-student-summary) .academic-students__heading { margin-bottom: 0; }
+.academic-progress-context:has(.academic-student-summary) .academic-progress-legend { margin-top: 8px; }
+
+/* Detalle de asignatura: cabecera que dice qué es y cómo va, secciones con títulos claros y fondo apenas atenuado para ver la malla. */
+.academic-detail { width: min(430px, calc(100vw - 32px)); box-shadow: var(--shadow-dialog); }
+.academic-detail--left { inset: 16px auto 16px 16px; }
+.academic-detail::backdrop { background: #252a3624; }
+.academic-detail__header { position: relative; display: flex; align-items: flex-start; gap: 12px; flex: none; padding: 20px 20px 16px; border-bottom: 1px solid var(--color-line-soft); background: var(--color-surface-subtle); border-radius: 12px 12px 0 0; }
+.academic-detail__header > div { flex: 1; min-width: 0; }
+.academic-detail__header > .cenit-button { flex: none; margin: -4px -6px 0 0; }
+.academic-detail__eyebrow { margin: 0 0 6px; color: var(--color-ink-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.academic-detail .academic-detail__header h2 { margin: 0; font-size: 21px; font-weight: 600; line-height: 1.3; letter-spacing: -.4px; overflow-wrap: anywhere; }
+.academic-detail__state { display: flex; align-items: center; gap: 10px; margin: 10px 0 0; color: var(--color-ink-label); font-size: 13px; font-variant-numeric: tabular-nums; }
+.academic-detail-status { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; background: var(--color-surface-chip); color: var(--color-progress-pending-ink); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.academic-detail-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--color-progress-pending); }
+.academic-detail-status--passed { color: var(--color-progress-passed-ink); }
+.academic-detail-status--passed::before { background: var(--color-progress-passed); }
+.academic-detail-status--failed { color: var(--color-progress-failed-ink); }
+.academic-detail-status--failed::before { background: var(--color-progress-failed); }
+.academic-detail-status--inProgress { color: var(--color-progress-ongoing-ink); }
+.academic-detail-status--inProgress::before { background: var(--color-progress-ongoing); }
+.academic-detail__body { padding: 4px 20px 20px; }
+.academic-detail__body > .academic-detail__section:first-child, .academic-detail__body > .academic-note + .academic-detail__section { border-top: 0; }
+.academic-detail__section { margin-top: 0; padding-block: 18px 2px; }
+.academic-detail .academic-detail__section h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; color: var(--color-ink); font-size: 14px; font-weight: 600; }
+.academic-detail__count { padding: 0 7px; border-radius: 999px; background: var(--color-surface-chip); color: var(--color-ink-muted); font-size: 12px; font-weight: 500; }
+.academic-detail__section > p { color: var(--color-ink-secondary); font-size: 13px; }
+.academic-detail__lead { margin-top: -4px !important; margin-bottom: 4px; }
+.academic-detail__progress .academic-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 12px; }
+.academic-detail .academic-facts dd { color: var(--color-ink); font-size: 14px; font-weight: 500; }
+.academic-detail-callout { display: flex; gap: 10px; padding: 12px 14px; border: 1px solid var(--color-info-line); border-radius: var(--radius-md); background: var(--color-info-soft); }
+.academic-detail-callout > svg { flex: none; margin-top: 1px; color: var(--color-info-icon); }
+.academic-detail-callout p { margin: 0; color: var(--color-ink); font-size: 13px; font-weight: 500; }
+.academic-detail-callout .academic-detail__explanation { margin-top: 4px; font-weight: 400; }
+.academic-detail .academic-rule { display: grid; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.academic-detail .academic-rule > li, .academic-detail .academic-relations li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface); font-size: 13px; line-height: 1.45; }
+.academic-detail-course { display: grid; min-width: 0; color: var(--color-ink); }
+.academic-detail-course > small { color: var(--color-ink-muted); font-size: 12px; }
+.academic-detail .academic-relations { margin-top: 12px; }
+.academic-detail .academic-relations h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; color: var(--color-ink-label); font-size: 12px; font-weight: 600; }
+.academic-detail .academic-relations ul { gap: 6px; }
+.academic-detail .academic-disclosure > summary { padding-block: 4px; color: var(--color-ink-secondary); }
+.academic-detail .academic-disclosure > ul { margin-top: 8px; }
+.academic-detail .academic-plan-info { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--color-line-soft); }
+@media (max-width: 760px) { .academic-detail--left { inset: 10px 10px 10px auto; } .academic-detail__progress .academic-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Full-height panel attached to one edge, sliding in from that side so it is clear where it opened. */
+.academic-detail { box-shadow: 0 0 0 1px #0000000f, 0 18px 60px #1a20302e, 0 4px 14px #1a203014; }
+.academic-detail__body { flex: 1; min-height: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .academic-detail { transition-property: opacity, translate; transition-duration: 300ms; transition-timing-function: cubic-bezier(.2, .8, .2, 1); }
+  .academic-detail--right[open] { translate: 0 0; }
+  .academic-detail.academic-detail--closing { filter: none; transition-duration: 150ms; }
+  .academic-detail--right.academic-detail--closing { translate: 32px 0; }
+  .academic-detail--left.academic-detail--closing { translate: -32px 0; }
+  @starting-style {
+    .academic-detail--right[open] { translate: 40px 0; filter: none; }
+    .academic-detail--left[open] { translate: -40px 0; filter: none; }
+  }
+}
+@media (min-width: 1001px) { .academic-student-summary { flex-wrap: nowrap; padding: 10px 14px; } }
+.academic-student-summary__credits { display: grid; gap: 6px; }
+.academic-student-summary__credits > .academic-student-summary__bar { margin-top: 0; }
+.academic-student-summary__counts { gap: 4px 14px; font-size: 12px; }
+.academic-student-summary__counts li { display: inline-flex; align-items: center; gap: 5px; }
+.academic-student-summary__counts strong { margin-right: 0; }
+/* The counts already explain the colors; the separate legend would only push the board down. */
+.academic-progress-context:has(.academic-student-summary) .academic-progress-legend { display: none; }
+@media (min-width: 1001px) {
+  .academic-student-summary { gap: 10px 18px; }
+  .academic-student-summary__credits { flex: 1; min-width: 0; }
+  .academic-student-summary__counts { flex-wrap: nowrap; gap: 4px 12px; white-space: nowrap; }
+}
+@media (min-width: 1001px) { .academic-student-summary { margin-top: 4px; padding-block: 7px; } .academic-student-summary__credits { gap: 4px; } }

@@ -13,7 +13,8 @@ async function chooseStudent(page: import('@playwright/test').Page, name: string
 
 async function expectLatestGrade(page: import('@playwright/test').Page, grade: string) {
   await page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true }).click();
-  await expect(page.getByRole('dialog').locator('.academic-facts').first().getByText(grade, { exact: true })).toBeVisible();
+  const latest = page.getByRole('dialog').locator('.academic-facts').first().locator('div').filter({ has: page.getByText('Última nota', { exact: true }) }).locator('dd');
+  await expect(latest).toHaveText(grade);
   await page.keyboard.press('Escape');
 }
 
@@ -232,8 +233,8 @@ test('detalle con teclado, relaciones pendientes y ausencia desconocida', async 
   const card = page.getByRole('button', { name: 'Ver asignatura: Inocuidad alimentaria', exact: true });
   await card.focus(); await card.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Inocuidad alimentaria' });
-  await expect(dialog).toContainText('Relaciones entre asignaturas');
-  await expect(dialog).toContainText('No indican por sí solas los requisitos para inscribir la asignatura.');
+  await expect(dialog.getByRole('heading', { name: 'En la malla', exact: true })).toBeVisible();
+  await expect(dialog).toContainText('no son requisitos de inscripción');
   await expect(dialog).not.toContainText('En revisión');
   await expect(dialog).toContainText('Ciencia de los alimentos');
   await expect(dialog.locator('#academic-rule-title + p')).toHaveText('Ciencia de los alimentos');
@@ -368,8 +369,8 @@ test('estudiante consulta RUT, estados e intentos propios y el docente ve el mis
   await first.click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('heading', { name: 'Ciencia de los alimentos', exact: true })).toBeVisible();
-  await expect(dialog).toContainText('Historial de intentos');
-  await dialog.locator('summary').filter({ hasText: 'Historial de intentos' }).click();
+  // The attempt history is shown directly, without a disclosure.
+  await expect(dialog.getByRole('heading', { name: /^Historial de intentos/ })).toBeVisible();
   await expect(dialog.getByRole('row')).toHaveCount(3);
   await expect(dialog.getByRole('row').nth(1)).toContainText('Reprobada');
   await expect(dialog.getByRole('row').nth(1)).toContainText('3,2');
@@ -427,7 +428,7 @@ test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezcl
   await expect(page.getByRole('dialog').locator('.academic-facts').first()).toContainText('2,5');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Ver asignatura: Inglés 1', exact: true }).click();
-  await page.getByRole('dialog').locator('summary').filter({ hasText: 'Historial de intentos' }).click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: /^Historial de intentos/ })).toBeVisible();
   await expect(page.getByRole('dialog')).toContainText('Sin intentos registrados');
   await page.keyboard.press('Escape');
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1920, height: 1080 }, { width: 390, height: 844 }]) {
