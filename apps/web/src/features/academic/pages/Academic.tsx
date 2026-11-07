@@ -32,7 +32,6 @@ export function Academic() {
   const [pointerFocus, setPointerFocus] = useState(false);
   const [boardScroll, setBoardScroll] = useState({ previous: false, next: false });
   const [boardDragging, setBoardDragging] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState('');
   const [detail, setDetail] = useState<AcademicCourse | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [relationPreview, setRelationPreview] = useState<{ plan: AcademicPlan; code: string } | null>(null);
@@ -40,7 +39,7 @@ export function Academic() {
   useEffect(() => { document.title = 'Cenit · Malla curricular'; return () => { document.title = 'Cenit'; }; }, []);
   const plans = useQuery({ queryKey: ['academic', account.id, 'plans'], queryFn: ({ signal }) => getPlans(signal), retry: retryAcademicRead });
   const available = plans.data?.find(plan => plan.planId === 'nutricion-dietetica');
-  const version = available?.versions.find(v => v.version === selectedVersion)?.version ?? available?.versions[0]?.version;
+  const version = available?.versions.find(v => v.version === 'diagrama-r2')?.version;
   const catalog = useQuery({
     queryKey: ['academic', account.id, available?.planId, version],
     queryFn: ({ signal }) => getPlan(available!.planId, version!, signal), enabled: Boolean(available && version), retry: retryAcademicRead,
@@ -96,7 +95,6 @@ export function Academic() {
     toolbarStart={<div><h1 ref={heading} tabIndex={-1}>Malla curricular</h1><p className="academic-toolbar__subtitle">{plan?.name ?? 'Nutrición y Dietética'}</p></div>}
     toolbarEnd={<>
       <div className="academic-toolbar__meta">
-        {version && (available!.versions.length > 1 ? <label className="academic-version">Versión<select aria-label="Versión del plan" value={version} onChange={event => { setDetail(null); setSelectedVersion(event.target.value); }}>{available!.versions.map(v => <option value={v.version} key={v.version}>{v.version}</option>)}</select></label> : <span className="academic-version">Versión {version}</span>)}
         <span className="academic-tag">Demostración</span>
       </div>
       {sidebarCollapsed && <p className="academic-mobile-account">{account.name} · {role}</p>}
@@ -105,7 +103,7 @@ export function Academic() {
           <SessionWarning expiresAt={auth.session!.expiresAt} logout={auth.logout} />
           {loading && !error && <div className="academic-state"><span className="academic-loading" aria-hidden="true" /><p role="status">Cargando la malla…</p></div>}
           {error && <div className="cenit-empty"><span className="cenit-empty__icon"><InfoIcon size={26} aria-hidden="true" /></span><h2>{error instanceof HttpError && error.status === 403 ? 'Acceso no autorizado' : 'No pudimos cargar la malla'}</h2><p role="alert">{error.message}</p><button className="cenit-button" type="button" onClick={() => { void (plans.error ? plans.refetch() : catalog.refetch()); }}>Reintentar</button></div>}
-          {!loading && !error && !version && <div className="cenit-empty"><span className="cenit-empty__icon"><BookOpenIcon size={26} aria-hidden="true" /></span><h2>La malla todavía no está disponible</h2><p>No hay una versión publicada de Nutrición y Dietética para consultar.</p><button className="cenit-button" type="button" onClick={() => { void plans.refetch(); }}>Volver a consultar</button></div>}
+          {!loading && !error && !version && <div className="cenit-empty"><span className="cenit-empty__icon"><BookOpenIcon size={26} aria-hidden="true" /></span><h2>La malla todavía no está disponible</h2><p>La malla vigente de Nutrición y Dietética aún no está publicada.</p><button className="cenit-button" type="button" onClick={() => { void plans.refetch(); }}>Volver a consultar</button></div>}
           {!error && plan && <>
             <div className="academic-board-context">
             <section className="academic-progress-context" aria-label="Avance curricular">
@@ -114,7 +112,6 @@ export function Academic() {
               {progress.isPending && <p role="status">Cargando el avance curricular…</p>}
               {progress.error && <div className="academic-inline-error"><p role="alert">{progress.error instanceof HttpError && progress.error.status === 404 ? 'Este estudiante aún no tiene un perfil académico preparado.' : progress.error.message}</p><button className="cenit-button" onClick={() => { void progress.refetch(); }}>Reintentar historial</button></div>}
               {!progress.error && matchingProgress && <>{account.role === 'estudiante' && <p className="academic-student-identity"><strong>{matchingProgress.student.name}</strong><span>RUT {matchingProgress.student.rut}</span></p>}<ul className="academic-progress-legend" aria-label="Estados del historial">{Object.entries(progressLabels).map(([status, label]) => <li key={status}><span className={`academic-progress-dot academic-progress-dot--${status}`} aria-hidden="true" />{label}</li>)}</ul></>}
-              {!progress.error && progress.data && !matchingProgress && <p role="status">El historial pertenece a la versión {progress.data.plan.version}. Selecciona esa versión para consultarlo sobre la malla.</p>}
               </>}
             </section>
             {(boardScroll.previous || boardScroll.next) && <div className="academic-board-actions" role="group" aria-label="Navegación de semestres">
