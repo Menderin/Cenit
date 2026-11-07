@@ -31,6 +31,8 @@ La versión anterior de esta verificación validaba con la segunda revisión act
 | `test:integration` | 126/126, incluido `purchases-detail.test.ts` con 23 pruebas |
 | E2E de producción con `purchase-detail.spec.ts` | 98 aprobadas, 1 omitida (OCR real) y 1 fallida ajena al detalle |
 
+**Alcance de esta evidencia:** `purchases-detail.test.ts` y sus 23 pruebas de API, igual que el control de mutación, no existen en el árbol de `develop` y su autor ya no participa en el proyecto, por lo que no se pueden reproducir desde el repositorio. Esta tabla es evidencia histórica de esa ejecución, no cobertura vigente. La cobertura presente del detalle está en [purchase-detail.spec.ts](../tests/e2e/purchase-detail.spec.ts) y [purchases.test.ts](../tests/integration/purchases.test.ts), según la [matriz](PRUEBAS-Y-ACEPTACION.md#compras).
+
 **La fallida:** «Inicio reúne cinco altas… se adapta a móvil». Desborda 7 px a 720 px de alto y falla igual cuando se ejecuta sola. Usa datos simulados y no depende del detalle. Se atribuye a la diferencia de Chromium y fuentes en este entorno (1243 frente a 1248 en CI), no a esta verificación. Si también falla en CI, conviene revisarla aparte.
 
 **Control de mutación:** con la API aceptando cualquier rol autenticado, fallan 5 de las 23 pruebas de API. Luego se restauró el original.
