@@ -7,16 +7,14 @@ import { getPurchaseSummary } from '../../purchases/api/purchases.js';
 import { ExportExcel } from '../../purchases/components/ExportExcel.js';
 import { usePurchaseCapabilities } from '../../purchases/model/capabilities.js';
 import { SheetsSyncStatus } from '../../purchases/components/SheetsSyncStatus.js';
-import { amountLabel, sentenceCase } from '../../purchases/model/fields.js';
+import { amountLabel } from '../../purchases/model/fields.js';
 import { periodRange } from '../../purchases/model/list.js';
 import { displayInstantDate } from '../../../shared/lib/dates.js';
 import { MonthlyChart } from '../components/MonthlyChart.js';
+import { DocumentTypeChart } from '../components/DocumentTypeChart.js';
 import '../home.css';
 
-const sourceLabels = { manual: 'Ingreso manual', image_capture: 'Desde captura', contract_example: 'Ejemplo de demostración' };
 const monthName = new Intl.DateTimeFormat('es-CL', { month: 'long', timeZone: 'UTC' });
-// Two shades of the chart color that also differ in lightness; the rest of the types share a neutral tone.
-const typeColors = ['var(--color-focus)', 'var(--color-chart-bar)', ...[60, 40, 25, 15].map(share => `color-mix(in srgb, var(--color-chart-bar) ${share}%, var(--color-surface))`)];
 
 export function Home() {
   const { secondReviewEnabled } = usePurchaseCapabilities();
@@ -31,8 +29,6 @@ export function Home() {
     { id: 'all', label: 'Todo el historial', detail: 'Todas las compras registradas en Cenit, sin filtros.', filters: {} },
   ] : [];
   const types = overview?.documentTypes ?? [], typeTotal = types.reduce((sum, type) => sum + type.count, 0);
-  let offset = 0;
-  const donut = types.map((type, index) => { const start = offset; offset += typeTotal ? type.count / typeTotal * 100 : 0; return `${typeColors[index]} ${start}% ${offset}%`; }).join(', ');
   const review = data && secondReviewEnabled && <section className="dashboard-review" aria-label="Segunda revisión"><h2 className="purchase-sr-only">Revisión de datos en Cenit</h2><p>{data.pending} {data.pending === 1 ? 'registro por revisar' : 'registros por revisar'}</p><strong title="Monto documental por revisar">{amountLabel(data.pendingAmount)} <small className="purchase-sr-only">documentales por revisar</small></strong><Link to="/administracion/compras">Ver revisión</Link></section>;
   return <section className="admin-home">
     <header className="admin-home-heading"><div><h1>Inicio</h1><p className="admin-intro">Un vistazo a la actividad administrativa.</p></div>
@@ -53,15 +49,12 @@ export function Home() {
           {overview.monthlyTotals?.length ? <MonthlyChart months={overview.monthlyTotals} current={overview.registrationMonth} /> : <p className="dashboard-muted">Sin datos mensuales disponibles.</p>}
         </section>
         <section className="dashboard-card dashboard-types" aria-labelledby="types-title"><div className="dashboard-section-heading"><h2 id="types-title">Por tipo de documento</h2><span>{year}</span></div>
-          {typeTotal ? <div className="dashboard-types-body">
-            <div className="dashboard-donut" role="img" aria-label={types.map(type => `${type.documentType ? sentenceCase(type.documentType) : 'Sin tipo'}: ${type.count}`).join(', ')} style={{ background: `conic-gradient(${donut})` }}><div><strong>{typeTotal}</strong><span>compras</span></div></div>
-            <ul className="dashboard-legend">{types.map((type, index) => <li key={type.documentType ?? 'none'}><i style={{ background: typeColors[index] }} aria-hidden="true" /><span>{type.documentType ? sentenceCase(type.documentType) : 'Sin tipo'}</span><small>{type.count}</small><b title={amountLabel(type.amount)}>{amountLabel(type.amount)}</b></li>)}</ul>
-          </div> : <p className="dashboard-muted">Aún no hay compras con fecha de envío este año.</p>}
+          {typeTotal ? <DocumentTypeChart types={types} /> : <p className="dashboard-muted">Aún no hay compras con fecha de envío este año.</p>}
           {review}
           <SheetsSyncStatus />
         </section>
         <section className="dashboard-card dashboard-recent" aria-labelledby="recent-title"><div className="dashboard-section-heading"><h2 id="recent-title">Últimos registros</h2><Link to="/administracion/compras">Ver registros<ArrowUpRightIcon size={16} aria-hidden="true" /></Link></div>
-          {overview.recentRecords.length ? <ul>{overview.recentRecords.map(record => <li key={record.id}><Link to={`/administracion/compras/${record.id}`}><div><strong>{record.description}</strong><span>{record.requestNumber} · {sourceLabels[record.source]}</span></div><div className="dashboard-recent-amount"><b title={amountLabel(record.totalAmount)}>{amountLabel(record.totalAmount)}</b><small><span className="purchase-sr-only">Incorporado el </span><time dateTime={record.createdAt}>{displayInstantDate(record.createdAt)}</time></small></div></Link></li>)}</ul>
+          {overview.recentRecords.length ? <ul>{overview.recentRecords.map(record => <li key={record.id}><Link to={`/administracion/compras/${record.id}`}><div><strong>{record.description}</strong><span>{record.requestNumber}{record.source === 'contract_example' && ' · Ejemplo de demostración'}</span></div><div className="dashboard-recent-amount"><b title={amountLabel(record.totalAmount)}>{amountLabel(record.totalAmount)}</b><small><span className="purchase-sr-only">Incorporado el </span><time dateTime={record.createdAt}>{displayInstantDate(record.createdAt)}</time></small></div></Link></li>)}</ul>
             : <div className="cenit-empty cenit-empty--compact"><span className="cenit-empty__icon"><FilesIcon size={26} aria-hidden="true" /></span><h3>Aún no hay compras registradas</h3><p>Sube una captura para registrar la primera.</p></div>}
         </section>
       </div>}

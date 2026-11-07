@@ -69,13 +69,14 @@ test('Inicio muestra error y permite reintentar hasta un resumen vacío', async 
   await expect(page.getByRole('link', { name: /Registrar manualmente/ })).toHaveCount(0);
 });
 
-test('el gráfico mensual destaca el mes más alto y expone las cifras como tabla', async ({ page }) => {
+test('los gráficos muestran detalles al interactuar y conservan sus cifras accesibles', async ({ page }) => {
   await page.route('**/api/v1/purchases/summary', async route => {
     const response = await route.fetch();
     const body = await response.json();
     const year = body.data.overview.registrationMonth.slice(0, 4);
     body.data.overview.registrationMonth = `${year}-03`;
     body.data.overview.monthlyTotals = Array.from({ length: 12 }, (_, index) => ({ month: `${year}-${String(index + 1).padStart(2, '0')}`, count: index < 3 ? index + 1 : 0, amount: ['100000', '450000', '200000'][index] ?? '0' }));
+    body.data.overview.documentTypes = [{ documentType: 'FACTURA', count: 3, amount: '450000' }, { documentType: 'BOLETA', count: 1, amount: '200000' }];
     await route.fulfill({ response, json: body });
   });
   await login(page, 'administrativo');
@@ -84,6 +85,19 @@ test('el gráfico mensual destaca el mes más alto y expone las cifras como tabl
   const table = page.getByRole('table', { name: 'Monto documental por mes de envío' });
   await expect(table.getByRole('row')).toHaveCount(4);
   await expect(table.getByRole('row').nth(2)).toContainText(amountLabel('450000'));
+  const february = page.locator('.dashboard-monthly__column').nth(1);
+  await february.hover();
+  await expect(february.locator('.dashboard-chart-tooltip')).toContainText('$450.000 · 2 compras');
+  await february.focus();
+  await page.mouse.move(0, 0);
+  await expect(february.locator('.dashboard-chart-tooltip')).toBeVisible();
+  const invoice = page.getByRole('button', { name: /Factura: 3 compras, 75%/ });
+  const donutBefore = await page.locator('.dashboard-donut').boundingBox();
+  await invoice.focus();
+  await expect(page.locator('.dashboard-types-detail')).toContainText('3 compras · 75% · $450.000 CLP');
+  expect(await page.locator('.dashboard-donut').boundingBox()).toEqual(donutBefore);
+  await invoice.press('Enter');
+  await expect(invoice).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('Inicio reúne cinco altas e indicadores en una pantalla de escritorio y se adapta a móvil', async ({ page }) => {
