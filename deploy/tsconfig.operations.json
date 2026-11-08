@@ -6,6 +6,6 @@
     "outDir": "../dist/operations",
     "declaration": false
   },
-  "include": ["../db/seeds/load-academic.ts"],
+  "include": ["../db/seeds/load-academic.ts", "../db/seeds/google-authorizations.ts"],
   "exclude": ["../**/*.test.ts"]
 }

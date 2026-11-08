@@ -29,7 +29,7 @@ El componente académico muestra la malla, las relaciones curriculares recibidas
 
 El Charter sitúa el desarrollo entre agosto y diciembre de 2026, con cierre estimado el 11 de diciembre. Esa planificación no acredita que una funcionalidad esté entregada o aceptada. La aceptación requiere pruebas y revisión con los responsables administrativos o académicos. Jira conserva el backlog, las asignaciones y los criterios de cada tarea; este documento resume el funcionamiento y las decisiones técnicas que necesita conocer quien mantiene el sistema.
 
-Quedan fuera del MVP la autenticación institucional y la simulación académica. La iteración de registro incorpora una integración opcional Cenit → Google Sheets, desactivada por defecto; amplía la base del Charter que dejaba Sheets como mejora opcional y requiere coordinación documental de ese alcance. El Charter también excluye simulaciones e integración con la API de Oracle del alcance descrito. No se incorporan procesos de Banner, importación masiva ni nuevos flujos institucionales por inferencia. El uso de datos reales requiere autorización de sus fuentes y acuerdos específicos; los datos ficticios no acreditan esas condiciones.
+Quedan fuera del MVP la autenticación institucional por dominio y la simulación académica. La iteración de identidad incorpora Google como alternativa opcional para cuentas exactas previamente autorizadas y vinculadas a cuentas locales; no acredita una integración institucional UCN. La iteración de registro incorpora una integración opcional Cenit → Google Sheets, desactivada por defecto; amplía la base del Charter que dejaba Sheets como mejora opcional y requiere coordinación documental de ese alcance. El Charter también excluye simulaciones e integración con la API de Oracle del alcance descrito. No se incorporan procesos de Banner, importación masiva ni nuevos flujos institucionales por inferencia. El uso de datos reales requiere autorización de sus fuentes y acuerdos específicos; los datos ficticios no acreditan esas condiciones.
 
 ## Organización del código
 
@@ -86,7 +86,7 @@ Los tests unitarios se colocan junto al código. Los escenarios con PostgreSQL p
 
 ## Autenticación y sesión
 
-El acceso es local, mediante correo y contraseña. Cada cuenta tiene un rol; el login no acepta asignación de rol desde el navegador. No hay registro público, recuperación de contraseña ni autenticación Google implementados.
+El acceso local usa correo y contraseña y permanece disponible. El backend incorpora Google como alternativa opcional y desactivada por defecto para cuentas autorizadas explícitamente; su interfaz y el recorrido con una configuración real requieren integración independiente. Cada cuenta tiene un rol; el login no acepta asignación de rol desde el navegador. No hay registro público ni recuperación de contraseña.
 
 | Recurso | Acceso |
 | --- | --- |
@@ -100,6 +100,28 @@ Los permisos se aplican en el servidor incluso si se consulta el API directament
 Las contraseñas se guardan con scrypt y salt; los tokens de sesión son aleatorios y la base conserva sólo su digest. La cookie `cenit_session` es HttpOnly, SameSite=Lax y Secure por defecto. La sesión dura dos horas fijas desde el login y no se renueva al consultar. Logout revoca la sesión. El rol y la activación de la cuenta se comprueban en el servidor.
 
 Rutas de acceso: `POST /api/v1/auth/login`, `GET /api/v1/auth/session` y `POST /api/v1/auth/logout`. Login y logout requieren un Origin exacto autorizado. El login limita diez intentos por minuto/IP. La excepción de cookie sin Secure se admite sólo con configuración explícita de desarrollo, test o demo HTTP; no es la configuración por defecto de una instalación institucional.
+
+### Acceso opcional con Google
+
+Los [contratos Google](../packages/contracts/src/auth/google.ts) separan disponibilidad, desafío y presentación de credencial. La interfaz consumidora requiere revisión de Gael antes de conectarse. El backend no registra cuentas, no cambia roles ni vincula por coincidencia de correo. Se solicita únicamente identidad mediante Google Identity Services, sin permisos de Gmail/Drive ni tokens de acceso o refresh almacenados.
+
+| Ruta bajo `/api/v1/auth` | Entrada y resultado |
+| --- | --- |
+| `GET /google` | `{data:{enabled,clientId}}`; deshabilitado devuelve `false` y `null`, sin consultar Google |
+| `POST /google/challenge` | `{purpose:"login"\|"link"}`; devuelve nonce y vencimiento, y cookie de desafío HttpOnly/SameSite=Strict/Secure según entorno |
+| `POST /google/login` | `{credential}` con ID token y cookie del desafío; devuelve el mismo `SessionResponse` que el acceso local |
+| `GET /google/link` | Sesión Cenit válida; devuelve `{data:{linked:boolean}}` de esa cuenta |
+| `POST /google/link` | `{credential}` y desafío de vinculación; exige la misma sesión local autenticada y devuelve `{data:{linked:true}}` |
+
+Todas las escrituras requieren Origin exacto y admiten diez intentos por minuto/IP por ruta. El desafío tiene cinco minutos de vigencia, se liga a la cookie de navegador, propósito y sesión actual, y se consume atómicamente incluso si después falla la credencial. No se reutiliza tras error, cambio de cuenta o éxito. El navegador entrega el nonce a `google.accounts.id.initialize` y presenta el `credential` del callback como JSON mediante fetch con cookies. No se recibe un formulario de redirección de Google ni se transportan tokens en URL. El contrato acepta hasta 16.384 caracteres de credencial y rechaza propiedades adicionales.
+
+`google-auth-library` verifica firma y destinatario con certificados de Google. Cenit verifica también emisor, vencimiento sin aceptar tokens ya expirados, emisión, correo verificado y nonce. El acceso se resuelve por `sub` previamente vinculado y autorización exacta vigente. La consulta y creación de sesión vuelven a comprobar cuenta activa y autorización con locks de PostgreSQL. Se reutilizan tokens aleatorios, hashes, rotación de la sesión anterior, revocación y vencimiento fijo de dos horas. No se infieren dominios institucionales ni permisos desde claims de Google.
+
+La migración aditiva `0010_google_identity` conserva cuentas/sesiones y añade `authentication_method` con valor inicial `local`, `google_authorizations` (cuenta FK y correo autorizado único), `google_identities` (cuenta FK y sub únicos) y `google_challenges` (hashes de cookie/nonce, propósito, cuenta/sesión vinculadas y fechas restringidas). Cada cuenta admite una identidad Google, sin reemplazo automático. La lista se prepara explícitamente mediante un archivo privado con [el procedimiento operativo](../deploy/LOCAL.md#acceso-google-opcional). La revocación conserva la asociación por sub e invalida las sesiones Google de la cuenta, sin alterar sus sesiones locales. Ni migraciones, arranque ni CD autorizan cuentas automáticamente.
+
+Los errores usan el envelope común y `requestId`: estructura `400`, credencial/desafío inválidos o sesión local requerida `401`, Origin/autorización `403`, identidad o cuenta ya vinculada de otra forma `409`, límite `429`, proveedor deshabilitado o indisponible `503` y fallo inesperado `500`. No contienen JWT, correos, SQL ni causas privadas. Todas las respuestas son `no-store`. Una vinculación rechazada no revoca la sesión local; un login fallido no confirma acceso ni crea cuentas. El cliente debe conservar sólo en memoria los desafíos/credenciales durante el intento y descartarlos al salir o cambiar de cuenta. La interfaz y la prueba con un cliente Google configurado siguen pendientes.
+
+La implementación sigue la [verificación oficial de ID tokens](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token) y el [nonce de Google Identity Services](https://developers.google.com/identity/gsi/web/reference/js-reference#nonce). Los comandos y configuración se mantienen en la guía operativa.
 
 ### Iteración de jornada pendiente
 

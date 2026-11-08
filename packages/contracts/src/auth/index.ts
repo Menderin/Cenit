@@ -1,4 +1,5 @@
 import { Type, type Static } from '@sinclair/typebox';
+export * from './google.js';
 
 export const AccountRoleSchema = Type.Union([Type.Literal('docente'), Type.Literal('estudiante'), Type.Literal('administrativo')]);
 export type AccountRole = Static<typeof AccountRoleSchema>;

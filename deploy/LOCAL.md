@@ -56,6 +56,7 @@ PostgreSQL local se publica sólo en loopback, por defecto `55432`; HTTP compila
 | `DATABASE_URL` | Alternativa directa para herramientas/QA; `DATABASE_URL_FILE` tiene prioridad. No escribir la URL real en ejemplos, historial de comandos o Git |
 | `AUTH_ALLOWED_ORIGINS` | Lista separada por comas, sin rutas ni comodines. Supervisor: `http://127.0.0.1:5173,http://127.0.0.1:3000`; un `npm start` HTTP directo puede usar sólo `http://127.0.0.1:3000` |
 | `AUTH_COOKIE_SECURE` | `true` por defecto y en HTTPS Azure. `false` sólo para HTTP explícito de demo/desarrollo/test; requiere `APP_ENV` compatible |
+| `AUTH_GOOGLE_ENABLED`, `AUTH_GOOGLE_CLIENT_ID` | Google opcional; requiere `true` y un ID web terminado en `.apps.googleusercontent.com`. Ausencia/configuración inválida lo deshabilita y conserva el login local. El ID es público y no se usa un client secret para validar ID tokens |
 | `OCR_URL` | Base HTTP privada del procesador: `http://127.0.0.1:8090` desde el host o `http://ocr:8090` dentro de la red Compose |
 | `CAPTURE_RECEIPT_KEY_FILE` | Archivo privado de al menos 32 bytes para HMAC de procedencia. Sin él o sin procesador configurado, extraer devuelve 503; login/compras siguen siendo independientes |
 | `CENIT_API_PROXY` | Destino de `/api` en Vite; el supervisor fija `http://127.0.0.1:3000` |
@@ -73,6 +74,27 @@ No regenerar una clave de procedencia o contraseña para resolver indisponibilid
 | Azure producción demo | `https://cenit.dpdns.org` | Caddy hacia loopback `8081`; red/BD/secretos propios |
 
 Los puertos coincidentes pertenecen a máquinas o interfaces diferentes. La VM anterior compartida usa Cenit en `8081`; su `8080` corresponde a Jenkins y no debe modificarse.
+
+## Acceso Google opcional
+
+El backend permite identidad Google para cuentas Cenit existentes y autorizadas explícitamente. La interfaz de acceso/vinculación requiere integración de frontend; habilitar variables todavía no añade un botón. Los [contratos y el recorrido](../Docs/ARQUITECTURA.md#acceso-opcional-con-google) son la referencia para ese consumidor.
+
+1. Aplicar las migraciones con el procedimiento habitual y rol migrador, separado del runtime. No se crean autorizaciones ni identidades automáticamente.
+2. Preparar un cliente web de Google Identity Services con los orígenes exactos de la aplicación y configurar `AUTH_GOOGLE_ENABLED=true` y `AUTH_GOOGLE_CLIENT_ID` en el entorno del API. El supervisor local y Compose transmiten estas dos variables. Azure requiere configuración explícita de su operador; este cambio no modifica el despliegue activo. El API necesita salida HTTPS a los certificados de Google y reloj correcto.
+3. Preparar un archivo JSON privado bajo `.local/secrets`, con un array de `{ "accountId": "<UUID de cuenta existente>", "googleEmail": "<correo Google exacto autorizado>" }`. No versionar el archivo ni usar listas de dominios. El correo Google puede ser distinto del correo local; no concede acceso sin vinculación.
+4. Configurar `DATABASE_URL_FILE` con la conexión privada de operación que permita actualizar autorizaciones y sesiones. Ejecutar explícitamente desde el repositorio:
+
+```sh
+npm run auth:google-authorizations -- authorize .local/secrets/google-authorizations.json
+```
+
+En la imagen compilada, el equivalente es `node operations/db/seeds/google-authorizations.js authorize /run/secrets/google-authorizations.json`, montando archivos privados de conexión y autorizaciones en sólo lectura en un contenedor de operación. No se modifica el comando de arranque ni se pasan contraseñas como argumentos. Un lote inválido revierte completo. Repetir el mismo lote es idempotente; una autorización distinta requiere revisión explícita.
+
+Para retirar el permiso, ejecutar el mismo comando con `revoke` en lugar de `authorize`. Invalida sesiones Google existentes, conserva el sub asociado y mantiene cuentas, roles, contraseñas y sesiones locales. No elimina la asociación para reasignarla a otra persona.
+
+El recorrido HTTP para el frontend comienza con `GET /api/v1/auth/google`. Para vincular, entrar primero con contraseña local, solicitar `POST /api/v1/auth/google/challenge` con `{"purpose":"link"}`, inicializar GIS con `clientId` y el `nonce` recibido y enviar `{"credential":"<ID token del callback>"}` a `POST /api/v1/auth/google/link`. Para acceder después, repetir con propósito `login` y `POST /api/v1/auth/google/login`. Las escrituras usan JSON, cookies y Origin autorizado. Tras un error se solicita otro desafío. El alta inicial de autorización nunca sustituye la vinculación desde la sesión local.
+
+Consultar `GET /api/v1/auth/session` comprueba la sesión emitida. Un error `GOOGLE_DISABLED` permite usar el login local; `GOOGLE_UNAVAILABLE` permite reintentar con un desafío nuevo. No pegar credenciales, JWT ni cookies en tickets o logs. Las pruebas automatizadas verifican tokens firmados con claves ficticias y PostgreSQL descartable; no acreditan un login real de Google ni la entrega de la interfaz.
 
 ## Preparar PostgreSQL y las cuentas
 
