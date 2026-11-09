@@ -86,7 +86,7 @@ Los tests unitarios se colocan junto al código. Los escenarios con PostgreSQL p
 
 ## Autenticación y sesión
 
-El acceso es local, mediante correo y contraseña. Cada cuenta tiene un rol; el login no acepta asignación de rol desde el navegador. No hay registro público, recuperación de contraseña ni autenticación Google implementados.
+El acceso es local, mediante correo y contraseña. Cada cuenta tiene un rol; el login no acepta asignación de rol desde el navegador. No hay registro público ni recuperación de contraseña. El sistema permite autorizar cuentas locales existentes y vincularles una única identidad Google (`sub`) desde una sesión local activa; la validación de credenciales Google y la emisión de sesión desde ese proveedor pertenecen a `SCRUM-123`.
 
 | Recurso | Acceso |
 | --- | --- |
@@ -99,7 +99,13 @@ Los permisos se aplican en el servidor incluso si se consulta el API directament
 
 Las contraseñas se guardan con scrypt y salt; los tokens de sesión son aleatorios y la base conserva sólo su digest. La cookie `cenit_session` es HttpOnly, SameSite=Lax y Secure por defecto. La sesión dura dos horas fijas desde el login y no se renueva al consultar. Logout revoca la sesión. El rol y la activación de la cuenta se comprueban en el servidor.
 
-Rutas de acceso: `POST /api/v1/auth/login`, `GET /api/v1/auth/session` y `POST /api/v1/auth/logout`. Login y logout requieren un Origin exacto autorizado. El login limita diez intentos por minuto/IP. La excepción de cookie sin Secure se admite sólo con configuración explícita de desarrollo, test o demo HTTP; no es la configuración por defecto de una instalación institucional.
+Rutas de acceso y vinculación: `POST /api/v1/auth/login`, `GET /api/v1/auth/session`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/google/link` y `POST /api/v1/auth/google/link`. Login, logout y vinculación requieren un Origin exacto autorizado; login y vinculación limitan diez intentos por minuto/IP. La excepción de cookie sin Secure se admite sólo con configuración explícita de desarrollo, test o demo HTTP; no es la configuración por defecto de una instalación institucional.
+
+### Autorización y vinculación de identidad Google
+
+La migración aditiva `0010_google_identity` agrega la tabla `cenit.google_identities` sin modificar `cenit.accounts` ni `cenit.sessions`, manteniendo compatibilidad de readiness y de operación con la imagen anterior. Cada fila relaciona una cuenta existente (`account_id` PK y FK hacia `cenit.accounts.id`) con su estado de autorización (`authorized`) y, una vez vinculada, con el identificador `google_sub` único (`UNIQUE`) y `linked_at`.
+
+Las cuentas autorizadas se gestionan exclusivamente mediante el [procedimiento privado explícito](../deploy/LOCAL.md#autorizar-cuentas-para-vinculación-google) (`npm run auth:google-authorizations -- authorize|revoke <archivo-privado.json>`), sin guardar listas personales ni contraseñas en Git. La vinculación (`POST /api/v1/auth/google/link` con `{sub}`) exige sesión local autenticada y activa, verifica en una transacción con bloqueo de fila que la cuenta esté activa y autorizada, e impide asociaciones duplicadas entre cuentas o reemplazos de `sub`, incluso ante solicitudes simultáneas (`409 GOOGLE_LINK_CONFLICT`). Nunca vincula por coincidencia de correo ni altera contraseñas, roles o sesiones vigentes. Revocar la autorización deshabilita el permiso (`authorized = false`) conservando el `google_sub` reservado y las sesiones locales.
 
 ### Iteración de jornada pendiente
 
@@ -231,6 +237,7 @@ El diccionario y el diagrama siguientes corresponden al esquema `cenit` implemen
 ```mermaid
 erDiagram
     accounts ||--o{ sessions : "account_id"
+    accounts ||--o| google_identities : "account_id"
     accounts ||--o{ purchase_requests : "created_by"
     accounts o|--o{ purchase_requests : "reviewed_by"
     purchase_requests ||--o{ purchase_request_lines : "request_id"
@@ -248,6 +255,14 @@ erDiagram
         timestamptz created_at
         timestamptz expires_at
         timestamptz revoked_at
+    }
+    google_identities {
+        uuid account_id PK_FK
+        boolean authorized
+        text google_sub UK
+        timestamptz authorized_at
+        timestamptz linked_at
+        timestamptz updated_at
     }
     purchase_requests {
         uuid id PK
@@ -298,6 +313,10 @@ Las relaciones con cuentas e ítems son FK con `NO ACTION`. El borrado de una co
 | `account_id` | UUID obligatorio, FK a `accounts.id`; índice por cuenta | Cuenta autenticada |
 | `created_at`, `expires_at` | `timestamptz` obligatorios; CHECK de expiración exactamente dos horas después de creación; índice de expiración | Plazo fijo, sin renovación por actividad |
 | `revoked_at` | `timestamptz` nullable; si existe, igual o posterior a creación | Cierre o invalidación. La consulta de sesión exige ausencia de revocación y vigencia; el CHECK no ejecuta la expiración ni elimina filas |
+| `google_identities.account_id` | UUID PK y FK a `accounts.id` | Relación 1:1 de autorización y vínculo Google por cuenta existente |
+| `authorized` | `boolean` obligatorio, por defecto `true` | Estado de autorización administrado mediante procedimiento privado explícito |
+| `google_sub` | Texto nullable, `UNIQUE`, 1–255 caracteres `[A-Za-z0-9._-]` sin espacios exteriores | Identificador `sub` de Google; único entre todas las cuentas e inmutable una vez vinculado |
+| `authorized_at`, `linked_at`, `updated_at` | `timestamptz` (`linked_at` nullable y coherente con `google_sub`); `updated_at >= authorized_at` y `linked_at >= authorized_at` | Trazabilidad de autorización y vinculación |
 
 La política de sesión y limpieza de borradores se mantiene en [Autenticación y sesión](#autenticación-y-sesión). Los perfiles académicos referencian la misma tabla de cuentas y se documentan en [Académico](#académico).
 

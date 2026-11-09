@@ -10,6 +10,8 @@ export const authErrorExamples = [
   { status: 401, code: 'INVALID_CREDENTIALS', message: 'Correo o contraseña incorrectos.' },
   { status: 401, code: 'AUTHENTICATION_REQUIRED', message: 'Debes iniciar sesión.' },
   { status: 403, code: 'FORBIDDEN', message: 'Origen no autorizado.' },
+  { status: 403, code: 'GOOGLE_NOT_AUTHORIZED', message: 'La cuenta no está autorizada para vincular una identidad Google.' },
+  { status: 409, code: 'GOOGLE_LINK_CONFLICT', message: 'La identidad Google o la cuenta ya tiene otra vinculación.' },
   { status: 429, code: 'RATE_LIMIT_EXCEEDED', message: 'Demasiados intentos. Inténtalo más tarde.' },
   { status: 503, code: 'SERVICE_UNAVAILABLE', message: 'El servicio no está disponible.' },
   { status: 500, code: 'INTERNAL_ERROR', message: 'No fue posible completar la solicitud.' },

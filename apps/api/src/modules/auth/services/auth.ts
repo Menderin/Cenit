@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import type { LoginRequest, SessionResponse } from '@cenit/contracts/auth';
+import type { GoogleLinkResponse, LoginRequest, SessionResponse } from '@cenit/contracts/auth';
 import { ApiError } from '../../../infrastructure/errors.js';
 import type { AuthRepository } from '../repositories/auth.js';
 import { dummyPasswordHash, verifyPassword } from './password.js';
@@ -26,6 +26,18 @@ export class AuthService {
     if (!hash) return null;
     const result = await this.repository.session(hash, this.clock());
     return result ? { data: { account: result.account, expiresAt: result.expiresAt.toISOString() } } : null;
+  }
+  async googleStatus(token?: string): Promise<GoogleLinkResponse> {
+    const current = await this.session(token);
+    if (!current) throw new ApiError(401, 'AUTHENTICATION_REQUIRED', 'Debes iniciar sesión.');
+    return { data: await this.repository.googleStatus(current.data.account.id) };
+  }
+  async linkGoogle(input: { sub: string; email?: string }, token?: string): Promise<GoogleLinkResponse> {
+    const hash = sessionHash(token);
+    if (!hash) throw new ApiError(401, 'AUTHENTICATION_REQUIRED', 'Debes iniciar sesión.');
+    const sub = typeof input.sub === 'string' ? input.sub.trim() : '';
+    if (!/^[A-Za-z0-9._-]{1,255}$/.test(sub)) throw new ApiError(400, 'VALIDATION_ERROR', 'Revisa los datos de la solicitud.');
+    return { data: await this.repository.linkGoogle(hash, sub, this.clock()) };
   }
   async logout(token?: string): Promise<void> {
     const hash = sessionHash(token); if (hash) await this.repository.revoke(hash, this.clock());

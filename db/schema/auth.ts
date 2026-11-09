@@ -23,3 +23,15 @@ export const sessions = cenit.table('sessions', {
   check('session_duration', sql`${t.expiresAt} = ${t.createdAt} + interval '2 hours'`),
   check('session_revocation', sql`${t.revokedAt} IS NULL OR ${t.revokedAt} >= ${t.createdAt}`),
 ]);
+export const googleIdentities = cenit.table('google_identities', {
+  accountId: uuid('account_id').primaryKey().references(() => accounts.id),
+  authorized: boolean('authorized').notNull().default(true),
+  googleSub: text('google_sub').unique(),
+  authorizedAt: timestamp('authorized_at', { withTimezone: true }).notNull().defaultNow(),
+  linkedAt: timestamp('linked_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [
+  check('google_identity_sub', sql`${t.googleSub} IS NULL OR (length(${t.googleSub}) BETWEEN 1 AND 255 AND ${t.googleSub} = btrim(${t.googleSub}) AND ${t.googleSub} ~ '^[A-Za-z0-9._-]+$')`),
+  check('google_identity_link_state', sql`(${t.googleSub} IS NULL) = (${t.linkedAt} IS NULL)`),
+  check('google_identity_dates', sql`${t.updatedAt} >= ${t.authorizedAt} AND (${t.linkedAt} IS NULL OR ${t.linkedAt} >= ${t.authorizedAt})`),
+]);

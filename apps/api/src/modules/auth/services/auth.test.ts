@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { hashPassword, verifyPassword, dummyPasswordHash } from './password.js';
-import { sessionHash } from './auth.js';
+import { AuthService, sessionHash } from './auth.js';
+import type { AuthRepository } from '../repositories/auth.js';
 import { readAuthConfig } from '../routes/index.js';
 
 it('protege contraseña con salt, verifica y no admite hash inválido', async () => {
@@ -27,4 +28,18 @@ it('cookie segura por defecto; HTTP sólo explícito para demo', () => {
   for (const origin of ['*', 'null', 'https://cenit.example/path', 'http://user@localhost:3000']) {
     expect(() => readAuthConfig({ AUTH_ALLOWED_ORIGINS: origin })).toThrow();
   }
+});
+it('vinculación Google en servicio exige sesión válida, valida sub e ignora correo', async () => {
+  const linkGoogle = vi.fn().mockResolvedValue({ authorized: true, linked: true });
+  const now = new Date('2026-11-01T12:00:00.000Z');
+  const service = new AuthService({ linkGoogle } as unknown as AuthRepository, () => now);
+  const token = randomBytes(32).toString('hex');
+  await expect(service.linkGoogle({ sub: 'sub-123' }, undefined)).rejects.toMatchObject({ status: 401, code: 'AUTHENTICATION_REQUIRED' });
+  await expect(service.linkGoogle({ sub: 'sub-123' }, 'token-invalido')).rejects.toMatchObject({ status: 401, code: 'AUTHENTICATION_REQUIRED' });
+  await expect(service.linkGoogle({ sub: 'invalido con espacios' }, token)).rejects.toMatchObject({ status: 400, code: 'VALIDATION_ERROR' });
+  expect(linkGoogle).not.toHaveBeenCalled();
+  await expect(service.linkGoogle({ sub: 'sub-123', email: 'docente@cenit.invalid' }, token)).resolves.toEqual({
+    data: { authorized: true, linked: true },
+  });
+  expect(linkGoogle).toHaveBeenCalledWith(sessionHash(token), 'sub-123', now);
 });

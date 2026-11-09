@@ -3,17 +3,19 @@ import pg from 'pg';
 import { createTestPool, closeTestPool } from './support/postgres.js';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { Value } from '@sinclair/typebox/value';
-import { SessionResponseSchema } from '../../packages/contracts/src/auth/index.js';
+import { GoogleLinkResponseSchema, SessionResponseSchema } from '../../packages/contracts/src/auth/index.js';
 import { ErrorResponseSchema } from '../../packages/contracts/src/common/index.js';
 import { buildAcademicApp } from '../../apps/api/src/app.js';
+import { createReadiness } from '../../apps/api/src/infrastructure/database/readiness.js';
 import { AcademicRepository } from '../../apps/api/src/modules/academic/repositories/academic.js';
 import { AuthRepository } from '../../apps/api/src/modules/auth/repositories/auth.js';
 import { AuthService, sessionHash } from '../../apps/api/src/modules/auth/services/auth.js';
 import { createDemoCredentials, demoPasswordKeys, demoPasswordsFromEnv, prepareDemoAccounts, privateDemoCredentials, type DemoPasswords } from '../../db/seeds/auth-demo.js';
+import { configureGoogleAuthorizations, readGoogleAuthorizationsFile } from '../../db/seeds/google-authorizations.js';
 import { loadCatalog, readCatalog } from '../../db/seeds/load-academic.js';
 
 const suffix = randomBytes(6).toString('hex');
@@ -91,6 +93,7 @@ describe('migraciones y preparación de cuentas', () => {
     for (const pool of runtimes) {
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.accounts')).rows[0].n).toBe(0);
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.sessions')).rows[0].n).toBe(0);
+      expect((await pool.query('SELECT count(*)::int AS n FROM cenit.google_identities')).rows[0].n).toBe(0);
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.academic_courses')).rows[0].n).toBe(52);
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.academic_students')).rows[0].n).toBe(0);
       expect((await pool.query('SELECT count(*)::int AS n FROM cenit.academic_attempts')).rows[0].n).toBe(0);
@@ -251,5 +254,196 @@ describe('login real, permisos y sesión', () => {
       const response = await login(); expect(response.statusCode).toBe(503); expect(Value.Check(ErrorResponseSchema, response.json())).toBe(true);
       expect(response.body).not.toMatch(/SELECT|INSERT|password|stack|cenit\./); expect(response.headers['set-cookie']).toBeUndefined();
     } finally { await migrations[0]!.query('ALTER TABLE cenit.sessions_temporarily_unavailable RENAME TO sessions'); }
+  });
+});
+
+describe('autorización y vinculación de identidad Google', () => {
+  const linkRequest = (cookie?: string, body: Record<string, unknown> = { sub: 'google-sub-docente-1' }, suppliedOrigin: string | undefined = origin, remoteAddress?: string) =>
+    app.inject({
+      method: 'POST', url: '/api/v1/auth/google/link', payload: body,
+      headers: { ...(cookie ? { cookie } : {}), ...(suppliedOrigin ? { origin: suppliedOrigin } : {}) },
+      remoteAddress: remoteAddress ?? `192.0.2.${ipCounter++}`,
+    });
+  const statusRequest = (cookie?: string) =>
+    app.inject({ method: 'GET', url: '/api/v1/auth/google/link', headers: cookie ? { cookie } : {} });
+
+  it('BD exige FK a cuenta existente, sub único y estados/fechas coherentes en google_identities', async () => {
+    const pool = runtimes[0]!;
+    const id = credentials[0]!.id, otherId = credentials[1]!.id;
+    await pool.query('DELETE FROM cenit.google_identities');
+    await expect(pool.query('INSERT INTO cenit.google_identities(account_id) VALUES($1)', [randomUUID()])).rejects.toMatchObject({ code: '23503' });
+    await expect(pool.query('INSERT INTO cenit.google_identities(account_id,google_sub,linked_at) VALUES($1,$2,NULL)', [id, 'sub-1'])).rejects.toMatchObject({ code: '23514' });
+    await expect(pool.query('INSERT INTO cenit.google_identities(account_id,google_sub,linked_at) VALUES($1,NULL,$2)', [id, now])).rejects.toMatchObject({ code: '23514' });
+    await expect(pool.query('INSERT INTO cenit.google_identities(account_id,google_sub,linked_at,authorized_at,updated_at) VALUES($1,$2,$3,$3,$3)', [id, 'sub con espacio', now])).rejects.toMatchObject({ code: '23514' });
+    await expect(pool.query('INSERT INTO cenit.google_identities(account_id,authorized_at,updated_at) VALUES($1,$2,$3)', [id, now, new Date(now.getTime() - 1000)])).rejects.toMatchObject({ code: '23514' });
+    await pool.query('INSERT INTO cenit.google_identities(account_id,google_sub,authorized_at,linked_at,updated_at) VALUES($1,$2,$3,$3,$3)', [id, 'sub-unico', now]);
+    await expect(pool.query('INSERT INTO cenit.google_identities(account_id,google_sub,authorized_at,linked_at,updated_at) VALUES($1,$2,$3,$3,$3)', [otherId, 'sub-unico', now])).rejects.toMatchObject({ code: '23505' });
+    await pool.query('DELETE FROM cenit.google_identities');
+  });
+
+  it('procedimiento privado explícito autoriza/revoca en transacción sin alterar cuentas, claves ni sesiones', async () => {
+    const pool = runtimes[0]!;
+    await pool.query('DELETE FROM cenit.google_identities');
+    const sessionCookie = cookieFrom(await login('docente'));
+    const accountsBefore = (await pool.query('SELECT id,email,name,role,active,password_hash FROM cenit.accounts ORDER BY id')).rows;
+    const sessionsBefore = (await pool.query('SELECT token_hash,account_id,created_at,expires_at,revoked_at FROM cenit.sessions ORDER BY token_hash')).rows;
+
+    const dir = resolve('tmp/auth-tests', suffix, 'google-private');
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    const file = resolve(dir, 'google-authorizations.json');
+    const symlink = resolve(dir, 'symlink-authorizations.json');
+    const urlFile = resolve(dir, 'runtime-url');
+    writeFileSync(file, JSON.stringify([{ accountId: credentials[0]!.id, email: credentials[0]!.email.toUpperCase() }]), { mode: 0o600 });
+    writeFileSync(urlFile, connection(databases[0]!, runtimeRole, runtimePassword), { mode: 0o600 });
+    symlinkSync(file, symlink);
+    try {
+      expect(() => readGoogleAuthorizationsFile(symlink)).toThrow(/enlaces simbólicos/i);
+      await expect(configureGoogleAuthorizations(pool, [
+        { accountId: credentials[0]!.id },
+        { accountId: randomUUID() },
+      ], 'authorize', now)).rejects.toThrow();
+      expect((await pool.query('SELECT count(*)::int AS n FROM cenit.google_identities')).rows[0].n).toBe(0);
+
+      await expect(configureGoogleAuthorizations(pool, [
+        { accountId: credentials[0]!.id, email: credentials[1]!.email },
+      ], 'authorize', now)).rejects.toThrow();
+      expect((await pool.query('SELECT count(*)::int AS n FROM cenit.google_identities')).rows[0].n).toBe(0);
+
+      for (const action of ['authorize', 'revoke'] as const) {
+        const output = execFileSync(process.execPath, ['--import', 'tsx', 'db/seeds/google-authorizations.ts', action, file], {
+          env: { ...process.env, DATABASE_URL_FILE: urlFile }, encoding: 'utf8', stdio: 'pipe',
+        });
+        expect(output).not.toContain(credentials[0]!.email);
+        expect(output).not.toContain(credentials[0]!.id);
+        const status = await statusRequest(sessionCookie);
+        expect(status.statusCode).toBe(200);
+        expect(Value.Check(GoogleLinkResponseSchema, status.json())).toBe(true);
+        expect(status.json()).toEqual({ data: { authorized: action === 'authorize', linked: false } });
+      }
+      expect((await pool.query('SELECT id,email,name,role,active,password_hash FROM cenit.accounts ORDER BY id')).rows).toEqual(accountsBefore);
+      expect((await pool.query('SELECT token_hash,account_id,created_at,expires_at,revoked_at FROM cenit.sessions ORDER BY token_hash')).rows).toEqual(sessionsBefore);
+      expect((await app.inject({ url: '/api/v1/auth/session', headers: { cookie: sessionCookie } })).statusCode).toBe(200);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+      await pool.query('DELETE FROM cenit.google_identities');
+    }
+  });
+
+  it('vincula sólo desde sesión local autenticada y autorizada; no vincula por coincidencia de correo', async () => {
+    const pool = runtimes[0]!, repo = new AuthRepository(pool);
+    await pool.query('DELETE FROM cenit.google_identities');
+    const docente = credentials[0]!, estudiante = credentials[1]!;
+    const docenteCookie = cookieFrom(await login('docente'));
+    const estudianteCookie = cookieFrom(await login('estudiante'));
+
+    // Sin sesión o con Origin inválido se rechaza.
+    expect((await statusRequest()).statusCode).toBe(401);
+    expect((await linkRequest(undefined, { sub: 'sub-docente-1' })).statusCode).toBe(401);
+    expect((await linkRequest(docenteCookie, { sub: 'sub-docente-1' }, undefined)).statusCode).toBe(403);
+    expect((await linkRequest(docenteCookie, { sub: 'sub-docente-1' }, 'https://externo.invalid')).statusCode).toBe(403);
+
+    // No se admite enviar email/rol en el body HTTP ni vincular una cuenta no autorizada aunque coincida su correo.
+    expect((await linkRequest(estudianteCookie, { sub: 'sub-est-1', email: estudiante.email })).statusCode).toBe(400);
+    const unauthorized = await linkRequest(estudianteCookie, { sub: 'sub-est-1' });
+    expect(unauthorized.statusCode).toBe(403);
+    expect(unauthorized.json().error.code).toBe('GOOGLE_NOT_AUTHORIZED');
+    await expect(service().linkGoogle({ sub: 'sub-est-1', email: estudiante.email }, tokenFrom(estudianteCookie))).rejects.toMatchObject({
+      status: 403, code: 'GOOGLE_NOT_AUTHORIZED',
+    });
+    expect((await pool.query('SELECT count(*)::int AS n FROM cenit.google_identities')).rows[0].n).toBe(0);
+
+    // Autorizar cuenta de docente y vincular desde su sesión local activa.
+    await configureGoogleAuthorizations(pool, [{ accountId: docente.id, email: docente.email }], 'authorize', now);
+    const beforeAccounts = (await pool.query('SELECT * FROM cenit.accounts ORDER BY id')).rows;
+    const firstLink = await linkRequest(docenteCookie, { sub: 'sub-docente-1' });
+    expect(firstLink.statusCode).toBe(200);
+    expect(firstLink.json()).toEqual({ data: { authorized: true, linked: true } });
+    // Reintento idempotente con el mismo sub en la misma cuenta.
+    const repeatLink = await linkRequest(docenteCookie, { sub: 'sub-docente-1' });
+    expect(repeatLink.statusCode).toBe(200);
+    expect(repeatLink.json()).toEqual({ data: { authorized: true, linked: true } });
+    expect((await statusRequest(docenteCookie)).json()).toEqual({ data: { authorized: true, linked: true } });
+    expect((await pool.query('SELECT * FROM cenit.accounts ORDER BY id')).rows).toEqual(beforeAccounts);
+    expect((await repo.accountByGoogleSub('sub-docente-1'))?.id).toBe(docente.id);
+
+    // Rechaza cuenta inactiva tanto al autorizar como al intentar vincular.
+    await configureGoogleAuthorizations(pool, [{ accountId: estudiante.id }], 'authorize', now);
+    await pool.query('UPDATE cenit.accounts SET active=false WHERE id=$1', [estudiante.id]);
+    try {
+      await expect(configureGoogleAuthorizations(pool, [{ accountId: estudiante.id }], 'authorize', now)).rejects.toThrow();
+      const inactiveLink = await linkRequest(estudianteCookie, { sub: 'sub-est-inactivo' });
+      expect(inactiveLink.statusCode).toBe(401);
+      expect((await repo.googleStatus(estudiante.id)).linked).toBe(false);
+    } finally {
+      await pool.query('UPDATE cenit.accounts SET active=true WHERE id=$1', [estudiante.id]);
+      await pool.query('DELETE FROM cenit.google_identities');
+    }
+  });
+
+  it('impide asociaciones duplicadas entre cuentas y en intentos simultáneos; revocar conserva sub reservado', async () => {
+    const pool = runtimes[0]!, repo = new AuthRepository(pool);
+    await pool.query('DELETE FROM cenit.google_identities');
+    const docente = credentials[0]!, estudiante = credentials[1]!, administrativo = credentials[2]!;
+    await configureGoogleAuthorizations(pool, [
+      { accountId: docente.id },
+      { accountId: estudiante.id },
+      { accountId: administrativo.id },
+    ], 'authorize', now);
+    const docenteCookie = cookieFrom(await login('docente'));
+    const estudianteCookie = cookieFrom(await login('estudiante'));
+    const adminCookie = cookieFrom(await login('administrativo'));
+
+    // Dos cuentas distintas intentan vincular simultáneamente el mismo sub de Google.
+    const [r1, r2] = await Promise.all([
+      linkRequest(docenteCookie, { sub: 'sub-compartido-simultaneo' }),
+      linkRequest(estudianteCookie, { sub: 'sub-compartido-simultaneo' }),
+    ]);
+    expect([r1.statusCode, r2.statusCode].sort()).toEqual([200, 409]);
+    const conflictResponse = r1.statusCode === 409 ? r1 : r2;
+    expect(conflictResponse.json().error.code).toBe('GOOGLE_LINK_CONFLICT');
+    expect((await pool.query('SELECT count(*)::int AS n FROM cenit.google_identities WHERE google_sub=$1', ['sub-compartido-simultaneo'])).rows[0].n).toBe(1);
+
+    // La misma cuenta intenta vincular dos sub distintos simultáneamente.
+    const [s1, s2] = await Promise.all([
+      linkRequest(adminCookie, { sub: 'sub-admin-a' }),
+      linkRequest(adminCookie, { sub: 'sub-admin-b' }),
+    ]);
+    expect([s1.statusCode, s2.statusCode].sort()).toEqual([200, 409]);
+
+    // Revocar la autorización deshabilita el uso Google sin liberar el sub para otra cuenta ni romper la sesión local.
+    const winnerId = r1.statusCode === 200 ? docente.id : estudiante.id;
+    const loserCookie = r1.statusCode === 200 ? estudianteCookie : docenteCookie;
+    await configureGoogleAuthorizations(pool, [{ accountId: winnerId }], 'revoke', now);
+    expect(await repo.accountByGoogleSub('sub-compartido-simultaneo')).toBeNull();
+    expect((await linkRequest(loserCookie, { sub: 'sub-compartido-simultaneo' })).statusCode).toBe(409);
+    await pool.query('DELETE FROM cenit.google_identities');
+  });
+
+  it('mantiene compatibilidad de readiness y operación con la imagen anterior tras aplicar 0010_google_identity', async () => {
+    const runtimeUrl = connection(databases[0]!, runtimeRole, runtimePassword);
+    const currentReady = createReadiness(runtimeUrl, resolve('db/migrations'));
+    const prevDir = resolve('tmp/auth-tests', suffix, 'previous-image-migrations');
+    mkdirSync(resolve(prevDir, 'meta'), { recursive: true, mode: 0o700 });
+    const fullJournal = JSON.parse(readFileSync(resolve('db/migrations/meta/_journal.json'), 'utf8')) as {
+      version: string; dialect: string; entries: { idx: number; version: string; when: number; tag: string; breakpoints: boolean }[];
+    };
+    const prevEntries = fullJournal.entries.filter(entry => entry.idx < 10);
+    for (const entry of prevEntries) {
+      copyFileSync(resolve('db/migrations', `${entry.tag}.sql`), resolve(prevDir, `${entry.tag}.sql`));
+    }
+    writeFileSync(resolve(prevDir, 'meta/_journal.json'), JSON.stringify({ ...fullJournal, entries: prevEntries }, null, 2));
+    copyFileSync(resolve('db/migrations/meta/_legacy.json'), resolve(prevDir, 'meta/_legacy.json'));
+    copyFileSync(resolve('db/migrations/meta/0009_snapshot.json'), resolve(prevDir, 'meta/0009_snapshot.json'));
+    const previousReady = createReadiness(runtimeUrl, prevDir);
+    try {
+      expect(await currentReady.check()).toBe(true);
+      expect(await previousReady.check()).toBe(true);
+      const response = await login('docente');
+      expect(response.statusCode).toBe(200);
+    } finally {
+      await currentReady.close();
+      await previousReady.close();
+      rmSync(prevDir, { recursive: true, force: true });
+    }
   });
 });

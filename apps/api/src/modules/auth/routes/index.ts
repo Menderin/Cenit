@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { ErrorResponseSchema } from '@cenit/contracts';
-import { LoginRequestSchema, LogoutRequestSchema, SessionResponseSchema, type LoginRequest } from '@cenit/contracts/auth';
+import { GoogleLinkRequestSchema, GoogleLinkResponseSchema, LoginRequestSchema, LogoutRequestSchema, SessionResponseSchema, type GoogleLinkRequest, type LoginRequest } from '@cenit/contracts/auth';
 import { ApiError } from '../../../infrastructure/errors.js';
 import { AuthService, SESSION_SECONDS } from '../services/auth.js';
 
@@ -21,7 +21,7 @@ export async function authRoutes(app: FastifyInstance, options: { service: AuthS
   const origin = async (request: FastifyRequest) => {
     if (!request.headers.origin || !config.allowedOrigins.includes(request.headers.origin)) throw new ApiError(403, 'FORBIDDEN', 'Origen no autorizado.');
   };
-  const errors = Object.fromEntries([400, 401, 403, 429, 500, 503].map(status => [status, ErrorResponseSchema]));
+  const errors = Object.fromEntries([400, 401, 403, 409, 429, 500, 503].map(status => [status, ErrorResponseSchema]));
   const cookieOptions = { path: '/', httpOnly: true, sameSite: 'lax' as const, secure: config.cookieSecure };
   app.post<{ Body: LoginRequest }>('/login', {
     schema: { body: LoginRequestSchema, response: { 200: SessionResponseSchema, ...errors } }, onRequest: origin,
@@ -36,6 +36,15 @@ export async function authRoutes(app: FastifyInstance, options: { service: AuthS
     const result = await service.session(request.cookies[SESSION_COOKIE]);
     if (!result) throw new ApiError(401, 'AUTHENTICATION_REQUIRED', 'Debes iniciar sesión.');
     return result;
+  });
+  app.get('/google/link', { schema: { response: { 200: GoogleLinkResponseSchema, ...errors } } }, async request => {
+    return service.googleStatus(request.cookies[SESSION_COOKIE]);
+  });
+  app.post<{ Body: GoogleLinkRequest }>('/google/link', {
+    schema: { body: GoogleLinkRequestSchema, response: { 200: GoogleLinkResponseSchema, ...errors } }, onRequest: origin,
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async request => {
+    return service.linkGoogle(request.body, request.cookies[SESSION_COOKIE]);
   });
   app.post('/logout', { schema: { body: LogoutRequestSchema, response: errors }, onRequest: origin }, async (request, reply) => {
     await service.logout(request.cookies[SESSION_COOKIE]);

@@ -113,6 +113,25 @@ Remove-Item Env:DATABASE_URL_FILE
 
 La preparación conserva cuentas compatibles y no rota sus claves; una discrepancia detiene la operación. Las credenciales se consultan localmente en el archivo privado generado.
 
+### Autorizar cuentas para vinculación Google
+
+Las cuentas que pueden vincular una identidad Google se gestionan de forma explícita mediante un archivo JSON privado fuera de Git (por ejemplo `.local/secrets/google-authorizations.json`), con permisos restringidos y sin enlaces simbólicos:
+
+```json
+[
+  { "accountId": "<uuid-de-cuenta-cenit>", "email": "docente@cenit.invalid" }
+]
+```
+
+Aplicar o revocar la autorización en una transacción:
+
+```sh
+DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run auth:google-authorizations -- authorize .local/secrets/google-authorizations.json
+DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run auth:google-authorizations -- revoke .local/secrets/google-authorizations.json
+```
+
+En la imagen compilada, el comando equivalente es `node dist/operations/db/seeds/google-authorizations.js authorize /run/secrets/google-authorizations.json`. El procedimiento valida que cada cuenta exista (y esté activa al autorizar), no altera contraseñas, roles ni sesiones locales y no imprime correos ni identificadores en consola.
+
 Para disponer de la malla y tres historiales ficticios:
 
 El [recorrido de revisión académica](../Docs/PRUEBAS-Y-ACEPTACION.md#preparar-la-revisión-académica--scrum-112) indica qué comprobar y registrar después de esta preparación.

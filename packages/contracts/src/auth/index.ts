@@ -16,6 +16,21 @@ export const SessionResponseSchema = Type.Object({ data: Type.Object({
   expiresAt: Type.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$' }),
 }, { additionalProperties: false }) }, { additionalProperties: false });
 export const LogoutRequestSchema = Type.Object({}, { additionalProperties: false });
+export const GoogleSubSchema = Type.String({ minLength: 1, maxLength: 255, pattern: '^[A-Za-z0-9._-]+$' });
+export const GoogleLinkRequestSchema = Type.Object({
+  sub: GoogleSubSchema,
+}, { additionalProperties: false });
+export const GoogleLinkStatusSchema = Type.Object({
+  authorized: Type.Boolean(),
+  linked: Type.Boolean(),
+}, { additionalProperties: false });
+export const GoogleLinkResponseSchema = Type.Object({
+  data: GoogleLinkStatusSchema,
+}, { additionalProperties: false });
 export type LoginRequest = Static<typeof LoginRequestSchema>;
 export type Account = Static<typeof AccountSchema>;
 export type SessionResponse = Static<typeof SessionResponseSchema>;
+export type GoogleSub = Static<typeof GoogleSubSchema>;
+export type GoogleLinkRequest = Static<typeof GoogleLinkRequestSchema>;
+export type GoogleLinkStatus = Static<typeof GoogleLinkStatusSchema>;
+export type GoogleLinkResponse = Static<typeof GoogleLinkResponseSchema>;
