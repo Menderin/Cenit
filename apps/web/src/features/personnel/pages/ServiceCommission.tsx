@@ -1,0 +1,267 @@
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft';
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight';
+import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check';
+import { EyeIcon } from '@phosphor-icons/react/dist/csr/Eye';
+import { PencilSimpleIcon } from '@phosphor-icons/react/dist/csr/PencilSimple';
+import { PrinterIcon } from '@phosphor-icons/react/dist/csr/Printer';
+import { TrashIcon } from '@phosphor-icons/react/dist/csr/Trash';
+import { MagnifyingGlassMinusIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlassMinus';
+import { MagnifyingGlassPlusIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlassPlus';
+import { MapPinIcon } from '@phosphor-icons/react/dist/csr/MapPin';
+import { GlobeHemisphereWestIcon } from '@phosphor-icons/react/dist/csr/GlobeHemisphereWest';
+import { DateField } from '../../../shared/components/DateField.js';
+import { ContextualConfirm } from '../../../shared/components/ContextualConfirm.js';
+import { displayDate } from '../../../shared/lib/dates.js';
+import { useGuardChanges } from '../../purchases/model/guard.js';
+import { StaffSearch } from '../components/StaffSearch.js';
+import { CommissionDocument } from '../components/CommissionDocument.js';
+import { units } from '../model/staff.js';
+import { categoryLabels, emptyCommission, fileName, plantLabels, stepFields, steps, validateStep, type CommissionDraft, type Errors, type Step } from '../model/commission.js';
+import '../personnel.css';
+
+const fieldId = (key: string) => `commission-${key.replace(/\./g, '-')}`;
+const formSteps = ['funcionario', 'comision', 'financiamiento', 'actividad'] as const;
+
+function Field({ name, label, value, onChange, error, optional, textarea, ...props }: {
+  name: string; label: string; value: string; onChange: (value: string) => void; error?: string; optional?: boolean; textarea?: boolean;
+  inputMode?: 'numeric' | 'decimal'; placeholder?: string; list?: string;
+}) {
+  const id = fieldId(name), common = { id, value, className: 'cenit-input', 'aria-invalid': !!error, 'aria-describedby': error ? `${id}-error` : undefined };
+  return <div className="personnel-field">
+    <label htmlFor={id}>{label}{optional && <span className="personnel-optional"> (opcional)</span>}</label>
+    {textarea ? <textarea {...common} rows={4} onChange={event => onChange(event.target.value)} />
+      : <input {...common} {...props} autoComplete="off" onChange={event => onChange(event.target.value)} />}
+    {error && <p className="personnel-error" id={`${id}-error`}>{error}</p>}
+  </div>;
+}
+
+function Choice<T extends string>({ name, legend, value, options, onChange, error, wide }: {
+  name: string; legend: string; value: T | ''; options: { value: T; label: ReactNode }[]; onChange: (value: T) => void; error?: string; wide?: boolean;
+}) {
+  return <fieldset className="personnel-field" aria-describedby={error ? `${fieldId(name)}-error` : undefined}>
+    <legend>{legend}</legend>
+    <div className={`personnel-choice${wide ? ' personnel-choice--wide' : ''}${error ? ' personnel-choice--invalid' : ''}`}>
+      {options.map((option, index) => <label key={option.value}>
+        <input type="radio" name={name} id={index === 0 ? fieldId(name) : undefined} checked={value === option.value} onChange={() => onChange(option.value)} />
+        <span>{option.label}</span>
+      </label>)}
+    </div>
+    {error && <p className="personnel-error" id={`${fieldId(name)}-error`}>{error}</p>}
+  </fieldset>;
+}
+
+export function ServiceCommission() {
+  const [draft, setDraft] = useState(emptyCommission);
+  const [step, setStep] = useState<Step>('funcionario');
+  const [errors, setErrors] = useState<Errors>({});
+  const [tried, setTried] = useState<Partial<Record<Step, boolean>>>({});
+  const [focusKey, setFocusKey] = useState<{ key: string } | null>(null);
+  const [preview, setPreview] = useState(false), [zoom, setZoom] = useState(100);
+  const [discardOrigin, setDiscardOrigin] = useState<HTMLElement | null>(null);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(emptyCommission());
+  const reset = useCallback(() => { setDraft(emptyCommission()); setStep('funcionario'); setErrors({}); setTried({}); setPreview(false); }, []);
+  useGuardChanges(dirty, false, reset);
+
+  useEffect(() => { if (focusKey) document.getElementById(fieldId(focusKey.key))?.focus(); }, [focusKey]);
+
+  function update(patch: Partial<CommissionDraft>) {
+    const next = { ...draft, ...patch };
+    setDraft(next);
+    if (step !== 'revision' && tried[step]) setErrors(current => {
+      const kept = Object.fromEntries(Object.entries(current).filter(([key]) => !stepFields[step].includes(key)));
+      return { ...kept, ...validateStep(next, step) };
+    });
+  }
+  const setFunding = (row: number, key: keyof CommissionDraft['funding'][number], value: string) =>
+    update({ funding: draft.funding.map((item, index) => index === row ? { ...item, [key]: value } : item) as CommissionDraft['funding'] });
+
+  function go(next: Step) { setStep(next); setPreview(false); document.getElementById('admin-content')?.scrollTo({ top: 0 }); }
+  function check(target: Exclude<Step, 'revision'>) {
+    const found = validateStep(draft, target);
+    setErrors(current => ({ ...Object.fromEntries(Object.entries(current).filter(([key]) => !stepFields[target].includes(key))), ...found }));
+    setTried(current => ({ ...current, [target]: true }));
+    return stepFields[target].find(key => found[key]);
+  }
+  function next() {
+    if (step === 'revision') return;
+    const invalid = check(step);
+    if (invalid) { setFocusKey({ key: invalid }); return; }
+    go(steps[steps.findIndex(item => item.key === step) + 1]!.key);
+  }
+  function print() {
+    for (const target of formSteps) {
+      const invalid = check(target);
+      if (invalid) { go(target); setFocusKey({ key: invalid }); return; }
+    }
+    const title = document.title;
+    document.title = fileName(draft);
+    window.addEventListener('afterprint', () => { document.title = title; }, { once: true });
+    window.print();
+  }
+
+  const index = steps.findIndex(item => item.key === step), current = steps[index]!;
+  const stepErrors = (target: Step) => target === 'revision' ? 0 : stepFields[target].filter(key => errors[key]).length;
+  const complete = (target: Step) => target !== 'revision' && !Object.keys(validateStep(draft, target)).length;
+  const known = (value: string) => value.trim() ? value : undefined;
+  const funding = (row: CommissionDraft['funding'][number]) => Object.values(row).some(value => value.trim())
+    ? `${[row.institution, row.organization, row.unit, row.project].map(value => value || '—').join(' · ')} · ${row.percent || '—'} %` : undefined;
+  const event = draft.activity === 'evento';
+  const review: { step: Step; title: string; rows: [string, string | undefined][] }[] = [
+    { step: 'funcionario', title: 'Funcionario', rows: [['Nombre completo', known(draft.name)], ['Cargo', known(draft.position)], ['Unidad o dependencia', known(draft.unit)], ['Grupo', draft.group || undefined],
+      ['Estamento', draft.category === 'otro' ? `Otro: ${draft.categoryOther}` : draft.category ? categoryLabels[draft.category] : undefined], ['Planta', draft.plant ? plantLabels[draft.plant] : undefined]] },
+    { step: 'comision', title: 'Comisión', rows: [['Lugar', draft.territory ? `${draft.territory === 'nacional' ? 'Territorio nacional' : 'Extranjero'}${draft.place ? ` · ${draft.place}` : ''}` : undefined],
+      ['Fechas', draft.from && draft.to ? `${displayDate(draft.from)} al ${displayDate(draft.to)}` : undefined], ['Días con pernoctación', known(draft.daysWithStay)], ['Días sin pernoctación', known(draft.daysWithoutStay)],
+      ['Total de días', known(draft.totalDays)], ['Viático', draft.allowance.trim() ? `${draft.allowance} ${draft.currency}` : undefined]] },
+    { step: 'financiamiento', title: 'Financiamiento', rows: [['Fuente 1', funding(draft.funding[0])], ['Fuente 2', funding(draft.funding[1])]] },
+    { step: 'actividad', title: 'Actividad', rows: event ? [['Evento', known(draft.eventName)], ['Institución organizadora', known(draft.eventOrganizer)], ['Trabajo o ponencia', known(draft.eventWork)], ['Proyecto asociado', known(draft.eventProject)], ['Otros antecedentes', known(draft.eventNotes)]]
+      : [['Descripción', known(draft.description)]] },
+  ];
+
+  return <section className="personnel-page">
+    <div className="personnel-heading">
+      <div><h1>Nueva comisión de servicios</h1><p>Completa los datos, revisa el documento y descárgalo para gestionar las firmas.</p></div>
+      <div className="personnel-heading__actions">
+        {!preview && <button type="button" className="cenit-button" onClick={() => setPreview(true)}><EyeIcon size={16} aria-hidden="true" />Vista previa</button>}
+        <button type="button" className="cenit-button cenit-button--quiet" disabled={!dirty} onClick={event => setDiscardOrigin(event.currentTarget)}><TrashIcon size={16} aria-hidden="true" />Descartar</button>
+      </div>
+    </div>
+    <ContextualConfirm open={!!discardOrigin} origin={discardOrigin} title="¿Descartar esta comisión?" description="Se borrarán todos los datos ingresados."
+      confirmLabel="Descartar" destructive onCancel={() => setDiscardOrigin(null)} onConfirm={() => { setDiscardOrigin(null); reset(); }} />
+
+    {preview ? <div className="personnel-preview">
+      <div className="personnel-preview__bar">
+        <button type="button" className="cenit-button" onClick={() => setPreview(false)}><ArrowLeftIcon size={16} aria-hidden="true" />Volver al formulario</button>
+        <div className="personnel-zoom" role="group" aria-label="Zoom">
+          <button type="button" className="cenit-button cenit-button--icon" aria-label="Reducir" onClick={() => setZoom(Math.max(50, zoom - 10))}><MagnifyingGlassMinusIcon size={17} aria-hidden="true" /></button>
+          <output aria-live="polite">{zoom} %</output>
+          <button type="button" className="cenit-button cenit-button--icon" aria-label="Ampliar" onClick={() => setZoom(Math.min(160, zoom + 10))}><MagnifyingGlassPlusIcon size={17} aria-hidden="true" /></button>
+        </div>
+        <button type="button" className="cenit-button cenit-button--primary" onClick={print}><PrinterIcon size={16} aria-hidden="true" />Imprimir o guardar PDF</button>
+      </div>
+      <div className="personnel-preview__sheet"><div style={{ zoom: zoom / 100 }}><CommissionDocument draft={draft} /></div></div>
+    </div> : <div className="personnel-layout">
+      <nav aria-label="Secciones"><ol className="personnel-steps">
+        {steps.map((item, position) => {
+          const count = stepErrors(item.key), done = !count && complete(item.key);
+          return <li key={item.key}><button type="button" aria-current={item.key === step ? 'step' : undefined} onClick={() => go(item.key)}>
+            <span className={`personnel-steps__number${count ? ' personnel-steps__number--error' : done ? ' personnel-steps__number--done' : ''}`}>{done ? <CheckIcon size={13} weight="bold" aria-label="Completa" /> : position + 1}</span>
+            <span>{item.label}{count > 0 && <small>{count === 1 ? '1 campo por corregir' : `${count} campos por corregir`}</small>}</span>
+          </button></li>;
+        })}
+      </ol></nav>
+
+      <div className="personnel-card">
+        <div className="personnel-card__head"><h2>{current.label}</h2><p>{current.intro}</p></div>
+
+        {step === 'funcionario' && <div className="personnel-group">
+          <StaffSearch id={fieldId('name')} value={draft.name} error={errors.name} onChange={name => update({ name })}
+            onPick={person => update({ name: person.name, position: person.position, unit: person.unit, plant: person.plant, category: person.category, categoryOther: '' })} />
+          <div className="personnel-group">
+            <Field name="position" label="Cargo" value={draft.position} error={errors.position} onChange={position => update({ position })} />
+            <Field name="unit" label="Unidad o dependencia" value={draft.unit} error={errors.unit} list="commission-units" onChange={unit => update({ unit })} />
+            <datalist id="commission-units">{units.map(unit => <option key={unit} value={unit} />)}</datalist>
+          </div>
+          <Choice name="group" legend="Grupo" value={draft.group} error={errors.group} onChange={group => update({ group })}
+            options={(['I', 'II', 'III'] as const).map(value => ({ value, label: value }))} />
+          <Choice name="category" legend="Estamento" value={draft.category} error={errors.category} onChange={category => update({ category })}
+            options={(Object.keys(categoryLabels) as (keyof typeof categoryLabels)[]).map(value => ({ value, label: categoryLabels[value] }))} />
+          {draft.category === 'otro' && <Field name="categoryOther" label="Especifica el estamento" value={draft.categoryOther} error={errors.categoryOther} onChange={categoryOther => update({ categoryOther })} />}
+          <Choice name="plant" legend="Planta" value={draft.plant} error={errors.plant} onChange={plant => update({ plant })}
+            options={[{ value: 'oficial', label: 'Oficial' }, { value: 'especial', label: 'Especial' }, { value: 'temporal', label: 'Temporal' }]} />
+        </div>}
+
+        {step === 'comision' && <div className="personnel-group">
+          <Choice name="territory" legend="Lugar de realización" value={draft.territory} error={errors.territory} onChange={territory => update({ territory })}
+            options={[{ value: 'nacional', label: <><MapPinIcon size={15} aria-hidden="true" />Territorio nacional</> }, { value: 'extranjero', label: <><GlobeHemisphereWestIcon size={15} aria-hidden="true" />Extranjero</> }]} />
+          <Field name="place" label={draft.territory === 'extranjero' ? 'Ciudad y país' : 'Lugar'} value={draft.place} error={errors.place}
+            placeholder={draft.territory === 'extranjero' ? 'Ej.: Lima, Perú' : 'Ej.: Santiago'} onChange={place => update({ place })} />
+          <div className="personnel-grid">
+            {(['from', 'to'] as const).map(key => <div className="personnel-field" key={key}>
+              <label htmlFor={fieldId(key)}>{key === 'from' ? 'Desde' : 'Hasta'}</label>
+              <DateField id={fieldId(key)} label={key === 'from' ? 'Desde' : 'Hasta'} value={draft[key]} aria-invalid={!!errors[key]} onValueChange={value => update({ [key]: value })} />
+              {errors[key] && <p className="personnel-error">{errors[key]}</p>}
+            </div>)}
+          </div>
+          <div className="personnel-grid personnel-grid--three">
+            <Field name="daysWithStay" label="Días con pernoctación" optional inputMode="numeric" value={draft.daysWithStay} error={errors.daysWithStay} onChange={daysWithStay => update({ daysWithStay })} />
+            <Field name="daysWithoutStay" label="Días sin pernoctación" optional inputMode="numeric" value={draft.daysWithoutStay} error={errors.daysWithoutStay} onChange={daysWithoutStay => update({ daysWithoutStay })} />
+            <Field name="totalDays" label="Total de días" value={draft.totalDays} error={errors.totalDays} onChange={totalDays => update({ totalDays })} />
+          </div>
+          <div className="personnel-grid">
+            <Field name="allowance" label="Importe del viático" optional inputMode="decimal" placeholder="Ej.: 186.000" value={draft.allowance} error={errors.allowance} onChange={allowance => update({ allowance })} />
+            <Choice name="currency" legend="Moneda" value={draft.currency} error={errors.currency} onChange={currency => update({ currency })}
+              options={[{ value: 'CLP', label: 'CLP' }, { value: 'USD', label: 'USD' }]} />
+          </div>
+        </div>}
+
+        {step === 'financiamiento' && <table className="personnel-funding">
+          <caption className="personnel-sr">Código presupuestario</caption>
+          <thead><tr><th scope="col"><span className="personnel-sr">Fuente</span></th><th scope="col">Institución</th><th scope="col">Organización</th><th scope="col">Unidad</th><th scope="col">Proyecto</th><th scope="col">% financ.</th></tr></thead>
+          <tbody>{draft.funding.map((row, rowIndex) => <tr key={rowIndex}>
+            <th scope="row">{rowIndex === 0 ? 'Fuente 1' : <>Fuente 2<small>Opcional</small></>}</th>
+            {(['institution', 'organization', 'unit', 'project', 'percent'] as const).map(key => {
+              const path = `funding.${rowIndex}.${key}`, id = fieldId(path);
+              return <td key={key}>
+                <input id={id} className="cenit-input" inputMode="numeric" autoComplete="off" value={row[key]} aria-label={`Fuente ${rowIndex + 1}, ${{ institution: 'institución', organization: 'organización', unit: 'unidad', project: 'proyecto', percent: 'porcentaje' }[key]}`}
+                  aria-invalid={!!errors[path]} aria-describedby={errors[path] ? `${id}-error` : undefined} onChange={event => setFunding(rowIndex, key, event.target.value)} />
+                {errors[path] && <p className="personnel-error" id={`${id}-error`}>{errors[path]}</p>}
+              </td>;
+            })}
+          </tr>)}</tbody>
+        </table>}
+
+        {step === 'actividad' && <div className="personnel-group">
+          <Choice name="activity" legend="¿La comisión corresponde a un evento?" value={draft.activity} onChange={activity => update({ activity })}
+            options={[{ value: 'evento', label: 'Sí, a un evento' }, { value: 'descripcion', label: 'No, describir la comisión' }]} />
+          {event ? <>
+            <Field name="eventName" label="Nombre del evento" value={draft.eventName} error={errors.eventName} onChange={eventName => update({ eventName })} />
+            <div className="personnel-grid">
+              <Field name="eventOrganizer" label="Institución organizadora" value={draft.eventOrganizer} error={errors.eventOrganizer} onChange={eventOrganizer => update({ eventOrganizer })} />
+              <Field name="eventProject" label="Proyecto al que se asocia el trabajo" optional value={draft.eventProject} onChange={eventProject => update({ eventProject })} />
+            </div>
+            <Field name="eventWork" label="Nombre del trabajo o ponencia" optional textarea value={draft.eventWork} onChange={eventWork => update({ eventWork })} />
+            <Field name="eventNotes" label="Otros antecedentes u observaciones" optional value={draft.eventNotes} onChange={eventNotes => update({ eventNotes })} />
+          </> : <Field name="description" label="Descripción de la comisión" textarea value={draft.description} error={errors.description} onChange={description => update({ description })} />}
+        </div>}
+
+        {step === 'revision' && <div>
+          {review.map(block => {
+            const count = stepErrors(block.step);
+            return <section className="personnel-review" key={block.step}>
+              <div className="personnel-review__head"><h3>{block.title}</h3><button type="button" className="cenit-button cenit-button--quiet" aria-label={`Editar ${block.title}`} onClick={() => go(block.step)}><PencilSimpleIcon size={15} aria-hidden="true" />Editar</button></div>
+              {count > 0 && <p className="personnel-error">{count === 1 ? 'Hay 1 campo por corregir.' : `Hay ${count} campos por corregir.`}</p>}
+              <dl>{block.rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd className={value ? undefined : 'personnel-unknown'}>{value ?? 'Sin información'}</dd></div>)}</dl>
+            </section>;
+          })}
+          <div className="personnel-download">
+            <p>El documento se imprime o se guarda como PDF desde el diálogo de impresión del navegador.</p>
+            <div className="personnel-download__actions">
+              <button type="button" className="cenit-button" onClick={() => setPreview(true)}><EyeIcon size={16} aria-hidden="true" />Ver vista previa</button>
+              <button type="button" className="cenit-button cenit-button--primary" onClick={print}><PrinterIcon size={16} aria-hidden="true" />Imprimir o guardar PDF</button>
+            </div>
+          </div>
+        </div>}
+
+        <div className="personnel-card__foot">
+          <div>{index > 0 && <button type="button" className="cenit-button cenit-button--quiet" onClick={() => go(steps[index - 1]!.key)}><ArrowLeftIcon size={16} aria-hidden="true" />{steps[index - 1]!.label}</button>}</div>
+          {step !== 'revision' && <button type="button" className="cenit-button cenit-button--primary" onClick={next}>{steps[index + 1]!.key === 'revision' ? 'Revisar' : `Continuar a ${steps[index + 1]!.label}`}<ArrowRightIcon size={16} aria-hidden="true" /></button>}
+        </div>
+      </div>
+
+      <aside className="personnel-summary" aria-label="Resumen">
+        <h2>Resumen</h2>
+        <dl>
+          <div><dt>Funcionario</dt><dd>{draft.name || '—'}</dd></div>
+          <div><dt>Lugar</dt><dd>{draft.territory ? `${draft.territory === 'nacional' ? 'Nacional' : 'Extranjero'}${draft.place ? ` · ${draft.place}` : ''}` : '—'}</dd></div>
+          <div><dt>Fechas</dt><dd>{draft.from && draft.to ? `${displayDate(draft.from)} al ${displayDate(draft.to)}` : '—'}</dd></div>
+          <div><dt>Total de días</dt><dd>{draft.totalDays || '—'}</dd></div>
+          <div><dt>Viático</dt><dd>{draft.allowance ? `${draft.allowance} ${draft.currency}` : '—'}</dd></div>
+          <div><dt>Actividad</dt><dd>{event ? draft.eventName || '—' : draft.description ? 'Descripción de la comisión' : '—'}</dd></div>
+        </dl>
+      </aside>
+    </div>}
+
+    <div className="personnel-print" aria-hidden="true"><CommissionDocument draft={draft} /></div>
+  </section>;
+}

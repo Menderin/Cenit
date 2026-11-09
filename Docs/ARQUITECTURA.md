@@ -13,14 +13,15 @@ Este archivo es el SDD vigente del repositorio. README es el punto de entrada; `
 | Plataforma | Login local, rol por cuenta, sesión de dos horas, frontend compilado servido por API, PostgreSQL persistente | Aceptación de usuarios y comprobación del destino elegido |
 | Administrativo | Compras: captura, revisión, alta manual, persistencia, búsqueda, resumen, validación local y eliminación | Precisión OCR acordada con nuevas muestras; actualización de una copia desde otra captura |
 | Académico | Consulta por rol, versiones del catálogo, detalle, reglas simples/conjuntas e historiales ficticios | Carga explícita de `diagrama-r2` en cada entorno; año, códigos y aceptación institucional pendientes |
-| Personal y Bienes | Navegación y páginas de construcción | Requisitos y módulos funcionales pendientes; no se presentan como entregados |
+| Personal | Comisión de servicios en `feat/personal-comision`: formulario por secciones, búsqueda de funcionario que precarga cargo, unidad, estamento y planta, vista previa e impresión o PDF desde el navegador. Borrador sólo en memoria | Dotación ficticia en memoria hasta contar con la consulta de funcionarios; PDF de servidor (`POST /api/v1/personnel/service-commissions/pdf`, SCRUM-108) sin implementar |
+| Bienes | Navegación y página de construcción | Requisitos y módulo funcional pendientes; no se presenta como entregado |
 | Entrega | CI, imágenes por digest, despliegue Azure, migrador separado y recuperación de configuración ante fallos de activación | Catálogo/cuentas se preparan por separado; restauración completa de datos y retiro del servidor anterior requieren ensayo y aprobación |
 
 La [matriz de aceptación](PRUEBAS-Y-ACEPTACION.md) identifica pruebas y evidencia histórica. El estado operativo se obtiene de Actions, `current.json`, health y recorridos autenticados, siguiendo la [guía Azure](../deploy/azure/README.md#diagnóstico-y-recuperación).
 
 ## Alcance y entregas
 
-El Project Charter contempla una plataforma modular con Compras, Personal, Bienes y consulta académica. La primera entrega se concentra en Compras y académico. Personal y Bienes forman parte del proyecto completo, pero sus campos, operaciones y reglas deben validarse antes de implementarlos; las páginas actuales sólo informan que esos módulos no están disponibles.
+El Project Charter contempla una plataforma modular con Compras, Personal, Bienes y consulta académica. La primera entrega se concentra en Compras y académico. Personal y Bienes forman parte del proyecto completo, pero sus campos, operaciones y reglas deben validarse antes de implementarlos. Personal ofrece por ahora sólo la Comisión de servicios: el administrativo busca al funcionario, completa el formulario y lo imprime o guarda como PDF; las firmas se gestionan fuera de Cenit. Bienes sólo informa que el módulo no está disponible.
 
 Compras recupera datos de capturas de compras aprobadas previamente en Oracle, permite revisarlos y conserva una copia consultable. Cenit no se conecta a la API de Oracle, no crea ni modifica compras allí y no ejecuta aprobaciones o pagos institucionales. La revisión local, la situación de pago declarada y la aprobación institucional son conceptos diferentes.
 
