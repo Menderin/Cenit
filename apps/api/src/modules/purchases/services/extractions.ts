@@ -45,7 +45,7 @@ export class ExtractionService {
       if (!Value.Check(ExtractionResponseSchema, data) || validateExtractionResponse(data).length || !data.data.captureLayout || data.data.origin ||
         data.data.input.bytes !== image.length || data.data.input.name !== name || data.data.input.mimeType !== mime) throw new Error('Salida OCR inválida.');
       data.data.extractionId = randomUUID();
-      data.data.origin = this.receipts.issue({ type: 'image_capture', extractionId: data.data.extractionId, processorVersion: data.data.regions ? 'ppocr5-latin-grid8-layout-v4' : 'ppocr5-latin-grid8-layout-v3', processedAt: new Date().toISOString() }, accountId);
+      data.data.origin = this.receipts.issue({ type: 'image_capture', extractionId: data.data.extractionId, processorVersion: 'tesseract5-spa-grid8-layout-v1', processedAt: new Date().toISOString() }, accountId);
       if (validateExtractionResponse(data).length) throw new Error('Salida OCR inválida.');
       return data;
     } catch (error) {

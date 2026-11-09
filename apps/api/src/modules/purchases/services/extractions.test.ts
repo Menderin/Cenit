@@ -12,7 +12,7 @@ import type { PurchaseService } from './purchases.js';
 import { ApiError } from '../../../infrastructure/errors.js';
 
 const account = randomUUID();
-const metadata = { type: 'image_capture' as const, extractionId: randomUUID(), processorVersion: 'ppocr5-latin-grid8-v1', processedAt: new Date(1000).toISOString() };
+const metadata = { type: 'image_capture' as const, extractionId: randomUUID(), processorVersion: 'tesseract5-spa-grid8-layout-v1', processedAt: new Date(1000).toISOString() };
 const success: ExtractionProcessor = async (image, name, mime) => {
   const result = structuredClone(extractionExamples[0]!.response); result.data.captureLayout = { status: 'compatible', signals: ['request_title', 'header_fields', 'line_section', 'eight_column_table'] };
   result.data.input = { name, mimeType: mime as 'image/png', bytes: image.length, width: 1200, height: 900 };
@@ -51,6 +51,7 @@ describe('extraction service', () => {
   it('validates output and emits verifiable provenance without persistence', async () => {
     const result = await new ExtractionService(success, receipts).extract(Buffer.from('test'), 'fake.png', 'image/png', account, new AbortController().signal);
     expect(validateExtractionResponse(result)).toEqual([]);
+    expect(result.data.origin?.processorVersion).toBe('tesseract5-spa-grid8-layout-v1');
     expect(() => receipts.verify(result.data.origin!, account)).not.toThrow();
   });
   it('rejects unavailable, invalid output and processor errors', async () => {
