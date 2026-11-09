@@ -3,17 +3,17 @@
   "processorVersion": "tesseract5-spa-grid8-layout-v1",
   "purpose": "Reference 8-column Oracle layout evaluation with Tesseract 5 (spa) + OpenCV morphological grid/header segmentation",
   "sourceHashes": {
-    "extractor.py": "b4c6dd0ea9adf1bc2abdb75308f764cbfb60c15d3b9c247293e6c354699e5230",
+    "extractor.py": "6312ebc14c3b49b199daad9c004ef374c45704f9abb13e38d9dc09780b31f7d3",
     "server.py": "96aea0093c586c15a65401e1c900c5a6829cb919474fb1135dfea03c87454ce0"
   },
   "generatorSha256": "834c1eb44a2a4c252257b6702c1bce41712952f0d80f3ec59ab41aef561a2a9f",
   "fontSha256": "30328e88b08753dc63b14d84ce882ce504d53e27a56e637f5a068fdedc6ae385",
   "counts": {
-    "exact": 124,
-    "wrong": 31,
+    "exact": 125,
+    "wrong": 30,
     "missing": 9
   },
-  "medianSeconds": 2.8545,
+  "medianSeconds": 2.206,
   "maxSeconds": 4.128,
   "byField": {
     "requestNumber": {
@@ -87,8 +87,8 @@
       "missing": 0
     },
     "price": {
-      "exact": 11,
-      "wrong": 1,
+      "exact": 12,
+      "wrong": 0,
       "missing": 0
     },
     "amount": {

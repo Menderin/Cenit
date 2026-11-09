@@ -69,7 +69,7 @@ Cada archivo de evidencia identifica muestras, fuentes, configuración y límite
 | Encabezados locales y lectura por líneas | [Cuarta batería](round4-evidence.json) | Mejora emparejada de un campo entre 162; no acredita una sustitución universal. |
 | Formato de ocho columnas, procesador v2 | [Evaluación v2](oracle-format-evidence.json) | 50 campos exactos, 21 incorrectos, 93 ausentes; ningún ítem reconstruido en las ocho capturas. |
 | Mismas muestras, procesador v3 | [Regresión v3](oracle-format-v3-evidence.json) | 118 exactos, 11 incorrectos y 35 ausentes. Recupera los ítems de PNG nativos y del recorte superior; falla la tabla en JPEG, escalados y gris. Mediana 14,32 s, máximo 28,67 s. |
-| Formato de ocho columnas, procesador Tesseract + OpenCV (`tesseract5-spa-grid8-layout-v1`) | [Evaluación Tesseract](oracle-format-tesseract-evidence.json) | 124 exactos, 31 incorrectos y 9 ausentes (164 campos). Reconstruye las **12/12 filas esperadas en las 8 variantes** (incluidos JPEG, escalados 85 %/125 %, escala de grises y cabecera recortada) y alcanza **12/12 exactos en `costCenter`**. Mediana **2,85 s**, máximo **4,13 s**. |
+| Formato de ocho columnas, procesador Tesseract + OpenCV (`tesseract5-spa-grid8-layout-v1`) | [Evaluación Tesseract](oracle-format-tesseract-evidence.json) | 125 exactos, 30 incorrectos y 9 ausentes (164 campos). Reconstruye las **12/12 filas esperadas en las 8 variantes** (incluidos JPEG, escalados 85 %/125 %, escala de grises y cabecera recortada) y alcanza **12/12 exactos en `costCenter`** y **12/12 en `price`**. Mediana **2,21 s**, máximo **3,85 s**. |
 | Holdout de ocho muestras del adaptador (`tesseract5-spa-grid8-layout-v1`) | [Holdout adaptador](../../tests/ocr/evidence.json) | 117/144 campos exactos, todas las filas con grilla reconstruidas (`7/7` en 6 muestras con grilla; `0/0` en `partial`; `0/1` en `no-grid` con incidencia explícita). Mediana **2,26 s**, máximo **2,82 s**. |
 | Regresión de señales de formato y rechazos (`tesseract5-spa-grid8-layout-v1`) | [Evidencia de layout](../../tests/ocr/layout-evidence-v3.json) | **10/10 casos correctos**: 3 `compatible` (HTTP 200), 3 `partial` (HTTP 200) y 4 rechazos `UNSUPPORTED_CAPTURE_LAYOUT` (HTTP 422). |
 
@@ -100,7 +100,7 @@ El reemplazo del motor `ppocr5-latin-grid8-layout-v3`/`v4` (RapidOCR con modelos
 - **Versión del procesador**: `tesseract5-spa-grid8-layout-v1`
 - **Entorno de ejecución**: Contenedor Linux/amd64 (`Ubuntu 24.04`, `Python 3.12.3`, `tesseract 5.3.4` con `spa`, `opencv-python 5.0.0.93`, `Pillow 12.3.0`/`13.0.0`, `numpy 2.4.6`/`2.5.4`), inferencia secuencial en `http://127.0.0.1:8090`, sin conexión a PostgreSQL ni credenciales de API.
 - **Hashes SHA-256 de código y activos**:
-  - [`apps/ocr/extractor.py`](../../apps/ocr/extractor.py): `b4c6dd0ea9adf1bc2abdb75308f764cbfb60c15d3b9c247293e6c354699e5230`
+  - [`apps/ocr/extractor.py`](../../apps/ocr/extractor.py): `6312ebc14c3b49b199daad9c004ef374c45704f9abb13e38d9dc09780b31f7d3`
   - [`apps/ocr/server.py`](../../apps/ocr/server.py): `96aea0093c586c15a65401e1c900c5a6829cb919474fb1135dfea03c87454ce0`
   - [`experiments/purchases/oracle_format.py`](oracle_format.py): `834c1eb44a2a4c252257b6702c1bce41712952f0d80f3ec59ab41aef561a2a9f`
   - [`tests/ocr/fixtures.py`](../../tests/ocr/fixtures.py): `784acb568ad9ac50e472c4be499019c910c918be4380bc20f8f819b2463edc80`
@@ -111,7 +111,7 @@ El reemplazo del motor `ppocr5-latin-grid8-layout-v3`/`v4` (RapidOCR con modelos
 ### Comandos ejecutados
 
 ```sh
-# 1. Pruebas unitarias del extractor, segmentación morfológica y mapeo de candidatos (21/21 OK)
+# 1. Pruebas unitarias del extractor, segmentación morfológica y mapeo de candidatos (23/23 OK)
 PYTHONPATH=apps/ocr python3 -m unittest discover -s tests/ocr -v
 
 # 2. Verificación de layout (compatible, partial y 422 UNSUPPORTED_CAPTURE_LAYOUT: 10/10 OK)
