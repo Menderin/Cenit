@@ -4,14 +4,13 @@ services:
   ocr:
     image: localhost/cenit-ocr:adapter1
     build:
-      context: ./ocr
-      dockerfile: Dockerfile
+      context: ./apps/ocr
+      dockerfile: Containerfile
     environment:
       HOST: 0.0.0.0
       PORT: "8090"
     ports:
       - "127.0.0.1:8090:8090"
-      - "127.0.0.1:8000:8090"
     networks: [cenit]
     read_only: true
     tmpfs: ["/tmp:rw,size=64m,mode=1777"]

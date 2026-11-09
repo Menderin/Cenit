@@ -568,6 +568,7 @@ describe('capture provenance and explicit persistence', () => {
     expect(responses.map(r => r.statusCode).sort()).toEqual([200, 201]);
     const saved = responses[0]!.json().data;
     expect(saved.source).toBe('image_capture'); expect(saved.capture.extractionId).toBe(input.origin.extractionId);
+    expect(saved.capture.processorVersion).toBe('tesseract5-spa-grid8-layout-v1');
     expect(saved.header.description).toBe(input.header.description);
     expect(saved).not.toHaveProperty('receipt');
     expect(await count()).toBe(before+1);

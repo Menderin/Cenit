@@ -33,14 +33,6 @@ __pycache__/
 /experiments/**/*.pt
 /apps/ocr/models/
 /apps/ocr/.venv/
-/ocr/.venv/
-/ocr/venv/
-/ocr/*.tar
-/ocr/*.tar.*
-/ocr/*.gz
-/ocr/*.zip
-/ocr/*.png
-/ocr/*.jpg
-/ocr/*.jpeg
+/ocr/
 /.ocr/
 /Entrenamiento/

@@ -10,7 +10,7 @@ const file = { name: 'captura-ficticia.png', mimeType: 'image/png', buffer: png 
 function result(partial = false): ExtractionResponse {
   const response = structuredClone(recoveredExample);
   response.data.captureLayout = partial ? { status: 'partial', signals: ['request_title', 'header_fields'] } : { status: 'compatible', signals: ['request_title', 'header_fields', 'line_section', 'eight_column_table'] };
-  response.data.origin = { type: 'image_capture', extractionId: response.data.extractionId, processorVersion: 'ppocr5-latin-grid8-layout-v2', processedAt: new Date().toISOString(), receipt: 'A'.repeat(43) };
+  response.data.origin = { type: 'image_capture', extractionId: response.data.extractionId, processorVersion: 'tesseract5-spa-grid8-layout-v1', processedAt: new Date().toISOString(), receipt: 'A'.repeat(43) };
   response.data.regions = [{ path: '/header/description', x: .1, y: .2, width: .7, height: .15 }];
   return response;
 }
