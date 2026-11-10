@@ -92,10 +92,15 @@ test('los gráficos muestran detalles al interactuar y conservan sus cifras acce
   await page.mouse.move(0, 0);
   await expect(february.locator('.dashboard-chart-tooltip')).toBeVisible();
   const invoice = page.getByRole('button', { name: /Factura: 3 compras, 75%/ });
-  const donutBefore = await page.locator('.dashboard-donut').boundingBox();
+  // Focusing the legend may scroll its card; compare the chart within that card.
+  const donutBounds = () => page.locator('.dashboard-donut').evaluate(element => {
+    const bounds = element.getBoundingClientRect(), parent = element.parentElement!.getBoundingClientRect();
+    return { x: bounds.x - parent.x, y: bounds.y - parent.y, width: bounds.width, height: bounds.height };
+  });
+  const donutBefore = await donutBounds();
   await invoice.focus();
   await expect(page.locator('.dashboard-types-detail')).toContainText('3 compras · 75% · $450.000 CLP');
-  expect(await page.locator('.dashboard-donut').boundingBox()).toEqual(donutBefore);
+  expect(await donutBounds()).toEqual(donutBefore);
   await invoice.press('Enter');
   await expect(invoice).toHaveAttribute('aria-pressed', 'true');
 });

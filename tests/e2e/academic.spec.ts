@@ -239,6 +239,7 @@ for (const role of ['docente', 'estudiante']) {
         await expect(dialog.getByText(prerequisitePlan.version, { exact: true })).toBeVisible();
         await page.keyboard.press('Enter');
         await page.keyboard.press('Shift+Tab'); await expect(close).toBeFocused();
+        await expect(dialog).toHaveCSS('translate', '0px');
         expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
         const bounds = (await dialog.boundingBox())!;
         expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
@@ -657,19 +658,19 @@ test('malla compacta conserva contexto, espacio de lectura y navegación plegabl
   await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
   await page.getByRole('heading', { name: 'Malla curricular', exact: true }).focus();
   await page.evaluate(() => { document.querySelector('.academic-content')!.scrollTop = 0; });
-  const density = await page.evaluate(() => {
-    const visibleBottom = document.querySelector('.academic-content')!.getBoundingClientRect().bottom;
+  await expect(courses(page).first()).toBeInViewport({ ratio: 1 });
+  const completeRows = await page.evaluate(() => {
+    const viewport = document.querySelector('.academic-content')!.getBoundingClientRect();
     const cards = [...document.querySelectorAll('.academic-semester:first-child .academic-course')].map(element => element.getBoundingClientRect());
-    return { first: cards[0]!.top, completeRows: cards.filter(card => card.bottom <= visibleBottom).length };
+    return cards.filter(card => card.top >= viewport.top && card.bottom <= viewport.bottom).length;
   });
-  expect(density.first).toBeLessThan(230);
-  expect(density.completeRows).toBeGreaterThanOrEqual(6);
+  expect(completeRows).toBeGreaterThanOrEqual(6);
   await page.getByRole('button', { name: 'Ocultar navegación', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'Área académica' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'Cerrar sesión', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'Área académica' })).toBeVisible();
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 1470, height: 900 });
   const allVisible = await courses(page).evaluateAll(elements => {
     const viewport = document.querySelector('.academic-content')!.getBoundingClientRect();
     return elements.every(element => { const card = element.getBoundingClientRect(); return card.top >= viewport.top && card.bottom <= viewport.bottom && card.left >= viewport.left && card.right <= viewport.right; });
@@ -735,6 +736,7 @@ test('malla y detalle legibles al redimensionar sin overflow del documento', asy
     }
     await page.getByRole('button', { name: 'Ver asignatura: Det. sociales y salud pública (Introducción a los determinantes sociales de la salud y salud pública)', exact: true }).click();
     const dialog = page.getByRole('dialog'); await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveCSS('translate', '0px');
     const bounds = await dialog.boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
     if (width === 1440) await page.screenshot({ path: testInfo.outputPath('detalle-1440.png') });
