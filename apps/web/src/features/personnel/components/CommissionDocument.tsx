@@ -1,72 +1,58 @@
-import { displayDate } from '../../../shared/lib/dates.js';
-import type { CommissionDraft } from '../model/commission.js';
+import { useLayoutEffect, useRef } from 'react';
+import { commissionAllowance, commissionDate, type CommissionDraft } from '../model/commission.js';
+import { commissionCells } from '../model/commission-layout.js';
+import template from './commission-template.svg';
 
-// Estructura del formulario «Comisión de servicios»: rótulos, casillas y firmas del original.
+// La plantilla conserva únicamente el formato y los rótulos de COMISION.
+// Los datos del ejemplo, fórmulas, macros y nombres de firmantes quedan fuera.
 export function CommissionDocument({ draft }: { draft: CommissionDraft }) {
-  const x = (on: boolean) => on ? 'X' : '';
+  const paper = useRef<HTMLElement>(null);
   const event = draft.activity === 'evento';
-  const box = (text: string, className = '') => <span className={`commission-paper__box ${className}`}>{text}</span>;
-  const check = (on: boolean) => <span className="commission-paper__check">{x(on)}</span>;
-  return <article className="commission-paper" aria-label="Documento de comisión de servicios">
-    <div className="commission-paper__logo">Universidad Católica del Norte</div>
-    <h2 className="commission-paper__title">COMISIÓN DE SERVICIOS</h2>
-    <section className="commission-paper__frame">
-      <p className="commission-paper__lead">Autorízase la comisión de servicios que a continuación se describe.</p>
-      <h3>I. Datos generales</h3>
-      <div className="commission-paper__row"><span>Nombre completo</span><b>:</b>{box(draft.name)}</div>
-      <div className="commission-paper__row"><span>Cargo</span><b>:</b>{box(draft.position)}</div>
-      <div className="commission-paper__row"><span>Unidad</span><b>:</b>{box(draft.unit)}</div>
-      <div className="commission-paper__row commission-paper__band"><span>Grupo</span><b>:</b><div className="commission-paper__options commission-paper__options--spread">
-        {(['I', 'II', 'III'] as const).map(group => <span key={group}>{group} {check(draft.group === group)}</span>)}
-      </div></div>
-      <div className="commission-paper__row"><span>Estamento</span><b>:</b><div className="commission-paper__options">
-        <span>{check(draft.category === 'academico')}Académico</span>
-        <span>{check(draft.category === 'no_academico')}No académico</span>
-        <span>{check(draft.category === 'directivo')}Directivo superior o exclusiva confianza</span>
-        <span>{check(draft.category === 'otro')}Otro {box(draft.category === 'otro' ? draft.categoryOther : '', 'commission-paper__box--line')}<small>(especificar)</small></span>
-      </div></div>
-      <div className="commission-paper__row"><span>Planta a la que pertenece</span><b>:</b><div className="commission-paper__options">
-        <span>{check(draft.plant === 'oficial')}Planta oficial</span><span>{check(draft.plant === 'especial')}Planta especial</span><span>{check(draft.plant === 'temporal')}Planta temporal</span>
-      </div></div>
-      <div className="commission-paper__row commission-paper__band"><span>Lugar de realización comisión</span><b>:</b><div className="commission-paper__stack">
-        <div className="commission-paper__options"><span>{check(draft.territory === 'nacional')}Territorio nacional</span><span className="commission-paper__grow">Lugar {box(draft.territory === 'nacional' ? draft.place : '', 'commission-paper__box--center')}</span></div>
-        <div className="commission-paper__options"><span>{check(draft.territory === 'extranjero')}Extranjero</span><span className="commission-paper__grow">Lugar {box(draft.territory === 'extranjero' ? draft.place : '', 'commission-paper__box--center')}</span></div>
-      </div></div>
-      <div className="commission-paper__row"><span>Fechas de la comisión</span><b>:</b><div className="commission-paper__options commission-paper__nowrap">
-        <span className="commission-paper__grow">Desde {box(displayDate(draft.from), 'commission-paper__box--center')}</span>
-        <span className="commission-paper__grow">Hasta {box(displayDate(draft.to), 'commission-paper__box--center')}</span>
-      </div></div>
-      <div className="commission-paper__row commission-paper__band"><span>Cantidad de días</span><b>:</b><div className="commission-paper__options commission-paper__nowrap">
-        <span>Días con pernoctar {box(draft.daysWithStay, 'commission-paper__box--small')}</span>
-        <span>Días sin pernoctar {box(draft.daysWithoutStay, 'commission-paper__box--small')}</span>
-        <span>Total días {box(draft.totalDays, 'commission-paper__box--small')}</span>
-      </div></div>
-      <div className="commission-paper__row commission-paper__band"><span>Costo total viático (CLP)</span><b>:</b><div className="commission-paper__options commission-paper__nowrap">
-        {box(draft.allowance, 'commission-paper__box--amount')}{box(draft.allowance.trim() ? draft.currency : '', 'commission-paper__box--small')}
-      </div></div>
-      <div className="commission-paper__row"><span>Código presupuestario</span><b>:</b><div className="commission-paper__stack">
-        {draft.funding.map((row, index) => <div key={index} className="commission-paper__codes">
-          {box(row.institution, 'commission-paper__box--center')}{box(row.organization, 'commission-paper__box--center')}{box(row.unit, 'commission-paper__box--center')}{box(row.project, 'commission-paper__box--center')}{box(row.percent ? `${row.percent}%` : '', 'commission-paper__box--center')}
-        </div>)}
-        <div className="commission-paper__codes commission-paper__captions"><span>Inst.</span><span>Org.</span><span>Unidad</span><span>Proyecto</span><span>% Financ.</span></div>
-      </div></div>
-    </section>
-    <section className="commission-paper__frame">
-      <h3>II. Datos del evento</h3>
-      <div className="commission-paper__row"><span>Nombre del evento</span><b>:</b>{box(event ? draft.eventName : '')}</div>
-      <div className="commission-paper__row"><span>Institución organizadora</span><b>:</b>{box(event ? draft.eventOrganizer : '')}</div>
-      <div className="commission-paper__row"><span>Nombre del trabajo o ponencia</span><b>:</b>{box(event ? draft.eventWork : '', 'commission-paper__box--tall')}</div>
-      <div className="commission-paper__row"><span>Proy. al que se asocia trabajo</span><b>:</b>{box(event ? draft.eventProject : '')}</div>
-      <div className="commission-paper__row"><span>Otros antecedentes u observ.</span><b>:</b>{box(event ? draft.eventNotes : '')}</div>
-    </section>
-    <section className="commission-paper__frame">
-      <h3>III. Descripción de la comisión <small>(Si no corresponde a un evento descrito en II.)</small></h3>
-      {box(event ? '' : draft.description, 'commission-paper__box--tall')}
-    </section>
-    <div className="commission-paper__signatures">
-      <div><span>Autorización Jefe de Unidad</span></div>
-      <div><span>Autorización Decano/a Facultad</span></div>
-      <div><span>Autorización VRA (o) VAEA (o) VRS</span></div>
+  const mark = (selected: boolean) => selected ? 'X' : '';
+  const values: Partial<Record<keyof typeof commissionCells, string>> = {
+    E11: draft.name, E13: draft.position, E15: draft.unit,
+    F17: mark(draft.group === 'I'), M17: mark(draft.group === 'II'), U17: mark(draft.group === 'III'),
+    E19: mark(draft.category === 'academico'), K19: mark(draft.category === 'no_academico'),
+    E21: mark(draft.category === 'directivo'), R21: mark(draft.category === 'otro'), V21: draft.category === 'otro' ? draft.categoryOther : '',
+    E23: mark(draft.plant === 'oficial'), M23: mark(draft.plant === 'especial'), R23: mark(draft.plant === 'temporal'),
+    E25: mark(draft.territory === 'nacional'), E27: mark(draft.territory === 'extranjero'),
+    P25: draft.territory === 'nacional' ? draft.place : '', P27: draft.territory === 'extranjero' ? draft.place : '',
+    G29: commissionDate(draft.from), P29: commissionDate(draft.to),
+    I31: draft.daysWithStay, O31: draft.daysWithoutStay, Y31: draft.totalDays,
+    F33: commissionAllowance(draft.allowance), T33: draft.allowance.trim() ? draft.currency : '',
+    E41: event ? draft.eventName : '', E43: event ? draft.eventOrganizer : '',
+    E45: event ? draft.eventWork : '', E47: event ? draft.eventProject : '', E49: event ? draft.eventNotes : '',
+    B54: event ? '' : draft.description,
+  };
+  draft.funding.forEach((row, index) => {
+    const cells = index === 0 ? ['E35', 'H35', 'K35', 'R35', 'AA35'] as const : ['E37', 'H37', 'K37', 'R37', 'AA37'] as const;
+    [row.institution, row.organization, row.unit, row.project, row.percent ? `${row.percent}%` : ''].forEach((value, i) => { values[cells[i]!] = value; });
+  });
+
+  useLayoutEffect(() => {
+    function fit() {
+      paper.current?.querySelectorAll<HTMLElement>('.commission-paper__value').forEach(field => {
+        const text = field.firstElementChild as HTMLElement;
+        text.style.fontSize = '';
+        let size = parseFloat(getComputedStyle(text).fontSize);
+        const overflows = () => text.scrollHeight > field.clientHeight || text.scrollWidth > field.clientWidth;
+        while (overflows() && size > 6) { size = Math.max(6, size - 0.5); text.style.fontSize = `${size}px`; }
+        field.dataset.overflow = String(overflows());
+      });
+    }
+    fit();
+    void document.fonts.ready.then(fit);
+  }, [draft]);
+
+  return <article ref={paper} className="commission-paper" aria-label="Documento de comisión de servicios">
+    <div className="commission-paper__canvas">
+      <img className="commission-paper__template" src={template} alt="Comisión de servicios UCN: datos generales, datos del evento, descripción y tres espacios de autorización." />
+      {Object.entries(values).map(([cell, value]) => {
+        const [x, y, width, height] = commissionCells[cell as keyof typeof commissionCells];
+        return <div key={cell} data-cell={cell} className={`commission-paper__value${['E11', 'E13', 'E15', 'E41', 'E43', 'E45', 'E47', 'E49', 'B54'].includes(cell) ? ' commission-paper__value--left' : ''}`}
+          style={{ left: `${x / 910 * 100}%`, top: `${y / 1278 * 100}%`, width: `${width / 910 * 100}%`, height: `${height / 1278 * 100}%` }}><span>{value}</span></div>;
+      })}
     </div>
+    <small className="commission-paper__draft">BORRADOR</small>
   </article>;
 }

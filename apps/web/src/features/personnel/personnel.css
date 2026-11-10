@@ -64,8 +64,7 @@
 .personnel-review dt { color: var(--color-ink-subtle); font-size: 13px; }
 .personnel-review dd { margin: 0; overflow-wrap: anywhere; }
 .personnel-unknown { color: var(--color-ink-subtle); font-style: italic; }
-.personnel-download { display: flex; flex-direction: column; gap: 14px; margin-top: 10px; padding: 18px 20px; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface-subtle); }
-.personnel-download p { margin: 0; color: var(--color-ink-muted); font-size: 13px; }
+.personnel-review-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .personnel-download__actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
 
 .personnel-summary { position: sticky; top: 0; padding: 16px 18px; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); }
@@ -73,51 +72,35 @@
 .personnel-summary dt { color: var(--color-ink-subtle); font-size: 12px; }
 .personnel-summary dd { margin: 2px 0 0; font-size: 13px; overflow-wrap: anywhere; }
 
-.personnel-preview { border-radius: var(--radius-lg); background: #e7e7ec; }
-.personnel-preview__bar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border: 1px solid var(--color-line); border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--color-surface); }
+.personnel-preview { display: flex; flex-direction: column; max-height: max(280px, calc(100dvh - 220px)); border-radius: var(--radius-lg); background: #e7e7ec; }
+.personnel-preview__bar { position: relative; flex: none; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border: 1px solid var(--color-line); border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--color-surface); }
 .personnel-zoom { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: var(--radius-md); background: var(--color-surface-chip); }
 .personnel-zoom output { min-width: 52px; font-size: 13px; text-align: center; font-variant-numeric: tabular-nums; }
 .personnel-zoom .cenit-button--icon { width: 34px; min-width: 34px; height: 34px; min-height: 34px; box-shadow: none; background: transparent; }
-.personnel-preview__sheet { overflow: auto; padding: 28px 20px 40px; }
+.personnel-preview__sheet { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 28px 20px 40px; }
 .personnel-preview__sheet > div { width: max-content; margin: 0 auto; }
 
-/* Documento: misma estructura del formulario original */
-.commission-paper { box-sizing: border-box; width: 816px; padding: 44px 48px 52px; background: #fff; color: #111; box-shadow: 0 1px 3px #0000001f, 0 10px 30px #00000014; font: 10.5px/1.3 "Times New Roman", Times, serif; }
+/* Geometría de la hoja COMISION del XLSM; vista previa e impresión comparten plantilla. */
+.commission-paper { --commission-width: 181mm; box-sizing: border-box; width: 216mm; min-height: 279.4mm; padding: 5mm 5mm 15mm 15mm; background: #fff; color: #000; box-shadow: 0 1px 3px #0000001f, 0 10px 30px #00000014; }
 .commission-paper * { box-sizing: border-box; }
-.commission-paper__logo { width: 210px; color: #333; font-size: 15px; letter-spacing: .2px; }
-.commission-paper__title { margin: 14px 0 18px !important; font-size: 15px !important; font-weight: 700 !important; text-align: center; text-decoration: underline; }
-.commission-paper__frame { padding: 10px 12px; border: 1px dashed #777; }
-.commission-paper__frame + .commission-paper__frame { border-top: 0; }
-.commission-paper__lead { margin: 2px 0 10px; font-size: 9.5px; text-transform: uppercase; }
-.commission-paper h3 { margin: 2px 0 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-.commission-paper h3 small { font-weight: 400; text-transform: none; }
-.commission-paper__row { display: grid; grid-template-columns: 200px 14px minmax(0, 1fr); align-items: start; margin: 6px 0; text-transform: uppercase; }
-.commission-paper__row > span:first-child, .commission-paper__row > b { padding-top: 5px; font-size: 9.5px; font-weight: 400; }
-.commission-paper__band { margin-inline: -12px; padding: 2px 12px; background: #dededf; }
-.commission-paper__box { display: block; min-height: 22px; padding: 4px 6px; border: 1px dotted #555; font-size: 10.5px; text-transform: uppercase; white-space: pre-wrap; overflow-wrap: anywhere; }
-.commission-paper__box--center { flex: 1; text-align: center; }
-.commission-paper__box--small { width: 46px; text-align: center; }
-.commission-paper__box--amount { flex: 1; text-align: right; font-variant-numeric: tabular-nums; }
-.commission-paper__box--line { min-width: 120px; min-height: 16px; padding: 1px 4px; border-width: 0 0 1px; }
-.commission-paper__box--tall { min-height: 64px; }
-.commission-paper__check { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 18px; height: 16px; border: 1px dotted #555; font-size: 11px; font-weight: 700; }
-.commission-paper__options { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 8.5px; text-transform: uppercase; }
-.commission-paper__options > span { display: inline-flex; align-items: center; gap: 6px; }
-.commission-paper__options--spread { justify-content: space-around; }
-.commission-paper__nowrap { flex-wrap: nowrap; }
-.commission-paper__grow { flex: 1; }
-.commission-paper__stack { display: flex; flex-direction: column; gap: 6px; }
-.commission-paper__codes { display: grid; grid-template-columns: 1fr 1fr 2fr 2.4fr .9fr; gap: 10px; }
-.commission-paper__captions { font-size: 8px; text-align: center; }
-.commission-paper__signatures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
-.commission-paper__signatures div { display: flex; flex-direction: column; justify-content: flex-end; height: 98px; border: 1px solid #111; }
-.commission-paper__signatures span { padding: 3px 4px; border-top: 1px solid #111; font-size: 8px; text-align: center; text-transform: uppercase; }
-
-.personnel-print { display: none; }
+.commission-paper__canvas { position: relative; width: var(--commission-width); aspect-ratio: 910 / 1278; font-family: "Bookman Old Style", Bookman, Georgia, serif; }
+.commission-paper__template { display: block; width: 100%; height: 100%; max-width: none; }
+.commission-paper__value { position: absolute; display: flex; align-items: center; justify-content: center; padding: 0 2px; text-align: center; text-transform: uppercase; }
+.commission-paper__value > span { display: block; width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; font-size: calc(var(--commission-width) / 910 * 13.3333); line-height: 1.1; }
+.commission-paper__value[data-cell="G29"], .commission-paper__value[data-cell="P29"] { text-transform: none; }
+.commission-paper__value--left { text-align: left; }
+.commission-paper__value[data-overflow="true"] { outline: 2px solid var(--color-danger); }
+.commission-paper__draft { display: block; width: var(--commission-width); margin-top: 2mm; font: 7px/1.2 Arial, sans-serif; text-align: center; color: #555; }
+.personnel-print-error { margin: 0 0 12px; color: var(--color-danger); font-size: 13px; }
+/* Se mide fuera de pantalla para detectar texto que no cabe antes de imprimir. */
+.personnel-print { position: fixed; left: -10000px; top: 0; visibility: hidden; pointer-events: none; }
+.personnel-print .commission-paper { --commission-width: 168mm; width: var(--commission-width); min-height: 0; padding: 0; box-shadow: none; }
 @media print {
   @page { size: letter; margin: 10mm; }
-  body * { visibility: hidden; }
+  html, body { height: auto !important; min-height: 0 !important; margin: 0 !important; overflow: visible !important; }
+  body:has(> .personnel-print) { background: #fff !important; }
+  body:has(> .personnel-print) > :not(.personnel-print) { display: none !important; }
   .personnel-print, .personnel-print * { visibility: visible; }
-  .personnel-print { display: block; position: absolute; inset: 0 auto auto 0; }
-  .personnel-print .commission-paper { width: 100%; padding: 0; box-shadow: none; }
+  .personnel-print { position: static; visibility: visible; }
+  .commission-paper { break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }

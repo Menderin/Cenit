@@ -92,3 +92,16 @@ export function fileName(draft: CommissionDraft) {
   const words = draft.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().split(/\s+/).slice(-2).join('-');
   return ['comision-servicios', words, draft.from].filter(Boolean).join('-');
 }
+
+// Formatos impresos del XLSM: d/mmm/yy y miles con dos decimales.
+export function commissionDate(value: string) {
+  if (!calendarDate(value)) return value;
+  const [year, month, day] = value.split('-');
+  const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
+  return `${Number(day)}/${months[Number(month) - 1]}/${year!.slice(-2)}`;
+}
+export function commissionAllowance(value: string) {
+  if (!value.trim()) return '';
+  const [integer, decimals = ''] = value.trim().split(',');
+  return `${integer!.replaceAll('.', '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${decimals.padEnd(2, '0')}`;
+}

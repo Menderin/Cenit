@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight';
 import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check';
 import { EyeIcon } from '@phosphor-icons/react/dist/csr/Eye';
 import { PencilSimpleIcon } from '@phosphor-icons/react/dist/csr/PencilSimple';
+import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/csr/DownloadSimple';
 import { PrinterIcon } from '@phosphor-icons/react/dist/csr/Printer';
 import { TrashIcon } from '@phosphor-icons/react/dist/csr/Trash';
 import { MagnifyingGlassMinusIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlassMinus';
@@ -55,17 +57,23 @@ export function ServiceCommission() {
   const [draft, setDraft] = useState(emptyCommission);
   const [step, setStep] = useState<Step>('funcionario');
   const [errors, setErrors] = useState<Errors>({});
+  const [printError, setPrintError] = useState('');
+  const [pdfAction, setPdfAction] = useState<'download' | 'print' | null>(null);
+  const preparingPdf = pdfAction !== null;
+  const pdfAbort = useRef<AbortController | null>(null);
+  useEffect(() => () => pdfAbort.current?.abort(), []);
   const [tried, setTried] = useState<Partial<Record<Step, boolean>>>({});
   const [focusKey, setFocusKey] = useState<{ key: string } | null>(null);
   const [preview, setPreview] = useState(false), [zoom, setZoom] = useState(100);
   const [discardOrigin, setDiscardOrigin] = useState<HTMLElement | null>(null);
   const dirty = JSON.stringify(draft) !== JSON.stringify(emptyCommission());
-  const reset = useCallback(() => { setDraft(emptyCommission()); setStep('funcionario'); setErrors({}); setTried({}); setPreview(false); }, []);
-  useGuardChanges(dirty, false, reset);
+  const reset = useCallback(() => { pdfAbort.current?.abort(); setDraft(emptyCommission()); setStep('funcionario'); setErrors({}); setTried({}); setPreview(false); }, []);
+  useGuardChanges(dirty, preparingPdf, reset);
 
   useEffect(() => { if (focusKey) document.getElementById(fieldId(focusKey.key))?.focus(); }, [focusKey]);
 
   function update(patch: Partial<CommissionDraft>) {
+    setPrintError('');
     const next = { ...draft, ...patch };
     setDraft(next);
     if (step !== 'revision' && tried[step]) setErrors(current => {
@@ -89,15 +97,44 @@ export function ServiceCommission() {
     if (invalid) { setFocusKey({ key: invalid }); return; }
     go(steps[steps.findIndex(item => item.key === step) + 1]!.key);
   }
-  function print() {
+  async function preparePdf(action: 'download' | 'print') {
+    if (preparingPdf) return;
     for (const target of formSteps) {
       const invalid = check(target);
       if (invalid) { go(target); setFocusKey({ key: invalid }); return; }
     }
-    const title = document.title;
-    document.title = fileName(draft);
-    window.addEventListener('afterprint', () => { document.title = title; }, { once: true });
-    window.print();
+    if (document.querySelector('.personnel-print [data-overflow="true"]')) {
+      setPrintError('Hay texto que no cabe en la plantilla. Revisa las casillas marcadas en la vista previa y acorta su contenido antes de imprimir.');
+      setPreview(true);
+      return;
+    }
+    setPrintError('');
+    setPdfAction(action);
+    pdfAbort.current?.abort();
+    const controller = new AbortController();
+    pdfAbort.current = controller;
+    try {
+      const { commissionImage, commissionPdf, printCommissionImage } = await import('../model/pdf.js');
+      const paper = document.querySelector<HTMLElement>('.personnel-print .commission-paper')!;
+      const sheet = await commissionImage(paper);
+      controller.signal.throwIfAborted();
+      if (action === 'print') {
+        printCommissionImage(sheet, () => {
+          if (!controller.signal.aborted) setPrintError('No pudimos abrir la impresión. Puedes descargar el documento e imprimirlo desde el archivo.');
+        }, controller.signal);
+      } else {
+        const blob = await commissionPdf(sheet);
+        controller.signal.throwIfAborted();
+        const url = URL.createObjectURL(blob), link = document.createElement('a');
+        link.href = url; link.download = `${fileName(draft)}.pdf`;
+        document.body.append(link); link.click(); link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      }
+    } catch {
+      if (controller.signal.aborted) return;
+      setPrintError('No pudimos preparar el documento. Revisa los textos y vuelve a intentarlo.');
+    } finally { setPdfAction(null); }
+
   }
 
   const index = steps.findIndex(item => item.key === step), current = steps[index]!;
@@ -118,17 +155,23 @@ export function ServiceCommission() {
       : [['Descripción', known(draft.description)]] },
   ];
 
+  const pdfActions = <div className="personnel-download__actions">
+    <button type="button" className="cenit-button" onClick={() => { void preparePdf('download'); }} disabled={preparingPdf} aria-busy={pdfAction === 'download'}><DownloadSimpleIcon size={16} aria-hidden="true" />{pdfAction === 'download' ? 'Preparando…' : 'Descargar'}</button>
+    <button type="button" className="cenit-button cenit-button--primary" onClick={() => { void preparePdf('print'); }} disabled={preparingPdf} aria-busy={pdfAction === 'print'}><PrinterIcon size={16} aria-hidden="true" />{pdfAction === 'print' ? 'Preparando…' : 'Imprimir'}</button>
+  </div>;
+
   return <section className="personnel-page">
     <div className="personnel-heading">
-      <div><h1>Nueva comisión de servicios</h1><p>Completa los datos, revisa el documento y descárgalo para gestionar las firmas.</p></div>
+      <div><h1>Nueva comisión de servicios</h1><p>Completa los datos de la comisión.</p></div>
       <div className="personnel-heading__actions">
-        {!preview && <button type="button" className="cenit-button" onClick={() => setPreview(true)}><EyeIcon size={16} aria-hidden="true" />Vista previa</button>}
+        {!preview && step !== 'revision' && <button type="button" className="cenit-button" onClick={() => setPreview(true)}><EyeIcon size={16} aria-hidden="true" />Vista previa</button>}
         <button type="button" className="cenit-button cenit-button--quiet" disabled={!dirty} onClick={event => setDiscardOrigin(event.currentTarget)}><TrashIcon size={16} aria-hidden="true" />Descartar</button>
       </div>
     </div>
     <ContextualConfirm open={!!discardOrigin} origin={discardOrigin} title="¿Descartar esta comisión?" description="Se borrarán todos los datos ingresados."
       confirmLabel="Descartar" destructive onCancel={() => setDiscardOrigin(null)} onConfirm={() => { setDiscardOrigin(null); reset(); }} />
 
+    {printError && <p role="alert" className="personnel-print-error">{printError}</p>}
     {preview ? <div className="personnel-preview">
       <div className="personnel-preview__bar">
         <button type="button" className="cenit-button" onClick={() => setPreview(false)}><ArrowLeftIcon size={16} aria-hidden="true" />Volver al formulario</button>
@@ -137,9 +180,9 @@ export function ServiceCommission() {
           <output aria-live="polite">{zoom} %</output>
           <button type="button" className="cenit-button cenit-button--icon" aria-label="Ampliar" onClick={() => setZoom(Math.min(160, zoom + 10))}><MagnifyingGlassPlusIcon size={17} aria-hidden="true" /></button>
         </div>
-        <button type="button" className="cenit-button cenit-button--primary" onClick={print}><PrinterIcon size={16} aria-hidden="true" />Imprimir o guardar PDF</button>
+        {pdfActions}
       </div>
-      <div className="personnel-preview__sheet"><div style={{ zoom: zoom / 100 }}><CommissionDocument draft={draft} /></div></div>
+      <div className="personnel-preview__sheet" role="region" aria-label="Vista previa del documento" tabIndex={0}><div style={{ zoom: zoom / 100 }}><CommissionDocument draft={draft} /></div></div>
     </div> : <div className="personnel-layout">
       <nav aria-label="Secciones"><ol className="personnel-steps">
         {steps.map((item, position) => {
@@ -234,12 +277,9 @@ export function ServiceCommission() {
               <dl>{block.rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd className={value ? undefined : 'personnel-unknown'}>{value ?? 'Sin información'}</dd></div>)}</dl>
             </section>;
           })}
-          <div className="personnel-download">
-            <p>El documento se imprime o se guarda como PDF desde el diálogo de impresión del navegador.</p>
-            <div className="personnel-download__actions">
-              <button type="button" className="cenit-button" onClick={() => setPreview(true)}><EyeIcon size={16} aria-hidden="true" />Ver vista previa</button>
-              <button type="button" className="cenit-button cenit-button--primary" onClick={print}><PrinterIcon size={16} aria-hidden="true" />Imprimir o guardar PDF</button>
-            </div>
+          <div className="personnel-review-actions">
+            <button type="button" className="cenit-button" onClick={() => setPreview(true)}><EyeIcon size={16} aria-hidden="true" />Vista previa</button>
+            {pdfActions}
           </div>
         </div>}
 
@@ -262,6 +302,6 @@ export function ServiceCommission() {
       </aside>
     </div>}
 
-    <div className="personnel-print" aria-hidden="true"><CommissionDocument draft={draft} /></div>
+    {createPortal(<div className="personnel-print" aria-hidden="true"><CommissionDocument draft={draft} /></div>, document.body)}
   </section>;
 }
