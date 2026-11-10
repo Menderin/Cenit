@@ -349,6 +349,21 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: 2 })).statusCode).toBe(200);
     expect((await request('GET', '/api/v1/purchases/summary')).json().data).toEqual(before);
   });
+  it('el resumen devuelve las seis altas más recientes', async () => {
+    const saved = [];
+    for (let index = 0; index < 7; index++) {
+      const response = await request('POST', '/api/v1/purchases', body());
+      expect(response.statusCode).toBe(201);
+      saved.push(response.json().data);
+    }
+    const response = await request('GET', '/api/v1/purchases/summary');
+    expect(response.statusCode).toBe(200);
+    expect(Value.Check(PurchaseSummaryResponseSchema, response.json())).toBe(true);
+    const recent = response.json().data.overview.recentRecords;
+    expect(recent).toHaveLength(6);
+    expect(recent.every((row: { id: string }) => saved.some(record => record.id === row.id))).toBe(true);
+    for (const row of saved) expect((await request('DELETE', `/api/v1/purchases/${row.id}`, { expectedVersion: row.version })).statusCode).toBe(200);
+  });
   it('los indicadores mensuales y anuales usan fecha documental y el período de Santiago', async () => {
     const before = (await repository.summary()).data.overview!;
     const input = body(); input.header.sentDate = '2098-12-31';
