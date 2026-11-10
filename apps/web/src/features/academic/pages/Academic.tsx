@@ -149,7 +149,7 @@ export function Academic() {
               onPointerCancel={() => { setBoardDragging(false); boardDrag.current = null; }}
               onLostPointerCapture={() => setBoardDragging(false)} onDragStart={event => event.preventDefault()}
               onClickCapture={event => { if (boardDrag.current?.dragged) { event.preventDefault(); event.stopPropagation(); boardDrag.current = null; } }}
-              onPointerLeave={() => { if (!boardDrag.current?.dragged) boardDrag.current = null; setRelationPreview(null); }} onKeyDown={event => { boardDrag.current = null; setBoardDragging(false); if (event.key === 'Escape') setRelationPreview(null); }}
+              onPointerLeave={() => { if (!boardDrag.current?.dragged) boardDrag.current = null; }} onKeyDown={event => { boardDrag.current = null; setBoardDragging(false); if (event.key === 'Escape') setRelationPreview(null); }}
               onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setRelationPreview(null); }}>
               <div className={`academic-columns${relationOrigin ? ' academic-columns--relations' : ''}`} style={{ '--semester-count': groups.length } as CSSProperties}>
                 {groups.map(group => {
@@ -163,6 +163,12 @@ export function Academic() {
                       const relation = course.code === relationOrigin ? 'origin' : linked ? (linked.depth === 1 ? 'direct' : 'indirect') : undefined;
                       return <li key={course.code}><button data-course-code={course.code} data-relation={relation} className={`academic-course${record ? ` academic-course--${record.status}` : ''}${relation ? ` academic-course--relation-${relation}` : ''}`} type="button" aria-label={`Ver asignatura: ${label}${label !== course.name ? ` (${course.name})` : ''}`} aria-describedby={`academic-course-meta-${course.code}`}
                         onPointerEnter={event => { if (event.pointerType === 'mouse' && !boardDrag.current?.dragged) showRelations(course.code); }}
+                        onPointerLeave={event => {
+                          if (event.pointerType !== 'mouse') return;
+                          const focused = document.activeElement;
+                          const focusedCode = !pointerFocus && focused instanceof HTMLElement && board.current?.contains(focused) && focused.matches(':focus-visible') ? focused.dataset.courseCode : undefined;
+                          if (focusedCode) showRelations(focusedCode); else setRelationPreview(null);
+                        }}
                         onFocus={event => { if (!pointerFocus && event.currentTarget.matches(':focus-visible')) showRelations(course.code); }} onClick={event => {
                         // Safari no enfoca botones al pulsarlos; el diálogo debe regresar al ramo.
                         event.currentTarget.focus({ preventScroll: true });
