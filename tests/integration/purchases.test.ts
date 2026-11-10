@@ -350,7 +350,7 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     expect((await request('GET', '/api/v1/purchases/summary')).json().data).toEqual(before);
   });
   it('el resumen devuelve las seis altas más recientes', async () => {
-    const saved = [];
+    const saved: { id: string; version: number }[] = [];
     for (let index = 0; index < 7; index++) {
       const response = await request('POST', '/api/v1/purchases', body());
       expect(response.statusCode).toBe(201);
