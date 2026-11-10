@@ -108,3 +108,8 @@
   /* position: relative keeps the visually hidden labels inside the scroll box instead of stretching the page. */
   .dashboard-recent ul { position: relative; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: start; scrollbar-gutter: stable; }
 }
+@media (min-width: 1101px) and (min-height: 600px) {
+  .dashboard-grid { grid-template-rows: minmax(0, 1fr) minmax(0, auto); }
+  .dashboard-recent { max-height: 35vh; }
+  .dashboard-recent ul { flex: 0 1 auto; }
+}
