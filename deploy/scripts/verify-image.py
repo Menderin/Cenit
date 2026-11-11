@@ -200,7 +200,16 @@ async function request(path, method, bytes) {
                 self.run('start', self.database)
                 self.phase = 'database recovery'
                 self.wait_database()
-                self.check_http()
+                # The pool reconnects on its own schedule after PostgreSQL returns.
+                deadline = time.monotonic() + 60
+                while True:
+                    try:
+                        self.check_http()
+                        break
+                    except RuntimeError:
+                        if time.monotonic() >= deadline:
+                            raise RuntimeError('Application did not recover after the database returned.')
+                        time.sleep(2)
             finally:
                 for name in (self.proxy, self.application, self.database):
                     subprocess.run([self.engine, 'rm', '-f', '-v', name], capture_output=True, timeout=30)

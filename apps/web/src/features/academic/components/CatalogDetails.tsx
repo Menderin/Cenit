@@ -29,7 +29,7 @@ function Rule({ rule, plan, statuses }: { rule: Prerequisite; plan: AcademicPlan
   // Pending rules stay pending: the panel says so plainly and never reads arrows as requirements.
   if (rule.kind === 'pending') return <div className="academic-detail-callout"><HourglassIcon size={18} aria-hidden="true" /><div><p>Pendientes de confirmación.</p><p className="academic-detail__explanation">{rule.description}</p></div></div>;
   if (rule.kind === 'unsupported') return <div className="academic-detail-callout"><HourglassIcon size={18} aria-hidden="true" /><div><p>Regla no soportada.</p><p className="academic-detail__explanation">{rule.description}</p><p className="academic-detail__explanation">Esta condición no puede representarse con las reglas disponibles. No se interpreta como ausencia de prerrequisitos.</p></div></div>;
-  if (rule.kind === 'none') return <p>Sin prerrequisitos. Ausencia confirmada en esta versión del plan.</p>;
+  if (rule.kind === 'none') return <p>Sin prerrequisitos. Ausencia confirmada en el plan.</p>;
   if (rule.kind === 'course') return <p>{plan.courses.find(c => c.code === rule.code)?.name ?? rule.code}</p>;
   return <><p>{rule.kind === 'allOf' ? 'Todos los siguientes:' : 'Al menos uno de los siguientes:'}</p><ul className="academic-rule">{rule.rules.map((child, index) => <li key={index}>{child.kind === 'course' ? <CourseLine code={child.code} plan={plan} statuses={statuses} /> : <Rule rule={child} plan={plan} statuses={statuses} />}</li>)}</ul></>;
 }
@@ -95,7 +95,7 @@ export function CatalogDetails({ course, plan, progress, student, statuses = new
           </section>}
           <details className="academic-detail__section academic-disclosure academic-plan-info">
             <summary><CaretRightIcon className="academic-disclosure__caret" size={12} aria-hidden="true" />Información del plan</summary>
-            <dl className="academic-facts"><div><dt>Plan</dt><dd>{plan.name}</dd></div><div><dt>Versión</dt><dd>{plan.version}</dd></div><div><dt>Código interno</dt><dd>{course.code}</dd></div>{course.officialCode && <div><dt>Código oficial</dt><dd>{course.officialCode}</dd></div>}</dl>
+            <dl className="academic-facts"><div><dt>Plan</dt><dd>{plan.name}</dd></div><div><dt>Código interno</dt><dd>{course.code}</dd></div>{course.officialCode && <div><dt>Código oficial</dt><dd>{course.officialCode}</dd></div>}</dl>
             <dl className="academic-facts academic-plan-sources" aria-label="Fuentes del catálogo">{plan.sources.map(source => <div key={source.sourceId}>
               <dt>{source.title}</dt><dd>{sourceStatusLabels[source.validationStatus]}</dd>
               {source.reviewedAt && <dd>Revisada el <time dateTime={source.reviewedAt}>{displayDate(source.reviewedAt)}</time></dd>}
