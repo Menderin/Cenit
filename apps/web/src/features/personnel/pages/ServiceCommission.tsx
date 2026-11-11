@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { Value } from '@sinclair/typebox/value';
+import { ServiceCommissionErrorsSchema } from '@cenit/contracts';
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight';
 import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check';
@@ -15,10 +16,14 @@ import { GlobeHemisphereWestIcon } from '@phosphor-icons/react/dist/csr/GlobeHem
 import { DateField } from '../../../shared/components/DateField.js';
 import { ContextualConfirm } from '../../../shared/components/ContextualConfirm.js';
 import { displayDate } from '../../../shared/lib/dates.js';
+import { HttpError } from '../../../shared/lib/http.js';
+import { useAuth } from '../../auth/model/session.js';
 import { useGuardChanges } from '../../purchases/model/guard.js';
 import { StaffSearch } from '../components/StaffSearch.js';
 import { CommissionDocument } from '../components/CommissionDocument.js';
 import { units } from '../model/staff.js';
+import { requestCommissionPdf } from '../api/commission.js';
+import { printCommissionPdf } from '../model/pdf.js';
 import { categoryLabels, emptyCommission, fileName, plantLabels, stepFields, steps, validateStep, type CommissionDraft, type Errors, type Step } from '../model/commission.js';
 import '../personnel.css';
 
@@ -60,20 +65,24 @@ export function ServiceCommission() {
   const [printError, setPrintError] = useState('');
   const [pdfAction, setPdfAction] = useState<'download' | 'print' | null>(null);
   const preparingPdf = pdfAction !== null;
-  const pdfAbort = useRef<AbortController | null>(null);
-  useEffect(() => () => pdfAbort.current?.abort(), []);
+  const pdfAbort = useRef<AbortController | null>(null), pdfBusy = useRef(false);
+  const { status, session } = useAuth();
+  useLayoutEffect(() => () => { pdfAbort.current?.abort(); }, [status, session?.account.id]);
   const [tried, setTried] = useState<Partial<Record<Step, boolean>>>({});
   const [focusKey, setFocusKey] = useState<{ key: string } | null>(null);
   const [preview, setPreview] = useState(false), [zoom, setZoom] = useState(100);
   const [discardOrigin, setDiscardOrigin] = useState<HTMLElement | null>(null);
   const dirty = JSON.stringify(draft) !== JSON.stringify(emptyCommission());
-  const reset = useCallback(() => { pdfAbort.current?.abort(); setDraft(emptyCommission()); setStep('funcionario'); setErrors({}); setTried({}); setPreview(false); }, []);
-  useGuardChanges(dirty, preparingPdf, reset);
+  const reset = useCallback(() => { pdfAbort.current?.abort(); setDraft(emptyCommission()); setStep('funcionario'); setErrors({}); setTried({}); setPreview(false); setPrintError(''); }, []);
+  useGuardChanges(dirty, false, reset);
 
   useEffect(() => { if (focusKey) document.getElementById(fieldId(focusKey.key))?.focus(); }, [focusKey]);
 
   function update(patch: Partial<CommissionDraft>) {
-    setPrintError('');
+    if (pdfBusy.current) {
+      pdfAbort.current?.abort();
+      setPrintError('Se canceló la preparación porque cambiaste el formulario.');
+    } else setPrintError('');
     const next = { ...draft, ...patch };
     setDraft(next);
     if (step !== 'revision' && tried[step]) setErrors(current => {
@@ -98,43 +107,44 @@ export function ServiceCommission() {
     go(steps[steps.findIndex(item => item.key === step) + 1]!.key);
   }
   async function preparePdf(action: 'download' | 'print') {
-    if (preparingPdf) return;
+    if (pdfBusy.current) return;
     for (const target of formSteps) {
       const invalid = check(target);
       if (invalid) { go(target); setFocusKey({ key: invalid }); return; }
     }
-    if (document.querySelector('.personnel-print [data-overflow="true"]')) {
-      setPrintError('Hay texto que no cabe en la plantilla. Revisa las casillas marcadas en la vista previa y acorta su contenido antes de imprimir.');
-      setPreview(true);
-      return;
-    }
     setPrintError('');
-    setPdfAction(action);
     pdfAbort.current?.abort();
     const controller = new AbortController();
-    pdfAbort.current = controller;
+    pdfAbort.current = controller; pdfBusy.current = true; setPdfAction(action);
     try {
-      const { commissionImage, commissionPdf, printCommissionImage } = await import('../model/pdf.js');
-      const paper = document.querySelector<HTMLElement>('.personnel-print .commission-paper')!;
-      const sheet = await commissionImage(paper);
+      const blob = await requestCommissionPdf(draft, controller.signal);
       controller.signal.throwIfAborted();
       if (action === 'print') {
-        printCommissionImage(sheet, () => {
-          if (!controller.signal.aborted) setPrintError('No pudimos abrir la impresión. Puedes descargar el documento e imprimirlo desde el archivo.');
+        printCommissionPdf(blob, () => {
+          if (!controller.signal.aborted) setPrintError('No pudimos abrir la impresión. Descarga el documento para imprimirlo.');
         }, controller.signal);
       } else {
-        const blob = await commissionPdf(sheet);
-        controller.signal.throwIfAborted();
         const url = URL.createObjectURL(blob), link = document.createElement('a');
+        const revoke = () => URL.revokeObjectURL(url);
+        controller.signal.addEventListener('abort', revoke, { once: true });
         link.href = url; link.download = `${fileName(draft)}.pdf`;
         document.body.append(link); link.click(); link.remove();
-        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        window.setTimeout(() => { controller.signal.removeEventListener('abort', revoke); revoke(); }, 60_000);
       }
-    } catch {
+    } catch (error) {
       if (controller.signal.aborted) return;
-      setPrintError('No pudimos preparar el documento. Revisa los textos y vuelve a intentarlo.');
-    } finally { setPdfAction(null); }
-
+      if (error instanceof HttpError && error.status === 422 && Value.Check(ServiceCommissionErrorsSchema, error.body)) {
+        const fields = error.body.error.fields;
+        const target = formSteps.find(item => stepFields[item].some(key => fields[key]));
+        if (target) {
+          setErrors(fields); setTried(current => ({ ...current, [target]: true }));
+          go(target); setFocusKey({ key: stepFields[target].find(key => fields[key])! });
+          setPrintError('Revisa los campos indicados. El formulario conserva tus datos.');
+          return;
+        }
+      }
+      setPrintError(error instanceof HttpError ? `${error.message} El formulario conserva tus datos.` : 'No pudimos preparar el documento. El formulario conserva tus datos.');
+    } finally { pdfBusy.current = false; setPdfAction(null); }
   }
 
   const index = steps.findIndex(item => item.key === step), current = steps[index]!;
@@ -156,6 +166,7 @@ export function ServiceCommission() {
   ];
 
   const pdfActions = <div className="personnel-download__actions">
+    {preparingPdf && <button type="button" className="cenit-button cenit-button--quiet" onClick={() => { pdfAbort.current?.abort(); setPrintError('Preparación cancelada. El formulario conserva tus datos.'); }}>Cancelar</button>}
     <button type="button" className="cenit-button" onClick={() => { void preparePdf('download'); }} disabled={preparingPdf} aria-busy={pdfAction === 'download'}><DownloadSimpleIcon size={16} aria-hidden="true" />{pdfAction === 'download' ? 'Preparando…' : 'Descargar'}</button>
     <button type="button" className="cenit-button cenit-button--primary" onClick={() => { void preparePdf('print'); }} disabled={preparingPdf} aria-busy={pdfAction === 'print'}><PrinterIcon size={16} aria-hidden="true" />{pdfAction === 'print' ? 'Preparando…' : 'Imprimir'}</button>
   </div>;
@@ -182,6 +193,7 @@ export function ServiceCommission() {
         </div>
         {pdfActions}
       </div>
+      <p className="personnel-preview__notice">Vista previa aproximada; el documento final se genera al descargar o imprimir.</p>
       <div className="personnel-preview__sheet" role="region" aria-label="Vista previa del documento" tabIndex={0}><div style={{ zoom: zoom / 100 }}><CommissionDocument draft={draft} /></div></div>
     </div> : <div className="personnel-layout">
       <nav aria-label="Secciones"><ol className="personnel-steps">
@@ -222,8 +234,8 @@ export function ServiceCommission() {
           <div className="personnel-grid">
             {(['from', 'to'] as const).map(key => <div className="personnel-field" key={key}>
               <label htmlFor={fieldId(key)}>{key === 'from' ? 'Desde' : 'Hasta'}</label>
-              <DateField id={fieldId(key)} label={key === 'from' ? 'Desde' : 'Hasta'} value={draft[key]} aria-invalid={!!errors[key]} onValueChange={value => update({ [key]: value })} />
-              {errors[key] && <p className="personnel-error">{errors[key]}</p>}
+              <DateField id={fieldId(key)} label={key === 'from' ? 'Desde' : 'Hasta'} value={draft[key]} aria-invalid={!!errors[key]} aria-describedby={errors[key] ? `${fieldId(key)}-error` : undefined} onValueChange={value => update({ [key]: value })} />
+              {errors[key] && <p className="personnel-error" id={`${fieldId(key)}-error`}>{errors[key]}</p>}
             </div>)}
           </div>
           <div className="personnel-grid personnel-grid--three">
@@ -238,7 +250,7 @@ export function ServiceCommission() {
           </div>
         </div>}
 
-        {step === 'financiamiento' && <table className="personnel-funding">
+        {step === 'financiamiento' && <div className="personnel-funding__scroll" role="region" aria-label="Código presupuestario" tabIndex={0}><table className="personnel-funding">
           <caption className="personnel-sr">Código presupuestario</caption>
           <thead><tr><th scope="col"><span className="personnel-sr">Fuente</span></th><th scope="col">Institución</th><th scope="col">Organización</th><th scope="col">Unidad</th><th scope="col">Proyecto</th><th scope="col">% financ.</th></tr></thead>
           <tbody>{draft.funding.map((row, rowIndex) => <tr key={rowIndex}>
@@ -252,7 +264,7 @@ export function ServiceCommission() {
               </td>;
             })}
           </tr>)}</tbody>
-        </table>}
+        </table></div>}
 
         {step === 'actividad' && <div className="personnel-group">
           <Choice name="activity" legend="¿La comisión corresponde a un evento?" value={draft.activity} onChange={activity => update({ activity })}
@@ -261,10 +273,10 @@ export function ServiceCommission() {
             <Field name="eventName" label="Nombre del evento" value={draft.eventName} error={errors.eventName} onChange={eventName => update({ eventName })} />
             <div className="personnel-grid">
               <Field name="eventOrganizer" label="Institución organizadora" value={draft.eventOrganizer} error={errors.eventOrganizer} onChange={eventOrganizer => update({ eventOrganizer })} />
-              <Field name="eventProject" label="Proyecto al que se asocia el trabajo" optional value={draft.eventProject} onChange={eventProject => update({ eventProject })} />
+              <Field name="eventProject" label="Proyecto al que se asocia el trabajo" optional value={draft.eventProject} error={errors.eventProject} onChange={eventProject => update({ eventProject })} />
             </div>
-            <Field name="eventWork" label="Nombre del trabajo o ponencia" optional textarea value={draft.eventWork} onChange={eventWork => update({ eventWork })} />
-            <Field name="eventNotes" label="Otros antecedentes u observaciones" optional value={draft.eventNotes} onChange={eventNotes => update({ eventNotes })} />
+            <Field name="eventWork" label="Nombre del trabajo o ponencia" optional textarea value={draft.eventWork} error={errors.eventWork} onChange={eventWork => update({ eventWork })} />
+            <Field name="eventNotes" label="Otros antecedentes u observaciones" optional value={draft.eventNotes} error={errors.eventNotes} onChange={eventNotes => update({ eventNotes })} />
           </> : <Field name="description" label="Descripción de la comisión" textarea value={draft.description} error={errors.description} onChange={description => update({ description })} />}
         </div>}
 
@@ -302,6 +314,5 @@ export function ServiceCommission() {
       </aside>
     </div>}
 
-    {createPortal(<div className="personnel-print" aria-hidden="true"><CommissionDocument draft={draft} /></div>, document.body)}
   </section>;
 }

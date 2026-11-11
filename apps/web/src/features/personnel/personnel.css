@@ -45,7 +45,8 @@
 .personnel-search__list span { color: var(--color-ink); font-size: 14px; }
 .personnel-search__list small { color: var(--color-ink-subtle); font-size: 12px; }
 
-.personnel-funding { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+.personnel-funding__scroll { max-width: 100%; overflow-x: auto; }
+.personnel-funding { min-width: 600px; width: 100%; border-collapse: separate; border-spacing: 0 8px; }
 .personnel-funding thead th { padding: 0 8px 0 0; color: var(--color-ink-label); font-size: 12px; font-weight: 500; text-align: left; }
 .personnel-funding tbody th { width: 70px; padding: 11px 8px 0 0; color: var(--color-ink-subtle); font-size: 12px; font-weight: 400; text-align: left; vertical-align: top; }
 .personnel-funding tbody th small { display: block; }
@@ -77,6 +78,7 @@
 .personnel-zoom { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: var(--radius-md); background: var(--color-surface-chip); }
 .personnel-zoom output { min-width: 52px; font-size: 13px; text-align: center; font-variant-numeric: tabular-nums; }
 .personnel-zoom .cenit-button--icon { width: 34px; min-width: 34px; height: 34px; min-height: 34px; box-shadow: none; background: transparent; }
+.personnel-preview__notice { margin: 0; padding: 8px 16px; color: var(--color-ink-muted); font-size: 13px; background: var(--color-surface); }
 .personnel-preview__sheet { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 28px 20px 40px; }
 .personnel-preview__sheet > div { width: max-content; margin: 0 auto; }
 
@@ -92,15 +94,20 @@
 .commission-paper__value[data-overflow="true"] { outline: 2px solid var(--color-danger); }
 .commission-paper__draft { display: block; width: var(--commission-width); margin-top: 2mm; font: 7px/1.2 Arial, sans-serif; text-align: center; color: #555; }
 .personnel-print-error { margin: 0 0 12px; color: var(--color-danger); font-size: 13px; }
-/* Se mide fuera de pantalla para detectar texto que no cabe antes de imprimir. */
-.personnel-print { position: fixed; left: -10000px; top: 0; visibility: hidden; pointer-events: none; }
-.personnel-print .commission-paper { --commission-width: 168mm; width: var(--commission-width); min-height: 0; padding: 0; box-shadow: none; }
-@media print {
-  @page { size: letter; margin: 10mm; }
-  html, body { height: auto !important; min-height: 0 !important; margin: 0 !important; overflow: visible !important; }
-  body:has(> .personnel-print) { background: #fff !important; }
-  body:has(> .personnel-print) > :not(.personnel-print) { display: none !important; }
-  .personnel-print, .personnel-print * { visibility: visible; }
-  .personnel-print { position: static; visibility: visible; }
-  .commission-paper { break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+@media (max-width: 1100px) {
+  .personnel-layout { grid-template-columns: 160px minmax(0, 1fr); gap: 18px; }
+  .personnel-summary { grid-column: 2; position: static; }
+}
+@media (max-width: 760px) {
+  .personnel-heading { flex-wrap: wrap; gap: 12px; }
+  .personnel-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .personnel-steps { position: static; flex-direction: row; flex-wrap: wrap; }
+  .personnel-steps li { flex: 1 1 120px; min-width: 0; }
+  .personnel-card { min-width: 0; padding: 18px 16px; }
+  .personnel-card__foot { flex-wrap: wrap; }
+  .personnel-grid, .personnel-grid--three { grid-template-columns: minmax(0, 1fr); }
+  .personnel-summary { grid-column: auto; }
+  .personnel-review dl { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .personnel-review dd { margin-bottom: 8px; }
 }

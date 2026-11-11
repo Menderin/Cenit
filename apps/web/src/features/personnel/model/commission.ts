@@ -1,19 +1,8 @@
 import { calendarDate } from '../../../shared/lib/dates.js';
 
-export type FundingRow = { institution: string; organization: string; unit: string; project: string; percent: string };
-export type CommissionDraft = {
-  name: string; position: string; unit: string;
-  group: '' | 'I' | 'II' | 'III';
-  category: '' | 'academico' | 'no_academico' | 'directivo' | 'otro'; categoryOther: string;
-  plant: '' | 'oficial' | 'especial' | 'temporal';
-  territory: '' | 'nacional' | 'extranjero'; place: string;
-  from: string; to: string; daysWithStay: string; daysWithoutStay: string; totalDays: string;
-  allowance: string; currency: '' | 'CLP' | 'USD';
-  funding: [FundingRow, FundingRow];
-  activity: 'evento' | 'descripcion';
-  eventName: string; eventOrganizer: string; eventWork: string; eventProject: string; eventNotes: string;
-  description: string;
-};
+export type { ServiceCommission as CommissionDraft } from '@cenit/contracts';
+import type { ServiceCommission as CommissionDraft } from '@cenit/contracts';
+export type FundingRow = CommissionDraft['funding'][number];
 export type Step = 'funcionario' | 'comision' | 'financiamiento' | 'actividad' | 'revision';
 export type Errors = Partial<Record<string, string>>;
 
@@ -38,7 +27,7 @@ export const stepFields: Record<Exclude<Step, 'revision'>, string[]> = {
   funcionario: ['name', 'position', 'unit', 'group', 'category', 'categoryOther', 'plant'],
   comision: ['territory', 'place', 'from', 'to', 'daysWithStay', 'daysWithoutStay', 'totalDays', 'allowance', 'currency'],
   financiamiento: [0, 1].flatMap(row => ['institution', 'organization', 'unit', 'project', 'percent'].map(key => `funding.${row}.${key}`)),
-  actividad: ['eventName', 'eventOrganizer', 'description'],
+  actividad: ['eventName', 'eventOrganizer', 'eventProject', 'eventWork', 'eventNotes', 'description'],
 };
 
 export function validateStep(draft: CommissionDraft, step: Step): Errors {
@@ -82,6 +71,23 @@ export function validateStep(draft: CommissionDraft, step: Step): Errors {
     if (draft.activity === 'evento') { required('eventName', 'Ingresa el nombre del evento.'); required('eventOrganizer', 'Ingresa la institución organizadora.'); }
     else required('description', 'Describe la comisión.');
   }
+  // Límites del contrato del servidor, aplicados sin recortar la entrada.
+  const limits: Partial<Record<keyof CommissionDraft, number>> = {
+    name: 500, position: 500, unit: 500, categoryOther: 500, place: 500,
+    daysWithStay: 16, daysWithoutStay: 16, totalDays: 16, allowance: 32,
+    eventName: 500, eventOrganizer: 500, eventWork: 2000, eventProject: 500, eventNotes: 500, description: 2000,
+  };
+  for (const key of stepFields[step as Exclude<Step, 'revision'>] ?? []) {
+    if ((key === 'categoryOther' && draft.category !== 'otro') || (key.startsWith('event') && draft.activity !== 'evento') || (key === 'description' && draft.activity !== 'descripcion')) continue;
+    const limit = limits[key as keyof CommissionDraft], value = draft[key as keyof CommissionDraft];
+    if (limit && typeof value === 'string' && [...value].length > limit) errors[key] = `Usa como máximo ${limit} caracteres.`;
+  }
+  if (step === 'financiamiento') draft.funding.forEach((row, index) => {
+    for (const [key, value] of Object.entries(row)) {
+      const limit = key === 'percent' ? 16 : 32;
+      if ([...value].length > limit) errors[`funding.${index}.${key}`] = `Usa como máximo ${limit} caracteres.`;
+    }
+  });
   return errors;
 }
 
