@@ -45,16 +45,32 @@
 .personnel-search__list span { color: var(--color-ink); font-size: 14px; }
 .personnel-search__list small { color: var(--color-ink-subtle); font-size: 12px; }
 
-.personnel-funding__scroll { max-width: 100%; overflow-x: auto; }
-.personnel-funding { min-width: 600px; width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+.personnel-funding__scroll { max-width: 100%; container-type: inline-size; }
+.personnel-funding { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0 8px; }
 .personnel-funding thead th { padding: 0 8px 0 0; color: var(--color-ink-label); font-size: 12px; font-weight: 500; text-align: left; }
-.personnel-funding tbody th { width: 70px; padding: 11px 8px 0 0; color: var(--color-ink-subtle); font-size: 12px; font-weight: 400; text-align: left; vertical-align: top; }
+.personnel-funding thead th:first-child { width: 70px; }
+.personnel-funding thead th:nth-child(2), .personnel-funding thead th:nth-child(3) { width: 92px; }
+.personnel-funding thead th:last-child { width: 88px; }
+.personnel-funding tbody th { padding: 11px 8px 0 0; color: var(--color-ink-subtle); font-size: 12px; font-weight: 400; text-align: left; vertical-align: top; }
 .personnel-funding tbody th small { display: block; }
-.personnel-funding td { padding: 0 8px 0 0; vertical-align: top; }
-.personnel-funding td:nth-child(2), .personnel-funding td:nth-child(3) { width: 82px; }
-.personnel-funding td:last-child { width: 88px; padding-right: 0; }
-.personnel-funding .cenit-input { font-variant-numeric: tabular-nums; }
+.personnel-funding td { min-width: 0; padding: 0 8px 0 0; vertical-align: top; }
+.personnel-funding td:last-child { padding-right: 0; }
+.personnel-funding .cenit-input { min-width: 0; font-variant-numeric: tabular-nums; }
 .personnel-funding .personnel-error { margin-top: 4px; }
+@container (max-width: 600px) {
+  .personnel-funding, .personnel-funding tbody { display: block; }
+  .personnel-funding thead { display: none; }
+  .personnel-funding tr { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .personnel-funding tr:last-child { margin-bottom: 0; }
+  .personnel-funding tbody th { grid-column: 1 / -1; padding: 0; color: var(--color-ink); font-size: 13px; font-weight: 600; }
+  .personnel-funding tbody th small { display: inline; margin-left: 6px; color: var(--color-ink-subtle); font-size: 12px; font-weight: 400; }
+  .personnel-funding td { width: auto; padding: 0; }
+  .personnel-funding td:last-child { max-width: 88px; }
+  .personnel-funding td::before { content: attr(data-label); display: block; margin-bottom: 6px; color: var(--color-ink-label); font-size: 12px; font-weight: 500; }
+}
+@container (min-width: 540px) and (max-width: 600px) {
+  .personnel-funding tr { grid-template-columns: repeat(4, minmax(0, 1fr)) 78px; }
+}
 
 .personnel-review { padding: 18px 0; border-top: 1px solid var(--color-line-soft); }
 .personnel-review:first-child { padding-top: 0; border-top: 0; }

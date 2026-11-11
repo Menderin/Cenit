@@ -271,14 +271,15 @@ export function ServiceCommission() {
           </div>
         </div>}
 
-        {step === 'financiamiento' && <div className="personnel-funding__scroll" role="region" aria-label="Código presupuestario" tabIndex={0}><table className="personnel-funding">
+        {step === 'financiamiento' && <div className="personnel-funding__scroll" role="region" aria-label="Código presupuestario"><table className="personnel-funding">
           <caption className="personnel-sr">Código presupuestario</caption>
           <thead><tr><th scope="col"><span className="personnel-sr">Fuente</span></th><th scope="col">Institución</th><th scope="col">Organización</th><th scope="col">Unidad</th><th scope="col">Proyecto</th><th scope="col">% financ.</th></tr></thead>
           <tbody>{draft.funding.map((row, rowIndex) => <tr key={rowIndex}>
             <th scope="row">{rowIndex === 0 ? 'Fuente 1' : <>Fuente 2<small>Opcional</small></>}</th>
             {(['institution', 'organization', 'unit', 'project', 'percent'] as const).map(key => {
               const path = `funding.${rowIndex}.${key}`, id = fieldId(path);
-              return <td key={key}>
+              const label = { institution: 'Institución', organization: 'Organización', unit: 'Unidad', project: 'Proyecto', percent: '% financ.' }[key];
+              return <td key={key} data-label={label}>
                 <input id={id} className="cenit-input" inputMode="numeric" autoComplete="off" value={row[key]} aria-label={`Fuente ${rowIndex + 1}, ${{ institution: 'institución', organization: 'organización', unit: 'unidad', project: 'proyecto', percent: 'porcentaje' }[key]}`}
                   aria-invalid={!!errors[path]} aria-describedby={errors[path] ? `${id}-error` : undefined} onChange={event => setFunding(rowIndex, key, event.target.value)} />
                 {errors[path] && <p className="personnel-error" id={`${id}-error`}>{errors[path]}</p>}

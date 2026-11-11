@@ -118,6 +118,27 @@ test('comisión: solicita el PDF del servidor y prepara la impresión', async ({
   await expect.poll(() => page.evaluate(() => document.documentElement.dataset.commissionPrintPrepared)).toBe('yes');
 });
 
+test('comisión: financiamiento muestra todos los campos en cada ancho', async ({ page }) => {
+  await login(page, 'administrativo');
+  await page.goto('/administracion/personal');
+  await section(page, 'Financiamiento').click();
+  const funding = page.getByRole('region', { name: 'Código presupuestario' });
+  for (const width of [1920, 1440, 1280, 1024, 768, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    const layout = await funding.evaluate(region => {
+      const rect = region.getBoundingClientRect();
+      const inputs = [...region.querySelectorAll('input')];
+      return { scroll: region.scrollWidth, width: region.clientWidth, count: inputs.length,
+        percentWidth: inputs[4]!.getBoundingClientRect().width, projectWidth: inputs[3]!.getBoundingClientRect().width,
+        visible: inputs.every(input => { const field = input.getBoundingClientRect(); return field.width > 0 && field.left >= rect.left - 1 && field.right <= rect.right + 1; }) };
+    });
+    expect(layout.count).toBe(10);
+    expect(layout.scroll, `desbordamiento a ${width}px`).toBeLessThanOrEqual(layout.width);
+    expect(layout.visible, `campos cortados a ${width}px`).toBe(true);
+    expect(layout.percentWidth, `porcentaje debe ocupar menos espacio a ${width}px`).toBeLessThan(layout.projectWidth);
+  }
+});
+
 test('comisión: cancelar una respuesta tardía y usar el formulario en móvil', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await fillCommission(page);
@@ -131,10 +152,10 @@ test('comisión: cancelar una respuesta tardía y usar el formulario en móvil',
       }));
       expect(bounds.width, `${width}px ${name}: ${bounds.overflowing.join(', ')}`).toBeLessThanOrEqual(bounds.viewport);
       if (width === 320 && name === 'Financiamiento') {
-        const funding = page.getByRole('region', { name: 'Código presupuestario' });
-        await funding.focus();
-        await funding.press('ArrowRight');
-        await expect.poll(() => funding.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+        const institution = page.getByLabel('Fuente 1, institución', { exact: true });
+        await institution.focus();
+        await institution.press('Tab');
+        await expect(page.getByLabel('Fuente 1, organización', { exact: true })).toBeFocused();
       }
     }
   }
