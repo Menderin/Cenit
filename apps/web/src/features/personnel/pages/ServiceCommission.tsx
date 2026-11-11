@@ -62,6 +62,7 @@ export function ServiceCommission() {
   const [draft, setDraft] = useState(emptyCommission);
   const [step, setStep] = useState<Step>('funcionario');
   const [errors, setErrors] = useState<Errors>({});
+  const serverErrors = useRef<Errors>({});
   const [printError, setPrintError] = useState('');
   const [pdfAction, setPdfAction] = useState<'download' | 'print' | null>(null);
   const preparingPdf = pdfAction !== null;
@@ -73,7 +74,7 @@ export function ServiceCommission() {
   const [preview, setPreview] = useState(false), [zoom, setZoom] = useState(100);
   const [discardOrigin, setDiscardOrigin] = useState<HTMLElement | null>(null);
   const dirty = JSON.stringify(draft) !== JSON.stringify(emptyCommission());
-  const reset = useCallback(() => { pdfAbort.current?.abort(); setDraft(emptyCommission()); setStep('funcionario'); setErrors({}); setTried({}); setPreview(false); setPrintError(''); }, []);
+  const reset = useCallback(() => { pdfAbort.current?.abort(); serverErrors.current = {}; setDraft(emptyCommission()); setStep('funcionario'); setErrors({}); setTried({}); setPreview(false); setPrintError(''); }, []);
   useGuardChanges(dirty, false, reset);
 
   useEffect(() => { if (focusKey) document.getElementById(fieldId(focusKey.key))?.focus(); }, [focusKey]);
@@ -84,10 +85,28 @@ export function ServiceCommission() {
       setPrintError('Se canceló la preparación porque cambiaste el formulario.');
     } else setPrintError('');
     const next = { ...draft, ...patch };
+    for (const key of Object.keys(patch)) {
+      if (key === 'funding') {
+        next.funding.forEach((row, index) => {
+          for (const field of Object.keys(row) as (keyof typeof row)[]) {
+            if (row[field] !== draft.funding[index]![field]) delete serverErrors.current[`funding.${index}.${field}`];
+          }
+        });
+      } else if (draft[key as keyof CommissionDraft] !== next[key as keyof CommissionDraft]) delete serverErrors.current[key];
+    }
+    if (!next.allowance.trim()) delete serverErrors.current.currency;
+    if (!Object.values(next.funding[1]).some(value => value.trim())) {
+      for (const key of Object.keys(serverErrors.current)) if (key.startsWith('funding.1.')) delete serverErrors.current[key];
+    }
+    if (patch.from !== undefined && patch.from !== draft.from) delete serverErrors.current.to;
+    if (next.category !== 'otro') delete serverErrors.current.categoryOther;
+    if (next.activity === 'evento') delete serverErrors.current.description;
+    else for (const key of ['eventName', 'eventOrganizer', 'eventProject', 'eventWork', 'eventNotes']) delete serverErrors.current[key];
     setDraft(next);
-    if (step !== 'revision' && tried[step]) setErrors(current => {
+    if (step !== 'revision') setErrors(current => {
       const kept = Object.fromEntries(Object.entries(current).filter(([key]) => !stepFields[step].includes(key)));
-      return { ...kept, ...validateStep(next, step) };
+      const remaining = Object.fromEntries(Object.entries(serverErrors.current).filter(([key]) => stepFields[step].includes(key)));
+      return { ...kept, ...remaining, ...(tried[step] ? validateStep(next, step) : {}) };
     });
   }
   const setFunding = (row: number, key: keyof CommissionDraft['funding'][number], value: string) =>
@@ -95,7 +114,8 @@ export function ServiceCommission() {
 
   function go(next: Step) { setStep(next); setPreview(false); document.getElementById('admin-content')?.scrollTo({ top: 0 }); }
   function check(target: Exclude<Step, 'revision'>) {
-    const found = validateStep(draft, target);
+    const remaining = Object.fromEntries(Object.entries(serverErrors.current).filter(([key]) => stepFields[target].includes(key)));
+    const found = { ...remaining, ...validateStep(draft, target) };
     setErrors(current => ({ ...Object.fromEntries(Object.entries(current).filter(([key]) => !stepFields[target].includes(key))), ...found }));
     setTried(current => ({ ...current, [target]: true }));
     return stepFields[target].find(key => found[key]);
@@ -137,6 +157,7 @@ export function ServiceCommission() {
         const fields = error.body.error.fields;
         const target = formSteps.find(item => stepFields[item].some(key => fields[key]));
         if (target) {
+          serverErrors.current = { ...fields };
           setErrors(fields); setTried(current => ({ ...current, [target]: true }));
           go(target); setFocusKey({ key: stepFields[target].find(key => fields[key])! });
           setPrintError('Revisa los campos indicados. El formulario conserva tus datos.');
