@@ -422,6 +422,7 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await navigateAdministration(page, 'Personal');
   await expect(page).toHaveURL(/\/administracion\/personal$/);
   await expect(page.getByRole('heading', { name: 'Nueva comisión de servicios', exact: true })).toBeVisible();
+  await expect(page.getByText('Propuesta pendiente de validación. Usa sólo datos ficticios; la búsqueda muestra funcionarios de ejemplo.')).toBeVisible();
   await navigateAdministration(page, 'Bienes');
   await expect(page).toHaveURL(/\/administracion\/bienes$/);
   await expect(page.getByRole('heading', { name: 'Bienes todavía no está disponible', exact: true })).toBeVisible();
