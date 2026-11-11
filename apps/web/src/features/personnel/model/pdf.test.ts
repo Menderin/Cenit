@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { printCommissionPdf } from './pdf.js';
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('impresión del PDF recibido', () => {
   function setup() {
@@ -26,6 +26,17 @@ describe('impresión del PDF recibido', () => {
     expect(frame.remove).toHaveBeenCalledOnce();
     expect(revoke).toHaveBeenCalledWith('blob:commission');
     expect(onError).not.toHaveBeenCalled();
+  });
+  it('informa el fallo y libera el documento si el visor no carga', () => {
+    vi.useFakeTimers();
+    const { frame, view, revoke } = setup(), controller = new AbortController(), onError = vi.fn();
+    printCommissionPdf(new Blob(['%PDF-test']), onError, controller.signal);
+    vi.advanceTimersByTime(10_000);
+    expect(onError).toHaveBeenCalledOnce();
+    expect(frame.remove).toHaveBeenCalledOnce();
+    expect(revoke).toHaveBeenCalledOnce();
+    frame.onload();
+    expect(view.print).not.toHaveBeenCalled();
   });
   it('cancela la impresión pendiente al abandonar la sesión', () => {
     const { frame, view, revoke } = setup(), controller = new AbortController(), onError = vi.fn();

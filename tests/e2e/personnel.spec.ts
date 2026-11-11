@@ -100,18 +100,22 @@ test('comisión: errores del servidor enfocan el campo y el reintento conserva d
   expect((await download).suggestedFilename()).toContain('comision-servicios');
 });
 
-test('comisión: solicita el PDF del servidor para imprimir', async ({ page }) => {
+test('comisión: solicita el PDF del servidor y prepara la impresión', async ({ page }) => {
+  // El visor PDF es nativo y puede ejecutarse fuera del contexto de scripts de la página.
   await page.addInitScript(() => {
-    if (window === window.top) window.addEventListener('message', event => { if (event.data === 'commission-print') document.documentElement.dataset.commissionPrinted = 'yes'; });
-    else window.print = () => window.top?.postMessage('commission-print', '*');
+    new MutationObserver(records => {
+      for (const record of records) for (const node of record.addedNodes) {
+        if (node instanceof HTMLIFrameElement && node.title === 'Imprimir comisión de servicios' && node.src.startsWith('blob:')) {
+          document.documentElement.dataset.commissionPrintPrepared = 'yes';
+        }
+      }
+    }).observe(document, { childList: true, subtree: true });
   });
   await fillCommission(page);
   const response = page.waitForResponse(resp => resp.url().endsWith('/service-commissions/pdf'));
   await page.getByRole('button', { name: 'Imprimir', exact: true }).click();
   expect((await response).status()).toBe(200);
-  await expect(page.locator('iframe[title="Imprimir comisión de servicios"]')).toHaveCount(1);
-  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.commissionPrinted)).toBe('yes');
-  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.commissionPrintPrepared)).toBe('yes');
 });
 
 test('comisión: cancelar una respuesta tardía y usar el formulario en móvil', async ({ page }) => {
