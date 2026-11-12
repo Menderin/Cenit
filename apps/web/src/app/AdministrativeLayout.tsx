@@ -15,10 +15,10 @@ import './administration.css';
 const navigation = [
   { to: '/administracion', label: 'Inicio', end: true, icon: HouseIcon },
   { to: '/administracion/compras', label: 'Registro de compras', end: false, icon: ShoppingCartSimpleIcon },
+  { to: '/administracion/personal', label: 'Personal', end: false, icon: UsersIcon },
 ];
 // Modules named in the Charter but not yet defined: reachable, visibly secondary.
 const upcoming = [
-  { to: '/administracion/personal', label: 'Personal', end: false, icon: UsersIcon },
   { to: '/administracion/bienes', label: 'Bienes', end: false, icon: PackageIcon },
 ];
 export function AdministrativeLayout({ account, expiresAt, logout, children }: {

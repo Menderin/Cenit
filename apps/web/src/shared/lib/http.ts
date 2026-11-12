@@ -2,7 +2,7 @@ import { Value } from '@sinclair/typebox/value';
 import { ErrorResponseSchema } from '@cenit/contracts';
 
 export class HttpError extends Error {
-  constructor(public readonly status: number, message: string) { super(message); }
+  constructor(public readonly status: number, message: string, public readonly body?: unknown) { super(message); }
 }
 export async function api(path: string, init: RequestInit = {}): Promise<Response> {
   let response: Response;
@@ -16,7 +16,7 @@ export async function api(path: string, init: RequestInit = {}): Promise<Respons
     const body: unknown = await response.json().catch(() => null);
     const message = Value.Check(ErrorResponseSchema, body) ? body.error.message : 'No se pudo completar la solicitud.';
     if (response.status === 401 && !['/auth/login', '/auth/session'].includes(path)) window.dispatchEvent(new Event('cenit:unauthenticated'));
-    throw new HttpError(response.status, message);
+    throw new HttpError(response.status, message, body);
   }
   return response;
 }

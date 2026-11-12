@@ -42,7 +42,7 @@ export const PurchaseSummaryResponseSchema = object({ data: object({
     recentRecords: Type.Array(object({ id: uuid, requestNumber: headerFields.requestNumber, description: headerFields.description,
       sentDate: headerFields.sentDate, totalAmount: headerFields.totalAmount, createdAt: stamp,
       source: Type.Union([Type.Literal('manual'), Type.Literal('image_capture'), Type.Literal('contract_example')]),
-    }), { maxItems: 5 }),
+    }), { maxItems: 6 }),
   })),
 }) });
 export type PurchaseSummaryResponse = Static<typeof PurchaseSummaryResponseSchema>;

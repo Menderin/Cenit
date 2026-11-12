@@ -57,7 +57,7 @@ export function StudentLookup({ accountId, selected, onSelect }: { accountId: st
     {selected && <div className="academic-students__heading">
       <p className="academic-student-identity"><strong>{selected.name}</strong><span>RUT {selected.rut}</span></p>
       <button ref={switchButton} type="button" className="cenit-button" aria-expanded={expanded} aria-controls="academic-students-search" onClick={() => setExpanded(!expanded)}><MagnifyingGlassIcon size={16} aria-hidden="true" />Cambiar estudiante</button>
-      <button type="button" className="academic-link-button" onClick={dropStudent}>Ver sólo catálogo</button>
+      <button type="button" className="cenit-button cenit-button--quiet" onClick={dropStudent}>Ver sólo catálogo</button>
     </div>}
     <div id="academic-students-search" hidden={!expanded}>
     <form className="academic-students__search" onSubmit={submit}>

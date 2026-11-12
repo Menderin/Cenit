@@ -83,6 +83,60 @@ test('diez semestres: navegación visible en portátil y recorrido móvil', asyn
   }
 });
 
+test('leyenda adaptable y detalle lateral conservan visibilidad, dirección y foco', async ({ page }) => {
+  await page.addInitScript(() => {
+    document.addEventListener('transitionrun', event => {
+      if (!(event instanceof TransitionEvent) || !(event.target instanceof HTMLDialogElement) || event.propertyName !== 'translate') return;
+      const animation = event.target.getAnimations().find(item => item instanceof CSSTransition && item.transitionProperty === 'translate');
+      const frames = (animation?.effect as KeyframeEffect | undefined)?.getKeyframes();
+      if (!frames || frames.length < 2) return;
+      const transitions = JSON.parse(document.documentElement.dataset.detailTransitions ?? '[]');
+      transitions.push({ side: event.target.className, from: frames[0]!.translate, to: frames[1]!.translate });
+      document.documentElement.dataset.detailTransitions = JSON.stringify(transitions);
+    }, true);
+  });
+  await page.setViewportSize({ width: 1470, height: 842 });
+  await login(page);
+  await chooseStudent(page, 'Estudiante Demo');
+  const first = courses(page).first();
+  for (const width of [1920, 1470, 1024, 390, 320]) {
+    await page.setViewportSize({ width, height: width === 1470 ? 842 : 700 });
+    await page.keyboard.press('Tab'); await first.focus();
+    const legend = page.getByLabel('Relaciones resaltadas');
+    await expect(legend).toBeVisible();
+    const fits = await legend.evaluate(element => {
+      const bounds = element.getBoundingClientRect();
+      const content = document.querySelector('.academic-content')!.getBoundingClientRect();
+      return bounds.left >= content.left && bounds.right <= content.right && bounds.bottom <= content.bottom && element.scrollWidth <= element.clientWidth;
+    });
+    expect(fits, `leyenda visible a ${width}px`).toBe(true);
+  }
+  await page.setViewportSize({ width: 1470, height: 842 });
+  for (const [card, side] of [[first, 'right'], [courses(page).last(), 'left']] as const) {
+    await card.click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toHaveClass(new RegExp(`academic-detail--${side}`));
+    await expect.poll(async () => page.evaluate(() => document.documentElement.dataset.detailTransitions ?? '')).toContain(`academic-detail--${side}`);
+    await expect(dialog).toHaveCSS('translate', '0px');
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0); await expect(card).toBeFocused();
+  }
+  const transitions = await page.evaluate(() => JSON.parse(document.documentElement.dataset.detailTransitions ?? '[]') as { side: string; from: string; to: string }[]);
+  for (const [side, direction] of [['right', 1], ['left', -1]] as const) {
+    const enter = transitions.find(item => item.side.includes(`academic-detail--${side}`) && !item.side.includes('closing'));
+    const exit = transitions.find(item => item.side.includes(`academic-detail--${side}`) && item.side.includes('closing'));
+    expect(parseFloat(enter!.from) * direction).toBeGreaterThan(0);
+    expect(parseFloat(enter!.to)).toBe(0);
+    expect(parseFloat(exit!.to) * direction).toBeGreaterThan(0);
+    for (const value of [enter!.from, enter!.to, exit!.from, exit!.to]) expect(parseFloat(value.split(' ')[1] ?? '0')).toBe(0);
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await first.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toHaveCSS('translate', 'none');
+  await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0); await expect(first).toBeFocused();
+});
+
 test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado y detalle móvil', async ({ page }, testInfo) => {
   let catalogReads = 0;
   await page.route('**/api/v1/academic/plans', route => route.fulfill({ json: { data: [{ planId: relationPlan.planId, name: relationPlan.name, versions: [{ version: relationPlan.version, isExample: true }] }] } }));
@@ -128,6 +182,10 @@ test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado 
   await b.hover(); await expect(b).toHaveAttribute('data-relation', 'origin');
   await expect(page.locator('[data-course-code="A"]')).not.toHaveAttribute('data-relation');
   expect(await a.evaluate(element => getComputedStyle(element, '::before').boxShadow)).toBe(highlightShadow);
+  const bBox = (await b.boundingBox())!;
+  await page.mouse.move(bBox.x + bBox.width / 2, bBox.y + bBox.height + 3);
+  await expect(page.locator('[data-relation]')).toHaveCount(0);
+  await expect(page.getByLabel('Relaciones resaltadas')).toHaveCount(0);
   await page.locator('[data-course-code="X"]').hover();
   await expect(unrelated).toHaveAttribute('data-relation', 'origin');
   await page.mouse.move(0, 0); await page.clock.fastForward(2000);
@@ -181,6 +239,7 @@ for (const role of ['docente', 'estudiante']) {
         await expect(dialog.getByText(prerequisitePlan.version, { exact: true })).toHaveCount(0);
         await page.keyboard.press('Enter');
         await page.keyboard.press('Shift+Tab'); await expect(close).toBeFocused();
+        await expect(dialog).toHaveCSS('translate', '0px');
         expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
         const bounds = (await dialog.boundingBox())!;
         expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
@@ -403,6 +462,12 @@ test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezcl
   await expect(results.getByRole('button')).toHaveCount(1);
   await results.getByRole('button', { name: /^Camila Demo/ }).click();
   await expect(page.getByRole('region', { name: 'Avance curricular', exact: true })).toContainText('Camila Demo');
+  const board = page.getByRole('region', { name: 'Asignaturas por semestre', exact: true });
+  await page.setViewportSize({ width: 1470, height: 842 });
+  await expect.poll(() => board.evaluate(element => element.scrollWidth - element.clientWidth)).toBe(0);
+  await expect(page.getByRole('group', { name: 'Navegación de semestres' })).toHaveCount(0);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.getByRole('button', { name: 'Ver semestres siguientes' })).toBeEnabled();
   const first = page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true });
   await expectLatestGrade(page, '6,5');
   await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
@@ -593,19 +658,19 @@ test('malla compacta conserva contexto, espacio de lectura y navegación plegabl
   await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
   await page.getByRole('heading', { name: 'Malla curricular', exact: true }).focus();
   await page.evaluate(() => { document.querySelector('.academic-content')!.scrollTop = 0; });
-  const density = await page.evaluate(() => {
-    const visibleBottom = document.querySelector('.academic-content')!.getBoundingClientRect().bottom;
+  await expect(courses(page).first()).toBeInViewport({ ratio: 1 });
+  const completeRows = await page.evaluate(() => {
+    const viewport = document.querySelector('.academic-content')!.getBoundingClientRect();
     const cards = [...document.querySelectorAll('.academic-semester:first-child .academic-course')].map(element => element.getBoundingClientRect());
-    return { first: cards[0]!.top, completeRows: cards.filter(card => card.bottom <= visibleBottom).length };
+    return cards.filter(card => card.top >= viewport.top && card.bottom <= viewport.bottom).length;
   });
-  expect(density.first).toBeLessThan(230);
-  expect(density.completeRows).toBeGreaterThanOrEqual(6);
+  expect(completeRows).toBeGreaterThanOrEqual(6);
   await page.getByRole('button', { name: 'Ocultar navegación', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'Área académica' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'Cerrar sesión', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'Área académica' })).toBeVisible();
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 1470, height: 900 });
   const allVisible = await courses(page).evaluateAll(elements => {
     const viewport = document.querySelector('.academic-content')!.getBoundingClientRect();
     return elements.every(element => { const card = element.getBoundingClientRect(); return card.top >= viewport.top && card.bottom <= viewport.bottom && card.left >= viewport.left && card.right <= viewport.right; });
@@ -680,6 +745,7 @@ test('malla y detalle legibles al redimensionar sin overflow del documento', asy
     }
     await page.getByRole('button', { name: 'Ver asignatura: Det. sociales y salud pública (Introducción a los determinantes sociales de la salud y salud pública)', exact: true }).click();
     const dialog = page.getByRole('dialog'); await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveCSS('translate', '0px');
     const bounds = await dialog.boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
     if (width === 1440) await page.screenshot({ path: testInfo.outputPath('detalle-1440.png') });
