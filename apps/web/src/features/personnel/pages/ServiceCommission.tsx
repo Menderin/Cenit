@@ -271,7 +271,8 @@ export function ServiceCommission() {
           </div>
         </div>}
 
-        {step === 'financiamiento' && <div className="personnel-funding__scroll" role="region" aria-label="Código presupuestario"><table className="personnel-funding">
+        {step === 'financiamiento' && <><p className="personnel-hint">Sólo números. Cada fuente indica el porcentaje que financia (hasta 100 %); la Fuente 2 es opcional, pero si la usas debes completar todos sus campos.</p>
+        <div className="personnel-funding__scroll" role="region" aria-label="Código presupuestario"><table className="personnel-funding">
           <caption className="personnel-sr">Código presupuestario</caption>
           <thead><tr><th scope="col"><span className="personnel-sr">Fuente</span></th><th scope="col">Institución</th><th scope="col">Organización</th><th scope="col">Unidad</th><th scope="col">Proyecto</th><th scope="col">% financ.</th></tr></thead>
           <tbody>{draft.funding.map((row, rowIndex) => <tr key={rowIndex}>
@@ -286,7 +287,7 @@ export function ServiceCommission() {
               </td>;
             })}
           </tr>)}</tbody>
-        </table></div>}
+        </table></div></>}
 
         {step === 'actividad' && <div className="personnel-group">
           <Choice name="activity" legend="¿La comisión corresponde a un evento?" value={draft.activity} onChange={activity => update({ activity })}
@@ -303,6 +304,10 @@ export function ServiceCommission() {
         </div>}
 
         {step === 'revision' && <div>
+          <div className="personnel-review-actions">
+            <button type="button" className="cenit-button" onClick={() => setPreview(true)}><EyeIcon size={16} aria-hidden="true" />Vista previa</button>
+            {pdfActions}
+          </div>
           {review.map(block => {
             const count = stepErrors(block.step);
             return <section className="personnel-review" key={block.step}>
@@ -311,10 +316,6 @@ export function ServiceCommission() {
               <dl>{block.rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd className={value ? undefined : 'personnel-unknown'}>{value ?? 'Sin información'}</dd></div>)}</dl>
             </section>;
           })}
-          <div className="personnel-review-actions">
-            <button type="button" className="cenit-button" onClick={() => setPreview(true)}><EyeIcon size={16} aria-hidden="true" />Vista previa</button>
-            {pdfActions}
-          </div>
         </div>}
 
         <div className="personnel-card__foot">

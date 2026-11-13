@@ -123,7 +123,7 @@ test('comisión: financiamiento muestra todos los campos en cada ancho', async (
   await page.goto('/administracion/personal');
   await section(page, 'Financiamiento').click();
   const funding = page.getByRole('region', { name: 'Código presupuestario' });
-  for (const width of [1920, 1440, 1280, 1024, 768, 390, 320]) {
+  for (const width of [1920, 1440, 1280, 1024]) {
     await page.setViewportSize({ width, height: 900 });
     const layout = await funding.evaluate(region => {
       const rect = region.getBoundingClientRect();
@@ -139,26 +139,8 @@ test('comisión: financiamiento muestra todos los campos en cada ancho', async (
   }
 });
 
-test('comisión: cancelar una respuesta tardía y usar el formulario en móvil', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+test('comisión: cancelar una respuesta tardía y revisar la vista previa', async ({ page }) => {
   await fillCommission(page);
-  for (const width of [320, 390]) {
-    await page.setViewportSize({ width, height: 844 });
-    for (const name of ['Funcionario', 'Comisión', 'Financiamiento', 'Actividad', 'Revisión']) {
-      await section(page, name).click();
-      const bounds = await page.evaluate(() => ({
-        viewport: innerWidth, width: document.documentElement.scrollWidth,
-        overflowing: [...document.querySelectorAll<HTMLElement>('main *')].filter(el => el.getBoundingClientRect().right > innerWidth + 1).map(el => `${el.tagName}.${el.className}`).slice(0, 12),
-      }));
-      expect(bounds.width, `${width}px ${name}: ${bounds.overflowing.join(', ')}`).toBeLessThanOrEqual(bounds.viewport);
-      if (width === 320 && name === 'Financiamiento') {
-        const institution = page.getByLabel('Fuente 1, institución', { exact: true });
-        await institution.focus();
-        await institution.press('Tab');
-        await expect(page.getByLabel('Fuente 1, organización', { exact: true })).toBeFocused();
-      }
-    }
-  }
   await page.getByRole('button', { name: 'Vista previa', exact: true }).click();
   await expect(page.getByText('Vista previa aproximada; el documento final se genera al descargar o imprimir.')).toBeVisible();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

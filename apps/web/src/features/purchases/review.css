@@ -36,4 +36,3 @@
 .purchase-editor .purchase-review__origin { align-items: flex-start; flex-wrap: wrap; gap: 6px 10px; margin-top: 7px; }
 .purchase-editor .purchase-review__original { margin-left: auto; }
 .purchase-editor .purchase-review__original summary { font-size: 12px; }
-@media (max-width: 760px) { .purchase-review__grid, .purchase-review__primary .purchase-review__grid { grid-template-columns: minmax(0, 1fr); gap: 20px; } .purchase-review__toolbar > div { width: 100%; } }

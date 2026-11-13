@@ -105,7 +105,7 @@ test('los gráficos muestran detalles al interactuar y conservan sus cifras acce
   await expect(invoice).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('Inicio reúne seis altas e indicadores en una pantalla de escritorio y se adapta a móvil', async ({ page }) => {
+test('Inicio reúne seis altas e indicadores en una pantalla de escritorio', async ({ page }) => {
   await page.route('**/api/v1/purchases/capabilities', route => route.fulfill({ json: { data: { secondReviewEnabled: true, sheetsSyncEnabled: true } } }));
   await page.route('**/api/v1/purchases/sheets-sync*', route => route.fulfill({ json: { data: { status: 'pending', pending: 2, lastSyncedAt: '2026-10-22T14:00:00.000Z', url: 'https://docs.google.com/spreadsheets/d/qa_only/edit' } } }));
   await page.route('**/api/v1/purchases/summary', route => route.fulfill({ json: { data: {
@@ -132,8 +132,4 @@ test('Inicio reúne seis altas e indicadores en una pantalla de escritorio y se 
     await expect(page.locator('.dashboard-recent li').last()).toBeInViewport();
     await expect.poll(() => page.locator('.admin-content').evaluate(element => element.scrollTop)).toBe(0);
   }
-  await page.setViewportSize({ width: 320, height: 740 });
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.locator('.dashboard-recent li').last().scrollIntoViewIfNeeded();
-  await expect(page.locator('.dashboard-recent li').last()).toBeInViewport();
 });

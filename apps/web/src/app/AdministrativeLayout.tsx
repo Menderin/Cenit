@@ -51,9 +51,9 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
     event.preventDefault();
     const target = event.currentTarget;
     target.focus({ preventScroll: true });
-    guard.request(() => { if (mobile) setCollapsed(true); navigate(target.pathname + target.search); }, target);
+    guard.request(() => { navigate(target.pathname + target.search); }, target);
   }
-  const sidebarState = useSidebar(location.pathname), { collapsed, setCollapsed, mobile } = sidebarState;
+  const sidebarState = useSidebar();
   function navItem({ icon: Icon, ...link }: typeof navigation[number], soon = false) {
     return <NavLink key={link.to} to={link.to} end={link.end} onClick={follow} className={({ isActive }) => `workspace-nav-item${isActive ? ' workspace-nav-item--active' : ''}${soon ? ' workspace-nav-item--soon' : ''}`}>
       {({ isActive }) => <><Icon size={18} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" /><span>{link.label}</span></>}
@@ -67,10 +67,10 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
     : location.pathname.startsWith('/administracion/compras/') ? 'Detalle del registro' : current?.label ?? 'Inicio';
   useEffect(() => { document.title = `Cenit · ${page}`; return () => { document.title = 'Cenit'; }; }, [page]);
   useEffect(() => {
-    if (focusedPath.current === location.pathname || (mobile && !collapsed)) return;
+    if (focusedPath.current === location.pathname) return;
     focusedPath.current = location.pathname;
     main.current?.scrollTo(0, 0); window.scrollTo(0, 0); main.current?.focus({ preventScroll: true });
-  }, [location.pathname, mobile, collapsed]);
+  }, [location.pathname]);
   return <WorkspaceShell sidebarState={sidebarState} className="admin-workspace" skip={{ href: '#admin-content', label: 'Ir al contenido' }}
     navigationId="admin-navigation" navigationLabel="Navegación administrativa" account={{ name: account.name, role: 'Administrativo' }} logout={logout}
     brand={<NavLink to="/administracion" onClick={follow} className="workspace-brand" aria-label="Cenit, inicio administrativo">Cenit<span>Espacio administrativo</span></NavLink>}

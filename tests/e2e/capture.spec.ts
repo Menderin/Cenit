@@ -73,7 +73,7 @@ test('captura: imagen y formulario compartido, guardado sólo al confirmar', asy
   await choose(page);
   await expect(page.getByText('Formato compatible', { exact: false }).first()).toBeVisible();
   await page.getByRole('group', { name: 'Datos principales', exact: true }).getByLabel('Descripción *', { exact: true }).fill('Corrección humana de prueba');
-  for (const width of [1440, 1024, 768, 320]) {
+  for (const width of [1440, 1024]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/capture-review-${width}.png`, fullPage: true });
@@ -96,7 +96,7 @@ test('captura: parcial, fallo comprensible y reintento conserva la imagen', asyn
   await choose(page);
   await expect(page.getByRole('alert')).toContainText('El procesador no está disponible');
   await expect(page.getByAltText('Vista previa de la captura seleccionada')).toBeVisible();
-  for (const width of [1440, 1024, 768, 320]) {
+  for (const width of [1440, 1024]) {
     await page.setViewportSize({ width, height: 900 });
     const message = await page.getByRole('alert').boundingBox();
     for (const name of ['Cambiar captura', 'Reintentar extracción']) {

@@ -44,20 +44,6 @@
   .cenit-access__access { padding-block: 56px; }
   .cenit-access__topography { height: 900px; }
 }
-@media (max-width: 760px) {
-  .cenit-access { padding: 10px; }
-  .cenit-access__shell { min-height: calc(100svh - 20px); border-radius: 13px; }
-  .cenit-access__badge { top: 16px; right: 16px; }
-  .cenit-access__landscape { display: none; }
-  .cenit-access__location { display: none; }
-  .cenit-access__access { justify-content: center; min-height: calc(100svh - 22px); padding: 48px 28px; }
-  .cenit-access__brand { margin-bottom: 40px; }
-  .cenit-access__institution { margin-top: 44px; }
-}
-@media (max-width: 380px) {
-  .cenit-access__access { padding: 36px 20px; }
-  .cenit-access h1 { font-size: 22px; }
-}
 @media (prefers-reduced-motion: reduce) {
   .cenit-access__spinner { animation: none; }
 }
@@ -68,4 +54,3 @@
 .cenit-access__notice { margin: 0 0 20px; font-size: 13px; line-height: 1.6; }
 .cenit-access__account { display: grid; gap: 4px; margin: 24px 0; color: var(--color-ink-subtle); font-size: 13px; line-height: 1.6; }
 
-@media (max-width: 760px) { .cenit-access__password input { min-height: 46px; padding-right: 50px; } .cenit-access__reveal { min-width: 44px; height: 44px; } }

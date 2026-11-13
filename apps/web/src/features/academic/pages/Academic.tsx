@@ -29,7 +29,7 @@ export function Academic() {
   const heading = useRef<HTMLHeadingElement>(null);
   const board = useRef<HTMLDivElement>(null);
   const boardDrag = useRef<{ pointerId: number; startX: number; scrollLeft: number; dragged: boolean } | null>(null);
-  const sidebarState = useSidebar('/academico'), { collapsed: sidebarCollapsed, setCollapsed: setSidebarCollapsed, mobile } = sidebarState;
+  const sidebarState = useSidebar();
   const [pointerFocus, setPointerFocus] = useState(false);
   const [boardScroll, setBoardScroll] = useState({ previous: false, next: false });
   const [boardDragging, setBoardDragging] = useState(false);
@@ -87,7 +87,7 @@ export function Academic() {
       <p className="workspace-eyebrow">Académico</p>
       <details className="academic-nav-group" open>
         <summary><CaretRightIcon className="academic-nav-group__caret" size={12} aria-hidden="true" /><GraduationCapIcon size={18} weight="regular" aria-hidden="true" /><span>Nutrición y Dietética</span></summary>
-        <div className="academic-nav-group__items"><NavLink to="/academico" onClick={() => { if (mobile) setSidebarCollapsed(true); }} className={({ isActive }) => `workspace-nav-item${isActive ? ' workspace-nav-item--active' : ''}`}>
+        <div className="academic-nav-group__items"><NavLink to="/academico" className={({ isActive }) => `workspace-nav-item${isActive ? ' workspace-nav-item--active' : ''}`}>
           {({ isActive }) => <><SquaresFourIcon size={18} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" />Malla curricular</>}
         </NavLink></div>
       </details>
@@ -98,7 +98,6 @@ export function Academic() {
       <div className="academic-toolbar__meta">
         <span className="academic-tag">Demostración</span>
       </div>
-      {sidebarCollapsed && <p className="academic-mobile-account">{account.name} · {role}</p>}
     </>}>
         <main id="academic-content" className="academic-content" tabIndex={-1}>
           <SessionWarning expiresAt={auth.session!.expiresAt} logout={auth.logout} />
@@ -112,8 +111,8 @@ export function Academic() {
               {hasStudent && <>
               {progress.isPending && <p role="status">Cargando el avance curricular…</p>}
               {progress.error && <div className="academic-inline-error"><p role="alert">{progress.error instanceof HttpError && progress.error.status === 404 ? 'Este estudiante aún no tiene un perfil académico preparado.' : progress.error.message}</p><button className="cenit-button" onClick={() => { void progress.refetch(); }}>Reintentar historial</button></div>}
-              {!progress.error && matchingProgress && account.role === 'docente' && <StudentProgressSummary plan={plan} progress={matchingProgress} />}
-              {!progress.error && matchingProgress && <>{account.role === 'estudiante' && <p className="academic-student-identity"><strong>{matchingProgress.student.name}</strong><span>RUT {matchingProgress.student.rut}</span></p>}<ul className="academic-progress-legend" aria-label="Estados del historial">{Object.entries(progressLabels).map(([status, label]) => <li key={status}><span className={`academic-progress-dot academic-progress-dot--${status}`} aria-hidden="true" />{label}</li>)}</ul></>}
+              {!progress.error && matchingProgress && <StudentProgressSummary plan={plan} progress={matchingProgress} />}
+              {!progress.error && matchingProgress && <><ul className="academic-progress-legend" aria-label="Estados del historial">{Object.entries(progressLabels).map(([status, label]) => <li key={status}><span className={`academic-progress-dot academic-progress-dot--${status}`} aria-hidden="true" />{label}</li>)}</ul></>}
               </>}
             </section>
             {(boardScroll.previous || boardScroll.next) && <div className="academic-board-actions" role="group" aria-label="Navegación de semestres">
@@ -152,7 +151,7 @@ export function Academic() {
                 {groups.map(group => {
                   const title = semesterLabel(group.semester, group.semesterEnd), numeral = title.replace(/^Semestres? /, '');
                   return <section className="academic-semester" key={`${group.semester}-${group.semesterEnd}`} aria-label={title}>
-                    <header className="academic-semester__header"><h2 aria-label={title} data-prefix={title.slice(0, title.length - numeral.length)}>{numeral}</h2></header>
+                    <header className="academic-semester__header"><h2 aria-label={title}>{numeral}</h2></header>
                     <ul>{group.courses.map(course => {
                       const record = !progress.error ? courseProgress.get(course.code) : undefined;
                       const label = courseLabel(course.name);

@@ -82,12 +82,6 @@
   .dashboard-monthly__column:hover .dashboard-monthly__bar { background: var(--color-focus); }
 }
 @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 760px) {
-  .admin-content:has(.admin-home) { padding: 20px 16px; }
-  .dashboard-kpis, .dashboard-skeleton { grid-template-columns: minmax(0, 1fr); }
-  .dashboard-monthly__bars { gap: 4px; }
-  .dashboard-monthly__value { display: none; }
-}
 /* Escritorio: Inicio cabe completo en la ventana; si falta alto, desplaza sólo la lista de últimos registros. */
 @media (min-width: 1001px) and (min-height: 600px) {
   .admin-content:has(.admin-home) { display: flex; flex-direction: column; padding-block: 20px; }

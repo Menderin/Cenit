@@ -81,7 +81,7 @@
 .personnel-review dt { color: var(--color-ink-subtle); font-size: 13px; }
 .personnel-review dd { margin: 0; overflow-wrap: anywhere; }
 .personnel-unknown { color: var(--color-ink-subtle); font-style: italic; }
-.personnel-review-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.personnel-review-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin: 0 0 4px; }
 .personnel-download__actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
 
 .personnel-summary { position: sticky; top: 0; padding: 16px 18px; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); }
@@ -115,15 +115,5 @@
   .personnel-layout { grid-template-columns: 160px minmax(0, 1fr); gap: 18px; }
   .personnel-summary { grid-column: 2; position: static; }
 }
-@media (max-width: 760px) {
-  .personnel-heading { flex-wrap: wrap; gap: 12px; }
-  .personnel-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  .personnel-steps { position: static; flex-direction: row; flex-wrap: wrap; }
-  .personnel-steps li { flex: 1 1 120px; min-width: 0; }
-  .personnel-card { min-width: 0; padding: 18px 16px; }
-  .personnel-card__foot { flex-wrap: wrap; }
-  .personnel-grid, .personnel-grid--three { grid-template-columns: minmax(0, 1fr); }
-  .personnel-summary { grid-column: auto; }
-  .personnel-review dl { grid-template-columns: minmax(0, 1fr); gap: 2px; }
-  .personnel-review dd { margin-bottom: 8px; }
-}
+
+.personnel-hint { margin: 0 0 14px; color: var(--color-ink-muted); font-size: 13px; line-height: 1.5; }
