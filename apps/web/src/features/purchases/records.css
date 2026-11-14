@@ -111,24 +111,6 @@
   .purchase-item > summary:hover { background: var(--color-surface-subtle); border-radius: 7px; }
 }
 @media (max-width: 1100px) { .purchase-heading-actions { gap: 12px; } }
-@media (max-width: 760px) {
-  .purchase-page-heading { flex-direction: column; gap: 14px; }
-  .purchase-heading-actions { flex-direction: row; justify-content: flex-start; gap: 10px; }
-  .purchase-list-heading { align-items: flex-start; }
-  .purchase-total { width: 100%; margin: 3px 0 0; }
-  .purchase-input-grid, .purchase-detail-fields { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  .purchase-filter-actions { align-items: flex-start; gap: 12px; }
-  .purchase-item > summary { flex-wrap: wrap; gap: 6px 9px; }
-  .purchase-item__description { flex-basis: calc(100% - 90px); }
-  .purchase-item__provider { margin-left: 24px; flex: 1; max-width: none; }
-  .purchase-item__body, .purchase-detail-fields, .purchase-item .purchase-detail-fields { padding: 16px; }
-  .purchase-disclosure > summary > span:not(.purchase-section-hint) { flex: 1; }
-  .purchase-records td.purchase-empty { text-align: left; }
-  .purchase-pagination { justify-content: space-between; }
-  .purchase-detail-heading { align-items: flex-start; }
-  .purchase-detail-heading__amount { text-align: left; max-width: 100%; }
-  .purchase-detail-heading__amount > strong { font-size: 22px; }
-}
 
 .purchase-sync { margin: 18px 0; padding: 14px 16px; border: 1px solid var(--admin-line); border-radius: 8px; background: var(--color-surface); font-size: 12px; overflow-wrap: anywhere; }
 .purchase-sync > strong { color: var(--admin-ink); font-size: 13px; }
@@ -178,38 +160,6 @@
 .purchase-technical[open] > summary > .purchase-chevron { transform: rotate(90deg); }
 .purchase-detail-meta { gap: 18px 28px; }
 @media (max-width: 1275px) { .purchase-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 760px) {
-  .purchase-heading-actions > .cenit-button--primary { order: -1; }
-  .purchase-pagination-summary, .purchase-pagination-navigation { justify-content: space-between; width: 100%; gap: 10px; }
-  .purchase-pagination-navigation { flex-direction: column; align-items: center; }
-  .purchase-page-neighbor { display: none; }
-  .purchase-date-popover .rdp-months { flex-direction: column; gap: 8px; }
-  .purchase-table-scroll { overflow: visible; border: 0; }
-  .purchase-records table, .purchase-records tbody { display: block; }
-  .purchase-records thead { display: none; }
-  .purchase-records tbody { display: grid; gap: 12px; }
-  .purchase-records tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: 'number money' 'description description' 'date document'; gap: 12px; padding: 16px; border: 1px solid var(--admin-line); border-radius: 12px; background: var(--color-surface); }
-  .purchase-records tbody :is(th, td) { display: block; min-width: 0; max-width: none; padding: 0; border: 0; font-size: 14px; white-space: normal; overflow-wrap: anywhere; }
-  .purchase-request-number { grid-area: number; }
-  .purchase-records td.purchase-money { grid-area: money; font-weight: 600; }
-  .purchase-description { grid-area: description; }
-  .purchase-sent-date { grid-area: date; }
-  .purchase-document-type { grid-area: document; }
-  .purchase-row-actions { grid-area: actions; width: auto; text-align: right; }
-  .purchase-records .purchase-row-caret { display: none; }
-  .purchase-records .purchase-table--actions tbody tr { grid-template-areas: 'number money' 'description description' 'date document' 'actions actions'; }
-  .purchase-records td[data-label] { font-size: 12px; }
-  .purchase-records td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 5px; color: var(--admin-muted); }
-  .purchase-filter-chips button { min-height: 40px; }
-  .purchase-search-bar { gap: 14px; }
-  .purchase-search-bar > .purchase-input { flex-basis: 100%; }
-  .purchase-inline-select { flex: 1 1 calc(50% - 4px); }
-  .purchase-inline-select.purchase-sort { flex: 1 1 145px; }
-  .purchase-filter-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  .purchase-filter-grid > .purchase-input--exact-date, .purchase-filter-grid > .purchase-input--date-range { width: 100%; }
-  .purchase-form-footer { bottom: 0; gap: 8px; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
-  .purchase-form-footer > span { flex-basis: 100%; width: fit-content; font-size: 12px; }
-}
 @media (prefers-reduced-motion: no-preference) {
   .purchase-filter-extra { transition-property: grid-template-rows, opacity; }
   @starting-style {
@@ -223,7 +173,8 @@
 .purchase-heading-actions > .cenit-button { min-height: 44px; padding: 12px 14px; }
 .purchase-heading-actions > .cenit-button--icon { width: 44px; height: 44px; padding: 0; }
 .admin-content .purchase-editor :is(input, textarea, select, summary) { scroll-margin-bottom: 120px; }
-@media (min-width: 761px) and (min-height: 561px) { .purchase-form-footer { bottom: -40px; margin-bottom: -40px; } }
+/* El pie del formulario se pega al borde inferior del área de contenido. */
+.purchase-form-footer { bottom: -40px; margin-bottom: -40px; }
 
 /* Detalle: franja de datos clave, ítems a todo el ancho y dos columnas de lectura. */
 .purchase-detail .purchase-detail-heading { align-items: flex-start; margin-bottom: 18px; }
@@ -240,7 +191,7 @@
 .purchase-detail-items { display: grid; gap: 8px; }
 .purchase-detail-items .purchase-item { margin: 0; }
 .purchase-detail-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; margin-top: 28px; align-items: start; }
-.purchase-detail-stack { display: grid; gap: 16px; min-width: 0; }
+.purchase-detail > .purchase-detail-box { margin-top: 16px; }
 .purchase-detail-box { min-width: 0; padding: 18px 20px; border: 1px solid var(--admin-line); border-radius: var(--radius-lg); }
 .purchase-detail-box > h2 { margin-bottom: 8px; }
 .purchase-detail-box--muted { background: var(--color-surface-subtle); }
@@ -255,10 +206,6 @@
 .purchase-detail-empties > summary::-webkit-details-marker { display: none; }
 .purchase-detail-empties[open] > summary > .purchase-chevron { transform: rotate(90deg); }
 .purchase-detail-box .purchase-technical { margin-top: 8px; }
-@media (max-width: 760px) {
-  .purchase-detail-summary > .purchase-detail-heading__amount, .purchase-detail-facts > div { flex-basis: 100%; border-right: 0; border-bottom: 1px solid var(--admin-line); }
-  .purchase-detail-columns { grid-template-columns: minmax(0, 1fr); }
-}
 
 /* Formulario manual: el resumen ocupa el costado derecho y acompaña al desplazarse. */
 .purchase-form-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; align-items: start; gap: 28px; }

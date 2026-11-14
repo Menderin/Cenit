@@ -25,8 +25,6 @@ export function PurchaseDateRangeField({ id, from, to, onValueChange, onBlur, in
   describedBy?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 760px)').matches);
-  useEffect(() => { const media = window.matchMedia('(max-width: 760px)'); const change = () => setCompact(media.matches); media.addEventListener('change', change); return () => media.removeEventListener('change', change); }, []);
   const appliedRange = selectedRange(from, to);
   const [month, setMonth] = useState<Date>(() => appliedRange?.from ?? new Date());
   const anchor = useRef<HTMLDivElement>(null);
@@ -73,7 +71,7 @@ export function PurchaseDateRangeField({ id, from, to, onValueChange, onBlur, in
       }}>
       <Calendar startMonth={minYear ? calendarDate(`${String(minYear).padStart(4, '0')}-01-01`) : undefined} endMonth={maxYear ? calendarDate(`${String(maxYear).padStart(4, '0')}-12-31`) : undefined}
         disabled={minYear && maxYear ? [{ before: calendarDate(`${String(minYear).padStart(4, '0')}-01-01`)! }, { after: calendarDate(`${String(maxYear).padStart(4, '0')}-12-31`)! }] : undefined}
-        mode="range" selected={appliedRange} month={shownMonth} onMonthChange={setMonth} autoFocus numberOfMonths={compact ? 1 : 2} resetOnSelect
+        mode="range" selected={appliedRange} month={shownMonth} onMonthChange={setMonth} autoFocus numberOfMonths={2} resetOnSelect
         onSelect={range => {
           onValidationError('');
           onValueChange(range?.from ? calendarValue(range.from) : '', range?.to ? calendarValue(range.to) : '');

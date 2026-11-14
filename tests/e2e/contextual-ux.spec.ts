@@ -33,13 +33,10 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   await home();
   await check(before.overview.registeredThisYear + 1, before.pending + 1, (BigInt(before.pendingAmount) + 12345n).toString());
   await expect(monthRow.getByRole('cell').first()).toHaveText(String(beforeMonth + 1));
-  for (const width of [1280, 390]) {
-    await page.setViewportSize({ width, height: 900 });
-    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-    await expect(page.locator('.cenit-page-enter')).toHaveCSS('opacity', '1');
-    await page.screenshot({ path: `tmp/admin-home-connected-${width}.png` });
-  }
   await page.setViewportSize({ width: 1280, height: 900 });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1280);
+  await expect(page.locator('.cenit-page-enter')).toHaveCSS('opacity', '1');
+  await page.screenshot({ path: 'tmp/admin-home-connected-1280.png' });
   await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(number);
 
@@ -84,7 +81,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
 });
 
 test('eliminar confirma, permite cancelar y conserva el registro ante conflicto hasta actualizar', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 }); await login(page, 'administrativo');
+  await login(page, 'administrativo');
   const record = (await fixtures(page, 1))[0]!;
   await expect(page.getByRole('button', { name: 'Eliminar', exact: true })).toHaveCount(0);
   await pending(page).getByRole('link', { name: 'Ver detalles' }).click();
@@ -92,11 +89,9 @@ test('eliminar confirma, permite cancelar y conserva el registro ante conflicto 
   await expect(trigger).toHaveText('');
   await expect(trigger).toHaveAttribute('title', 'Eliminar registro');
   await expect(page.locator('.cenit-page-enter')).toHaveCSS('opacity', '1');
-  await page.screenshot({ path: 'tmp/purchase-delete-detail-390.png' });
   let deletes = 0; page.on('request', request => { if (request.method() === 'DELETE') deletes++; });
   await trigger.click(); await insideViewport(page, dialog(page));
   await expect(dialog(page)).toHaveCSS('opacity', '1');
-  await page.screenshot({ path: 'tmp/purchase-delete-confirm-390.png' });
   await expect(dialog(page).getByRole('button', { name: 'Cancelar', exact: true })).toBeFocused();
   await page.keyboard.press('Escape'); await expect(dialog(page)).toHaveCount(0); await expect(trigger).toBeFocused(); expect(deletes).toBe(0);
   // Another session validates after the table was loaded. A stale delete must not succeed.
@@ -112,7 +107,6 @@ test('eliminar confirma, permite cancelar y conserva el registro ante conflicto 
   await expect(page).toHaveURL(/\/compras\?q=CTX-/);
   await expect(page.getByRole('row').filter({ hasText: record.number })).toHaveCount(0);
   expect(deletes).toBe(2);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
 test('Inicio presenta carga y error con reintento sin mostrar cifras ficticias', async ({ page }) => {
@@ -360,7 +354,7 @@ test('cambiar filtros reinicia páginas, limpiar evita duplicados y el no cambio
   await expect(page.getByRole('button', { name: 'Limpiar', exact: true })).toBeDisabled();
 });
 
-test('marco y navegación permanecen visibles al desplazar listas/formularios, con fallback móvil y poca altura', async ({ page }) => {
+test('marco y navegación permanecen visibles al desplazar listas y formularios', async ({ page }) => {
   await login(page, 'administrativo'); await fixtures(page);
   for (const [width, height] of [[1280, 720], [1440, 900], [1920, 1080]] as const) {
     await page.setViewportSize({ width, height });
@@ -372,7 +366,7 @@ test('marco y navegación permanecen visibles al desplazar listas/formularios, c
   }
   await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
   expect(await page.locator('#admin-content').evaluate(e => e.scrollTop)).toBe(0); await expect(page.locator('#admin-content')).toBeFocused();
-  for (const [width, height] of [[1280, 720], [390, 844], [640, 450]] as const) {
+  for (const [width, height] of [[1280, 720]] as const) {
     await page.setViewportSize({ width, height });
     await page.getByRole('button', { name: 'Agregar ítem', exact: true }).click();
     const field = page.getByLabel(/Proveedor · ítem/).last(); await field.focus(); await field.fill('Foco visible');
@@ -404,7 +398,7 @@ test('reapertura durante salida, ancla retirada y movimiento reducido conservan 
   await expect(pending(page).getByRole('heading', { name: 'Por revisar en Cenit' })).toBeFocused();
 });
 
-test('navegación: ancho fijo del contenido durante apertura/cierre, inversión y panel móvil con foco', async ({ page }) => {
+test('navegación: ancho fijo del contenido durante apertura/cierre, inversión', async ({ page }) => {
   await login(page, 'administrativo');
   const content = page.locator('.workspace-sidebar .workspace-sidebar-content');
   const label = page.locator('.workspace-sidebar a[href="/administracion/compras"] span');
@@ -430,29 +424,4 @@ test('navegación: ancho fijo del contenido durante apertura/cierre, inversión 
   const manual = page.getByRole('link', { name: 'Registrar manualmente', exact: true }), capture = page.getByRole('link', { name: 'Subir captura', exact: true });
   expect((await manual.boundingBox())!.height).toBe((await capture.boundingBox())!.height);
   expect((await capture.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  await page.setViewportSize({ width: 390, height: 844 });
-  const position = () => page.locator('.workspace-main').evaluate(e => ({ top: (e as HTMLElement).offsetTop, width: (e as HTMLElement).offsetWidth, height: (e as HTMLElement).offsetHeight }));
-  const beforeDrawer = await position();
-  await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
-  const drawer = page.getByRole('dialog', { name: 'Navegación administrativa' });
-  await expect(drawer.getByRole('button', { name: 'Cerrar navegación' })).toBeFocused();
-  expect(await position()).toEqual(beforeDrawer);
-  await page.keyboard.press('Shift+Tab'); await expect(drawer.getByRole('button', { name: 'Cerrar sesión', exact: true })).toBeFocused();
-  await page.keyboard.press('Escape'); await expect(drawer).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Mostrar navegación', exact: true })).toBeFocused();
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
-  await expect(drawer).toHaveCSS('translate', 'none');
-  await drawer.getByRole('link', { name: 'Inicio', exact: true }).click();
-  await expect(page).toHaveURL(/\/administracion$/); await expect(drawer).toBeHidden();
-  await expect(page.locator('#admin-content')).toBeFocused();
-  await page.goto('/administracion/compras/nueva');
-  await page.getByLabel('Descripción *', { exact: true }).fill('Borrador conservado');
-  await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
-  const home = drawer.getByRole('link', { name: 'Inicio', exact: true });
-  await home.click(); await page.getByRole('alertdialog').getByRole('button', { name: 'Seguir editando' }).click();
-  await expect(home).toBeFocused();
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: 'Mostrar navegación', exact: true })).toBeFocused();
-  await expect(page.getByLabel('Descripción *', { exact: true })).toHaveValue('Borrador conservado');
 });

@@ -11,7 +11,7 @@
 .capture-drop small { margin-top: 8px; font-size: 12px; }
 .capture-image-area--dragging { outline: 2px solid var(--color-primary); outline-offset: 4px; }
 @media (hover: hover) { .purchase-records .capture-drop:hover { border-color: var(--color-ink-muted); background: var(--color-surface-hover); } }
-.capture-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 24px; margin-top: 24px; }
+.capture-workspace { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: start; gap: 24px; margin-top: 24px; }
 .capture-preview { min-width: 0; margin: 0; padding: 16px; border: 1px solid var(--admin-line); border-radius: 12px; background: var(--color-surface-subtle); }
 .capture-preview figcaption { display: flex; flex-direction: column; gap: 6px; overflow-wrap: anywhere; font-size: 13px; }
 .capture-preview figcaption span, .capture-preview > p { color: var(--admin-muted); font-size: 12px; }
@@ -36,7 +36,6 @@
 .capture-placeholder__fields { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 14px; }
 .capture-placeholder__fields > span { height: 52px; border-radius: 8px; background: var(--color-surface-muted); }
 .capture-placeholder__fields > span:last-child { grid-column: 1 / -1; height: 86px; }
-.capture-preview__expand { display: none !important; }
 .capture-processing { padding: 10px 14px; background: var(--color-surface-muted); color: var(--color-ink-secondary); border-radius: 8px; font-size: 13px; }
 @media (min-width: 1001px) and (min-height: 561px) {
   .admin-content.admin-content--capture { display: flex; flex-direction: column; overflow: clip; padding-bottom: 20px; }
@@ -59,13 +58,6 @@
 @media (max-width: 1000px) {
   .capture-workspace { grid-template-columns: minmax(0, 1fr); }
   .capture-preview__viewport { height: 240px; }
-  .capture-preview--expanded .capture-preview__viewport { height: 65svh; }
-  .capture-preview__expand { display: inline-flex !important; }
-}
-@media (max-width: 760px) {
-  .capture-review .purchase-main-grid { grid-template-columns: minmax(0, 1fr); }
-  .capture-preview { padding: 12px; }
-  .capture-preview .capture-preview__toolbar button { min-height: 44px; }
 }
 
 /* Antes de subir, analizando y error: el panel derecho explica en vez de mostrar un formulario vacío. */

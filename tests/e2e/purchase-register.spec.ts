@@ -47,7 +47,7 @@ test('registro: una lista histórica sin segunda revisión, conservando ambos es
   await page.getByRole('link', { name: 'Volver al registro', exact: true }).click();
   await expect(list.getByText(/^Página 2 de /)).toBeVisible();
   await expect(page.getByRole('button', { name: /^Ordenar por fecha de envío:/ })).toHaveText('Más antiguas');
-  for (const width of [1440, 390]) {
+  for (const width of [1440]) {
     await page.setViewportSize({ width, height: 900 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/purchase-register-${width}.png`, fullPage: true, animations: 'disabled' });
@@ -162,7 +162,7 @@ test('historial de 800 compras: períodos, orden, páginas acotadas y tamaño co
   await page.keyboard.press('Home'); await page.keyboard.press('Enter');
   await expect(menu).toHaveCount(0); await expect(year).toHaveText('Año');
   await expect(list.getByText('1–20 de 800 registros', { exact: true })).toBeVisible();
-  for (const width of [1440, 390, 320]) {
+  for (const width of [1440]) {
     await page.setViewportSize({ width, height: 900 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await expect(list.getByRole('button', { name: 'Página 40', exact: true })).toBeVisible();
@@ -345,10 +345,10 @@ test('fechas segmentadas: placeholders, errores, rangos y calendarios coherentes
   await expect(from).toHaveValue('01'); await expect(fromMonth).toHaveValue('01'); await expect(fromYear).toHaveValue('2024');
   await expect(to).toHaveValue('31'); await expect(toMonth).toHaveValue('12'); await expect(toYear).toHaveValue('2024');
   await clear.click();
-  for (const width of [1440, 1280, 390, 320]) {
+  for (const width of [1440, 1280]) {
     await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ reducedMotion: 'reduce' });
     await rangeTrigger.click(); await expect(range).toBeVisible();
-    await expect(range.locator('.rdp-month')).toHaveCount(width <= 760 ? 1 : 2);
+    await expect(range.locator('.rdp-month')).toHaveCount(2);
     await expect.poll(() => range.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/purchase-date-${width}.png`, animations: 'disabled' });
@@ -437,14 +437,6 @@ test('filtros: distribución estable, teclado virtual, zoom equivalente y movimi
   await expect(page.getByRole('textbox', { name: 'Fecha de envío, mes', exact: true })).toHaveAttribute('placeholder', 'mm');
   await expect(page.getByRole('textbox', { name: 'Fecha de envío, año', exact: true })).toHaveAttribute('placeholder', 'aaaa');
   await clear.click();
-  // 640 CSS pixels reproduce the available width of a 1280-pixel viewport at 200% zoom.
-  await page.setViewportSize({ width: 640, height: 450 });
-  await page.getByRole('button', { name: 'Abrir calendario: rango de fechas', exact: true }).click();
-  const calendar = page.getByRole('dialog', { name: 'Calendario de rango de fechas', exact: true });
-  await expect(calendar.locator('.rdp-month')).toHaveCount(1);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: 'tmp/purchase-date-zoom-equivalent.png', animations: 'disabled' });
-  await page.keyboard.press('Escape');
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.getByRole('button', { name: 'Más filtros', exact: true }).click();

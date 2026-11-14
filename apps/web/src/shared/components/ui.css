@@ -20,7 +20,6 @@
 .cenit-empty--page .cenit-empty__icon { width: 64px; height: 64px; margin-bottom: 20px; }
 .cenit-empty--bordered { padding: 40px 20px; border: 1px dashed var(--color-line-dashed); border-radius: var(--radius-lg); }
 .cenit-empty--compact { padding: 24px 8px; }
-@media (max-width: 760px) { .cenit-empty--page { min-height: 360px; padding-inline: 0; } }
 /* Campo único: texto, número, área y select nativo. */
 .cenit-input { display: block; width: 100%; min-height: 42px; padding: 8px 12px; border: 1px solid var(--color-line-input); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-ink); font: inherit; font-size: 14px; line-height: 1.4; transition: border-color 150ms ease-out, box-shadow 150ms ease-out; }
 textarea.cenit-input { resize: vertical; }
@@ -74,12 +73,6 @@ textarea.cenit-input { resize: vertical; }
   .cenit-calendar .rdp-day_button:hover:not(:disabled) { background: var(--color-surface-muted); }
   .cenit-calendar .rdp-selected .rdp-day_button:hover:not(:disabled) { background: var(--color-primary-hover); }
 }
-@media (max-width: 760px) {
-  .cenit-button--icon { min-width: 44px; width: 44px; height: 44px; }
-  .cenit-input { font-size: 16px; }
-  .cenit-date-field .cenit-date-trigger { min-height: 44px; width: 44px; top: 0; right: 0; }
-  .cenit-date-field .cenit-date-input:not(.cenit-date-input--segmented) > input { min-height: 44px; padding-right: 48px !important; }
-}
 @media (prefers-reduced-motion: no-preference) {
   .cenit-popover { transition-property: opacity, translate, filter; }
   .academic-detail { transition-property: opacity, translate, filter; }
@@ -119,7 +112,6 @@ textarea.cenit-input { resize: vertical; }
   @starting-style { .cenit-confirm { translate: 0 12px; filter: blur(4px); } }
 }
 
-@media (max-width: 380px) { .cenit-calendar { padding: 3px; } }
 
 .cenit-date-input { position: relative; min-width: 0; width: 100%; }
 .cenit-date-input > input, .cenit-date-mask { font-variant-numeric: tabular-nums; }
@@ -172,7 +164,6 @@ textarea.cenit-input { resize: vertical; }
 .cenit-date-input, .cenit-date-input > input, .cenit-date-mask { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; font-variant-numeric: tabular-nums; }
 .cenit-calendar .rdp-caption_label { display: inline-block; font-size: 14px; font-weight: 550; }
 .cenit-calendar .rdp-caption_label::first-letter { text-transform: uppercase; }
-@media (max-width: 760px) { .purchase-input .cenit-date-input, .purchase-input .cenit-date-input > input, .cenit-date-mask { font-size: 16px; } }
 .cenit-confirm--wide { width: min(380px, calc(100vw - 32px)); }
 .cenit-confirm-summary { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; margin: 16px 0 0; padding: 12px 14px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface-subtle); font-variant-numeric: tabular-nums; }
 .cenit-confirm-summary > div { display: contents; }

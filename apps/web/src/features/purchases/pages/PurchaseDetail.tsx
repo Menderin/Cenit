@@ -18,6 +18,13 @@ import '../records.css';
 
 type Values = Record<string, string | null>;
 const display = (key: string, value: string | null) => ['totalAmount', 'taxAmount', 'price', 'amount'].includes(key) ? amountLabel(value) : key === 'sentDate' && value ? dateLabel(value) : value ?? 'Sin dato';
+const accountKeys = ['universityCode', 'campusCode', 'unitCode', 'projectCode', 'accountingCode'];
+// La cuenta completa ya contiene los cinco códigos: se muestran aparte sólo si difieren de ella.
+function withoutRedundantCodes(line: Values): Values {
+  const parts = line.chargeAccount?.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)\.(\d+)$/)?.slice(1);
+  if (!parts || !accountKeys.every((key, i) => line[key] === null || line[key] === parts[i])) return line;
+  return Object.fromEntries(Object.entries(line).filter(([key]) => !accountKeys.includes(key)));
+}
 function Fields({ values, className = 'purchase-detail-fields' }: { values: Values; className?: string }) {
   return <dl className={className}>{Object.entries(values).map(([key, value]) => <div className={key === 'description' ? 'purchase-input--wide' : undefined} key={key}><dt>{purchaseLabels[key]}</dt><dd className={value === null ? 'purchase-detail-empty' : undefined}>{display(key, value)}</dd></div>)}</dl>;
 }
@@ -48,15 +55,13 @@ export function PurchaseDetail() {
         <Fields values={Object.fromEntries(Object.entries(record.header).filter(([key]) => primary.has(key) && key !== 'totalAmount' && key !== 'description'))} className="purchase-detail-facts" />
         <dl className="purchase-detail-facts"><div><dt>{purchaseLabels.documentType}</dt><dd className={record.administrative.documentType === null ? 'purchase-detail-empty' : undefined}>{record.administrative.documentType ? sentenceCase(record.administrative.documentType) : 'Sin dato'}</dd></div><div><dt>Procedencia</dt><dd>{source}</dd></div></dl>
       </section>
-      <section className="purchase-detail-section"><div className="purchase-list-heading"><h2>Ítems de la solicitud</h2><span className="purchase-count">{record.lines.length}</span></div>{!record.lines.length ? <p className="purchase-form-note">No hay ítems registrados.</p> : <div className="purchase-detail-items">{record.lines.map((line, index) => <details className="purchase-item" key={index}><summary><CaretRightIcon className="purchase-chevron" size={15} aria-hidden="true" /><span className="purchase-item__number">Ítem {index + 1}</span><span className="purchase-item__description">{line.description || 'Sin descripción'}</span><span className="purchase-item__provider">{line.provider || 'Sin proveedor'}</span><span className="purchase-item__amount">{amountLabel(line.amount)}</span></summary><Fields values={line} /></details>)}</div>}</section>
+      <section className="purchase-detail-section"><div className="purchase-list-heading"><h2>Ítems de la solicitud</h2><span className="purchase-count">{record.lines.length}</span></div>{!record.lines.length ? <p className="purchase-form-note">No hay ítems registrados.</p> : <div className="purchase-detail-items">{record.lines.map((line, index) => <details className="purchase-item" key={index}><summary><CaretRightIcon className="purchase-chevron" size={15} aria-hidden="true" /><span className="purchase-item__number">Ítem {index + 1}</span><span className="purchase-item__description">{line.description || 'Sin descripción'}</span><span className="purchase-item__provider">{line.provider || 'Sin proveedor'}</span><span className="purchase-item__amount">{amountLabel(line.amount)}</span></summary><Fields values={withoutRedundantCodes(line)} /></details>)}</div>}</section>
       <div className="purchase-detail-columns">
         <section className="purchase-detail-box" aria-labelledby="purchase-request-title"><h2 id="purchase-request-title">Datos de la solicitud</h2><KnownFields values={Object.fromEntries(Object.entries(record.header).filter(([key]) => !primary.has(key)))} /></section>
-        <div className="purchase-detail-stack">
           <section className="purchase-detail-box" aria-labelledby="purchase-admin-title"><h2 id="purchase-admin-title">Seguimiento administrativo</h2><KnownFields values={Object.fromEntries(Object.entries(record.administrative).filter(([key]) => key !== 'documentType'))} /></section>
-          <section className="purchase-detail-box purchase-detail-box--muted" aria-labelledby="purchase-provenance-title"><h2 id="purchase-provenance-title">Registro en Cenit</h2><dl className="purchase-detail-list"><div><dt>Registrado por</dt><dd>{record.createdBy.name}<br />{displayDateTime(record.createdAt)}</dd></div>{secondReviewEnabled && record.reviewedBy && <div><dt>Revisado en Cenit por</dt><dd>{record.reviewedBy.name}<br />{displayDateTime(record.reviewedAt!)}</dd></div>}</dl>
-            <details className="purchase-technical"><summary><CaretRightIcon className="purchase-chevron" size={13} aria-hidden="true" />Información técnica</summary><dl className="purchase-detail-list"><div><dt>ID Cenit</dt><dd>{record.id}</dd></div>{record.capture && <div><dt>Referencia de captura</dt><dd>{record.capture.extractionId}<br />{record.capture.processorVersion}<br />{displayDateTime(record.capture.processedAt)}</dd></div>}</dl></details></section>
-        </div>
       </div>
+      <section className="purchase-detail-box purchase-detail-box--muted" aria-labelledby="purchase-provenance-title"><h2 id="purchase-provenance-title">Registro en Cenit</h2><dl className="purchase-detail-list"><div><dt>Registrado por</dt><dd>{record.createdBy.name}<br />{displayDateTime(record.createdAt)}</dd></div>{secondReviewEnabled && record.reviewedBy && <div><dt>Revisado en Cenit por</dt><dd>{record.reviewedBy.name}<br />{displayDateTime(record.reviewedAt!)}</dd></div>}</dl>
+            <details className="purchase-technical"><summary><CaretRightIcon className="purchase-chevron" size={13} aria-hidden="true" />Información técnica</summary><dl className="purchase-detail-list"><div><dt>ID Cenit</dt><dd>{record.id}</dd></div>{record.capture && <div><dt>Referencia de captura</dt><dd>{record.capture.extractionId}<br />{record.capture.processorVersion}<br />{displayDateTime(record.capture.processedAt)}</dd></div>}</dl></details></section>
     </>}
   </section>;
 }
