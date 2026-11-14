@@ -1,0 +1,8 @@
+.google-access { display: grid; gap: .75rem; margin-top: 1rem; max-width: 100%; }
+.google-access p { margin: 0; font-size: .875rem; line-height: 1.5; }
+.google-access__button { min-width: 0; max-width: 100%; }
+.google-access__button:empty { display: none; }
+.google-account { width: min(28rem, calc(100vw - 2rem)); box-sizing: border-box; border: 1px solid var(--color-line-strong); border-radius: var(--radius-xl); padding: 1.5rem; color: var(--color-ink); background: var(--color-surface); }
+.google-account::backdrop { background: rgb(0 0 0 / 35%); }
+.google-account h2 { margin: 0 0 1rem; }
+.google-account > .cenit-button:last-child { margin-top: 1rem; }

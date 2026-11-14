@@ -12,6 +12,7 @@ import { AcademicService, type AcademicReadRepository } from './modules/academic
 import { PurchaseRepository } from './modules/purchases/repositories/purchases.js';
 import { PurchaseService } from './modules/purchases/services/purchases.js';
 import { purchaseRoutes } from './modules/purchases/routes/index.js';
+import { personnelRoutes } from './modules/personnel/routes/index.js';
 import { registerFrontend } from './infrastructure/plugins/frontend.js';
 import type { ExtractionService } from './modules/purchases/services/extractions.js';
 import type { PurchaseCapabilities } from '@cenit/contracts/purchases';
@@ -51,6 +52,7 @@ export function buildAcademicApp(options: { repository: AcademicReadRepository; 
     return session ? { accountId: session.data.account.id, role: session.data.account.role } : null;
   } : options.authenticate ?? (async () => null);
   app.register(academicRoutes, { prefix: '/api/v1/academic', service: new AcademicService(options.repository), authenticate });
+  app.register(personnelRoutes, { prefix: '/api/v1/personnel', authenticate, allowedOrigins: options.auth?.config.allowedOrigins ?? [] });
   if (options.purchases) app.register(purchaseRoutes, { prefix: '/api/v1/purchases', service: new PurchaseService(options.purchases, options.captureReceipts, options.purchaseCapabilities), capabilities: options.purchaseCapabilities ?? defaultPurchaseCapabilities, sheets: options.sheets, extraction: options.extraction, authenticate, allowedOrigins: options.auth?.config.allowedOrigins ?? [] });
   return app;
 }

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { lstatSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Type } from '@sinclair/typebox';
@@ -8,7 +8,18 @@ import { AccountEmailSchema, AccountSchema } from '@cenit/contracts/auth';
 import { createPool } from '../../apps/api/src/infrastructure/database/connection.js';
 
 const AuthorizationsSchema = Type.Array(Type.Object({ accountId: AccountSchema.properties.id, googleEmail: AccountEmailSchema }, { additionalProperties: false }), { minItems: 1, maxItems: 1000 });
+// File safeguards adapted from Ignacio's SCRUM-124 implementation (15a1e36).
+export function readGoogleAuthorizationsFile(file: string): unknown {
+  const target = resolve(file);
+  const stat = lstatSync(target);
+  if (stat.isSymbolicLink() || !stat.isFile()) throw new Error('Usa un archivo privado regular.');
+  if (stat.size > 256 * 1024) throw new Error('Archivo de autorizaciones demasiado grande.');
+  const input: unknown = JSON.parse(readFileSync(target, 'utf8'));
+  if (!Value.Check(AuthorizationsSchema, input)) throw new Error('Archivo de autorizaciones inválido.');
+  return input;
+}
 export async function configureGoogleAuthorizations(pool: pg.Pool, input: unknown, action: 'authorize' | 'revoke'): Promise<number> {
+  if (action !== 'authorize' && action !== 'revoke') throw new Error('Acción de autorización inválida.');
   if (!Value.Check(AuthorizationsSchema, input)) throw new Error('Archivo de autorizaciones inválido.');
   const entries = input.map(entry => ({ ...entry, googleEmail: entry.googleEmail.toLowerCase() })).sort((a, b) => a.accountId.localeCompare(b.accountId));
   if (new Set(entries.map(entry => entry.accountId)).size !== entries.length || new Set(entries.map(entry => entry.googleEmail)).size !== entries.length) throw new Error('Autorizaciones duplicadas.');
@@ -34,7 +45,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   try {
     const [action, file, ...rest] = process.argv.slice(2);
     if (!['authorize', 'revoke'].includes(action ?? '') || !file || rest.length) throw new Error('Uso inválido.');
-    const input: unknown = JSON.parse(readFileSync(file, 'utf8'));
+    const input = readGoogleAuthorizationsFile(file);
     pool = createPool();
     const count = await configureGoogleAuthorizations(pool, input, action as 'authorize' | 'revoke');
     console.log(`Configuración Google aplicada: ${count} cuentas. No se modificaron contraseñas ni roles.`);

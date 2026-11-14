@@ -84,7 +84,7 @@ async function main() {
   // Override inherited migration credentials/production settings only in these children.
   const env = { ...process.env, APP_ENV: 'development', HOST: '127.0.0.1', PORT: '3000',
     DATABASE_URL_FILE: databaseFile, AUTH_COOKIE_SECURE: 'false',
-    AUTH_ALLOWED_ORIGINS: 'http://127.0.0.1:5173,http://127.0.0.1:3000',
+    AUTH_ALLOWED_ORIGINS: 'http://127.0.0.1:5173,http://127.0.0.1:3000,http://localhost:5173,http://localhost:3000',
     CENIT_API_PROXY: 'http://127.0.0.1:3000' };
   for (const key of ['AUTH_GOOGLE_ENABLED', 'AUTH_GOOGLE_CLIENT_ID', 'OCR_URL', 'CAPTURE_RECEIPT_KEY_FILE', 'CENIT_PURCHASE_SECOND_REVIEW_ENABLED', 'CENIT_PURCHASE_SHEETS_SYNC_ENABLED', 'CENIT_PURCHASE_SHEETS_ID', 'CENIT_PURCHASE_SHEETS_KEY_FILE']) if (local[key]) env[key] = local[key];
   if (env.OCR_URL) {

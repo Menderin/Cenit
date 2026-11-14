@@ -7,6 +7,7 @@ import { PackageIcon } from '@phosphor-icons/react/dist/csr/Package';
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
 import type { Account } from '@cenit/contracts/auth';
 import { SessionWarning } from '../features/auth/components/SessionWarning.js';
+import { GoogleAccount } from '../features/auth/components/GoogleAccess.js';
 import { usePurchaseReturnTo } from '../features/purchases/model/location.js';
 import { usePurchaseGuard } from '../features/purchases/model/guard.js';
 import { useSidebar } from '../shared/lib/use-sidebar.js';
@@ -15,10 +16,10 @@ import './administration.css';
 const navigation = [
   { to: '/administracion', label: 'Inicio', end: true, icon: HouseIcon },
   { to: '/administracion/compras', label: 'Registro de compras', end: false, icon: ShoppingCartSimpleIcon },
+  { to: '/administracion/personal', label: 'Personal', end: false, icon: UsersIcon },
 ];
 // Modules named in the Charter but not yet defined: reachable, visibly secondary.
 const upcoming = [
-  { to: '/administracion/personal', label: 'Personal', end: false, icon: UsersIcon },
   { to: '/administracion/bienes', label: 'Bienes', end: false, icon: PackageIcon },
 ];
 export function AdministrativeLayout({ account, expiresAt, logout, children }: {
@@ -72,7 +73,7 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
     main.current?.scrollTo(0, 0); window.scrollTo(0, 0); main.current?.focus({ preventScroll: true });
   }, [location.pathname, mobile, collapsed]);
   return <WorkspaceShell sidebarState={sidebarState} className="admin-workspace" skip={{ href: '#admin-content', label: 'Ir al contenido' }}
-    navigationId="admin-navigation" navigationLabel="Navegación administrativa" account={{ name: account.name, role: 'Administrativo' }} logout={logout}
+    navigationId="admin-navigation" navigationLabel="Navegación administrativa" account={{ name: account.name, role: 'Administrativo' }} accountActions={<GoogleAccount />} logout={logout}
     brand={<NavLink to="/administracion" onClick={follow} className="workspace-brand" aria-label="Cenit, inicio administrativo">Cenit<span>Espacio administrativo</span></NavLink>}
     navigation={<nav className="workspace-nav" aria-label="Sistemas administrativos">
       <p className="workspace-eyebrow">Administración</p>

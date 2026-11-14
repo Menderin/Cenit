@@ -419,14 +419,15 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/admin-home-${width}.png` });
   }
-  for (const [name, path] of [['Personal', 'personal'], ['Bienes', 'bienes']] as const) {
-    const heading = `${name} todavía no está disponible`;
-    await navigateAdministration(page, name);
-    await expect(page).toHaveURL(new RegExp(`/administracion/${path}$`));
-    await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
-    await expect(page.getByText('Próximamente', { exact: true }).last()).toBeVisible();
-    await page.reload(); await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
-  }
+  await navigateAdministration(page, 'Personal');
+  await expect(page).toHaveURL(/\/administracion\/personal$/);
+  await expect(page.getByRole('heading', { name: 'Nueva comisión de servicios', exact: true })).toBeVisible();
+  await expect(page.getByText('Propuesta pendiente de validación. Usa sólo datos ficticios; la búsqueda muestra funcionarios de ejemplo.')).toBeVisible();
+  await navigateAdministration(page, 'Bienes');
+  await expect(page).toHaveURL(/\/administracion\/bienes$/);
+  await expect(page.getByRole('heading', { name: 'Bienes todavía no está disponible', exact: true })).toBeVisible();
+  await expect(page.getByText('Próximamente', { exact: true }).last()).toBeVisible();
+  await page.reload(); await expect(page.getByRole('heading', { name: 'Bienes todavía no está disponible', exact: true })).toBeVisible();
   await navigateAdministration(page, 'Registro de compras');
   await expect(page.getByRole('link', { name: 'Revisar ejemplo' })).toHaveCount(0);
   await page.goto('/administracion/compras/laboratorio');

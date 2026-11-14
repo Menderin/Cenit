@@ -140,6 +140,13 @@ it('correo coincidente no crea ni vincula identidades; requiere autorización ex
   expect((await complete('link', await challenge('link', await local()), identity)).statusCode).toBe(403);
   expect((await pool.query('SELECT count(*)::int AS n FROM cenit.google_identities')).rows[0].n).toBe(0);
 });
+it('rechaza vincular un subject declarado sin credencial Google', async () => {
+  await authorize();
+  const session = await local();
+  expect((await request('/google/link', { sub: 'unverified-foreign-sub' }, session)).statusCode).toBe(400);
+  expect((await pool.query('SELECT count(*)::int AS n FROM cenit.google_identities')).rows[0].n).toBe(0);
+  expect((await request('/session', undefined, session)).statusCode).toBe(200);
+});
 it('rechaza replay, nonce ajeno, falta de cookie y desafío vencido', async () => {
   const attempt = await challenge('login');
   expect((await request('/google/login', { credential: '{}' })).statusCode).toBe(401);
