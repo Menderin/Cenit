@@ -30,7 +30,9 @@ export function ReviewSection({ title, errors, rows, onEdit }: {
   </section>;
 }
 
-export function DocumentPreview({ onClose, actions, children }: { onClose: () => void; actions: ReactNode; children: ReactNode }) {
+export function DocumentPreview({ onClose, actions, pending, onFix, children }: {
+  onClose: () => void; actions: ReactNode; pending: number; onFix: () => void; children: ReactNode;
+}) {
   const [zoom, setZoom] = useState(100);
   return <div className="personnel-preview">
     <div className="personnel-preview__bar">
@@ -43,6 +45,10 @@ export function DocumentPreview({ onClose, actions, children }: { onClose: () =>
       {actions}
     </div>
     <p className="personnel-preview__notice">Vista previa aproximada; el documento final se genera al descargar o imprimir.</p>
+    {pending > 0 && <div className="personnel-preview__pending" role="status">
+      <p>{pending === 1 ? 'Falta 1 campo por completar o corregir.' : `Faltan ${pending} campos por completar o corregir.`} El documento no se descarga ni se imprime hasta resolverlos.</p>
+      <button type="button" className="cenit-button" onClick={onFix}>Corregir</button>
+    </div>}
     <div className="personnel-preview__sheet" role="region" aria-label="Vista previa del documento" tabIndex={0}><div style={{ zoom: zoom / 100 }}>{children}</div></div>
   </div>;
 }

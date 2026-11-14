@@ -596,7 +596,7 @@ test('laboratorio: formato inválido bloquea transferencia, original intacto y b
   await page.getByRole('button', { name: 'Restablecer ejemplo' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Descartar y restablecer' }).click();
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
-  await expect(page.getByLabel('Monto total (CLP)', { exact: true })).toHaveValue('200000');
+  await expect(page.getByLabel('Monto total (CLP)', { exact: true })).toHaveValue('200.000');
   await page.getByLabel('Datos de ejemplo').selectOption('failure');
   await expect(page.getByRole('button', { name: 'Continuar al formulario' })).toHaveCount(0);
   await page.getByLabel('Datos de ejemplo').selectOption('partial');

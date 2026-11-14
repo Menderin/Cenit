@@ -2,9 +2,9 @@
 
 /** RUT con puntos y guion: «154829032» → «15.482.903-2». El último carácter es el dígito verificador. */
 export function formatRut(input: string) {
-  const clean = input.replace(/[^0-9kK]/g, '').toUpperCase();
+  const clean = input.replace(/[^0-9kK]/g, '').toUpperCase().slice(0, 9);
   if (clean.length <= 1) return clean;
-  const body = clean.slice(0, -1).replace(/K/g, '').slice(0, 8), dv = clean.slice(-1);
+  const body = clean.slice(0, -1).replace(/K/g, ''), dv = clean.slice(-1);
   return `${body.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}-${dv}`;
 }
 

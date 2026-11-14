@@ -92,14 +92,19 @@ export function LeaveRequest() {
     if (invalid) { setFocusKey({ key: invalid }); return; }
     go(leaveSteps[leaveSteps.findIndex(item => item.key === step) + 1]!.key);
   }
-  async function preparePdf(action: 'download' | 'print') {
-    if (pdf.busy.current) return;
+  // Marca los errores de todas las secciones y lleva al primero; devuelve false si no hay.
+  function showFirstError() {
     for (const target of formSteps) {
       const invalid = check(target);
-      if (invalid) { go(target); setFocusKey({ key: invalid }); return; }
+      if (invalid) { go(target); setFocusKey({ key: invalid }); return true; }
     }
+    return false;
+  }
+  async function preparePdf(action: 'download' | 'print') {
+    if (pdf.busy.current || showFirstError()) return;
     await pdf.run(action);
   }
+  const pending = formSteps.reduce((total, target) => total + new Set([...Object.keys(validateLeaveStep(draft, target)), ...leaveStepFields[target].filter(key => serverErrors.current[key])]).size, 0);
 
   const index = leaveSteps.findIndex(item => item.key === step), current = leaveSteps[index]!;
   const stepErrors = (target: LeaveStep) => target === 'revision' ? 0 : leaveStepFields[target].filter(key => errors[key]).length;
@@ -130,7 +135,7 @@ export function LeaveRequest() {
       confirmLabel="Descartar" destructive onCancel={() => setDiscardOrigin(null)} onConfirm={() => { setDiscardOrigin(null); reset(); }} />
 
     {pdf.message && <p role="alert" className="personnel-print-error">{pdf.message}</p>}
-    {preview ? <DocumentPreview onClose={() => setPreview(false)} actions={pdfActions}><LeaveDocument draft={draft} /></DocumentPreview>
+    {preview ? <DocumentPreview onClose={() => setPreview(false)} actions={pdfActions} pending={pending} onFix={showFirstError}><LeaveDocument draft={draft} /></DocumentPreview>
     : <div className="personnel-layout">
       <StepNav steps={leaveSteps} current={step} errors={stepErrors} complete={complete} onGo={go} />
 

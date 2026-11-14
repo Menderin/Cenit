@@ -97,14 +97,19 @@ export function ServiceCommission() {
     if (invalid) { setFocusKey({ key: invalid }); return; }
     go(steps[steps.findIndex(item => item.key === step) + 1]!.key);
   }
-  async function preparePdf(action: 'download' | 'print') {
-    if (pdf.busy.current) return;
+  // Marca los errores de todas las secciones y lleva al primero; devuelve false si no hay.
+  function showFirstError() {
     for (const target of formSteps) {
       const invalid = check(target);
-      if (invalid) { go(target); setFocusKey({ key: invalid }); return; }
+      if (invalid) { go(target); setFocusKey({ key: invalid }); return true; }
     }
+    return false;
+  }
+  async function preparePdf(action: 'download' | 'print') {
+    if (pdf.busy.current || showFirstError()) return;
     await pdf.run(action);
   }
+  const pending = formSteps.reduce((total, target) => total + new Set([...Object.keys(validateStep(draft, target)), ...stepFields[target].filter(key => serverErrors.current[key])]).size, 0);
 
   const index = steps.findIndex(item => item.key === step), current = steps[index]!;
   const stepErrors = (target: Step) => target === 'revision' ? 0 : stepFields[target].filter(key => errors[key]).length;
@@ -138,7 +143,7 @@ export function ServiceCommission() {
       confirmLabel="Descartar" destructive onCancel={() => setDiscardOrigin(null)} onConfirm={() => { setDiscardOrigin(null); reset(); }} />
 
     {pdf.message && <p role="alert" className="personnel-print-error">{pdf.message}</p>}
-    {preview ? <DocumentPreview onClose={() => setPreview(false)} actions={pdfActions}><CommissionDocument draft={draft} /></DocumentPreview>
+    {preview ? <DocumentPreview onClose={() => setPreview(false)} actions={pdfActions} pending={pending} onFix={showFirstError}><CommissionDocument draft={draft} /></DocumentPreview>
     : <div className="personnel-layout">
       <StepNav steps={steps} current={step} errors={stepErrors} complete={complete} onGo={go} />
 

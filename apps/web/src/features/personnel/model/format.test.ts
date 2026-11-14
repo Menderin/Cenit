@@ -9,6 +9,7 @@ describe('formato mientras se escribe', () => {
     expect(formatRut('1234')).toBe('123-4');
     expect(formatRut('1')).toBe('1');
     expect(formatRut('ab')).toBe('');
+    expect(formatRut('15482903211111111111')).toBe('15.482.903-2');
   });
   it('separa miles del importe y conserva hasta dos decimales', () => {
     expect(formatAmount('186000')).toBe('186.000');

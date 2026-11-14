@@ -141,3 +141,5 @@
 .personnel-documents p { margin: 0; color: var(--color-ink-muted); font-size: 13px; line-height: 1.5; }
 .personnel-documents small { margin-top: auto; padding-top: 6px; color: var(--color-ink-subtle); font-size: 12px; }
 .personnel-search__input::-webkit-search-decoration, .personnel-search__input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.personnel-preview__pending { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; border-top: 1px solid var(--color-line-soft); background: var(--color-surface); }
+.personnel-preview__pending p { margin: 0; color: var(--color-danger); font-size: 13px; }

@@ -105,7 +105,7 @@ test('los gráficos muestran detalles al interactuar y conservan sus cifras acce
   await expect(invoice).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('Inicio reúne seis altas e indicadores en una pantalla de escritorio', async ({ page }) => {
+test('Inicio reúne seis u ocho altas según el ancho e indicadores en una pantalla de escritorio', async ({ page }) => {
   await page.route('**/api/v1/purchases/capabilities', route => route.fulfill({ json: { data: { secondReviewEnabled: true, sheetsSyncEnabled: true } } }));
   await page.route('**/api/v1/purchases/sheets-sync*', route => route.fulfill({ json: { data: { status: 'pending', pending: 2, lastSyncedAt: '2026-10-22T14:00:00.000Z', url: 'https://docs.google.com/spreadsheets/d/qa_only/edit' } } }));
   await page.route('**/api/v1/purchases/summary', route => route.fulfill({ json: { data: {
@@ -113,23 +113,24 @@ test('Inicio reúne seis altas e indicadores en una pantalla de escritorio', asy
       documentTotal: '28000000', documentTotalThisMonth: '3520000', registrationMonth: '2026-10', registeredThisYear: 48, registeredThisMonth: 21,
       sourceCounts: { manual: 50, image_capture: 26, contract_example: 10 },
       registrationDays: Array.from({ length: 30 }, (_, index) => ({ date: new Date(Date.UTC(2026, 8, 23 + index)).toISOString().slice(0, 10), count: index % 4 })),
-      recentRecords: Array.from({ length: 6 }, (_, index) => ({ id: `00000000-0000-4000-8000-00000000000${index}`, requestNumber: `QA-2026-00${index}`, description: 'Materiales para laboratorio de Nutrición y Dietética', sentDate: '2026-10-22', totalAmount: '1200000', createdAt: '2026-10-22T14:00:00.000Z', source: 'manual' })),
+      recentRecords: Array.from({ length: 8 }, (_, index) => ({ id: `00000000-0000-4000-8000-0000000000${String(index).padStart(2, '0')}`, requestNumber: `QA-2026-0${String(index).padStart(2, '0')}`, description: 'Materiales para laboratorio de Nutrición y Dietética', sentDate: '2026-10-22', totalAmount: '1200000', createdAt: '2026-10-22T14:00:00.000Z', source: 'manual' })),
     },
   } } }));
   await page.setViewportSize({ width: 1280, height: 720 });
   await login(page, 'administrativo');
-  await expect(page.locator('.dashboard-recent li')).toHaveCount(6);
+  await expect(page.locator('.dashboard-recent li:visible')).toHaveCount(6);
   await expect(page.locator('.dashboard-recent li').first()).toContainText('22/10/2026');
   await expect(page.getByRole('region', { name: 'Sincronización con Google Sheets' })).toContainText('Pendiente de sincronización');
   await expect(page.locator('.dashboard-kpis > div').nth(0).locator('dd').first()).toHaveText('48');
   await expect(page.locator('.dashboard-kpis > div').nth(2).locator('dd').first()).toHaveText(amountLabel('3520000'));
-  for (const width of [1280, 1366, 1440]) {
-    await page.setViewportSize({ width, height: 720 });
+  for (const [width, height] of [[1280, 720], [1366, 768], [1440, 900], [1920, 1080]] as const) {
+    await page.setViewportSize({ width, height });
     await expect.poll(() => page.locator('.admin-content').evaluate(element => element.scrollHeight - element.clientHeight)).toBeLessThanOrEqual(1);
     // Whatever does not fit scrolls inside «Últimos registros», never the page.
     await expect(page.locator('.dashboard-recent')).toBeInViewport({ ratio: 1 });
-    await page.locator('.dashboard-recent li').last().scrollIntoViewIfNeeded();
-    await expect(page.locator('.dashboard-recent li').last()).toBeInViewport();
+    await expect(page.locator('.dashboard-recent li:visible')).toHaveCount(width >= 1600 ? 8 : 6);
+    await page.locator('.dashboard-recent li:visible').last().scrollIntoViewIfNeeded();
+    await expect(page.locator('.dashboard-recent li:visible').last()).toBeInViewport();
     await expect.poll(() => page.locator('.admin-content').evaluate(element => element.scrollTop)).toBe(0);
   }
 });
