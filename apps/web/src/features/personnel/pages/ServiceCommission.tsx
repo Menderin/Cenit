@@ -16,6 +16,7 @@ import { PdfActions, usePersonnelPdf } from '../components/PdfOutput.js';
 import { DocumentPreview, ReviewSection, StepNav } from '../components/PersonnelLayout.js';
 import { units } from '../model/staff.js';
 import { requestCommissionPdf } from '../api/commission.js';
+import { formatAmount } from '../model/format.js';
 import { categoryLabels, emptyCommission, fileName, plantLabels, stepFields, steps, validateStep, type CommissionDraft, type Errors, type Step } from '../model/commission.js';
 import '../personnel.css';
 
@@ -179,7 +180,7 @@ export function ServiceCommission() {
             <Field name="totalDays" label="Total de días" value={draft.totalDays} error={errors.totalDays} onChange={totalDays => update({ totalDays })} />
           </div>
           <div className="personnel-grid">
-            <Field name="allowance" label="Importe del viático" optional inputMode="decimal" placeholder="Ej.: 186.000" value={draft.allowance} error={errors.allowance} onChange={allowance => update({ allowance })} />
+            <Field name="allowance" label="Importe del viático" optional inputMode="decimal" placeholder="Ej.: 186.000" value={draft.allowance} error={errors.allowance} onChange={allowance => update({ allowance: formatAmount(allowance) })} />
             <Choice name="currency" legend="Moneda" value={draft.currency} error={errors.currency} onChange={currency => update({ currency })}
               options={[{ value: 'CLP', label: 'CLP' }, { value: 'USD', label: 'USD' }]} />
           </div>

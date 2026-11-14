@@ -15,6 +15,7 @@ import { PdfActions, usePersonnelPdf } from '../components/PdfOutput.js';
 import { DocumentPreview, ReviewSection, StepNav } from '../components/PersonnelLayout.js';
 import { units } from '../model/staff.js';
 import { requestLeavePdf } from '../api/leave.js';
+import { formatRut } from '../model/format.js';
 import { emptyLeave, leaveFileName, leaveStepFields, leaveSteps, leaveTypeLabels, validateLeaveStep, type Errors, type LeaveDraft, type LeaveStep } from '../model/leave.js';
 import '../personnel.css';
 
@@ -140,7 +141,7 @@ export function LeaveRequest() {
           <StaffSearch id={fieldId('name')} label="Nombre del funcionario" value={draft.name} error={errors.name} onChange={name => update({ name })}
             onPick={person => update({ name: person.name, rut: person.rut, unit: person.unit })} />
           <div className="personnel-grid">
-            <Field name="rut" label="RUT" placeholder="Ej.: 12.345.678-5" value={draft.rut} error={errors.rut} onChange={rut => update({ rut })} />
+            <Field name="rut" label="RUT" placeholder="Ej.: 12.345.678-5" value={draft.rut} error={errors.rut} onChange={rut => update({ rut: formatRut(rut) })} />
             <DateInputField name="requestDate" label="Fecha de la solicitud" value={draft.requestDate} error={errors.requestDate} onChange={requestDate => update({ requestDate })} />
           </div>
           <Field name="unit" label="Unidad en que trabaja" value={draft.unit} error={errors.unit} list="leave-units" onChange={unit => update({ unit })} />

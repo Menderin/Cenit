@@ -16,7 +16,8 @@ export function StaffSearch({ id, label = 'Nombre completo', value, error, onCha
     <label htmlFor={id}>{label}</label>
     <div className="personnel-search">
       <MagnifyingGlassIcon size={16} aria-hidden="true" />
-      <input id={id} className="cenit-input" value={value} autoComplete="off" placeholder="Busca por nombre, RUT o cargo"
+      {/* type="search" y un nombre propio evitan que Safari y Chrome ofrezcan contactos del equipo. */}
+      <input id={id} className="cenit-input personnel-search__input" type="search" name="cenit-staff-search" value={value} autoComplete="off" spellCheck={false} data-1p-ignore data-lpignore="true" placeholder="Busca por nombre, RUT o cargo"
         role="combobox" aria-expanded={shown} aria-controls={listId} aria-autocomplete="list"
         aria-activedescendant={shown ? `${listId}-${active}` : undefined}
         aria-invalid={!!error} aria-describedby={error ? errorId : undefined}

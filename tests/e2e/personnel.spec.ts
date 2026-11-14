@@ -246,6 +246,8 @@ async function fillLeave(page: Page) {
   await page.getByLabel('Nombre del funcionario', { exact: true }).fill('Camila');
   await page.getByRole('option', { name: /Camila Soto Araya/ }).click();
   await expect(page.getByLabel('RUT', { exact: true })).toHaveValue('15.482.903-2');
+  await page.getByLabel('RUT', { exact: true }).fill('154829032');
+  await expect(page.getByLabel('RUT', { exact: true })).toHaveValue('15.482.903-2');
   await page.getByRole('button', { name: 'Continuar a Permiso' }).click();
 }
 
@@ -293,4 +295,20 @@ test('permiso: errores del servidor vuelven al campo y conservan los datos', asy
   await expect(page.getByLabel('Observaciones (opcional)', { exact: true })).toBeFocused();
   await expect(page.getByText('El texto no cabe en la plantilla; acórtalo.')).toBeVisible();
   await expect(page.getByLabel('Observaciones (opcional)', { exact: true })).toHaveValue('Texto ficticio');
+});
+
+test('formato al escribir: viático con miles y fecha que se borra de corrido', async ({ page }) => {
+  await login(page, 'administrativo');
+  await page.goto('/administracion/personal/comision');
+  await section(page, 'Comisión').click();
+  await page.getByLabel('Importe del viático (opcional)', { exact: true }).fill('186000');
+  await expect(page.getByLabel('Importe del viático (opcional)', { exact: true })).toHaveValue('186.000');
+  const from = page.getByLabel('Desde', { exact: true });
+  await from.pressSequentially('10112026');
+  await expect(from).toHaveValue('10/11/2026');
+  await from.press('End');
+  for (let i = 0; i < 5; i++) await from.press('Backspace');
+  await expect(from).toHaveValue('10/1');
+  for (let i = 0; i < 3; i++) await from.press('Backspace');
+  await expect(from).toHaveValue('');
 });

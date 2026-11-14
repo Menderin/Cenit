@@ -140,3 +140,4 @@
 .personnel-documents h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 15px; }
 .personnel-documents p { margin: 0; color: var(--color-ink-muted); font-size: 13px; line-height: 1.5; }
 .personnel-documents small { margin-top: auto; padding-top: 6px; color: var(--color-ink-subtle); font-size: 12px; }
+.personnel-search__input::-webkit-search-decoration, .personnel-search__input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
