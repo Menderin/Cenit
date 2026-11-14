@@ -233,10 +233,16 @@ test('personal: la entrada lleva a cada documento', async ({ page }) => {
   await page.getByRole('link', { name: /Solicitud de permiso/ }).click();
   await expect(page).toHaveURL(/\/administracion\/personal\/permiso$/);
   await expect(page.getByRole('heading', { name: 'Nueva solicitud de permiso' })).toBeVisible();
-  await page.goBack();
+  const location = page.getByRole('navigation', { name: 'Ubicación' });
+  await expect(location.getByRole('link', { name: 'Personal' })).toBeVisible();
+  await expect(location.getByText('Solicitud de permiso')).toHaveAttribute('aria-current', 'page');
+  await page.getByRole('link', { name: 'Cambiar de documento' }).click();
+  await expect(page).toHaveURL(/\/administracion\/personal$/);
   await page.getByRole('link', { name: /Comisión de servicios/ }).click();
   await expect(page).toHaveURL(/\/administracion\/personal\/comision$/);
   await expect(page.getByRole('heading', { name: 'Nueva comisión de servicios' })).toBeVisible();
+  await location.getByRole('link', { name: 'Personal' }).click();
+  await expect(page).toHaveURL(/\/administracion\/personal$/);
 });
 
 const leaveEndpoint = '**/api/v1/personnel/leave-requests/pdf';

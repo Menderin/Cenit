@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { Link } from 'react-router';
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft';
 import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check';
 import { MagnifyingGlassMinusIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlassMinus';
@@ -6,6 +7,11 @@ import { MagnifyingGlassPlusIcon } from '@phosphor-icons/react/dist/csr/Magnifyi
 import { PencilSimpleIcon } from '@phosphor-icons/react/dist/csr/PencilSimple';
 
 // Piezas de pantalla compartidas por los documentos de Personal.
+// Regreso a la entrada para cambiar de documento; si hay datos sin guardar, el bloqueo de navegación pide confirmar.
+export function BackToPersonnel() {
+  return <Link to="/administracion/personal" className="personnel-back"><ArrowLeftIcon size={16} aria-hidden="true" />Cambiar de documento</Link>;
+}
+
 export function StepNav<T extends string>({ steps, current, errors, complete, onGo }: {
   steps: { key: T; label: string }[]; current: T; errors: (step: T) => number; complete: (step: T) => boolean; onGo: (step: T) => void;
 }) {

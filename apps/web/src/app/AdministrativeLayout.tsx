@@ -21,6 +21,10 @@ const navigation = [
 const upcoming = [
   { to: '/administracion/bienes', label: 'Bienes', end: false, icon: PackageIcon },
 ];
+// Documentos de Personal: su ruta superior sale de Personal.
+const personnelDocuments: Record<string, string> = {
+  '/administracion/personal/comision': 'Comisión de servicios', '/administracion/personal/permiso': 'Solicitud de permiso',
+};
 export function AdministrativeLayout({ account, expiresAt, logout, children }: {
   account: Account; expiresAt: string; logout: (origin?: HTMLElement) => Promise<void>; children: ReactNode;
 }) {
@@ -64,7 +68,9 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
     : location.pathname === '/administracion/compras/captura' ? 'Registrar desde captura'
     : location.pathname === '/administracion/compras/laboratorio' ? 'Revisar datos'
     : /\/administracion\/compras\/[^/]+\/editar$/.test(location.pathname) ? 'Editar compra'
-    : location.pathname.startsWith('/administracion/compras/') ? 'Detalle del registro' : current?.label ?? 'Inicio';
+    : location.pathname.startsWith('/administracion/compras/') ? 'Detalle del registro'
+    : personnelDocuments[location.pathname] ?? current?.label ?? 'Inicio';
+  const parent = page === current?.label ? null : current?.to === '/administracion/personal' ? { label: 'Personal', to: current.to } : { label: 'Compras', to: returnTo };
   useEffect(() => { document.title = `Cenit · ${page}`; return () => { document.title = 'Cenit'; }; }, [page]);
   useEffect(() => {
     if (focusedPath.current === location.pathname) return;
@@ -80,8 +86,8 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
       <p className="workspace-eyebrow workspace-eyebrow--section">Próximamente</p>
       {upcoming.map(link => navItem(link, true))}
     </nav>}
-    toolbarStart={<nav className="admin-breadcrumb" aria-label="Ubicación"><NavLink to="/administracion" onClick={follow}>Administración</NavLink><CaretRightIcon size={12} aria-hidden="true" />{page !== current?.label && <><NavLink to={returnTo} onClick={follow}>Compras</NavLink><CaretRightIcon size={12} aria-hidden="true" /></>}<span aria-current="page" data-confirm-fallback tabIndex={-1}>{page}</span></nav>}>
-    <main className={`admin-content${location.pathname === '/administracion/compras/captura' ? ' admin-content--capture' : ''}`} id="admin-content" ref={main} tabIndex={-1} onFocusCapture={event => revealFocus(event.target)}>
+    toolbarStart={<nav className="admin-breadcrumb" aria-label="Ubicación"><NavLink to="/administracion" onClick={follow}>Administración</NavLink><CaretRightIcon size={12} aria-hidden="true" />{parent && <><NavLink to={parent.to} onClick={follow}>{parent.label}</NavLink><CaretRightIcon size={12} aria-hidden="true" /></>}<span aria-current="page" data-confirm-fallback tabIndex={-1}>{page}</span></nav>}>
+    <main className={`admin-content${location.pathname === '/administracion/compras/captura' ? ' admin-content--capture' : ''}${location.pathname === '/administracion/personal' ? ' admin-content--fill' : ''}`} id="admin-content" ref={main} tabIndex={-1} onFocusCapture={event => revealFocus(event.target)}>
       <SessionWarning expiresAt={expiresAt} logout={logout} />
       <div key={location.pathname} className="cenit-page-enter">{children}</div>
     </main>

@@ -12,7 +12,7 @@ import { StaffSearch } from '../components/StaffSearch.js';
 import { LeaveDocument } from '../components/LeaveDocument.js';
 import { personnelForm } from '../components/FormControls.js';
 import { PdfActions, usePersonnelPdf } from '../components/PdfOutput.js';
-import { DocumentPreview, ReviewSection, StepNav } from '../components/PersonnelLayout.js';
+import { BackToPersonnel, DocumentPreview, ReviewSection, StepNav } from '../components/PersonnelLayout.js';
 import { units } from '../model/staff.js';
 import { requestLeavePdf } from '../api/leave.js';
 import { formatRut } from '../model/format.js';
@@ -125,7 +125,7 @@ export function LeaveRequest() {
 
   return <section className="personnel-page">
     <div className="personnel-heading">
-      <div><h1>Nueva solicitud de permiso</h1><p>Propuesta pendiente de validación. Usa sólo datos ficticios; la búsqueda muestra funcionarios de ejemplo.</p></div>
+      <div><BackToPersonnel /><h1>Nueva solicitud de permiso</h1><p>Propuesta pendiente de validación. Usa sólo datos ficticios; la búsqueda muestra funcionarios de ejemplo.</p></div>
       <div className="personnel-heading__actions">
         {!preview && step !== 'revision' && <button type="button" className="cenit-button" onClick={() => setPreview(true)}><EyeIcon size={16} aria-hidden="true" />Vista previa</button>}
         <button type="button" className="cenit-button cenit-button--quiet" disabled={!dirty} onClick={event => setDiscardOrigin(event.currentTarget)}><TrashIcon size={16} aria-hidden="true" />Descartar</button>
