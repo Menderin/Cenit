@@ -3,8 +3,8 @@ import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGl
 import { searchStaff, type Staff } from '../model/staff.js';
 
 // Nombre del funcionario con sugerencias de la dotación; también acepta texto libre.
-export function StaffSearch({ id, value, error, onChange, onPick }: {
-  id: string; value: string; error?: string; onChange: (value: string) => void; onPick: (person: Staff) => void;
+export function StaffSearch({ id, label = 'Nombre completo', value, error, onChange, onPick }: {
+  id: string; label?: string; value: string; error?: string; onChange: (value: string) => void; onPick: (person: Staff) => void;
 }) {
   const listId = useId(), errorId = useId();
   const [open, setOpen] = useState(false), [active, setActive] = useState(0);
@@ -13,7 +13,7 @@ export function StaffSearch({ id, value, error, onChange, onPick }: {
   const shown = results.length > 0;
   function pick(person: Staff) { picked.current = person.name; onPick(person); setOpen(false); }
   return <div className="personnel-field">
-    <label htmlFor={id}>Nombre completo</label>
+    <label htmlFor={id}>{label}</label>
     <div className="personnel-search">
       <MagnifyingGlassIcon size={16} aria-hidden="true" />
       <input id={id} className="cenit-input" value={value} autoComplete="off" placeholder="Busca por nombre, RUT o cargo"

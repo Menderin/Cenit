@@ -1,6 +1,6 @@
 # Pruebas y criterios de aceptación
 
-Esta matriz ayuda al equipo a revisar el acceso a Cenit, el registro de compras, la propuesta de Comisión de servicios y la consulta académica. Para cada caso indica qué preparar, qué resultado esperar, qué pruebas existen y qué falta validar. Corresponde al MVP de Compras y académico; Personal y Bienes requieren sus propios casos cuando se definan sus requisitos.
+Esta matriz ayuda al equipo a revisar el acceso a Cenit, el registro de compras, las propuestas de Comisión de servicios y Solicitud de permiso y la consulta académica. Para cada caso indica qué preparar, qué resultado esperar, qué pruebas existen y qué falta validar. Corresponde al MVP de Compras y académico; Personal y Bienes requieren sus propios casos cuando se definan sus requisitos.
 
 Una prueba automática correcta demuestra el comportamiento que comprueba. La aceptación del contenido curricular, la precisión del OCR y la revisión con usuarios requieren además las fuentes y los criterios acordados con sus responsables.
 
@@ -65,6 +65,17 @@ Estos casos usan exclusivamente datos ficticios. Gael informó que los campos se
 | Descargar e imprimir el resultado | Formulario completo con tildes y ceros iniciales; evento y descripción alternativos | El servidor devuelve una sola hoja carta, con marca «BORRADOR», casillas y espacios de firma vacíos; las acciones usan el PDF recibido | [API/PDF](../apps/api/src/modules/personnel/services/personnel.test.ts), [navegador](../tests/e2e/personnel.spec.ts), [impresión](../apps/web/src/features/personnel/model/pdf.test.ts) | Cotejo visual completo con la plantilla original, impresión física y aceptación del formato |
 | Fallos, cancelación y sesión | Provocar fallo 503, cancelar o editar durante la respuesta; cerrar sesión y provocar 401 | No se confirma una descarga tardía; el borrador se conserva ante fallo o cancelación, y se descarta al abandonar la sesión | [Navegador](../tests/e2e/personnel.spec.ts), [cliente PDF](../apps/web/src/features/personnel/api/commission.test.ts) | Comprobación en los navegadores de la demostración |
 | Teclado | Completar y corregir con teclado; recorrer las secciones y navegar el presupuesto | Foco en el campo incorrecto; página sin desbordamiento horizontal y campos de financiamiento visibles y accesibles con teclado | [Navegador](../tests/e2e/personnel.spec.ts) | Revisión con lector de pantalla |
+
+## Solicitud de permiso — propuesta
+
+Estos casos usan exclusivamente datos ficticios. La obligatoriedad por tipo, el cálculo de días, el orden de firmas, la vigencia del formulario y el formato siguen pendientes de confirmación de la contraparte. El [mapa provisional](ARQUITECTURA.md#solicitud-de-permiso-correspondencia-provisional) describe el comportamiento actual. No se implementan almacenamiento, aprobaciones, control de días ni las reglas de la nota del formulario. La cancelación, la sesión y la impresión reutilizan el mecanismo probado en la comisión.
+
+| Caso y criterio | Preparación y entrada | Resultado esperado | Pruebas existentes | Pendiente |
+| --- | --- | --- | --- | --- |
+| Elegir documento | Entrar a Personal | Se ofrecen Comisión de servicios y Solicitud de permiso, cada una en su ruta | [Navegador](../tests/e2e/personnel.spec.ts) | Revisión del recorrido con usuarios |
+| Campos y condiciones | Elegir funcionario ficticio, tipo, fechas; alternar «Por hora» y otro tipo | Se completan RUT y unidad; el horario y la recuperación se piden sólo en «Por hora» y no se envían con otro tipo; RUT con dígito verificador | [Modelo](../apps/web/src/features/personnel/model/leave.test.ts), [API/PDF](../apps/api/src/modules/personnel/services/leave.test.ts), [navegador](../tests/e2e/personnel.spec.ts) | Confirmar obligatoriedad por tipo y si se marca más de un tipo |
+| Corregir errores | Enviar vacío, RUT inválido, horas invertidas, texto que no cabe o caracteres no admitidos | Error comprensible, foco en el primer campo y datos conservados; el servidor no devuelve un PDF recortado | [API/PDF](../apps/api/src/modules/personnel/services/leave.test.ts), [navegador](../tests/e2e/personnel.spec.ts) | Revisar límites con la contraparte |
+| Descargar e imprimir | Formulario completo por hora | Una hoja carta con «BORRADOR», la casilla del tipo marcada, firmas y sección de RRHH vacías | [API/PDF](../apps/api/src/modules/personnel/services/leave.test.ts), [navegador](../tests/e2e/personnel.spec.ts) | Cotejo visual con el XLSX, impresión física y aceptación del formato |
 
 ## Consulta académica
 

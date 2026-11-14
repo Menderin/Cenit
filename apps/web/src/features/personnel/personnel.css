@@ -98,17 +98,19 @@
 .personnel-preview__sheet { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 28px 20px 40px; }
 .personnel-preview__sheet > div { width: max-content; margin: 0 auto; }
 
-/* Geometría de la hoja COMISION del XLSM; vista previa e impresión comparten plantilla. */
-.commission-paper { --commission-width: 181mm; box-sizing: border-box; width: 216mm; min-height: 279.4mm; padding: 5mm 5mm 15mm 15mm; background: #fff; color: #000; box-shadow: 0 1px 3px #0000001f, 0 10px 30px #00000014; }
-.commission-paper * { box-sizing: border-box; }
-.commission-paper__canvas { position: relative; width: var(--commission-width); aspect-ratio: 910 / 1278; font-family: "Bookman Old Style", Bookman, Georgia, serif; }
-.commission-paper__template { display: block; width: 100%; height: 100%; max-width: none; }
-.commission-paper__value { position: absolute; display: flex; align-items: center; justify-content: center; padding: 0 2px; text-align: center; text-transform: uppercase; }
-.commission-paper__value > span { display: block; width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; font-size: calc(var(--commission-width) / 910 * 13.3333); line-height: 1.1; }
-.commission-paper__value[data-cell="G29"], .commission-paper__value[data-cell="P29"] { text-transform: none; }
-.commission-paper__value--left { text-align: left; }
-.commission-paper__value[data-overflow="true"] { outline: 2px solid var(--color-danger); }
-.commission-paper__draft { display: block; width: var(--commission-width); margin-top: 2mm; font: 7px/1.2 Arial, sans-serif; text-align: center; color: #555; }
+/* Hoja carta con la plantilla del formulario; la geometría de cada documento replica la del PDF del servidor. */
+.personnel-paper { --paper-width: 181mm; box-sizing: border-box; width: 216mm; min-height: 279.4mm; padding: 5mm 5mm 15mm 15mm; background: #fff; color: #000; box-shadow: 0 1px 3px #0000001f, 0 10px 30px #00000014; }
+.personnel-paper--leave { --paper-width: 190.5mm; padding: 12.7mm 12.75mm; }
+.personnel-paper * { box-sizing: border-box; }
+.personnel-paper__canvas { position: relative; width: var(--paper-width); aspect-ratio: var(--paper-ratio); font-family: "Bookman Old Style", Bookman, Georgia, serif; }
+.personnel-paper--leave .personnel-paper__canvas { font-family: Arial, Helvetica, sans-serif; }
+.personnel-paper__template { display: block; width: 100%; height: 100%; max-width: none; }
+.personnel-paper__value { position: absolute; display: flex; align-items: center; justify-content: center; padding: 0 2px; text-align: center; text-transform: uppercase; }
+.personnel-paper__value > span { display: block; width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; font-size: calc(var(--paper-width) / var(--paper-sheet-width) * 13.3333); line-height: 1.1; }
+.personnel-paper__value--keep-case { text-transform: none; }
+.personnel-paper__value--left { text-align: left; }
+.personnel-paper__value[data-overflow="true"] { outline: 2px solid var(--color-danger); }
+.personnel-paper__draft { display: block; width: var(--paper-width); margin-top: 2mm; font: 7px/1.2 Arial, sans-serif; text-align: center; color: #555; }
 .personnel-print-error { margin: 0 0 12px; color: var(--color-danger); font-size: 13px; }
 
 @media (max-width: 1100px) {
@@ -117,3 +119,24 @@
 }
 
 .personnel-hint { margin: 0 0 14px; color: var(--color-ink-muted); font-size: 13px; line-height: 1.5; }
+
+.personnel-grid--four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.personnel-subgroup { gap: 16px; padding: 16px 18px 18px; border: 1px solid var(--color-line-soft); border-radius: var(--radius-md); }
+.personnel-subgroup > legend { padding: 0 6px; margin-left: -6px; }
+
+/* Tipos de permiso: dos columnas, como en el formulario. */
+.personnel-options { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, auto); grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 16px; padding: 4px; border-radius: var(--radius-md); }
+.personnel-options label { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 10px; border-radius: var(--radius-sm); color: var(--color-ink-secondary); font-size: 13px; cursor: pointer; }
+.personnel-options label:hover { background: var(--color-surface-hover); }
+.personnel-options label:has(input:checked) { background: var(--color-surface-chip); color: var(--color-ink); font-weight: 500; }
+.personnel-options input { flex: none; margin: 0; accent-color: var(--color-ink); }
+.personnel-options--invalid { box-shadow: inset 0 0 0 1px var(--color-danger-border); }
+
+/* Entrada de Personal: elige el documento. */
+.personnel-documents { display: grid; grid-template-columns: repeat(2, minmax(0, 360px)); gap: 16px; margin: 0; padding: 0; list-style: none; }
+.personnel-documents a { display: flex; flex-direction: column; gap: 8px; height: 100%; padding: 20px 22px; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-ink); text-decoration: none; transition: border-color 150ms ease-out, box-shadow 150ms ease-out; }
+.personnel-documents a:hover { border-color: var(--color-line-strong); box-shadow: var(--shadow-control); }
+.personnel-documents a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.personnel-documents h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 15px; }
+.personnel-documents p { margin: 0; color: var(--color-ink-muted); font-size: 13px; line-height: 1.5; }
+.personnel-documents small { margin-top: auto; padding-top: 6px; color: var(--color-ink-subtle); font-size: 12px; }

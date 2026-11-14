@@ -8,7 +8,7 @@ const endpoint = '**/api/v1/personnel/service-commissions/pdf';
 const section = (page: Page, name: string) => page.getByRole('navigation', { name: 'Secciones' }).getByRole('button').filter({ hasText: name });
 async function fillCommission(page: Page, signedIn = false) {
   if (!signedIn) await login(page, 'administrativo');
-  await page.goto('/administracion/personal');
+  await page.goto('/administracion/personal/comision');
   await page.getByLabel('Nombre completo', { exact: true }).fill('María Ejemplo');
   await page.getByLabel('Cargo', { exact: true }).fill('Docente');
   await page.getByLabel('Unidad o dependencia', { exact: true }).fill('Facultad ficticia');
@@ -39,7 +39,7 @@ function pdfInstructions(pdf: PDFDocument) {
 
 test('comisión: valida con teclado y descarga el PDF real', async ({ page }) => {
   await login(page, 'administrativo');
-  await page.goto('/administracion/personal');
+  await page.goto('/administracion/personal/comision');
   await page.getByRole('button', { name: 'Continuar a Comisión' }).press('Enter');
   await expect(page.getByLabel('Nombre completo', { exact: true })).toBeFocused();
   await page.reload();
@@ -120,7 +120,7 @@ test('comisión: solicita el PDF del servidor y prepara la impresión', async ({
 
 test('comisión: financiamiento muestra todos los campos en cada ancho', async ({ page }) => {
   await login(page, 'administrativo');
-  await page.goto('/administracion/personal');
+  await page.goto('/administracion/personal/comision');
   await section(page, 'Financiamiento').click();
   const funding = page.getByRole('region', { name: 'Código presupuestario' });
   for (const width of [1920, 1440, 1280, 1024]) {
@@ -224,4 +224,73 @@ test('comisión: editar el borrador cancela la respuesta pendiente', async ({ pa
   release(); await handled;
   await expect(page.getByLabel('Nombre completo', { exact: true })).toHaveValue('Nombre modificado');
   expect(downloads).toBe(0);
+});
+
+test('personal: la entrada lleva a cada documento', async ({ page }) => {
+  await login(page, 'administrativo');
+  await page.goto('/administracion/personal');
+  await expect(page.getByRole('heading', { name: 'Personal', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: /Solicitud de permiso/ }).click();
+  await expect(page).toHaveURL(/\/administracion\/personal\/permiso$/);
+  await expect(page.getByRole('heading', { name: 'Nueva solicitud de permiso' })).toBeVisible();
+  await page.goBack();
+  await page.getByRole('link', { name: /Comisión de servicios/ }).click();
+  await expect(page).toHaveURL(/\/administracion\/personal\/comision$/);
+  await expect(page.getByRole('heading', { name: 'Nueva comisión de servicios' })).toBeVisible();
+});
+
+const leaveEndpoint = '**/api/v1/personnel/leave-requests/pdf';
+async function fillLeave(page: Page) {
+  await login(page, 'administrativo');
+  await page.goto('/administracion/personal/permiso');
+  await page.getByLabel('Nombre del funcionario', { exact: true }).fill('Camila');
+  await page.getByRole('option', { name: /Camila Soto Araya/ }).click();
+  await expect(page.getByLabel('RUT', { exact: true })).toHaveValue('15.482.903-2');
+  await page.getByRole('button', { name: 'Continuar a Permiso' }).click();
+}
+
+test('permiso: valida con teclado, pide horario sólo por hora y descarga el PDF real', async ({ page }) => {
+  await fillLeave(page);
+  await page.getByRole('button', { name: 'Revisar', exact: true }).press('Enter');
+  await expect(page.getByLabel('Día administrativo', { exact: true })).toBeFocused();
+  await expect(page.getByLabel('Horas', { exact: true })).toHaveCount(0);
+  await page.getByLabel('Por hora', { exact: true }).check();
+  await page.getByLabel('Desde', { exact: true }).fill('20/11/2026');
+  await page.getByLabel('Hasta', { exact: true }).fill('20/11/2026');
+  await page.getByLabel('Horas', { exact: true }).fill('2');
+  await page.getByLabel('Minutos', { exact: true }).fill('30');
+  await page.getByLabel('Desde las', { exact: true }).fill('09:15');
+  await page.getByLabel('Hasta las', { exact: true }).fill('11:45');
+  await page.getByLabel('Fecha de recuperación del permiso', { exact: true }).fill('27/11/2026');
+  await page.getByRole('button', { name: 'Revisar', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Revisión', exact: true })).toBeVisible();
+  await expect(page.getByText('09:15 a 11:45 h').first()).toBeVisible();
+  const response = page.waitForResponse(resp => resp.url().endsWith('/leave-requests/pdf'));
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Descargar', exact: true }).press('Enter');
+  expect((await response).status()).toBe(200);
+  const file = await download;
+  expect(file.suggestedFilename()).toBe('solicitud-permiso-soto-araya-2026-11-20.pdf');
+  const pdf = await PDFDocument.load(await readFile((await file.path())!));
+  expect(pdf.getPageCount()).toBe(1);
+  expect(pdf.getPage(0).getSize()).toEqual({ width: 612, height: 792 });
+  const content = pdfInstructions(pdf);
+  expect(content).toContain('<43414D494C4120534F544F204152415941> Tj');
+  expect(content).toContain('<30393A3135> Tj');
+  expect(content).toContain('<424F525241444F52> Tj');
+});
+
+test('permiso: errores del servidor vuelven al campo y conservan los datos', async ({ page }) => {
+  await fillLeave(page);
+  await page.getByLabel('Teletrabajo', { exact: true }).check();
+  await page.getByLabel('Desde', { exact: true }).fill('20/11/2026');
+  await page.getByLabel('Hasta', { exact: true }).fill('21/11/2026');
+  await page.getByLabel('Observaciones (opcional)', { exact: true }).fill('Texto ficticio');
+  await page.getByRole('button', { name: 'Revisar', exact: true }).click();
+  await page.route(leaveEndpoint, route => route.fulfill({ status: 422, json: { error: { code: 'VALIDATION_ERROR', message: 'Revisa los campos indicados.', requestId: 'test', fields: { notes: 'El texto no cabe en la plantilla; acórtalo.' } } } }));
+  await page.getByRole('button', { name: 'Descargar', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('El formulario conserva tus datos');
+  await expect(page.getByLabel('Observaciones (opcional)', { exact: true })).toBeFocused();
+  await expect(page.getByText('El texto no cabe en la plantilla; acórtalo.')).toBeVisible();
+  await expect(page.getByLabel('Observaciones (opcional)', { exact: true })).toHaveValue('Texto ficticio');
 });

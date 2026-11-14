@@ -1,10 +1,12 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { ErrorResponseSchema } from '@cenit/contracts';
-import { ServiceCommissionErrorsSchema, ServiceCommissionSchema, type ServiceCommission } from '@cenit/contracts/personnel';
+import { LeaveRequestSchema, PersonnelPdfErrorsSchema, ServiceCommissionErrorsSchema, ServiceCommissionSchema, type LeaveRequest, type ServiceCommission } from '@cenit/contracts/personnel';
 import type { Authenticate } from '../../auth/services/principal.js';
 import { ApiError } from '../../../infrastructure/errors.js';
 import { commissionPdf } from '../services/pdf.js';
 import { validateCommission } from '../services/validation.js';
+import { leavePdf } from '../services/leave-pdf.js';
+import { validateLeave } from '../services/leave-validation.js';
 
 export async function personnelRoutes(app: FastifyInstance, options: { authenticate: Authenticate; allowedOrigins: string[] }) {
   const access = async (request: FastifyRequest) => {
@@ -23,5 +25,15 @@ export async function personnelRoutes(app: FastifyInstance, options: { authentic
     if (!Object.keys(fields).length) ({ bytes, fields } = await commissionPdf(request.body));
     if (Object.keys(fields).length) return reply.code(422).send({ error: { code: 'VALIDATION_ERROR', message: 'Revisa los campos indicados.', requestId: request.id, fields } });
     return reply.header('Content-Type', 'application/pdf').header('Content-Disposition', 'attachment; filename="comision-servicios.pdf"').header('Cache-Control', 'no-store').send(Buffer.from(bytes!));
+  });
+  app.post<{ Body: LeaveRequest }>('/leave-requests/pdf', {
+    onRequest: access,
+    schema: { body: LeaveRequestSchema, response: { ...errors, 422: PersonnelPdfErrorsSchema } },
+  }, async (request, reply) => {
+    let fields = validateLeave(request.body);
+    let bytes: Uint8Array | undefined;
+    if (!Object.keys(fields).length) ({ bytes, fields } = await leavePdf(request.body));
+    if (Object.keys(fields).length) return reply.code(422).send({ error: { code: 'VALIDATION_ERROR', message: 'Revisa los campos indicados.', requestId: request.id, fields } });
+    return reply.header('Content-Type', 'application/pdf').header('Content-Disposition', 'attachment; filename="solicitud-permiso.pdf"').header('Cache-Control', 'no-store').send(Buffer.from(bytes!));
   });
 }
