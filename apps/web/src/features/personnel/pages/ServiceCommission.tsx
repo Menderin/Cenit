@@ -224,11 +224,11 @@ export function ServiceCommission() {
         </div>}
 
         {step === 'revision' && <div>
+          {review.map(block => <ReviewSection key={block.step} title={block.title} errors={stepErrors(block.step)} rows={block.rows} onEdit={() => go(block.step)} />)}
           <div className="personnel-review-actions">
             <button type="button" className="cenit-button" onClick={() => setPreview(true)}><EyeIcon size={16} aria-hidden="true" />Vista previa</button>
             {pdfActions}
           </div>
-          {review.map(block => <ReviewSection key={block.step} title={block.title} errors={stepErrors(block.step)} rows={block.rows} onEdit={() => go(block.step)} />)}
         </div>}
 
         <div className="personnel-card__foot">

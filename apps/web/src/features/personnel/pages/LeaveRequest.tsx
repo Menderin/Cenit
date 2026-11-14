@@ -185,12 +185,12 @@ export function LeaveRequest() {
         </div>}
 
         {step === 'revision' && <div>
+          {review.map(block => <ReviewSection key={block.step} title={block.title} errors={stepErrors(block.step)} rows={block.rows} onEdit={() => go(block.step)} />)}
+          <p className="personnel-hint">El documento lleva en blanco los espacios de firma y la sección de uso exclusivo de Recursos Humanos. Según el formulario, el VºBº del VAEA o del VR de sede corresponde sólo a permisos sin goce de sueldo.</p>
           <div className="personnel-review-actions">
             <button type="button" className="cenit-button" onClick={() => setPreview(true)}><EyeIcon size={16} aria-hidden="true" />Vista previa</button>
             {pdfActions}
           </div>
-          {review.map(block => <ReviewSection key={block.step} title={block.title} errors={stepErrors(block.step)} rows={block.rows} onEdit={() => go(block.step)} />)}
-          <p className="personnel-hint">El documento lleva en blanco los espacios de firma y la sección de uso exclusivo de Recursos Humanos. Según el formulario, el VºBº del VAEA o del VR de sede corresponde sólo a permisos sin goce de sueldo.</p>
         </div>}
 
         <div className="personnel-card__foot">

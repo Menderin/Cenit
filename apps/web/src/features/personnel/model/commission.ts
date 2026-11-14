@@ -19,7 +19,7 @@ export const steps: { key: Step; label: string; intro: string }[] = [
   { key: 'comision', label: 'Comisión', intro: 'Lugar, fechas, días y viático.' },
   { key: 'financiamiento', label: 'Financiamiento', intro: 'Código presupuestario y porcentaje de cada fuente.' },
   { key: 'actividad', label: 'Actividad', intro: 'Evento al que asiste o descripción de la comisión.' },
-  { key: 'revision', label: 'Revisión', intro: 'Revisa los datos antes de descargar el documento.' },
+  { key: 'revision', label: 'Revisión', intro: 'Revisa los datos; al final podrás ver, descargar o imprimir el documento.' },
 ];
 
 // Orden de los campos en pantalla: el foco va al primero con error.

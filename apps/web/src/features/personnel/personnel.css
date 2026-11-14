@@ -84,7 +84,7 @@
 .personnel-review dt { color: var(--color-ink-subtle); font-size: 13px; }
 .personnel-review dd { margin: 0; overflow-wrap: anywhere; }
 .personnel-unknown { color: var(--color-ink-subtle); font-style: italic; }
-.personnel-review-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin: 0 0 4px; }
+.personnel-review-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin: 16px 0 0; }
 .personnel-download__actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
 
 .personnel-summary { position: sticky; top: 0; padding: 16px 18px; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); }

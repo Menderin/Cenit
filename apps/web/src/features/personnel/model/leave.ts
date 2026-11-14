@@ -13,7 +13,7 @@ export const emptyLeave = (): LeaveDraft => ({
 export const leaveSteps: { key: LeaveStep; label: string; intro: string }[] = [
   { key: 'funcionario', label: 'Funcionario', intro: 'Datos de quien solicita el permiso.' },
   { key: 'permiso', label: 'Permiso', intro: 'Tipo, fechas y observaciones.' },
-  { key: 'revision', label: 'Revisión', intro: 'Revisa los datos antes de descargar el documento.' },
+  { key: 'revision', label: 'Revisión', intro: 'Revisa los datos; al final podrás ver, descargar o imprimir el documento.' },
 ];
 
 // Orden de los campos en pantalla: el foco va al primero con error.
