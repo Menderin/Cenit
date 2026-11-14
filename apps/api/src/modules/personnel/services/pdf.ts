@@ -1,11 +1,9 @@
-import { readFile } from 'node:fs/promises';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { StandardFonts } from 'pdf-lib';
 import type { ServiceCommission } from '@cenit/contracts/personnel';
 import { commissionCells } from './commission-layout.js';
+import { fillTemplate } from './template-pdf.js';
 
 const templatePath = new URL('../../../../assets/service-commission-template.pdf', import.meta.url);
-const scale = Math.min(540 / 910, 706 / 1278);
-const left = (612 - 910 * scale) / 2, top = 792 - 36;
 const leftAligned = new Set(['E11', 'E13', 'E15', 'E41', 'E43', 'E45', 'E47', 'E49', 'B54']);
 const date = (value: string) => {
   const [year, month, day] = value.split('-');
@@ -40,42 +38,8 @@ export async function commissionPdf(d: ServiceCommission): Promise<{ bytes?: Uin
     const keys = ['institution', 'organization', 'unit', 'project', 'percent'] as const;
     keys.forEach((key, i) => { entries[cells[i]!] = [`funding.${index}.${key}`, key === 'percent' && row[key] ? `${row[key]}%` : row[key]]; });
   });
-  const pdf = await PDFDocument.create();
-  const [background] = await pdf.embedPdf(await readFile(templatePath));
-  const page = pdf.addPage([612, 792]);
-  page.drawPage(background!, { x: left, y: top - 1278 * scale, width: 910 * scale, height: 1278 * scale });
-  const font = await pdf.embedFont(StandardFonts.TimesRoman), fields: Record<string, string> = {};
-  for (const [rawCell, entry] of Object.entries(entries)) {
-    const cell = rawCell as Cell, [key, value] = entry!;
-    if (!value) continue;
-    const text = ['G29', 'P29'].includes(cell) ? value : value.toLocaleUpperCase('es');
-    const [x, y, w, h] = commissionCells[cell];
-    let lines: string[] = [], chosen = 0;
-    try {
-      for (let size = 13.3333 * scale; size >= 4.5; size -= 0.25) {
-        const maxWidth = (w - 4) * scale;
-        const result: string[] = [];
-        for (const paragraph of text.split('\n')) {
-          let line = '';
-          for (const char of paragraph) {
-            if (line && font.widthOfTextAtSize(line + char, size) > maxWidth) { result.push(line); line = ''; }
-            line += char;
-          }
-          result.push(line);
-        }
-        if (result.every(line => font.widthOfTextAtSize(line, size) <= maxWidth) && result.length * size * 1.1 <= h * scale) { lines = result; chosen = size; break; }
-      }
-    } catch { fields[key] = 'Contiene caracteres que no admite el documento.'; continue; }
-    if (!chosen) { fields[key] = 'El texto no cabe en la plantilla; acórtalo.'; continue; }
-    const blockHeight = lines.length * chosen * 1.1;
-    lines.forEach((line, index) => {
-      const width = font.widthOfTextAtSize(line, chosen);
-      const textX = left + x * scale + (leftAligned.has(cell) ? 2 * scale : (w * scale - width) / 2);
-      const textY = top - (y + h / 2) * scale + blockHeight / 2 - (index + 1) * chosen * 1.1 + chosen * 0.15;
-      page.drawText(line, { x: textX, y: textY, size: chosen, font, color: rgb(0, 0, 0) });
-    });
-  }
-  if (Object.keys(fields).length) return { fields };
-  page.drawText('BORRADOR', { x: 306 - font.widthOfTextAtSize('BORRADOR', 6) / 2, y: 36, size: 6, font });
-  return { bytes: await pdf.save(), fields };
+  return fillTemplate({
+    template: templatePath, sheet: { width: 910, height: 1278 }, font: StandardFonts.TimesRoman, cells: commissionCells,
+    entries: Object.entries(entries).map(([cell, entry]) => [cell, entry![0], entry![1]]), left: leftAligned, keepCase: new Set(['G29', 'P29']),
+  });
 }

@@ -58,6 +58,12 @@
 
 .dashboard-recent ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 0 24px; margin: 0; padding: 0; list-style: none; }
 .dashboard-recent li { min-width: 0; border-top: 1px solid var(--color-line-soft); }
+/* El servidor envía ocho altas; se muestran seis salvo en monitores anchos, donde caben ocho sin dejar espacio vacío. */
+.dashboard-recent li:nth-child(n + 7) { display: none; }
+@media (min-width: 1600px) {
+  .dashboard-recent ul { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dashboard-recent li:nth-child(n + 7) { display: block; }
+}
 .dashboard-recent li a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 8px; border-radius: var(--radius-sm); line-height: 18px; text-decoration: none; transition: background-color 150ms ease-out; }
 .dashboard-recent li a > div { min-width: 0; }
 .dashboard-recent li a > div:first-child { flex: 1 1 0; }

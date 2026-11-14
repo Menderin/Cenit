@@ -2,7 +2,7 @@ import type { ExtractionCandidate } from '@cenit/contracts/purchases';
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
 import { useRef } from 'react';
 import { DateField } from '../../../shared/components/DateField.js';
-import { amountFields, normalizeAmountInput } from '../model/fields.js';
+import { amountFields, groupThousands, normalizeAmountInput } from '../model/fields.js';
 const statusLabels = { recovered: 'Recuperado', missing: 'Sin dato', invalid: 'Formato inválido', ambiguous: 'Por aclarar' };
 export function CandidateField({ id, label, candidate, value, onChange, error, issue, long = false, field, required = false, disabled = false, sourcePath, active = false, onFocus, locationAvailable }: {
   id: string; label: string; candidate?: ExtractionCandidate; value: string | null;
@@ -14,7 +14,13 @@ export function CandidateField({ id, label, candidate, value, onChange, error, i
   const kind = field ?? id.split('-').at(-1);
   // Only what the person typed is normalized; extracted candidates are never corrected silently.
   const edited = useRef(false), amount = amountFields.has(kind ?? '');
-  const props = { id, value: value ?? '', onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { edited.current = true; onChange(event.target.value === '' ? null : event.target.value); },
+  // Los montos se muestran con puntos de miles mientras se escriben; se guardan como dígitos.
+  const shown = amount && value && /^\d+$/.test(value) ? groupThousands(value) : value ?? '';
+  const props = { id, value: shown, onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    edited.current = true;
+    const typed = amount && /^[\d.]+$/.test(event.target.value) ? event.target.value.replace(/\./g, '') : event.target.value;
+    onChange(typed === '' ? null : typed);
+  },
     required, disabled, onFocus: () => { edited.current = false; onFocus?.(); }, 'data-source-path': sourcePath,
     maxLength: long ? 1000 : 255, 'aria-invalid': !!error,
     'aria-describedby': [candidate ? `${id}-origin` : '', issue && !changed ? `${id}-issue` : '', error ? `${id}-error` : ''].filter(Boolean).join(' ') || undefined };

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { printCommissionPdf } from './pdf.js';
+import { printPdf } from './pdf.js';
 
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
@@ -17,7 +17,7 @@ describe('impresión del PDF recibido', () => {
   }
   it('imprime el PDF del servidor y libera el documento después del diálogo', () => {
     const { frame, view, browser, revoke } = setup(), controller = new AbortController(), onError = vi.fn();
-    printCommissionPdf(new Blob(['%PDF-test']), onError, controller.signal);
+    printPdf(new Blob(['%PDF-test']), 'Imprimir documento', onError, controller.signal);
     expect(frame.src).toBe('blob:commission');
     expect(view.print).not.toHaveBeenCalled();
     frame.onload();
@@ -30,7 +30,7 @@ describe('impresión del PDF recibido', () => {
   it('informa el fallo y libera el documento si el visor no carga', () => {
     vi.useFakeTimers();
     const { frame, view, revoke } = setup(), controller = new AbortController(), onError = vi.fn();
-    printCommissionPdf(new Blob(['%PDF-test']), onError, controller.signal);
+    printPdf(new Blob(['%PDF-test']), 'Imprimir documento', onError, controller.signal);
     vi.advanceTimersByTime(10_000);
     expect(onError).toHaveBeenCalledOnce();
     expect(frame.remove).toHaveBeenCalledOnce();
@@ -40,7 +40,7 @@ describe('impresión del PDF recibido', () => {
   });
   it('cancela la impresión pendiente al abandonar la sesión', () => {
     const { frame, view, revoke } = setup(), controller = new AbortController(), onError = vi.fn();
-    printCommissionPdf(new Blob(['%PDF-test']), onError, controller.signal);
+    printPdf(new Blob(['%PDF-test']), 'Imprimir documento', onError, controller.signal);
     controller.abort(); frame.onload();
     expect(view.print).not.toHaveBeenCalled();
     expect(frame.remove).toHaveBeenCalledOnce();

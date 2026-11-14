@@ -197,10 +197,17 @@ function PlainDateInput({ value, onValueChange, onOpenCalendar, ...props }: Date
   const input = useRef<HTMLInputElement>(null);
   const nativeProps = Object.fromEntries(Object.entries(props).filter(([key]) => !['onValidationError', 'minYear', 'maxYear', 'segmentLabel'].includes(key))) as ComponentProps<'input'>;
   function changeInput(event: ChangeEvent<HTMLInputElement>) {
-    const text = event.currentTarget.value;
-    const cursor = event.currentTarget.selectionStart ?? text.length;
+    let text = event.currentTarget.value;
+    let cursor = event.currentTarget.selectionStart ?? text.length;
+    // Al borrar, un separador eliminado arrastra el dígito anterior y no se vuelve a agregar «/» al final:
+    // así la fecha se borra de corrido con la tecla de retroceso.
+    const deleting = (event.nativeEvent as InputEvent).inputType?.startsWith('delete') ?? false;
+    if (deleting && text.replace(/\D/g, '').length === displayDate(value).replace(/\D/g, '').length) {
+      const before = text.slice(0, cursor), last = before.search(/\d(?=\D*$)/);
+      if (last >= 0) { text = text.slice(0, last) + text.slice(last + 1); cursor = last; }
+    }
     const digitCount = text.slice(0, cursor).replace(/\D/g, '').length;
-    const formatted = formatDateInput(text);
+    const formatted = deleting ? formatDateInput(text).replace(/\/$/, '') : formatDateInput(text);
     onValueChange(dateValue(formatted));
     const nextCursor = caretAfterDigits(formatted, digitCount);
     requestAnimationFrame(() => input.current?.setSelectionRange(nextCursor, nextCursor));

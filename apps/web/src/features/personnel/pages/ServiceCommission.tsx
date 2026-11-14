@@ -1,89 +1,60 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { Value } from '@sinclair/typebox/value';
-import { ServiceCommissionErrorsSchema } from '@cenit/contracts';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight';
-import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check';
 import { EyeIcon } from '@phosphor-icons/react/dist/csr/Eye';
-import { PencilSimpleIcon } from '@phosphor-icons/react/dist/csr/PencilSimple';
-import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/csr/DownloadSimple';
-import { PrinterIcon } from '@phosphor-icons/react/dist/csr/Printer';
 import { TrashIcon } from '@phosphor-icons/react/dist/csr/Trash';
-import { MagnifyingGlassMinusIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlassMinus';
-import { MagnifyingGlassPlusIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlassPlus';
 import { MapPinIcon } from '@phosphor-icons/react/dist/csr/MapPin';
 import { GlobeHemisphereWestIcon } from '@phosphor-icons/react/dist/csr/GlobeHemisphereWest';
 import { DateField } from '../../../shared/components/DateField.js';
 import { ContextualConfirm } from '../../../shared/components/ContextualConfirm.js';
 import { displayDate } from '../../../shared/lib/dates.js';
-import { HttpError } from '../../../shared/lib/http.js';
-import { useAuth } from '../../auth/model/session.js';
 import { useGuardChanges } from '../../purchases/model/guard.js';
 import { StaffSearch } from '../components/StaffSearch.js';
 import { CommissionDocument } from '../components/CommissionDocument.js';
+import { personnelForm } from '../components/FormControls.js';
+import { PdfActions, usePersonnelPdf } from '../components/PdfOutput.js';
+import { BackToPersonnel, DocumentPreview, ReviewSection, StepNav } from '../components/PersonnelLayout.js';
 import { units } from '../model/staff.js';
 import { requestCommissionPdf } from '../api/commission.js';
-import { printCommissionPdf } from '../model/pdf.js';
+import { formatAmount } from '../model/format.js';
 import { categoryLabels, emptyCommission, fileName, plantLabels, stepFields, steps, validateStep, type CommissionDraft, type Errors, type Step } from '../model/commission.js';
 import '../personnel.css';
 
-const fieldId = (key: string) => `commission-${key.replace(/\./g, '-')}`;
+const { fieldId, Field, Choice } = personnelForm('commission');
 const formSteps = ['funcionario', 'comision', 'financiamiento', 'actividad'] as const;
-
-function Field({ name, label, value, onChange, error, optional, textarea, ...props }: {
-  name: string; label: string; value: string; onChange: (value: string) => void; error?: string; optional?: boolean; textarea?: boolean;
-  inputMode?: 'numeric' | 'decimal'; placeholder?: string; list?: string;
-}) {
-  const id = fieldId(name), common = { id, value, className: 'cenit-input', 'aria-invalid': !!error, 'aria-describedby': error ? `${id}-error` : undefined };
-  return <div className="personnel-field">
-    <label htmlFor={id}>{label}{optional && <span className="personnel-optional"> (opcional)</span>}</label>
-    {textarea ? <textarea {...common} rows={4} onChange={event => onChange(event.target.value)} />
-      : <input {...common} {...props} autoComplete="off" onChange={event => onChange(event.target.value)} />}
-    {error && <p className="personnel-error" id={`${id}-error`}>{error}</p>}
-  </div>;
-}
-
-function Choice<T extends string>({ name, legend, value, options, onChange, error, wide }: {
-  name: string; legend: string; value: T | ''; options: { value: T; label: ReactNode }[]; onChange: (value: T) => void; error?: string; wide?: boolean;
-}) {
-  return <fieldset className="personnel-field" aria-describedby={error ? `${fieldId(name)}-error` : undefined}>
-    <legend>{legend}</legend>
-    <div className={`personnel-choice${wide ? ' personnel-choice--wide' : ''}${error ? ' personnel-choice--invalid' : ''}`}>
-      {options.map((option, index) => <label key={option.value}>
-        <input type="radio" name={name} id={index === 0 ? fieldId(name) : undefined} checked={value === option.value} onChange={() => onChange(option.value)} />
-        <span>{option.label}</span>
-      </label>)}
-    </div>
-    {error && <p className="personnel-error" id={`${fieldId(name)}-error`}>{error}</p>}
-  </fieldset>;
-}
 
 export function ServiceCommission() {
   const [draft, setDraft] = useState(emptyCommission);
   const [step, setStep] = useState<Step>('funcionario');
   const [errors, setErrors] = useState<Errors>({});
   const serverErrors = useRef<Errors>({});
-  const [printError, setPrintError] = useState('');
-  const [pdfAction, setPdfAction] = useState<'download' | 'print' | null>(null);
-  const preparingPdf = pdfAction !== null;
-  const pdfAbort = useRef<AbortController | null>(null), pdfBusy = useRef(false);
-  const { status, session } = useAuth();
-  useLayoutEffect(() => () => { pdfAbort.current?.abort(); }, [status, session?.account.id]);
   const [tried, setTried] = useState<Partial<Record<Step, boolean>>>({});
   const [focusKey, setFocusKey] = useState<{ key: string } | null>(null);
-  const [preview, setPreview] = useState(false), [zoom, setZoom] = useState(100);
+  const [preview, setPreview] = useState(false);
   const [discardOrigin, setDiscardOrigin] = useState<HTMLElement | null>(null);
+  const pdf = usePersonnelPdf({
+    request: signal => requestCommissionPdf(draft, signal), fileName: () => fileName(draft), printTitle: 'Imprimir comisión de servicios',
+    onFieldErrors: fields => {
+      const target = formSteps.find(item => stepFields[item].some(key => fields[key]));
+      if (!target) return false;
+      serverErrors.current = { ...fields };
+      setErrors(fields); setTried(current => ({ ...current, [target]: true }));
+      go(target); setFocusKey({ key: stepFields[target].find(key => fields[key])! });
+      return true;
+    },
+  });
   const dirty = JSON.stringify(draft) !== JSON.stringify(emptyCommission());
-  const reset = useCallback(() => { pdfAbort.current?.abort(); serverErrors.current = {}; setDraft(emptyCommission()); setStep('funcionario'); setErrors({}); setTried({}); setPreview(false); setPrintError(''); }, []);
+  const { abort: abortPdf, setMessage: setPdfMessage } = pdf;
+  const reset = useCallback(() => { abortPdf(); serverErrors.current = {}; setDraft(emptyCommission()); setStep('funcionario'); setErrors({}); setTried({}); setPreview(false); setPdfMessage(''); }, [abortPdf, setPdfMessage]);
   useGuardChanges(dirty, false, reset);
 
   useEffect(() => { if (focusKey) document.getElementById(fieldId(focusKey.key))?.focus(); }, [focusKey]);
 
   function update(patch: Partial<CommissionDraft>) {
-    if (pdfBusy.current) {
-      pdfAbort.current?.abort();
-      setPrintError('Se canceló la preparación porque cambiaste el formulario.');
-    } else setPrintError('');
+    if (pdf.busy.current) {
+      pdf.abort();
+      pdf.setMessage('Se canceló la preparación porque cambiaste el formulario.');
+    } else pdf.setMessage('');
     const next = { ...draft, ...patch };
     for (const key of Object.keys(patch)) {
       if (key === 'funding') {
@@ -126,47 +97,19 @@ export function ServiceCommission() {
     if (invalid) { setFocusKey({ key: invalid }); return; }
     go(steps[steps.findIndex(item => item.key === step) + 1]!.key);
   }
-  async function preparePdf(action: 'download' | 'print') {
-    if (pdfBusy.current) return;
+  // Marca los errores de todas las secciones y lleva al primero; devuelve false si no hay.
+  function showFirstError() {
     for (const target of formSteps) {
       const invalid = check(target);
-      if (invalid) { go(target); setFocusKey({ key: invalid }); return; }
+      if (invalid) { go(target); setFocusKey({ key: invalid }); return true; }
     }
-    setPrintError('');
-    pdfAbort.current?.abort();
-    const controller = new AbortController();
-    pdfAbort.current = controller; pdfBusy.current = true; setPdfAction(action);
-    try {
-      const blob = await requestCommissionPdf(draft, controller.signal);
-      controller.signal.throwIfAborted();
-      if (action === 'print') {
-        printCommissionPdf(blob, () => {
-          if (!controller.signal.aborted) setPrintError('No pudimos abrir la impresión. Descarga el documento para imprimirlo.');
-        }, controller.signal);
-      } else {
-        const url = URL.createObjectURL(blob), link = document.createElement('a');
-        const revoke = () => URL.revokeObjectURL(url);
-        controller.signal.addEventListener('abort', revoke, { once: true });
-        link.href = url; link.download = `${fileName(draft)}.pdf`;
-        document.body.append(link); link.click(); link.remove();
-        window.setTimeout(() => { controller.signal.removeEventListener('abort', revoke); revoke(); }, 60_000);
-      }
-    } catch (error) {
-      if (controller.signal.aborted) return;
-      if (error instanceof HttpError && error.status === 422 && Value.Check(ServiceCommissionErrorsSchema, error.body)) {
-        const fields = error.body.error.fields;
-        const target = formSteps.find(item => stepFields[item].some(key => fields[key]));
-        if (target) {
-          serverErrors.current = { ...fields };
-          setErrors(fields); setTried(current => ({ ...current, [target]: true }));
-          go(target); setFocusKey({ key: stepFields[target].find(key => fields[key])! });
-          setPrintError('Revisa los campos indicados. El formulario conserva tus datos.');
-          return;
-        }
-      }
-      setPrintError(error instanceof HttpError ? `${error.message} El formulario conserva tus datos.` : 'No pudimos preparar el documento. El formulario conserva tus datos.');
-    } finally { pdfBusy.current = false; setPdfAction(null); }
+    return false;
   }
+  async function preparePdf(action: 'download' | 'print') {
+    if (pdf.busy.current || showFirstError()) return;
+    await pdf.run(action);
+  }
+  const pending = formSteps.reduce((total, target) => total + new Set([...Object.keys(validateStep(draft, target)), ...stepFields[target].filter(key => serverErrors.current[key])]).size, 0);
 
   const index = steps.findIndex(item => item.key === step), current = steps[index]!;
   const stepErrors = (target: Step) => target === 'revision' ? 0 : stepFields[target].filter(key => errors[key]).length;
@@ -186,15 +129,11 @@ export function ServiceCommission() {
       : [['Descripción', known(draft.description)]] },
   ];
 
-  const pdfActions = <div className="personnel-download__actions">
-    {preparingPdf && <button type="button" className="cenit-button cenit-button--quiet" onClick={() => { pdfAbort.current?.abort(); setPrintError('Preparación cancelada. El formulario conserva tus datos.'); }}>Cancelar</button>}
-    <button type="button" className="cenit-button" onClick={() => { void preparePdf('download'); }} disabled={preparingPdf} aria-busy={pdfAction === 'download'}><DownloadSimpleIcon size={16} aria-hidden="true" />{pdfAction === 'download' ? 'Preparando…' : 'Descargar'}</button>
-    <button type="button" className="cenit-button cenit-button--primary" onClick={() => { void preparePdf('print'); }} disabled={preparingPdf} aria-busy={pdfAction === 'print'}><PrinterIcon size={16} aria-hidden="true" />{pdfAction === 'print' ? 'Preparando…' : 'Imprimir'}</button>
-  </div>;
+  const pdfActions = <PdfActions pdf={{ ...pdf, run: preparePdf }} />;
 
   return <section className="personnel-page">
     <div className="personnel-heading">
-      <div><h1>Nueva comisión de servicios</h1><p>Propuesta pendiente de validación. Usa sólo datos ficticios; la búsqueda muestra funcionarios de ejemplo.</p></div>
+      <div><BackToPersonnel /><h1>Nueva comisión de servicios</h1><p>Propuesta pendiente de validación. Usa sólo datos ficticios; la búsqueda muestra funcionarios de ejemplo.</p></div>
       <div className="personnel-heading__actions">
         {!preview && step !== 'revision' && <button type="button" className="cenit-button" onClick={() => setPreview(true)}><EyeIcon size={16} aria-hidden="true" />Vista previa</button>}
         <button type="button" className="cenit-button cenit-button--quiet" disabled={!dirty} onClick={event => setDiscardOrigin(event.currentTarget)}><TrashIcon size={16} aria-hidden="true" />Descartar</button>
@@ -203,29 +142,10 @@ export function ServiceCommission() {
     <ContextualConfirm open={!!discardOrigin} origin={discardOrigin} title="¿Descartar esta comisión?" description="Se borrarán todos los datos ingresados."
       confirmLabel="Descartar" destructive onCancel={() => setDiscardOrigin(null)} onConfirm={() => { setDiscardOrigin(null); reset(); }} />
 
-    {printError && <p role="alert" className="personnel-print-error">{printError}</p>}
-    {preview ? <div className="personnel-preview">
-      <div className="personnel-preview__bar">
-        <button type="button" className="cenit-button" onClick={() => setPreview(false)}><ArrowLeftIcon size={16} aria-hidden="true" />Volver al formulario</button>
-        <div className="personnel-zoom" role="group" aria-label="Zoom">
-          <button type="button" className="cenit-button cenit-button--icon" aria-label="Reducir" onClick={() => setZoom(Math.max(50, zoom - 10))}><MagnifyingGlassMinusIcon size={17} aria-hidden="true" /></button>
-          <output aria-live="polite">{zoom} %</output>
-          <button type="button" className="cenit-button cenit-button--icon" aria-label="Ampliar" onClick={() => setZoom(Math.min(160, zoom + 10))}><MagnifyingGlassPlusIcon size={17} aria-hidden="true" /></button>
-        </div>
-        {pdfActions}
-      </div>
-      <p className="personnel-preview__notice">Vista previa aproximada; el documento final se genera al descargar o imprimir.</p>
-      <div className="personnel-preview__sheet" role="region" aria-label="Vista previa del documento" tabIndex={0}><div style={{ zoom: zoom / 100 }}><CommissionDocument draft={draft} /></div></div>
-    </div> : <div className="personnel-layout">
-      <nav aria-label="Secciones"><ol className="personnel-steps">
-        {steps.map((item, position) => {
-          const count = stepErrors(item.key), done = !count && complete(item.key);
-          return <li key={item.key}><button type="button" aria-current={item.key === step ? 'step' : undefined} onClick={() => go(item.key)}>
-            <span className={`personnel-steps__number${count ? ' personnel-steps__number--error' : done ? ' personnel-steps__number--done' : ''}`}>{done ? <CheckIcon size={13} weight="bold" aria-label="Completa" /> : position + 1}</span>
-            <span>{item.label}{count > 0 && <small>{count === 1 ? '1 campo por corregir' : `${count} campos por corregir`}</small>}</span>
-          </button></li>;
-        })}
-      </ol></nav>
+    {pdf.message && <p role="alert" className="personnel-print-error">{pdf.message}</p>}
+    {preview ? <DocumentPreview onClose={() => setPreview(false)} actions={pdfActions} pending={pending} onFix={showFirstError}><CommissionDocument draft={draft} /></DocumentPreview>
+    : <div className="personnel-layout">
+      <StepNav steps={steps} current={step} errors={stepErrors} complete={complete} onGo={go} />
 
       <div className="personnel-card">
         <div className="personnel-card__head"><h2>{current.label}</h2><p>{current.intro}</p></div>
@@ -265,7 +185,7 @@ export function ServiceCommission() {
             <Field name="totalDays" label="Total de días" value={draft.totalDays} error={errors.totalDays} onChange={totalDays => update({ totalDays })} />
           </div>
           <div className="personnel-grid">
-            <Field name="allowance" label="Importe del viático" optional inputMode="decimal" placeholder="Ej.: 186.000" value={draft.allowance} error={errors.allowance} onChange={allowance => update({ allowance })} />
+            <Field name="allowance" label="Importe del viático" optional inputMode="decimal" placeholder="Ej.: 186.000" value={draft.allowance} error={errors.allowance} onChange={allowance => update({ allowance: formatAmount(allowance) })} />
             <Choice name="currency" legend="Moneda" value={draft.currency} error={errors.currency} onChange={currency => update({ currency })}
               options={[{ value: 'CLP', label: 'CLP' }, { value: 'USD', label: 'USD' }]} />
           </div>
@@ -304,18 +224,11 @@ export function ServiceCommission() {
         </div>}
 
         {step === 'revision' && <div>
+          {review.map(block => <ReviewSection key={block.step} title={block.title} errors={stepErrors(block.step)} rows={block.rows} onEdit={() => go(block.step)} />)}
           <div className="personnel-review-actions">
             <button type="button" className="cenit-button" onClick={() => setPreview(true)}><EyeIcon size={16} aria-hidden="true" />Vista previa</button>
             {pdfActions}
           </div>
-          {review.map(block => {
-            const count = stepErrors(block.step);
-            return <section className="personnel-review" key={block.step}>
-              <div className="personnel-review__head"><h3>{block.title}</h3><button type="button" className="cenit-button cenit-button--quiet" aria-label={`Editar ${block.title}`} onClick={() => go(block.step)}><PencilSimpleIcon size={15} aria-hidden="true" />Editar</button></div>
-              {count > 0 && <p className="personnel-error">{count === 1 ? 'Hay 1 campo por corregir.' : `Hay ${count} campos por corregir.`}</p>}
-              <dl>{block.rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd className={value ? undefined : 'personnel-unknown'}>{value ?? 'Sin información'}</dd></div>)}</dl>
-            </section>;
-          })}
         </div>}
 
         <div className="personnel-card__foot">

@@ -420,8 +420,9 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   }
   await navigateAdministration(page, 'Personal');
   await expect(page).toHaveURL(/\/administracion\/personal$/);
-  await expect(page.getByRole('heading', { name: 'Nueva comisión de servicios', exact: true })).toBeVisible();
-  await expect(page.getByText('Propuesta pendiente de validación. Usa sólo datos ficticios; la búsqueda muestra funcionarios de ejemplo.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Personal', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Comisión de servicios/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Solicitud de permiso/ })).toBeVisible();
   await navigateAdministration(page, 'Bienes');
   await expect(page).toHaveURL(/\/administracion\/bienes$/);
   await expect(page.getByRole('heading', { name: 'Bienes todavía no está disponible', exact: true })).toBeVisible();
@@ -595,7 +596,7 @@ test('laboratorio: formato inválido bloquea transferencia, original intacto y b
   await page.getByRole('button', { name: 'Restablecer ejemplo' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Descartar y restablecer' }).click();
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
-  await expect(page.getByLabel('Monto total (CLP)', { exact: true })).toHaveValue('200000');
+  await expect(page.getByLabel('Monto total (CLP)', { exact: true })).toHaveValue('200.000');
   await page.getByLabel('Datos de ejemplo').selectOption('failure');
   await expect(page.getByRole('button', { name: 'Continuar al formulario' })).toHaveCount(0);
   await page.getByLabel('Datos de ejemplo').selectOption('partial');

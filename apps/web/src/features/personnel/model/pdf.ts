@@ -1,8 +1,8 @@
 /** Imprime el PDF recibido, sin reconstruir ni modificar el documento. */
-export function printCommissionPdf(blob: Blob, onError: () => void, signal: AbortSignal) {
+export function printPdf(blob: Blob, title: string, onError: () => void, signal: AbortSignal) {
   signal.throwIfAborted();
   const url = URL.createObjectURL(blob), frame = document.createElement('iframe');
-  frame.title = 'Imprimir comisión de servicios';
+  frame.title = title;
   frame.setAttribute('aria-hidden', 'true');
   frame.style.cssText = 'position:fixed;left:-10000px;top:0;width:816px;height:1056px;border:0;pointer-events:none';
   let closed = false, view: Window | null = null;

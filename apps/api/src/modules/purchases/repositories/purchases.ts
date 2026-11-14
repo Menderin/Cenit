@@ -97,7 +97,7 @@ export class PurchaseRepository {
       FROM cenit.purchase_requests,period WHERE sent_date >= period.year_start AND sent_date < (period.year_start + interval '1 year')::date
       GROUP BY upper(document_type) ORDER BY sum(total_amount) DESC,2 DESC LIMIT 6`);
     const recent = await db.query(`SELECT id,request_number AS "requestNumber",description,sent_date::text AS "sentDate",total_amount AS "totalAmount",created_at AS "createdAt",source
-      FROM cenit.purchase_requests ORDER BY created_at DESC,id DESC LIMIT 6`);
+      FROM cenit.purchase_requests ORDER BY created_at DESC,id DESC LIMIT 8`);
     return { data: {
       requests: rows.reduce((total, row) => total + row.requests, 0), pending: rows.reduce((total, row) => total + row.pending, 0),
       currency: 'CLP', pendingAmount: rows.reduce((total, row) => total + BigInt(row.amount), 0n).toString(),
