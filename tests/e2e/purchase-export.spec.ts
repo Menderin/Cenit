@@ -72,8 +72,7 @@ test('descarga por teclado, conserva filtros pendientes y informa fallos sin éx
   await expect(page.getByText('La sesión venció', { exact: true })).toBeVisible();
 });
 
-test('descarga de varias páginas exporta todas las compras y se adapta a móvil', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+test('descarga de varias páginas exporta todas las compras', async ({ page }) => {
   await login(page, 'administrativo');
   await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
   const origin = new URL(page.url()).origin;

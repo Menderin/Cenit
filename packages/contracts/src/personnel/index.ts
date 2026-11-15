@@ -21,3 +21,21 @@ export const ServiceCommissionErrorsSchema = Type.Object({ error: Type.Object({
   code: Type.Literal('VALIDATION_ERROR'), message: Type.String(), requestId: Type.String(),
   fields: Type.Record(Type.String(), Type.String()),
 }, { additionalProperties: false }) }, { additionalProperties: false });
+// Mismo formato de errores por campo para todos los documentos de Personal.
+export const PersonnelPdfErrorsSchema = ServiceCommissionErrorsSchema;
+
+// Solicitud de permiso (hoja SOL. PERMISO). Contrato provisional: no calcula días ni registra la solicitud.
+export const leaveTypes = [
+  'dia_administrativo', 'administrativo_todo_evento', 'por_hora', 'vacaciones_pendientes', 'matrimonio', 'comision_servicio', 'teletrabajo',
+  'permiso_especial_sindicatos', 'cumpleanos', 'logro_sindical', 'nacimiento_hijo', 'defuncion_familiar', 'sin_goce_sueldo', 'vacaciones_progresivas',
+] as const;
+export type LeaveType = typeof leaveTypes[number];
+
+export const LeaveRequestSchema = Type.Object({
+  requestDate: text(10), name: text(500), rut: text(12), unit: text(500),
+  type: Type.Union([Type.Literal(''), ...leaveTypes.map(type => Type.Literal(type))]),
+  from: text(10), to: text(10), totalDays: text(16),
+  hours: text(2), minutes: text(2), startTime: text(5), endTime: text(5), recoveryDate: text(10),
+  notes: text(500),
+}, { additionalProperties: false });
+export type LeaveRequest = Omit<Static<typeof LeaveRequestSchema>, 'type'> & { type: LeaveType | '' };

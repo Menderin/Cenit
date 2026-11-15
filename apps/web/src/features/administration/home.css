@@ -58,6 +58,12 @@
 
 .dashboard-recent ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 0 24px; margin: 0; padding: 0; list-style: none; }
 .dashboard-recent li { min-width: 0; border-top: 1px solid var(--color-line-soft); }
+/* El servidor envía ocho altas; se muestran seis salvo en monitores anchos, donde caben ocho sin dejar espacio vacío. */
+.dashboard-recent li:nth-child(n + 7) { display: none; }
+@media (min-width: 1600px) {
+  .dashboard-recent ul { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dashboard-recent li:nth-child(n + 7) { display: block; }
+}
 .dashboard-recent li a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 8px; border-radius: var(--radius-sm); line-height: 18px; text-decoration: none; transition: background-color 150ms ease-out; }
 .dashboard-recent li a > div { min-width: 0; }
 .dashboard-recent li a > div:first-child { flex: 1 1 0; }
@@ -82,12 +88,6 @@
   .dashboard-monthly__column:hover .dashboard-monthly__bar { background: var(--color-focus); }
 }
 @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 760px) {
-  .admin-content:has(.admin-home) { padding: 20px 16px; }
-  .dashboard-kpis, .dashboard-skeleton { grid-template-columns: minmax(0, 1fr); }
-  .dashboard-monthly__bars { gap: 4px; }
-  .dashboard-monthly__value { display: none; }
-}
 /* Escritorio: Inicio cabe completo en la ventana; si falta alto, desplaza sólo la lista de últimos registros. */
 @media (min-width: 1001px) and (min-height: 600px) {
   .admin-content:has(.admin-home) { display: flex; flex-direction: column; padding-block: 20px; }

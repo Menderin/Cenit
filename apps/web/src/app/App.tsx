@@ -12,6 +12,8 @@ import { PurchaseTransferProvider } from '../features/purchases/model/transfer.j
 import { AdministrativeLayout } from './AdministrativeLayout.js';
 import { Home } from '../features/administration/pages/Home.js';
 import { ServiceCommission } from '../features/personnel/pages/ServiceCommission.js';
+import { LeaveRequest } from '../features/personnel/pages/LeaveRequest.js';
+import { Personnel } from '../features/personnel/pages/Personnel.js';
 import { Assets } from '../features/administration/pages/Assets.js';
 import { AccessLayout } from '../features/auth/components/AccessLayout.js';
 import { Academic } from '../features/academic/pages/Academic.js';
@@ -33,7 +35,9 @@ function AdministrativeArea() {
       <Route path="/administracion/compras/captura" element={<PurchaseCapture key={session.account.id} />} />
       <Route path="/administracion/compras/:id/editar" element={<PurchaseEdit key={session.account.id} />} />
       <Route path="/administracion/compras/:id" element={<PurchaseDetail key={session.account.id} />} />
-      <Route path="/administracion/personal" element={<ServiceCommission />} />
+      <Route path="/administracion/personal" element={<Personnel />} />
+      <Route path="/administracion/personal/comision" element={<ServiceCommission />} />
+      <Route path="/administracion/personal/permiso" element={<LeaveRequest />} />
       <Route path="/administracion/bienes" element={<Assets />} />
       <Route path="*" element={<Navigate to="/administracion" replace />} />
     </Routes>

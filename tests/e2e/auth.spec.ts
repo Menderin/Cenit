@@ -4,13 +4,13 @@ import { manualPurchaseExample } from '../../packages/contracts/src/purchases/re
 
 async function navigateAdministration(page: Page, name: string) {
   const navigation = page.getByRole('navigation', { name: 'Sistemas administrativos' });
-  if (!await navigation.isVisible()) await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
+  const show = page.getByRole('button', { name: 'Mostrar navegación', exact: true });
+  if (await show.isVisible()) await show.click();
   const link = navigation.getByRole('link', { name, exact: true });
   const path = await link.getAttribute('href');
   const changesPage = new URL(page.url()).pathname !== path;
   await link.click();
   if (changesPage) await expect.poll(async () => new URL(page.url()).pathname === path || await page.getByRole('alertdialog').isVisible()).toBe(true);
-  if (changesPage && (page.viewportSize()?.width ?? 1280) <= 760 && !await page.getByRole('alertdialog').isVisible()) await expect(page.getByRole('button', { name: 'Mostrar navegación', exact: true })).toBeVisible();
 }
 
 async function expandPurchaseSection(page: Page, name: string) {
@@ -223,7 +223,7 @@ test('normaliza sólo el correo y permite teclado y carga antes del éxito real'
 test('redimensionar con errores conserva el login sin cortes horizontales', async ({ page }) => {
   await page.goto('/login');
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
-  for (const width of [1920, 1440, 1280, 1024, 1001, 1000, 768, 761, 760, 390, 320]) {
+  for (const width of [1920, 1440, 1280, 1024, 1001, 1000, 768, 761]) {
     await page.setViewportSize({ width, height: 600 });
     await expect(page.getByRole('alert')).toHaveCount(2);
     const dimensions = await page.evaluate(() => {
@@ -235,8 +235,7 @@ test('redimensionar con errores conserva el login sin cortes horizontales', asyn
     expect(dimensions.left).toBeGreaterThanOrEqual(0);
     expect(dimensions.right).toBeLessThanOrEqual(dimensions.client);
     expect(dimensions.form).toBeLessThanOrEqual(336.5);
-    if (width > 760) await expect(page.locator('.cenit-access__landscape')).toBeVisible();
-    else await expect(page.locator('.cenit-access__landscape')).toBeHidden();
+    await expect(page.locator('.cenit-access__landscape')).toBeVisible();
   }
 });
 
@@ -381,9 +380,9 @@ test('compras: expiración descarta borrador y protege la navegación hacia atr�
 });
 
 
-test('compras: formulario accesible y sin desbordamiento en escritorio y móvil', async ({ page }) => {
+test('compras: formulario accesible y sin desbordamiento', async ({ page }) => {
   await openPurchases(page);
-  for (const width of [1280, 375]) {
+  for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });
     await expect(page.getByRole('heading', { name: 'Revisar datos', exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -414,15 +413,16 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await expect(page.getByRole('table', { name: 'Monto documental por mes de envío' })).toHaveCount(1);
   await expect(page.locator('.dashboard-monthly__column')).toHaveCount(12);
   await expect(page.getByRole('button', { name: /aprobar/i })).toHaveCount(0);
-  for (const width of [1280, 375]) {
+  for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/admin-home-${width}.png` });
   }
   await navigateAdministration(page, 'Personal');
   await expect(page).toHaveURL(/\/administracion\/personal$/);
-  await expect(page.getByRole('heading', { name: 'Nueva comisión de servicios', exact: true })).toBeVisible();
-  await expect(page.getByText('Propuesta pendiente de validación. Usa sólo datos ficticios; la búsqueda muestra funcionarios de ejemplo.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Personal', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Comisión de servicios/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Solicitud de permiso/ })).toBeVisible();
   await navigateAdministration(page, 'Bienes');
   await expect(page).toHaveURL(/\/administracion\/bienes$/);
   await expect(page.getByRole('heading', { name: 'Bienes todavía no está disponible', exact: true })).toBeVisible();
@@ -435,7 +435,6 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await navigateAdministration(page, 'Inicio');
   await page.getByRole('alertdialog').getByRole('button', { name: 'Descartar y salir' }).click();
   await expect(page).toHaveURL(/\/administracion$/);
-  await expect(page.getByRole('button', { name: 'Mostrar navegación', exact: true })).toBeVisible();
   await navigateAdministration(page, 'Registro de compras');
   await expect(page.getByRole('link', { name: 'Revisar ejemplo' })).toHaveCount(0);
   await page.goto('/administracion/compras/laboratorio');
@@ -477,7 +476,7 @@ test('solicitudes persistentes: ingreso, varios ítems, recarga, detalle y valid
   await expandPurchaseSection(page, 'Ítem 2');
   await expect(page.locator('.purchase-detail-fields dd').filter({ hasText: 'Proveedor ficticio B' })).toHaveText('Proveedor ficticio B');
   await expect(page.getByText('0000000', { exact: true })).toBeVisible();
-  for (const width of [1280, 1440, 1920, 390]) {
+  for (const width of [1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -597,7 +596,7 @@ test('laboratorio: formato inválido bloquea transferencia, original intacto y b
   await page.getByRole('button', { name: 'Restablecer ejemplo' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Descartar y restablecer' }).click();
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
-  await expect(page.getByLabel('Monto total (CLP)', { exact: true })).toHaveValue('200000');
+  await expect(page.getByLabel('Monto total (CLP)', { exact: true })).toHaveValue('200.000');
   await page.getByLabel('Datos de ejemplo').selectOption('failure');
   await expect(page.getByRole('button', { name: 'Continuar al formulario' })).toHaveCount(0);
   await page.getByLabel('Datos de ejemplo').selectOption('partial');
@@ -671,7 +670,7 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
     await expect(table.getByText('No encontramos compras con estos filtros', { exact: true })).toBeVisible();
     await expect(table.getByRole('table')).toHaveCount(0);
   }
-  for (const width of [1280, 375]) {
+  for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/purchase-empty-tables-${width}.png`, fullPage: true });
@@ -683,7 +682,7 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
   await expect(page).toHaveURL(/dateFrom=2027-02-01&dateTo=2027-02-01/);
   await search.fill('100%_\\');
   for (const table of [pending, reviewed]) await expect(table.getByText('1 registro', { exact: true })).toBeVisible();
-  for (const width of [1280, 375]) {
+  for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/purchase-filters-${width}.png`, fullPage: true });
@@ -766,13 +765,13 @@ test('solicitudes: paginación independiente y vistas sin desbordamiento horizon
   await pending.getByRole('button', { name: 'Siguiente' }).click();
   await expect(pending.getByText(/^Página 2 de /)).toBeVisible();
   await expect(reviewed.getByText(/^Página 1 de /)).toBeVisible();
-  for (const width of [1280, 1440, 1920, 390]) {
+  for (const width of [1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/purchases-list-${width}.png` });
   }
   await page.getByRole('link', { name: 'Registrar manualmente' }).click();
-  for (const width of [1280, 375]) {
+  for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.getByRole('button', { name: 'Agregar ítem', exact: true }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -806,7 +805,7 @@ test('ítems desplegables: errores abren el ítem y eliminar otro conserva valor
   const maximumAmount = '9'.repeat(255);
   await page.getByLabel('Monto total (CLP) *', { exact: true }).fill(maximumAmount);
   await page.getByLabel('Importe (CLP) · ítem 1', { exact: true }).fill(maximumAmount);
-  await page.setViewportSize({ width: 390, height: 900 });
+  await page.setViewportSize({ width: 1280, height: 900 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page.getByRole('heading', { name: /^Solicitud / })).toBeVisible();

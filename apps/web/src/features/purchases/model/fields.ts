@@ -15,6 +15,7 @@ export const dateLabel = (date: string) => date.split('-').reverse().join('/');
 const currency = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 export const amountLabel = (value: string | null) => value === null ? 'Sin dato' : /^(0|[1-9]\d*)$/.test(value) ? currency.format(BigInt(value)) : value;
 export const amountFields = new Set(['totalAmount', 'taxAmount', 'price', 'amount']);
+export const groupThousands = (digits: string) => digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 // Accepts Chilean thousands separators («$1.250.000», «1 250 000») and returns the canonical integer string.
 // Commas and other formats stay as typed so validation can still explain them.
 export function normalizeAmountInput(value: string) {

@@ -349,9 +349,9 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: 2 })).statusCode).toBe(200);
     expect((await request('GET', '/api/v1/purchases/summary')).json().data).toEqual(before);
   });
-  it('el resumen devuelve las seis altas más recientes', async () => {
+  it('el resumen devuelve las ocho altas más recientes', async () => {
     const saved: { id: string; version: number }[] = [];
-    for (let index = 0; index < 7; index++) {
+    for (let index = 0; index < 9; index++) {
       const response = await request('POST', '/api/v1/purchases', body());
       expect(response.statusCode).toBe(201);
       saved.push(response.json().data);
@@ -360,7 +360,7 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     expect(response.statusCode).toBe(200);
     expect(Value.Check(PurchaseSummaryResponseSchema, response.json())).toBe(true);
     const recent = response.json().data.overview.recentRecords;
-    expect(recent).toHaveLength(6);
+    expect(recent).toHaveLength(8);
     expect(recent.every((row: { id: string }) => saved.some(record => record.id === row.id))).toBe(true);
     for (const row of saved) expect((await request('DELETE', `/api/v1/purchases/${row.id}`, { expectedVersion: row.version })).statusCode).toBe(200);
   });
