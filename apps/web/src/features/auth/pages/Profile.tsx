@@ -45,12 +45,12 @@ export function Profile() {
 
 export function AcademicProfile() {
   const auth = useAuth(), account = auth.session!.account;
-  const sidebar = useSidebar('/academico/perfil');
+  const sidebar = useSidebar();
   const main = useRef<HTMLElement>(null);
   useEffect(() => { document.title = 'Cenit · Mi perfil'; main.current?.focus(); return () => { document.title = 'Cenit'; }; }, []);
   return <WorkspaceShell sidebarState={sidebar} className="academic-workspace" skip={{ href: '#profile-content', label: 'Ir al perfil' }}
     navigationId="academic-navigation" navigationLabel="Área académica" account={{ name: account.name, role: roleLabels[account.role] }} logout={auth.logout}
-    accountActions={<AccountProfileLink to="/academico/perfil" onClick={() => { if (sidebar.mobile) sidebar.setCollapsed(true); }} />}
+    accountActions={<AccountProfileLink to="/academico/perfil" />}
     brand={<div className="workspace-brand">Cenit<span>Consulta académica</span></div>}
     navigation={<nav className="workspace-nav" aria-label="Navegación académica"><NavLink to="/academico" className="workspace-nav-item">Malla curricular</NavLink></nav>}
     toolbarStart={<span>Mi perfil</span>}>

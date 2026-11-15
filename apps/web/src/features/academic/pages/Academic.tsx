@@ -82,7 +82,7 @@ export function Academic() {
   return <WorkspaceShell sidebarState={sidebarState} className={`academic-workspace${pointerFocus ? ' academic-workspace--pointer' : ''}`}
     rootProps={{ onPointerDownCapture: () => setPointerFocus(true), onKeyDownCapture: () => setPointerFocus(false) }}
     skip={{ href: '#academic-content', label: 'Ir a la malla' }} navigationId="academic-navigation" navigationLabel="Área académica"
-    account={{ name: account.name, role }} accountActions={<AccountProfileLink to="/academico/perfil" onClick={() => { if (mobile) setSidebarCollapsed(true); }} />} logout={auth.logout}
+    account={{ name: account.name, role }} accountActions={<AccountProfileLink to="/academico/perfil" />} logout={auth.logout}
     brand={<div className="workspace-brand">Cenit<span>Consulta académica</span></div>}
     navigation={<nav className="workspace-nav" aria-label="Navegación académica">
       <p className="workspace-eyebrow">Académico</p>
