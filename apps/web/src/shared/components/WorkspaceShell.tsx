@@ -24,9 +24,8 @@ export function WorkspaceShell({ sidebarState, className, rootProps, skip, navig
           {brand}
           {navigation}
           <div className="workspace-sidebar__bottom">
-            {accountActions}
             <button type="button" className="workspace-nav-item" onClick={event => signOut(event.currentTarget)}><SignOutIcon size={18} aria-hidden="true" />Cerrar sesión</button>
-            <div className="workspace-account"><span className="workspace-avatar" aria-hidden="true">{account.name.trim().charAt(0)}</span><div><strong>{account.name}</strong><span>{account.role}</span></div></div>
+            {accountActions ?? <div className="workspace-account"><span className="workspace-avatar" aria-hidden="true">{account.name.trim().charAt(0)}</span><div><strong>{account.name}</strong><span>{account.role}</span></div></div>}
           </div>
         </div>
       </aside>

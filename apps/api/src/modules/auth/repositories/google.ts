@@ -26,6 +26,13 @@ export class GoogleRepository {
   async linked(accountId: string) {
     return (await this.pool.query('SELECT 1 FROM cenit.google_identities WHERE account_id=$1', [accountId])).rowCount === 1;
   }
+  async profile(accountId: string) {
+    return (await this.pool.query<{ linked: boolean; email: string | null; pictureUrl: string | null }>(
+      `SELECT (g.account_id IS NOT NULL) AS linked,w.email,g.picture_url AS "pictureUrl"
+       FROM cenit.accounts a LEFT JOIN cenit.google_identities g ON g.account_id=a.id
+       LEFT JOIN cenit.google_authorizations w ON w.account_id=a.id WHERE a.id=$1`, [accountId])).rows[0]
+      ?? { linked: false, email: null, pictureUrl: null };
+  }
   async link(accountId: string, sessionHash: string, identity: GoogleIdentity, now: Date) {
     const db = await this.pool.connect();
     try {
@@ -39,7 +46,8 @@ export class GoogleRepository {
       }
       const existing = (await db.query<{ subject: string; account_id: string }>('SELECT subject,account_id FROM cenit.google_identities WHERE account_id=$1 OR subject=$2', [accountId, identity.sub])).rows;
       if (existing.some(row => row.account_id !== accountId || row.subject !== identity.sub)) throw new ApiError(409, 'GOOGLE_LINK_CONFLICT', 'La identidad o cuenta ya tiene otra vinculación.');
-      if (!existing.length) await db.query('INSERT INTO cenit.google_identities(account_id,subject,linked_at) VALUES($1,$2,$3)', [accountId, identity.sub, now]);
+      if (!existing.length) await db.query('INSERT INTO cenit.google_identities(account_id,subject,linked_at,picture_url) VALUES($1,$2,$3,$4)', [accountId, identity.sub, now, identity.pictureUrl ?? null]);
+      else await db.query('UPDATE cenit.google_identities SET picture_url=$2 WHERE account_id=$1', [accountId, identity.pictureUrl ?? null]);
       await db.query('COMMIT');
     } catch (error) {
       await db.query('ROLLBACK');

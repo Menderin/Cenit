@@ -12,6 +12,8 @@ Iniciar o reutilizar PostgreSQL local con `docker compose up -d db`, y luego eje
 
 Abrir [http://127.0.0.1:5173/login](http://127.0.0.1:5173/login) y usar las cuentas ficticias guardadas localmente. `Ctrl+C` cierra API y web; PostgreSQL queda iniciado y conserva su volumen. La demo compilada de `8081`, si está activa, es independiente.
 
+En Windows, el reinicio automático del API observa `apps/api/src` y los contratos compilados; excluye las dependencias para evitar reinicios por eventos de sincronización de OneDrive. Tras instalar o cambiar dependencias, detener y volver a ejecutar `npm run dev`.
+
 La copia automática a Google Sheets es opcional y viene apagada. Para revisar ese flujo hacen falta una planilla dedicada de pruebas, su ID y la credencial privada de la cuenta de servicio; seguir [Conectar una planilla de pruebas](#conectar-una-planilla-de-pruebas). Crear un registro ficticio desde Cenit y esperar el estado «Sincronizado»; los cambios de Sheets no se importan a Cenit.
 
 ## Herramientas y configuración
@@ -94,7 +96,7 @@ Para retirar el permiso, ejecutar el mismo comando con `revoke` en lugar de `aut
 
 El recorrido HTTP para el frontend comienza con `GET /api/v1/auth/google`. Para vincular, entrar primero con contraseña local, solicitar `POST /api/v1/auth/google/challenge` con `{"purpose":"link"}`, inicializar GIS con `clientId` y el `nonce` recibido y enviar `{"credential":"<ID token del callback>"}` a `POST /api/v1/auth/google/link`. Para acceder después, repetir con propósito `login` y `POST /api/v1/auth/google/login`. Las escrituras usan JSON, cookies y Origin autorizado. Tras un error se solicita otro desafío. El alta inicial de autorización nunca sustituye la vinculación desde la sesión local.
 
-Para comprobarlo en pantalla, entrar primero con contraseña, abrir **Acceso con Google** en la navegación lateral y pulsar **Preparar vinculación con Google**. El botón oficial abre la selección de cuenta. Confirmar la vinculación en Cenit, cerrar sesión y pulsar **Preparar acceso con Google** en el login para entrar con esa identidad. Repetir consulta y logout con cada rol autorizado. Escape o **Cerrar** cierran el diálogo. **Cancelar intento** permite volver al formulario local, y los errores permiten preparar un desafío nuevo.
+Para comprobarlo en pantalla, entrar primero con contraseña y abrir **Mi perfil** en la navegación lateral. Su sección **Acceso con Google** prepara el botón oficial y abre la selección de cuenta con un clic. Confirmar la vinculación en Cenit, cerrar sesión y pulsar **Iniciar sesión con Google** en el login para entrar con esa identidad. Repetir consulta y logout con cada rol autorizado. La preparación puede cancelarse mientras carga, y los errores permiten usar **Reintentar Google** para obtener un desafío nuevo. La foto Google se actualiza al vincular o ingresar, usando la migración `0011_google_profile_picture`. Si falta o falla su carga, el perfil muestra la inicial.
 
 Consultar `GET /api/v1/auth/session` comprueba la sesión emitida. Un error `GOOGLE_DISABLED` permite usar el login local; `GOOGLE_UNAVAILABLE` permite reintentar con un desafío nuevo. No pegar credenciales, JWT ni cookies en tickets o logs. Las pruebas automatizadas verifican tokens firmados con claves ficticias, PostgreSQL descartable y estados de interfaz con dobles del proveedor. La comprobación con un cliente Google real debe registrarse por separado. Si se añade CSP en el proxy, permitir las rutas GIS indicadas en la documentación oficial. Revisar también COOP para permitir la ventana emergente.
 

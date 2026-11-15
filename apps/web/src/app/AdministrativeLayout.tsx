@@ -7,7 +7,7 @@ import { PackageIcon } from '@phosphor-icons/react/dist/csr/Package';
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
 import type { Account } from '@cenit/contracts/auth';
 import { SessionWarning } from '../features/auth/components/SessionWarning.js';
-import { GoogleAccount } from '../features/auth/components/GoogleAccess.js';
+import { AccountProfileLink } from '../features/auth/components/AccountProfileLink.js';
 import { usePurchaseReturnTo } from '../features/purchases/model/location.js';
 import { usePurchaseGuard } from '../features/purchases/model/guard.js';
 import { useSidebar } from '../shared/lib/use-sidebar.js';
@@ -61,7 +61,7 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
     </NavLink>;
   }
   const current = [...navigation, ...upcoming].find(link => link.end ? location.pathname === link.to : location.pathname.startsWith(link.to));
-  const page = location.pathname === '/administracion/compras/nueva' ? 'Registrar compra'
+  const page = location.pathname === '/administracion/perfil' ? 'Mi perfil' : location.pathname === '/administracion/compras/nueva' ? 'Registrar compra'
     : location.pathname === '/administracion/compras/captura' ? 'Registrar desde captura'
     : location.pathname === '/administracion/compras/laboratorio' ? 'Revisar datos'
     : /\/administracion\/compras\/[^/]+\/editar$/.test(location.pathname) ? 'Editar compra'
@@ -73,7 +73,7 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
     main.current?.scrollTo(0, 0); window.scrollTo(0, 0); main.current?.focus({ preventScroll: true });
   }, [location.pathname, mobile, collapsed]);
   return <WorkspaceShell sidebarState={sidebarState} className="admin-workspace" skip={{ href: '#admin-content', label: 'Ir al contenido' }}
-    navigationId="admin-navigation" navigationLabel="Navegación administrativa" account={{ name: account.name, role: 'Administrativo' }} accountActions={<GoogleAccount />} logout={logout}
+    navigationId="admin-navigation" navigationLabel="Navegación administrativa" account={{ name: account.name, role: 'Administrativo' }} accountActions={<AccountProfileLink to="/administracion/perfil" onClick={follow} />} logout={logout}
     brand={<NavLink to="/administracion" onClick={follow} className="workspace-brand" aria-label="Cenit, inicio administrativo">Cenit<span>Espacio administrativo</span></NavLink>}
     navigation={<nav className="workspace-nav" aria-label="Sistemas administrativos">
       <p className="workspace-eyebrow">Administración</p>
@@ -81,7 +81,7 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
       <p className="workspace-eyebrow workspace-eyebrow--section">Próximamente</p>
       {upcoming.map(link => navItem(link, true))}
     </nav>}
-    toolbarStart={<nav className="admin-breadcrumb" aria-label="Ubicación"><NavLink to="/administracion" onClick={follow}>Administración</NavLink><CaretRightIcon size={12} aria-hidden="true" />{page !== current?.label && <><NavLink to={returnTo} onClick={follow}>Compras</NavLink><CaretRightIcon size={12} aria-hidden="true" /></>}<span aria-current="page" data-confirm-fallback tabIndex={-1}>{page}</span></nav>}>
+    toolbarStart={<nav className="admin-breadcrumb" aria-label="Ubicación"><NavLink to="/administracion" onClick={follow}>Administración</NavLink><CaretRightIcon size={12} aria-hidden="true" />{page !== current?.label && location.pathname.startsWith('/administracion/compras') && <><NavLink to={returnTo} onClick={follow}>Compras</NavLink><CaretRightIcon size={12} aria-hidden="true" /></>}<span aria-current="page" data-confirm-fallback tabIndex={-1}>{page}</span></nav>}>
     <main className={`admin-content${location.pathname === '/administracion/compras/captura' ? ' admin-content--capture' : ''}`} id="admin-content" ref={main} tabIndex={-1} onFocusCapture={event => revealFocus(event.target)}>
       <SessionWarning expiresAt={expiresAt} logout={logout} />
       <div key={location.pathname} className="cenit-page-enter">{children}</div>

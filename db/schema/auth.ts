@@ -34,7 +34,10 @@ export const googleIdentities = cenit.table('google_identities', {
   accountId: uuid('account_id').primaryKey().references(() => accounts.id),
   subject: text('subject').notNull().unique(),
   linkedAt: timestamp('linked_at', { withTimezone: true }).notNull().defaultNow(),
-}, t => [check('google_identity_subject', sql`${t.subject} ~ '^[A-Za-z0-9_-]{1,255}$'`)]);
+  pictureUrl: text('picture_url'),
+}, t => [check('google_identity_subject', sql`${t.subject} ~ '^[A-Za-z0-9_-]{1,255}$'`),
+  check('google_identity_picture_url', sql`${t.pictureUrl} IS NULL OR (length(${t.pictureUrl}) <= 2048 AND ${t.pictureUrl} ~ '^https://([a-z0-9-]+\\.)*googleusercontent\\.com/[^[:space:]]*$')`),
+]);
 export const googleChallenges = cenit.table('google_challenges', {
   tokenHash: text('token_hash').primaryKey(), nonceHash: text('nonce_hash').notNull(), purpose: text('purpose').notNull(),
   accountId: uuid('account_id').references(() => accounts.id), sessionHash: text('session_hash'),

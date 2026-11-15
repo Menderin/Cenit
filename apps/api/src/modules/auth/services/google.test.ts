@@ -27,7 +27,21 @@ it('proveedor apagado si falta configuración válida; no infiere dominios', () 
 });
 it('verifica firma RSA con google-auth-library, nonce y correo verificado', async () => {
   const { verify } = verifier();
-  expect(await verify(token(), googleHash(nonce))).toEqual({ sub: '123456789', email: 'docente@cenit.invalid' });
+  expect(await verify(token(), googleHash(nonce))).toEqual({ sub: '123456789', email: 'docente@cenit.invalid', pictureUrl: null });
+});
+it.each([
+  ['https://lh3.googleusercontent.com/a/photo', 'https://lh3.googleusercontent.com/a/photo'],
+  ['https://googleusercontent.com/photo', 'https://googleusercontent.com/photo'],
+  ['https://googleusercontent.com.evil.invalid/photo', null],
+  ['http://lh3.googleusercontent.com/photo', null],
+  ['https://user:password@lh3.googleusercontent.com/photo', null],
+  ['https://lh3.googleusercontent.com:8443/photo', null],
+  ['data:image/png;base64,abc', null],
+  ['https://lh3.googleusercontent.com/' + 'a'.repeat(2048), null],
+  [null, null],
+])('recupera una foto admitida desde el token firmado (%s)', async (picture, expected) => {
+  const { verify } = verifier();
+  expect((await verify(token({ picture }), googleHash(nonce))).pictureUrl).toBe(expected);
 });
 describe('rechaza claims incoherentes sin exponer el token', () => {
   it.each([

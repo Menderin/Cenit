@@ -5,7 +5,7 @@ import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { Value } from '@sinclair/typebox/value';
-import { GoogleChallengeResponseSchema, SessionResponseSchema } from '../../packages/contracts/src/auth/index.js';
+import { GoogleChallengeResponseSchema, ProfileResponseSchema, SessionResponseSchema } from '../../packages/contracts/src/auth/index.js';
 import { buildAcademicApp } from '../../apps/api/src/app.js';
 import { AcademicRepository } from '../../apps/api/src/modules/academic/repositories/academic.js';
 import { AuthRepository } from '../../apps/api/src/modules/auth/repositories/auth.js';
@@ -41,7 +41,7 @@ function build(enabled = true) {
     google: new GoogleService(enabled ? { enabled: true, clientId } : { enabled: false }, googleRepo, auth, async (credential, hash) => {
       const parsed = JSON.parse(credential);
       if (googleHash(parsed.nonce) !== hash) throw invalidGoogle();
-      return { sub: parsed.sub, email: parsed.email };
+      return { sub: parsed.sub, email: parsed.email, pictureUrl: parsed.pictureUrl ?? null };
     }, () => now) } });
 }
 const request = (url: string, payload?: object, cookie?: string, suppliedOrigin: string | undefined = origin, remoteAddress?: string) => app.inject({
@@ -146,6 +146,25 @@ it('rechaza vincular un subject declarado sin credencial Google', async () => {
   expect((await request('/google/link', { sub: 'unverified-foreign-sub' }, session)).statusCode).toBe(400);
   expect((await pool.query('SELECT count(*)::int AS n FROM cenit.google_identities')).rows[0].n).toBe(0);
   expect((await request('/session', undefined, session)).statusCode).toBe(200);
+});
+it('el perfil es privado, conserva foto al vincular y la actualiza al entrar con Google', async () => {
+  expect((await request('/profile')).statusCode).toBe(401);
+  await authorize();
+  const session = await local();
+  const initial = await request('/profile', undefined, session);
+  expect(Value.Check(ProfileResponseSchema, initial.json())).toBe(true);
+  expect(initial.json().data.google).toMatchObject({ linked: false, pictureUrl: null });
+  const selected = { ...identity, pictureUrl: 'https://lh3.googleusercontent.com/a/fictitious' };
+  expect((await complete('link', await challenge('link', session), selected)).statusCode).toBe(200);
+  expect((await request('/profile', undefined, session)).json().data.google).toEqual({ enabled: true, linked: true, email: identity.email, pictureUrl: selected.pictureUrl });
+  const other = await local(credentials[1]!);
+  expect((await request('/profile', undefined, other)).json().data.google).toMatchObject({ linked: false, pictureUrl: null, email: null });
+  const updated = { ...selected, pictureUrl: 'https://lh3.googleusercontent.com/a/updated' };
+  const login = await complete('login', await challenge('login'), updated);
+  const response = await request('/profile', undefined, cookie(login, 'cenit_session'));
+  expect(response.json().data.google.pictureUrl).toBe(updated.pictureUrl);
+  await expect(pool.query('UPDATE cenit.google_identities SET picture_url=$2 WHERE account_id=$1', [account.id, 'https://example.invalid/photo'])).rejects.toMatchObject({ code: '23514' });
+  expect((await request('/profile', undefined, session)).json().data.google.pictureUrl).toBe(updated.pictureUrl);
 });
 it('rechaza replay, nonce ajeno, falta de cookie y desafío vencido', async () => {
   const attempt = await challenge('login');

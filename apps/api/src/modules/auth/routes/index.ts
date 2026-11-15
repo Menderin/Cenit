@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { ErrorResponseSchema } from '@cenit/contracts';
-import { LoginRequestSchema, LogoutRequestSchema, SessionResponseSchema, type LoginRequest } from '@cenit/contracts/auth';
+import { LoginRequestSchema, LogoutRequestSchema, ProfileResponseSchema, SessionResponseSchema, type LoginRequest } from '@cenit/contracts/auth';
 import { ApiError } from '../../../infrastructure/errors.js';
 import { AuthService, SESSION_SECONDS } from '../services/auth.js';
 import type { GoogleService } from '../services/google.js';
@@ -39,6 +39,13 @@ export async function authRoutes(app: FastifyInstance, options: { service: AuthS
     const result = await service.session(request.cookies[SESSION_COOKIE]);
     if (!result) throw new ApiError(401, 'AUTHENTICATION_REQUIRED', 'Debes iniciar sesión.');
     return result;
+  });
+  app.get('/profile', { schema: { response: { 200: ProfileResponseSchema, ...errors } } }, async request => {
+    const session = await service.session(request.cookies[SESSION_COOKIE]);
+    if (!session) throw new ApiError(401, 'AUTHENTICATION_REQUIRED', 'Debes iniciar sesión.');
+    const google = await options.google?.profile(session.data.account.id)
+      ?? { enabled: false, linked: false, email: null, pictureUrl: null };
+    return { data: { account: session.data.account, google } };
   });
   app.post('/logout', { schema: { body: LogoutRequestSchema, response: errors }, onRequest: origin }, async (request, reply) => {
     await service.logout(request.cookies[SESSION_COOKIE]);

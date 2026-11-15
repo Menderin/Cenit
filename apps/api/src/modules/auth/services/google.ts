@@ -5,7 +5,16 @@ import { ApiError } from '../../../infrastructure/errors.js';
 import type { GoogleRepository } from '../repositories/google.js';
 import { sessionHash, type AuthService } from './auth.js';
 
-export type GoogleIdentity = { sub: string; email: string };
+export type GoogleIdentity = { sub: string; email: string; pictureUrl?: string | null };
+export function googlePictureUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length > 2048) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || url.username || url.password || url.port ||
+      !(url.hostname === 'googleusercontent.com' || url.hostname.endsWith('.googleusercontent.com'))) return null;
+    return url.href.length <= 2048 ? url.href : null;
+  } catch { return null; }
+}
 export type GoogleConfig = { enabled: false } | { enabled: true; clientId: string };
 export const GOOGLE_CHALLENGE_SECONDS = 300;
 export const googleHash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -38,7 +47,7 @@ export function googleTokenVerifier(clientId: string, client = new OAuth2Client(
       typeof payload.email !== 'string' || payload.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email) ||
       typeof nonce !== 'string' || !/^[0-9a-f]{64}$/.test(nonce) || !/^[0-9a-f]{64}$/.test(nonceHash) ||
       !timingSafeEqual(Buffer.from(googleHash(nonce), 'hex'), Buffer.from(nonceHash, 'hex'))) throw invalidGoogle();
-    return { sub: payload.sub, email: payload.email.toLowerCase() };
+    return { sub: payload.sub, email: payload.email.toLowerCase(), pictureUrl: googlePictureUrl(payload.picture) };
   };
 }
 
@@ -76,5 +85,8 @@ export class GoogleService {
     const session = await this.auth.session(sessionToken);
     if (!session) throw new ApiError(401, 'AUTHENTICATION_REQUIRED', 'Debes iniciar sesión.');
     return { data: { linked: await this.repository.linked(session.data.account.id) } };
+  }
+  async profile(accountId: string) {
+    return { enabled: this.config.enabled, ...await this.repository.profile(accountId) };
   }
 }

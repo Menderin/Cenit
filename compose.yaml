@@ -11,6 +11,12 @@ services:
     networks: [cenit]
     read_only: true
     tmpfs: ["/tmp:rw,size=64m,mode=1777"]
+    # Health probe recovered from ihelo's SCRUM-133, commit 35f336a.
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health/live', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
     mem_limit: 1g
     cpus: 1
     cap_drop: [ALL]

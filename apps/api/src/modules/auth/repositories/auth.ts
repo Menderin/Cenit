@@ -25,9 +25,10 @@ export class AuthRepository {
       const account = (await db.query<{ active: boolean }>('SELECT active FROM cenit.accounts WHERE id=$1 FOR SHARE', [accountId])).rows[0];
       if (!account?.active) { await db.query('ROLLBACK'); return false; }
       if (google && !(await db.query(`SELECT 1 FROM cenit.google_identities g JOIN cenit.google_authorizations w ON w.account_id=g.account_id
-        WHERE g.account_id=$1 AND g.subject=$2 AND w.email=$3 FOR SHARE OF g,w`, [accountId, google.sub, google.email])).rowCount) {
+        WHERE g.account_id=$1 AND g.subject=$2 AND w.email=$3 FOR UPDATE OF g FOR SHARE OF w`, [accountId, google.sub, google.email])).rowCount) {
         await db.query('ROLLBACK'); return false;
       }
+      if (google) await db.query('UPDATE cenit.google_identities SET picture_url=$2 WHERE account_id=$1', [accountId, google.pictureUrl ?? null]);
       if (previousHash) await db.query('UPDATE cenit.sessions SET revoked_at=$2 WHERE token_hash=$1 AND revoked_at IS NULL', [previousHash, createdAt]);
       // Local SQL remains compatible with the previous schema and image.
       if (google) await db.query("INSERT INTO cenit.sessions(token_hash,account_id,created_at,expires_at,authentication_method) VALUES($1,$2,$3,$4,'google')", [tokenHash, accountId, createdAt, expiresAt]);

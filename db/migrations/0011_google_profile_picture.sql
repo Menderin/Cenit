@@ -1,0 +1,2 @@
+ALTER TABLE "cenit"."google_identities" ADD COLUMN "picture_url" text;--> statement-breakpoint
+ALTER TABLE "cenit"."google_identities" ADD CONSTRAINT "google_identity_picture_url" CHECK ("cenit"."google_identities"."picture_url" IS NULL OR (length("cenit"."google_identities"."picture_url") <= 2048 AND "cenit"."google_identities"."picture_url" ~ '^https://([a-z0-9-]+\.)*googleusercontent\.com/[^[:space:]]*$'));

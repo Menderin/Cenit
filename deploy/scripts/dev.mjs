@@ -108,9 +108,13 @@ async function main() {
   if (stopping) return;
   start('Contratos', [...contracts, '--watch', '--preserveWatchOutput'], root, env);
   console.log('Iniciando API local en http://127.0.0.1:3000…');
-  start('API', ['--watch', '--watch-preserve-output', '--import', 'tsx', 'apps/api/src/server.ts'], root, env);
+  // Windows/OneDrive can emit dependency hydration events while imports are read.
+  // Explicit paths keep node_modules out while preserving API/contract reloads.
+  const watch = process.platform === 'win32'
+    ? ['--watch-path=apps/api/src', '--watch-path=packages/contracts/dist'] : ['--watch'];
+  start('API', [...watch, '--watch-preserve-output', '--import', 'tsx', 'apps/api/src/server.ts'], root, env);
   let ready = false;
-  for (let i = 0; i < 100 && !stopping; i++) {
+  for (let i = 0; i < 300 && !stopping; i++) {
     try {
       const response = await fetch('http://127.0.0.1:3000/health/live', { signal: AbortSignal.timeout(500) });
       if (response.ok && (await response.json()).status === 'live') { ready = true; break; }
