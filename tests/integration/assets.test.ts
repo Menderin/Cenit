@@ -24,7 +24,8 @@ const admin = createTestPool({ connectionString: adminUrl });
 let db: Pool;
 const dir = resolve('tmp/assets-tests', suffix);
 const migratorFile = resolve(dir, 'migrator-url'), runtimeFile = resolve(dir, 'runtime-url');
-const account = createDemoCredentials().find(entry => entry.role === 'administrativo')!;
+const credentials = createDemoCredentials();
+const account = credentials.find(entry => entry.role === 'administrativo')!;
 let base = '', cookie = '';
 let child: ChildProcess | undefined;
 let stderr = '';
@@ -68,7 +69,7 @@ beforeAll(async () => {
     GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA cenit TO ${runtimeRole}; GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA cenit TO ${runtimeRole};`);
   const runtimeUrl = new URL(url.toString()); runtimeUrl.username = runtimeRole; runtimeUrl.password = runtimePassword;
   writeFileSync(runtimeFile, runtimeUrl.toString(), { mode: 0o600 });
-  await prepareDemoAccounts(db, createDemoCredentials());
+  await prepareDemoAccounts(db, credentials);
   const port = await freePort(); base = `http://127.0.0.1:${port}`;
   child = spawn(process.execPath, ['apps/api/dist/server.js'], {
     env: { ...process.env, DATABASE_URL: '', NODE_ENV: 'production', APP_ENV: 'demo', HOST: '127.0.0.1', PORT: String(port), DATABASE_URL_FILE: runtimeFile, AUTH_COOKIE_SECURE: 'false', AUTH_ALLOWED_ORIGINS: base },
