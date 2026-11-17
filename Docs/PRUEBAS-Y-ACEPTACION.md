@@ -1,6 +1,6 @@
 # Pruebas y criterios de aceptación
 
-Esta matriz ayuda al equipo a revisar el acceso a Cenit, el registro de compras, las propuestas de Comisión de servicios y Solicitud de permiso y la consulta académica. Para cada caso indica qué preparar, qué resultado esperar, qué pruebas existen y qué falta validar. Corresponde al MVP de Compras y académico; Personal y Bienes requieren sus propios casos cuando se definan sus requisitos.
+Esta matriz ayuda al equipo a revisar el acceso a Cenit, el registro de compras, las propuestas de Comisión de servicios, Solicitud de permiso y Bienes y la consulta académica. Para cada caso indica qué preparar, qué resultado esperar, qué pruebas existen y qué falta validar. Corresponde al MVP de Compras y académico; Personal y Bienes son propuestas que se validan con la Facultad, por lo que sus casos son provisionales.
 
 Una prueba automática correcta demuestra el comportamiento que comprueba. La aceptación del contenido curricular, la precisión del OCR y la revisión con usuarios requieren además las fuentes y los criterios acordados con sus responsables.
 
@@ -86,6 +86,19 @@ Estos casos usan exclusivamente datos ficticios. La obligatoriedad por tipo, el 
 | Corregir errores | Enviar vacío, RUT inválido, horas invertidas, texto que no cabe o caracteres no admitidos | Error comprensible, foco en el primer campo y datos conservados; el servidor no devuelve un PDF recortado | [API/PDF](../apps/api/src/modules/personnel/services/leave.test.ts), [navegador](../tests/e2e/personnel.spec.ts) | Revisar límites con la contraparte |
 | Descargar e imprimir | Formulario completo por hora | Una hoja carta con «BORRADOR», la casilla del tipo marcada, firmas y sección de RRHH vacías | [API/PDF](../apps/api/src/modules/personnel/services/leave.test.ts), [navegador](../tests/e2e/personnel.spec.ts) | Cotejo visual con el XLSX, impresión física y aceptación del formato |
 
+## Bienes — propuesta
+
+Propuesta general basada en el informe de levantamiento y los tres formularios recibidos; sus campos, firmantes, identificador oficial, plazos y formato siguen pendientes de validar con la Facultad. El [mapa](ARQUITECTURA.md#bienes-propuesta-general) describe el comportamiento actual. Los casos usan datos ficticios.
+
+| Caso y criterio | Preparación y entrada | Resultado esperado | Pruebas existentes | Pendiente |
+| --- | --- | --- | --- | --- |
+| Acceso | Abrir `/administracion/bienes` con administrativo y con un rol académico | El administrativo ve Bienes; el académico es redirigido | [Navegador](../tests/e2e/auth.spec.ts) | Permisos por rol de Bienes aún sin definir |
+| Préstamos simultáneos | Enviar a la vez dos préstamos del mismo bien | Uno se guarda (201) y el otro recibe 409; el inventario no lista el bien dos veces | [Integración](../tests/integration/assets.test.ts) | Ejecutar en un PostgreSQL de pruebas |
+| Responsable que ya no pertenece | Prestar un bien a otra persona y marcar a su responsable como «ya no pertenece» | «Por revisar» y Responsables cuentan el bien; el bien sigue «En préstamo» | [Integración](../tests/integration/assets.test.ts) | Revisión del recorrido con usuarios |
+| Fechas y caracteres | Enviar una fecha inexistente (31/02) y un texto con «✓» | 422 con mensaje claro, sin 500 ni «?» en el PDF | [Integración](../tests/integration/assets.test.ts), [PDF](../apps/api/src/modules/assets/services/pdf.test.ts) | Límites de texto con la contraparte |
+| Documentos PDF | Generar una entrega corta, una con textos largos y una con más de diez bienes | Una hoja carta con «BORRADOR»; lo que no cabe se rechaza con mensaje | [PDF](../apps/api/src/modules/assets/services/pdf.test.ts) | Cotejo visual con los formularios, impresión física y aceptación del formato |
+| Formularios | Enviar vacío, con fecha inexistente o con RUT erróneo | Errores en rojo bajo cada campo, aviso con la cantidad y foco en el primero | — | Prueba de navegador pendiente |
+
 ## Consulta académica
 
 La fuente vigente y las aclaraciones de dirección/conjunción están en el [cotejo](COTEJO-CATALOGO-ACADEMICO.md). Las pruebas de PostgreSQL verifican convivencia con `2027-r1`, repetición, inmutabilidad, rollback y conservación de adscripciones; no necesitan releer el PDF histórico retirado. En el navegador se comprueba que se muestra `diagrama-r2` sin selector y no se aplica un historial incompatible. Los resultados locales de esta modificación se informan con su revisión; no sustituyen Actions ni aceptación del cliente.
@@ -139,6 +152,7 @@ Las pruebas usan datos ficticios. Las de integración y navegador crean y elimin
 | Recorridos de navegador | `npm run test:e2e` | Aplicación compilada, login y recorridos administrativos/académicos |
 | Sólo académico | `npm run test:e2e -- tests/e2e/academic.spec.ts` | Recorridos académicos existentes |
 | Revisar el mockup de prerrequisitos | `npm run test:e2e -- tests/e2e/academic.spec.ts --grep 'fictici[oa]s' --output tmp/prerequisite-review/screenshots` | Seis estados y cadena ficticia, intención de hover, teclado y capturas fuera de Git |
+| Bienes (carrera de préstamos y validaciones) | `npm run test:integration -- tests/integration/assets.test.ts` | Concurrencia, «por revisar» y mensajes 422 sobre PostgreSQL descartable |
 | Persistencia y filtros de compras | `npm run test:integration -- tests/integration/purchases.test.ts tests/integration/purchases-consistency.test.ts` | Casos para revisión independiente de SCRUM-53 y SCRUM-58 sobre PostgreSQL |
 | Catálogo | `npm run catalog:check` | Archivo del plan, fuentes/hashes, reglas interpretadas y pendientes, sin publicarlo |
 | Tipos y estilo de código | `npm run typecheck` y `npm run lint` | Consistencia de tipos y reglas de código |

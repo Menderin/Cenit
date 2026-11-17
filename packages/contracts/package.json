@@ -35,6 +35,10 @@
     "./personnel": {
       "types": "./dist/personnel/index.d.ts",
       "import": "./dist/personnel/index.js"
+    },
+    "./assets": {
+      "types": "./dist/assets/index.d.ts",
+      "import": "./dist/assets/index.js"
     }
   },
   "scripts": {

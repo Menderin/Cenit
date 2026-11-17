@@ -33,6 +33,9 @@
       ],
       "@cenit/contracts/personnel": [
         "./packages/contracts/src/personnel/index.ts"
+      ],
+      "@cenit/contracts/assets": [
+        "./packages/contracts/src/assets/index.ts"
       ]
     }
   },

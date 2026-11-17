@@ -13,6 +13,8 @@ import { PurchaseRepository } from './modules/purchases/repositories/purchases.j
 import { PurchaseService } from './modules/purchases/services/purchases.js';
 import { purchaseRoutes } from './modules/purchases/routes/index.js';
 import { personnelRoutes } from './modules/personnel/routes/index.js';
+import { assetRoutes } from './modules/assets/routes/index.js';
+import type { AssetRepository } from './modules/assets/repositories/assets.js';
 import { registerFrontend } from './infrastructure/plugins/frontend.js';
 import type { ExtractionService } from './modules/purchases/services/extractions.js';
 import type { PurchaseCapabilities } from '@cenit/contracts/purchases';
@@ -20,7 +22,7 @@ import { defaultPurchaseCapabilities } from './modules/purchases/services/config
 import type { PurchaseSheetsRepository } from './modules/purchases/repositories/sheets.js';
 import type { CaptureReceipts } from './modules/purchases/services/capture-receipts.js';
 
-export function buildAcademicApp(options: { repository: AcademicReadRepository; purchases?: PurchaseRepository; purchaseCapabilities?: PurchaseCapabilities; sheets?: { repository: PurchaseSheetsRepository; spreadsheetId: string }; extraction?: ExtractionService; captureReceipts?: CaptureReceipts; frontendRoot?: string; authenticate?: AuthenticateAcademic; auth?: { service: AuthService; config: AuthConfig; google?: GoogleService } }) {
+export function buildAcademicApp(options: { repository: AcademicReadRepository; purchases?: PurchaseRepository; assets?: AssetRepository; purchaseCapabilities?: PurchaseCapabilities; sheets?: { repository: PurchaseSheetsRepository; spreadsheetId: string }; extraction?: ExtractionService; captureReceipts?: CaptureReceipts; frontendRoot?: string; authenticate?: AuthenticateAcademic; auth?: { service: AuthService; config: AuthConfig; google?: GoogleService } }) {
   if (options.auth && options.authenticate) throw new Error('No combinar sesión real con adaptador de identidad de prueba.');
   const app = Fastify({ bodyLimit: 128 * 1024, genReqId: () => randomUUID(), ajv: { customOptions: { removeAdditional: false, coerceTypes: false } } });
   // Query-only coercion keeps HTTP pagination usable without accepting role/body coercion.
@@ -53,6 +55,7 @@ export function buildAcademicApp(options: { repository: AcademicReadRepository; 
   } : options.authenticate ?? (async () => null);
   app.register(academicRoutes, { prefix: '/api/v1/academic', service: new AcademicService(options.repository), authenticate });
   app.register(personnelRoutes, { prefix: '/api/v1/personnel', authenticate, allowedOrigins: options.auth?.config.allowedOrigins ?? [] });
+  if (options.assets) app.register(assetRoutes, { prefix: '/api/v1/assets', repository: options.assets, authenticate, allowedOrigins: options.auth?.config.allowedOrigins ?? [] });
   if (options.purchases) app.register(purchaseRoutes, { prefix: '/api/v1/purchases', service: new PurchaseService(options.purchases, options.captureReceipts, options.purchaseCapabilities), capabilities: options.purchaseCapabilities ?? defaultPurchaseCapabilities, sheets: options.sheets, extraction: options.extraction, authenticate, allowedOrigins: options.auth?.config.allowedOrigins ?? [] });
   return app;
 }

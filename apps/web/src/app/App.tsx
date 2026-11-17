@@ -14,7 +14,15 @@ import { Home } from '../features/administration/pages/Home.js';
 import { ServiceCommission } from '../features/personnel/pages/ServiceCommission.js';
 import { LeaveRequest } from '../features/personnel/pages/LeaveRequest.js';
 import { Personnel } from '../features/personnel/pages/Personnel.js';
-import { Assets } from '../features/administration/pages/Assets.js';
+import { Inventory } from '../features/assets/pages/Inventory.js';
+import { AssetDetail } from '../features/assets/pages/AssetDetail.js';
+import { AssetForm } from '../features/assets/pages/AssetForm.js';
+import { Deliveries, DeliveryDetail } from '../features/assets/pages/Deliveries.js';
+import { DeliveryCreate } from '../features/assets/pages/DeliveryCreate.js';
+import { Loans, LoanDetail } from '../features/assets/pages/Loans.js';
+import { LoanCreate } from '../features/assets/pages/LoanCreate.js';
+import { People } from '../features/assets/pages/People.js';
+import { AssetsLayout } from '../features/assets/pages/AssetsLayout.js';
 import { AccessLayout } from '../features/auth/components/AccessLayout.js';
 import { Academic } from '../features/academic/pages/Academic.js';
 import { PurchaseGuardProvider, usePurchaseGuard } from '../features/purchases/model/guard.js';
@@ -38,7 +46,19 @@ function AdministrativeArea() {
       <Route path="/administracion/personal" element={<Personnel />} />
       <Route path="/administracion/personal/comision" element={<ServiceCommission />} />
       <Route path="/administracion/personal/permiso" element={<LeaveRequest />} />
-      <Route path="/administracion/bienes" element={<Assets />} />
+      <Route element={<AssetsLayout />}>
+        <Route path="/administracion/bienes" element={<Inventory />} />
+        <Route path="/administracion/bienes/entregas" element={<Deliveries />} />
+        <Route path="/administracion/bienes/prestamos" element={<Loans />} />
+        <Route path="/administracion/bienes/responsables" element={<People />} />
+      </Route>
+      <Route path="/administracion/bienes/nuevo" element={<AssetForm key="new" />} />
+      <Route path="/administracion/bienes/entregas/nueva" element={<DeliveryCreate />} />
+      <Route path="/administracion/bienes/entregas/:id" element={<DeliveryDetail />} />
+      <Route path="/administracion/bienes/prestamos/nuevo" element={<LoanCreate />} />
+      <Route path="/administracion/bienes/prestamos/:id" element={<LoanDetail />} />
+      <Route path="/administracion/bienes/:id/editar" element={<AssetForm key="edit" />} />
+      <Route path="/administracion/bienes/:id" element={<AssetDetail />} />
       <Route path="*" element={<Navigate to="/administracion" replace />} />
     </Routes>
   </AdministrativeLayout>;
