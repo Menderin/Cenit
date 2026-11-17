@@ -16,11 +16,14 @@ const navigation = [
   { to: '/administracion', label: 'Inicio', end: true, icon: HouseIcon },
   { to: '/administracion/compras', label: 'Registro de compras', end: false, icon: ShoppingCartSimpleIcon },
   { to: '/administracion/personal', label: 'Personal', end: false, icon: UsersIcon },
-];
-// Modules named in the Charter but not yet defined: reachable, visibly secondary.
-const upcoming = [
   { to: '/administracion/bienes', label: 'Bienes', end: false, icon: PackageIcon },
 ];
+// Pantallas de Bienes: nombre de la página y si cuelga de la entrada del módulo.
+function assetPage(path: string) {
+  const rest = path.slice('/administracion/bienes'.length);
+  const fixed: Record<string, string> = { '': 'Bienes', '/nuevo': 'Registrar bien', '/entregas': 'Entregas', '/entregas/nueva': 'Nueva entrega', '/prestamos': 'Préstamos', '/prestamos/nuevo': 'Nuevo préstamo', '/responsables': 'Responsables' };
+  return fixed[rest] ?? (rest.startsWith('/entregas/') ? 'Entrega' : rest.startsWith('/prestamos/') ? 'Préstamo' : rest.endsWith('/editar') ? 'Editar bien' : 'Ficha del bien');
+}
 // Documentos de Personal: su ruta superior sale de Personal.
 const personnelDocuments: Record<string, string> = {
   '/administracion/personal/comision': 'Comisión de servicios', '/administracion/personal/permiso': 'Solicitud de permiso',
@@ -58,19 +61,21 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
     guard.request(() => { navigate(target.pathname + target.search); }, target);
   }
   const sidebarState = useSidebar();
-  function navItem({ icon: Icon, ...link }: typeof navigation[number], soon = false) {
-    return <NavLink key={link.to} to={link.to} end={link.end} onClick={follow} className={({ isActive }) => `workspace-nav-item${isActive ? ' workspace-nav-item--active' : ''}${soon ? ' workspace-nav-item--soon' : ''}`}>
+  function navItem({ icon: Icon, ...link }: typeof navigation[number]) {
+    return <NavLink key={link.to} to={link.to} end={link.end} onClick={follow} className={({ isActive }) => `workspace-nav-item${isActive ? ' workspace-nav-item--active' : ''}`}>
       {({ isActive }) => <><Icon size={18} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" /><span>{link.label}</span></>}
     </NavLink>;
   }
-  const current = [...navigation, ...upcoming].find(link => link.end ? location.pathname === link.to : location.pathname.startsWith(link.to));
+  const current = navigation.find(link => link.end ? location.pathname === link.to : location.pathname.startsWith(link.to));
   const page = location.pathname === '/administracion/compras/nueva' ? 'Registrar compra'
     : location.pathname === '/administracion/compras/captura' ? 'Registrar desde captura'
     : location.pathname === '/administracion/compras/laboratorio' ? 'Revisar datos'
     : /\/administracion\/compras\/[^/]+\/editar$/.test(location.pathname) ? 'Editar compra'
     : location.pathname.startsWith('/administracion/compras/') ? 'Detalle del registro'
+    : location.pathname.startsWith('/administracion/bienes') ? assetPage(location.pathname)
     : personnelDocuments[location.pathname] ?? current?.label ?? 'Inicio';
-  const parent = page === current?.label ? null : current?.to === '/administracion/personal' ? { label: 'Personal', to: current.to } : { label: 'Compras', to: returnTo };
+  const parent = page === current?.label ? null : current?.to === '/administracion/personal' ? { label: 'Personal', to: current.to }
+    : current?.to === '/administracion/bienes' ? { label: 'Bienes', to: current.to } : { label: 'Compras', to: returnTo };
   useEffect(() => { document.title = `Cenit · ${page}`; return () => { document.title = 'Cenit'; }; }, [page]);
   useEffect(() => {
     if (focusedPath.current === location.pathname) return;
@@ -83,8 +88,6 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
     navigation={<nav className="workspace-nav" aria-label="Sistemas administrativos">
       <p className="workspace-eyebrow">Administración</p>
       {navigation.map(link => navItem(link))}
-      <p className="workspace-eyebrow workspace-eyebrow--section">Próximamente</p>
-      {upcoming.map(link => navItem(link, true))}
     </nav>}
     toolbarStart={<nav className="admin-breadcrumb" aria-label="Ubicación"><NavLink to="/administracion" onClick={follow}>Administración</NavLink><CaretRightIcon size={12} aria-hidden="true" />{parent && <><NavLink to={parent.to} onClick={follow}>{parent.label}</NavLink><CaretRightIcon size={12} aria-hidden="true" /></>}<span aria-current="page" data-confirm-fallback tabIndex={-1}>{page}</span></nav>}>
     <main className={`admin-content${location.pathname === '/administracion/compras/captura' ? ' admin-content--capture' : ''}${location.pathname === '/administracion/personal' ? ' admin-content--fill' : ''}`} id="admin-content" ref={main} tabIndex={-1} onFocusCapture={event => revealFocus(event.target)}>

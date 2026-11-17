@@ -133,6 +133,8 @@ APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run purchas
 
 Prepara 74 compras ficticias editables, distribuidas por los meses de 2024 y 2025 y de enero a octubre de 2026. Toman las categorías de compra de la planilla de referencia; folios y montos son inventados, y los nombres, RUT, estados de pago y códigos institucionales no validados quedan fuera o vacíos. La carga crea registros de ingreso manual, no ejemplos de contrato, por eso se pueden corregir desde el detalle. Sus fechas de incorporación se distribuyen de forma repetible en los últimos 30 días para que el gráfico de actividad del Inicio muestre movimiento.
 
+Los bienes ficticios (inventario, entregas, préstamos y responsables inventados) se preparan con `APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run assets:prepare-demo`, después de aplicar las migraciones. Si ya están cargados, no modifica nada.
+
 Si las compras ficticias ya están cargadas, se pueden distribuir únicamente sus fechas de incorporación con `APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run purchases:prepare-demo -- --spread-activity-only`. La opción sólo actualiza `created_at` de las operaciones reservadas a esta semilla en `cenit_demo` local; no crea ni reemplaza compras ni modifica su contenido.
 
 En la primera ejecución, la carga reemplaza sólo los ejemplos antiguos que coincidan con sus operaciones fijas y la cuenta administrativa de demo. Conserva cualquier otra compra; una diferencia inesperada en esos registros detiene la preparación. Repetir conserva contenido y revisión, y puede volver a crear un registro de la semilla que se haya eliminado. Estos comandos están limitados a la demo local y no forman parte de CD.

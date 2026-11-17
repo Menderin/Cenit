@@ -425,9 +425,8 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await expect(page.getByRole('link', { name: /Solicitud de permiso/ })).toBeVisible();
   await navigateAdministration(page, 'Bienes');
   await expect(page).toHaveURL(/\/administracion\/bienes$/);
-  await expect(page.getByRole('heading', { name: 'Bienes todavía no está disponible', exact: true })).toBeVisible();
-  await expect(page.getByText('Próximamente', { exact: true }).last()).toBeVisible();
-  await page.reload(); await expect(page.getByRole('heading', { name: 'Bienes todavía no está disponible', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bienes', exact: true })).toBeVisible();
+  await page.reload(); await expect(page.getByRole('navigation', { name: 'Secciones de Bienes' })).toBeVisible();
   await navigateAdministration(page, 'Registro de compras');
   await expect(page.getByRole('link', { name: 'Revisar ejemplo' })).toHaveCount(0);
   await page.goto('/administracion/compras/laboratorio');

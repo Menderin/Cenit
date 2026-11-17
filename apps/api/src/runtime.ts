@@ -11,6 +11,7 @@ import { ExtractionService, httpExtractionProcessor } from './modules/purchases/
 import { readPurchaseCapabilities } from './modules/purchases/services/config.js';
 import { PurchaseSheetsRepository } from './modules/purchases/repositories/sheets.js';
 import { createGoogleSheetsWriter, readSheetsTarget, startSheetsSync } from './modules/purchases/services/sheets.js';
+import { AssetRepository } from './modules/assets/repositories/assets.js';
 import { readCaptureReceipts } from './modules/purchases/services/capture-receipts.js';
 
 export function createRuntimeApp() {
@@ -24,7 +25,7 @@ export function createRuntimeApp() {
   const purchases = new PurchaseRepository(pool);
   const sheets = target ? { repository: new PurchaseSheetsRepository(pool, purchases), spreadsheetId: target.spreadsheetId } : undefined;
   const readiness = createReadiness(databaseUrl(), fileURLToPath(new URL('../../../db/migrations/', import.meta.url)));
-  const app = buildAcademicApp({ extraction, captureReceipts, repository: new AcademicRepository(pool), purchases, purchaseCapabilities, sheets, frontendRoot: process.env.NODE_ENV === 'production' ? fileURLToPath(new URL('../../web/dist/', import.meta.url)) : undefined, auth: { service: new AuthService(new AuthRepository(pool)), config } });
+  const app = buildAcademicApp({ extraction, captureReceipts, repository: new AcademicRepository(pool), purchases, assets: new AssetRepository(pool), purchaseCapabilities, sheets, frontendRoot: process.env.NODE_ENV === 'production' ? fileURLToPath(new URL('../../web/dist/', import.meta.url)) : undefined, auth: { service: new AuthService(new AuthRepository(pool)), config } });
   if (sheets && writer) {
     let stop: (() => Promise<void>) | undefined;
     app.addHook('onReady', async () => { stop = startSheetsSync(sheets.repository, sheets.spreadsheetId, writer); });
