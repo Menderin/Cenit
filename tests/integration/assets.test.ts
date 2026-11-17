@@ -100,13 +100,14 @@ describe('Bienes: préstamos simultáneos', () => {
   it('de dos préstamos del mismo bien sólo uno se acepta y el inventario no lo duplica', async () => {
     const borrower = await newPerson('Persona ficticia carrera');
     for (let round = 0; round < 5; round++) { // varias rondas: la carrera depende del orden de los bloqueos
-      const asset = await newAsset(`Bien carrera ${round}`);
+      const token = `carrera${randomBytes(4).toString('hex')}`; // palabra única: la búsqueda no distingue «Bien 1» de «Bien 10»
+      const asset = await newAsset(`Bien ${token}`);
       const statuses = (await Promise.all([api('/loans', 'POST', loanBody(borrower.id, [asset.id])), api('/loans', 'POST', loanBody(borrower.id, [asset.id]))])).map(response => response.status).sort();
       expect(statuses).toEqual([201, 409]);
       const open = await db.query(`SELECT count(*)::int AS n FROM cenit.asset_loan_items i JOIN cenit.asset_loans l ON l.id = i.loan_id WHERE i.asset_id = $1 AND l.returned_on IS NULL`, [asset.id]);
       expect(open.rows[0].n).toBe(1);
-      const list = await (await api(`/?q=${encodeURIComponent(`Bien carrera ${round}`)}`)).json();
-      expect(list.data).toHaveLength(1);
+      const list = await (await api(`/?q=${token}`)).json();
+      expect(list.data.filter((row: { id: string }) => row.id === asset.id)).toHaveLength(1);
     }
   });
 });
@@ -121,7 +122,7 @@ describe('Bienes: «por revisar» y responsables', () => {
     const summary = (await (await api('/summary')).json()).data;
     expect(summary.review).toBe(1);
     expect(summary.peopleReview).toBe(1);
-    const review = await (await api('/?estado=revisar')).json();
+    const review = await (await api('/?status=revisar')).json();
     expect(review.data.map((row: { id: string; status: string }) => [row.id, row.status])).toEqual([[asset.id, 'prestamo']]);
   });
 });
