@@ -34,7 +34,9 @@ export function useListParams() {
 }
 export function rowOpener(navigate: (to: string) => void) {
   return (event: MouseEvent<HTMLTableRowElement>, to: string) => {
-    if (event.button || event.metaKey || event.ctrlKey || (event.target as HTMLElement).closest('a, button') || window.getSelection()?.toString()) return;
+    // Un portal (confirmación anclada) burbujea hacia la fila en React aunque no esté dentro de ella en el DOM.
+    const target = event.target as HTMLElement;
+    if (event.button || event.metaKey || event.ctrlKey || !event.currentTarget.contains(target) || target.closest('a, button') || window.getSelection()?.toString()) return;
     navigate(to);
   };
 }

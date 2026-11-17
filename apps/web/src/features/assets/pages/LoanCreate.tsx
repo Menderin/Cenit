@@ -2,13 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { AssetListItem, Person } from '@cenit/contracts/assets';
+import { maxDocumentItems, type AssetListItem, type Person } from '@cenit/contracts/assets';
 import { createLoan, getAsset } from '../api/assets.js';
 import { today } from '../model/labels.js';
-import { BackLink, TextField, nullable, useAssetSummary } from '../components/AssetsUi.js';
+import { BackLink, DateBlock, ProposalNotice, TextField, focusFirstError, missingMessage, nullable, useAssetSummary } from '../components/AssetsUi.js';
 import { AssetPicker, PersonPicker } from '../components/Pickers.js';
 import { ItemsTable, SheetPreview } from '../components/Documents.js';
-import { DateField } from '../../../shared/components/DateField.js';
 import { StatusNotice } from '../../../shared/components/StatusNotice.js';
 import { HttpError } from '../../../shared/lib/http.js';
 import { useGuardChanges, usePurchaseGuard } from '../../purchases/model/guard.js';
@@ -41,7 +40,7 @@ export function LoanCreate() {
     else if (due && due < date) next.due = 'La devolución no puede ser antes del préstamo.';
     if (!authorizer.trim()) next.authorizer = 'Escribe quién autoriza el préstamo.';
     setErrors(next); setFailure('');
-    if (Object.keys(next).length) { setFailure('Revisa los campos marcados en rojo.'); return; }
+    if (Object.keys(next).length) { setFailure(missingMessage(Object.keys(next).length)); focusFirstError(); return; }
     setBusy(true);
     try {
       const loan = await createLoan({ operationId: operation.current, borrowerId: borrower!.id, loanedOn: date, dueOn: due || null, location: nullable(location),
@@ -56,23 +55,25 @@ export function LoanCreate() {
   return <section className="assets-page assets-page--doc">
     <BackLink to={preset ? `/administracion/bienes/${preset}` : '/administracion/bienes/prestamos'}>{preset ? 'Volver a la ficha del bien' : 'Volver a Préstamos'}</BackLink>
     <header className="assets-heading"><div><h1>Nuevo préstamo</h1><p>Presta un bien por un tiempo. El responsable no cambia; cuando vuelva, registra la devolución.</p></div></header>
+    <ProposalNotice />
     {presetAsset.data?.loan && <div style={{ marginBottom: 18 }}><StatusNotice kind="warning" title="Este bien ya está prestado" message={`Está prestado a ${presetAsset.data.loan.borrowerName}. Registra su devolución antes de prestarlo otra vez.`} /></div>}
     <div className="assets-form-layout">
       <form className="assets-form" noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
         <fieldset><legend>1. ¿Qué bien se presta?</legend>
-          <AssetPicker id="loan-asset" label="Buscar en el inventario" forLoan exclude={assets.map(asset => asset.id)} error={errors.assets}
+          <AssetPicker id="loan-asset" label="Buscar en el inventario" forLoan disabled={assets.length >= maxDocumentItems} exclude={assets.map(asset => asset.id)} error={errors.assets}
             onPick={asset => { setAssets([...assets, asset]); setErrors({ ...errors, assets: '' }); }} />
           <div style={{ marginTop: 12 }}><ItemsTable items={items} onRemove={key => setAssets(assets.filter(asset => asset.id !== key))}
             empty={<p className="assets-sub" style={{ margin: 0 }}>Busca el bien arriba. Sólo aparecen los que no están prestados.</p>} /></div>
+          {assets.length >= maxDocumentItems && <p className="assets-sub" style={{ margin: '8px 0 0' }}>Un préstamo admite hasta {maxDocumentItems} bienes para que quepa en una hoja. Guarda este y registra otro con el resto.</p>}
         </fieldset>
         <fieldset><legend>2. ¿Quién lo recibe?</legend>
           <PersonPicker id="loan-borrower" label="Persona que recibe el préstamo" value={borrower} onChange={person => { setBorrower(person); setErrors({ ...errors, borrower: '' }); }} error={errors.borrower} />
         </fieldset>
         <fieldset><legend>3. Fechas y lugar</legend>
           <div className="assets-grid">
-            <div className="assets-field"><label htmlFor="loan-date">Fecha del préstamo</label><DateField id="loan-date" label="Fecha del préstamo" value={date} onValueChange={setDate} />{errors.date && <p className="assets-error">{errors.date}</p>}</div>
-            <div className="assets-field"><label htmlFor="loan-due">Devolución esperada <small>(opcional)</small></label><DateField id="loan-due" label="Devolución esperada" value={due} onValueChange={setDue} />
-              {errors.due ? <p className="assets-error">{errors.due}</p> : <p>Si pasa esta fecha, el préstamo aparecerá como vencido. Bórrala si no hay fecha.</p>}</div>
+            <DateBlock id="loan-date" label="Fecha del préstamo" value={date} onChange={value => { setDate(value); setErrors({ ...errors, date: '' }); }} error={errors.date} />
+            <DateBlock id="loan-due" label="Devolución esperada" optional value={due} onChange={value => { setDue(value); setErrors({ ...errors, due: '' }); }} error={errors.due}
+              hint="Si pasa esta fecha, el préstamo aparecerá como vencido. Bórrala si no hay fecha." />
             <TextField id="loan-location" label="¿Dónde se usará?" optional value={location} onChange={setLocation} list="loan-locations" placeholder="Por ejemplo: Docencia, Sala 204" />
             <datalist id="loan-locations">{locations.map(place => <option key={place} value={place} />)}</datalist>
           </div>

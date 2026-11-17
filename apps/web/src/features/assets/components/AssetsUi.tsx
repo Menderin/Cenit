@@ -7,6 +7,7 @@ import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft';
 import type { AssetStatus, LoanStatus } from '@cenit/contracts/assets';
 import { downloadPdf, getAssetSummary } from '../api/assets.js';
 import { initials, loanStatuses, statuses } from '../model/labels.js';
+import { DateField } from '../../../shared/components/DateField.js';
 import { HttpError } from '../../../shared/lib/http.js';
 
 export const summaryKey = ['assets', 'summary'] as const;
@@ -41,6 +42,7 @@ export function AssetsHeader({ actions }: { actions?: ReactNode }) {
         <Link className="cenit-button cenit-button--primary" to="/administracion/bienes/nuevo"><PlusIcon size={16} aria-hidden="true" />Registrar bien</Link>
       </>}</div>
     </header>
+    <ProposalNotice />
     <ul className="assets-tiles" aria-label="Resumen de bienes">
       {tiles.map(tile => <li key={tile.label}><Link className="assets-tile" to={tile.to} aria-current={tile.current ? 'true' : undefined}>
         <span>{tile.label}</span><strong>{tile.value ?? '—'}</strong><small className={tile.tone ? `assets-${tile.tone}` : undefined}>{tile.detail}</small>
@@ -52,6 +54,11 @@ export function AssetsHeader({ actions }: { actions?: ReactNode }) {
       </Link>)}
     </nav>
   </>;
+}
+
+/** Aviso fijo: Bienes es una propuesta general, no un registro institucional validado. */
+export function ProposalNotice() {
+  return <p className="assets-proposal"><strong>Propuesta pendiente de validación con la Facultad.</strong> Los datos de esta demostración son ficticios y no reemplazan el registro de la Sección Registro.</p>;
 }
 
 export function StatusChip({ status }: { status: AssetStatus }) {
@@ -101,3 +108,20 @@ export function TextField({ id, label, value, onChange, optional, hint, error, t
   </div>;
 }
 export const nullable = (value: string) => value.trim() ? value.trim() : null;
+
+/** Fecha con etiqueta, ayuda y error; muestra también el aviso del campo cuando el día o el mes no existen. */
+export function DateBlock({ id, label, value, onChange, optional, hint, error }: { id: string; label: string; value: string; onChange: (value: string) => void; optional?: boolean; hint?: string; error?: string }) {
+  const [warning, setWarning] = useState('');
+  const shown = error || warning;
+  return <div className="assets-field">
+    <label htmlFor={id}>{label}{optional && <small> (opcional)</small>}</label>
+    <DateField id={id} label={label} value={value} onValueChange={onChange} onValidationError={setWarning} aria-invalid={!!shown || undefined} aria-describedby={shown ? `${id}-error` : hint ? `${id}-hint` : undefined} />
+    {shown ? <p className="assets-error" id={`${id}-error`}>{shown}</p> : hint && <p id={`${id}-hint`}>{hint}</p>}
+  </div>;
+}
+
+/** Tras mostrar los errores de un formulario, lleva el foco al primer campo marcado. */
+export function focusFirstError() {
+  window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.assets-form [aria-invalid="true"]')?.focus());
+}
+export const missingMessage = (count: number) => count === 1 ? 'Falta 1 dato. Revisa el mensaje bajo el campo marcado.' : `Faltan ${count} datos. Revisa los mensajes bajo cada campo.`;

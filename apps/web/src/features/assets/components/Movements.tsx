@@ -33,7 +33,7 @@ export function ReturnLoanButton({ loanId, number, loanedOn, small = false, prim
     <ContextualConfirm open={open} origin={button.current} wide title={`Registrar devolución del préstamo ${number}`} description="El bien queda disponible otra vez con su responsable y ubicación."
       confirmLabel="Registrar" cancelLabel="Cancelar" busy={busy} busyLabel="Registrando…" onCancel={() => setOpen(false)} onConfirm={() => { void confirm(); }}>
       <div className="assets-field" style={{ marginTop: 14 }}><label htmlFor={`return-${loanId}`}>Fecha de devolución</label>
-        <DateField id={`return-${loanId}`} label="Fecha de devolución" value={date} onValueChange={setDate} /></div>
+        <DateField id={`return-${loanId}`} label="Fecha de devolución" value={date} onValueChange={setDate} onValidationError={setError} /></div>
       <div className="assets-field" style={{ marginTop: 10 }}><label htmlFor={`return-note-${loanId}`}>Observación <small>(opcional)</small></label>
         <input id={`return-note-${loanId}`} className="cenit-input" value={note} maxLength={500} placeholder="Estado del bien al volver" onChange={event => setNote(event.target.value)} /></div>
       {error && <p className="cenit-dialog-error" role="alert">{error}</p>}
@@ -65,7 +65,7 @@ export function RelocateButton({ asset, locations }: { asset: AssetDetail; locat
       <div className="assets-field" style={{ marginTop: 14 }}><label htmlFor="relocate-place">Nueva ubicación</label>
         <input id="relocate-place" className="cenit-input" list="relocate-places" value={location} maxLength={255} autoComplete="off" placeholder="Recinto, pabellón o unidad" onChange={event => setLocation(event.target.value)} />
         <datalist id="relocate-places">{locations.filter(place => place !== asset.location).map(place => <option key={place} value={place} />)}</datalist></div>
-      <div className="assets-field" style={{ marginTop: 10 }}><label htmlFor="relocate-date">Fecha del cambio</label><DateField id="relocate-date" label="Fecha del cambio" value={date} onValueChange={setDate} /></div>
+      <div className="assets-field" style={{ marginTop: 10 }}><label htmlFor="relocate-date">Fecha del cambio</label><DateField id="relocate-date" label="Fecha del cambio" value={date} onValueChange={setDate} onValidationError={setError} /></div>
       <div className="assets-field" style={{ marginTop: 10 }}><label htmlFor="relocate-note">Motivo <small>(opcional)</small></label>
         <input id="relocate-note" className="cenit-input" value={note} maxLength={500} onChange={event => setNote(event.target.value)} /></div>
       {error && <p className="cenit-dialog-error" role="alert">{error}</p>}

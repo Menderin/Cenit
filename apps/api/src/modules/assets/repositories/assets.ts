@@ -27,6 +27,9 @@ const assetRows = `SELECT a.*, ${code('a')} AS code, a.registered_on::text AS re
   LEFT JOIN cenit.asset_loan_items li ON li.asset_id = a.id AND EXISTS (SELECT 1 FROM cenit.asset_loans x WHERE x.id = li.loan_id AND x.returned_on IS NULL)
   LEFT JOIN cenit.asset_loans l ON l.id = li.loan_id LEFT JOIN cenit.asset_people b ON b.id = l.borrower_id`;
 
+// «Por revisar»: el responsable ya no pertenece, aunque el bien siga prestado (el estado mostrado conserva la prioridad del préstamo).
+const reviewPredicate = (alias: string) => `(${alias}.person_id IS NOT NULL AND NOT ${alias}.person_active)`;
+
 const listItem = (row: Row): AssetListItem => ({
   id: row.id, code: row.code, inventoryNumber: row.inventory_number, kind: row.kind, description: row.description, brand: row.brand, model: row.model,
   serialNumber: row.serial_number, material: row.material, dimensions: row.dimensions, quantity: row.quantity, location: row.location,
@@ -62,7 +65,7 @@ export class AssetRepository {
   async summary(): Promise<AssetSummary> {
     return this.transaction(async db => {
       const { rows: [counts] } = await db.query(`SELECT count(*)::int AS total, (count(*) FILTER (WHERE status IN ('prestamo','vencido')))::int AS on_loan,
-        (count(*) FILTER (WHERE status = 'vencido'))::int AS overdue, (count(*) FILTER (WHERE status = 'revisar'))::int AS review,
+        (count(*) FILTER (WHERE status = 'vencido'))::int AS overdue, (count(*) FILTER (WHERE ${reviewPredicate('s')}))::int AS review,
         (count(*) FILTER (WHERE status = 'sin_responsable'))::int AS unassigned FROM (${assetRows}) s`);
       const { rows: [other] } = await db.query(`SELECT (SELECT count(*)::int FROM cenit.asset_deliveries) AS deliveries,
         (SELECT count(*)::int FROM cenit.asset_loans WHERE returned_on IS NULL) AS loans, (SELECT count(*)::int FROM cenit.asset_people) AS people,
@@ -78,7 +81,8 @@ export class AssetRepository {
     const parameter = (value: unknown) => { values.push(value); return `$${values.length}`; };
     const predicates = words(query.q).map(word => `s.haystack LIKE ${parameter(word)} ESCAPE chr(92)`);
     if (query.kind) predicates.push(`s.kind = ${parameter(query.kind)}`);
-    if (query.status) predicates.push(`s.status = ${parameter(query.status)}`);
+    if (query.status === 'revisar') predicates.push(reviewPredicate('s'));
+    else if (query.status) predicates.push(`s.status = ${parameter(query.status)}`);
     if (query.custodianId) predicates.push(`s.custodian_id = ${parameter(query.custodianId)}`);
     if (query.available === 'loan') predicates.push(`s.loan_id IS NULL`);
     const where = predicates.length ? `WHERE ${predicates.join(' AND ')}` : '';
@@ -205,11 +209,15 @@ export class AssetRepository {
     return row.next as number;
   }
   private async lockAssets(db: Db, ids: string[]) {
-    const { rows } = await db.query(`SELECT a.id, a.location, a.custodian_id, ${code('a')} AS code,
-      EXISTS (SELECT 1 FROM cenit.asset_loan_items i JOIN cenit.asset_loans l ON l.id = i.loan_id WHERE i.asset_id = a.id AND l.returned_on IS NULL) AS on_loan
-      FROM cenit.assets a WHERE a.id = ANY($1::uuid[]) FOR UPDATE OF a`, [ids]);
+    // El bloqueo y la lectura del préstamo vigente van en sentencias distintas: la segunda parte de una foto nueva y ve el
+    // préstamo que otra transacción confirmó mientras esperábamos el bloqueo.
+    const { rows } = await db.query(`SELECT a.id, a.location, a.custodian_id, ${code('a')} AS code FROM cenit.assets a
+      WHERE a.id = ANY($1::uuid[]) ORDER BY a.id FOR UPDATE OF a`, [ids]);
     if (rows.length !== ids.length) throw new ApiError(422, 'VALIDATION_ERROR', 'Uno de los bienes ya no existe en el inventario.');
-    return new Map(rows.map(row => [row.id as string, row]));
+    const { rows: loaned } = await db.query(`SELECT DISTINCT i.asset_id FROM cenit.asset_loan_items i JOIN cenit.asset_loans l ON l.id = i.loan_id
+      WHERE i.asset_id = ANY($1::uuid[]) AND l.returned_on IS NULL`, [ids]);
+    const onLoan = new Set(loaned.map(row => row.asset_id as string));
+    return new Map(rows.map(row => [row.id as string, { ...row, on_loan: onLoan.has(row.id) }]));
   }
   private async documentItems(db: Db, table: 'asset_delivery_items' | 'asset_loan_items', key: 'delivery_id' | 'loan_id', id: string) {
     const { rows } = await db.query(`SELECT a.*, ${code('a')} AS code FROM cenit.${table} i JOIN cenit.assets a ON a.id = i.asset_id WHERE i.${key} = $1 ORDER BY i.position`, [id]);

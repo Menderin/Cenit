@@ -6,9 +6,8 @@ import { InfoIcon } from '@phosphor-icons/react/dist/csr/Info';
 import type { AssetData, AssetDetail, AssetKind, Person } from '@cenit/contracts/assets';
 import { createAsset, getAsset, updateAsset } from '../api/assets.js';
 import { kindOrder, kinds, today, usesSerial } from '../model/labels.js';
-import { BackLink, LoadState, TextField, nullable, useAssetSummary } from '../components/AssetsUi.js';
+import { BackLink, DateBlock, LoadState, ProposalNotice, TextField, focusFirstError, missingMessage, nullable, useAssetSummary } from '../components/AssetsUi.js';
 import { PersonPicker } from '../components/Pickers.js';
-import { DateField } from '../../../shared/components/DateField.js';
 import { StatusNotice } from '../../../shared/components/StatusNotice.js';
 import { HttpError } from '../../../shared/lib/http.js';
 import { useGuardChanges, usePurchaseGuard } from '../../purchases/model/guard.js';
@@ -59,12 +58,13 @@ function Form({ asset }: { asset?: AssetDetail }) {
     if (!editing() && !/^\d{4}-\d{2}-\d{2}$/.test(draft.registeredOn)) next.registeredOn = 'Indica la fecha de alta.';
     if (purchaseText && !purchase && !(asset?.purchase && asset.purchase.requestNumber === purchaseText)) next.purchase = 'No encontramos esa compra en Cenit. Revisa el número o deja el campo vacío.';
     setErrors(next);
-    return !Object.keys(next).length;
+    return Object.keys(next).length;
   }
   function editing() { return !!asset; }
   async function submit() {
     setFailure('');
-    if (!validate()) { setFailure('Revisa los campos marcados en rojo.'); return; }
+    const invalid = validate();
+    if (invalid) { setFailure(missingMessage(invalid)); focusFirstError(); return; }
     const serial = usesSerial(draft.kind), furniture = draft.kind === 'mueble', building = draft.kind === 'construccion';
     const data: AssetData = {
       kind: draft.kind, quantity: Number(draft.quantity), description: draft.description.trim(), inventoryNumber: nullable(draft.inventoryNumber),
@@ -89,6 +89,7 @@ function Form({ asset }: { asset?: AssetDetail }) {
     <BackLink to={asset ? `/administracion/bienes/${asset.id}` : '/administracion/bienes'}>{asset ? `Volver a la ficha de ${asset.code}` : 'Volver a Bienes'}</BackLink>
     <header className="assets-heading"><div><h1>{asset ? 'Editar datos del bien' : 'Registrar bien'}</h1>
       <p>{asset ? 'Corrige los datos del bien. Para cambiar responsable o ubicación usa «Entregar» o «Cambiar» en la ficha.' : 'Completa los datos que pide la Sección Registro. Lo que no sepas, déjalo en blanco.'}</p></div></header>
+    <ProposalNotice />
     <div className="assets-form-layout">
       <form className="assets-form" noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
         <fieldset>
@@ -130,8 +131,7 @@ function Form({ asset }: { asset?: AssetDetail }) {
           <div className="assets-grid">
             <TextField id="asset-location" label="Ubicación" value={draft.location} onChange={set('location')} error={errors.location} list="asset-locations" placeholder="Recinto, pabellón o unidad" />
             <datalist id="asset-locations">{locations.map(place => <option key={place} value={place} />)}</datalist>
-            <div className="assets-field"><label htmlFor="asset-date">Fecha de alta</label><DateField id="asset-date" label="Fecha de alta" value={draft.registeredOn} onValueChange={set('registeredOn')} aria-invalid={!!errors.registeredOn || undefined} />
-              {errors.registeredOn && <p className="assets-error">{errors.registeredOn}</p>}</div>
+            <DateBlock id="asset-date" label="Fecha de alta" value={draft.registeredOn} onChange={set('registeredOn')} error={errors.registeredOn} />
             <div className="assets-wide"><PersonPicker id="asset-custodian" label="Responsable (opcional)" value={custodian} onChange={setCustodian} />
               <p className="assets-sub" style={{ marginTop: 6 }}>Si todavía no se entrega a nadie, déjalo en blanco. Después puedes usar «Entregar» y se generará el acta.</p></div>
           </div>

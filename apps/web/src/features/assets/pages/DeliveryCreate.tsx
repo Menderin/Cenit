@@ -3,13 +3,12 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { PlusIcon } from '@phosphor-icons/react/dist/csr/Plus';
-import type { AssetKind, AssetListItem, DeliveryItemInput, Person } from '@cenit/contracts/assets';
+import { maxDocumentItems, type AssetKind, type AssetListItem, type DeliveryItemInput, type Person } from '@cenit/contracts/assets';
 import { createDelivery, getAsset, listAssets, listPeople } from '../api/assets.js';
 import { kindOrder, kinds, today } from '../model/labels.js';
-import { BackLink, TextField, nullable, useAssetSummary } from '../components/AssetsUi.js';
+import { BackLink, DateBlock, ProposalNotice, TextField, focusFirstError, missingMessage, nullable, useAssetSummary } from '../components/AssetsUi.js';
 import { AssetPicker, PersonPicker } from '../components/Pickers.js';
 import { ItemsTable, SheetPreview, type DocItem } from '../components/Documents.js';
-import { DateField } from '../../../shared/components/DateField.js';
 import { Select } from '../../../shared/components/Select.js';
 import { StatusNotice } from '../../../shared/components/StatusNotice.js';
 import { HttpError } from '../../../shared/lib/http.js';
@@ -41,9 +40,12 @@ export function DeliveryCreate() {
   useEffect(() => {
     if (loaded.current) return;
     if (presetAsset.data && !presetAsset.data.loan) { loaded.current = true; setLines([{ key: presetAsset.data.id, asset: presetAsset.data }]); }
-    if (fromAssets.data) { loaded.current = true; setLines(fromAssets.data.data.filter(asset => !asset.loan).map(asset => ({ key: asset.id, asset }))); }
+    if (fromAssets.data) { loaded.current = true; setLines(fromAssets.data.data.filter(asset => !asset.loan).slice(0, maxDocumentItems).map(asset => ({ key: asset.id, asset }))); }
   }, [presetAsset.data, fromAssets.data]);
   const previous = from ? fromPerson.data?.find(person => person.id === from) : undefined;
+  const onLoanCount = fromAssets.data?.data.filter(asset => asset.loan).length ?? 0;
+  const pending = Math.max(0, (fromAssets.data?.data.filter(asset => !asset.loan).length ?? 0) - maxDocumentItems);
+  const full = lines.length >= maxDocumentItems;
   const dirty = !!receiver || !!reason || (!preset && !from && lines.length > 0) || !!fresh;
   useGuardChanges(dirty && !busy, busy, useCallback(() => {}, []));
   const items = lines.map(toItem);
@@ -61,7 +63,7 @@ export function DeliveryCreate() {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) next.date = 'Indica la fecha de entrega.';
     if (!giver.trim()) next.giver = 'Escribe quién entrega.';
     setErrors(next); setFailure('');
-    if (Object.keys(next).length) { setFailure('Revisa los campos marcados en rojo.'); return; }
+    if (Object.keys(next).length) { setFailure(missingMessage(Object.keys(next).length)); focusFirstError(); return; }
     setBusy(true);
     try {
       const delivery = await createDelivery({
@@ -80,7 +82,8 @@ export function DeliveryCreate() {
   return <section className="assets-page assets-page--doc">
     <BackLink to={preset ? `/administracion/bienes/${preset}` : '/administracion/bienes/entregas'}>{preset ? 'Volver a la ficha del bien' : 'Volver a Entregas'}</BackLink>
     <header className="assets-heading"><div><h1>Nueva entrega</h1><p>Deja constancia de los bienes que entregas. Al guardar, quien recibe queda como responsable y descargas el acta para firmar.</p></div></header>
-    {previous && <div style={{ marginBottom: 18 }}><StatusNotice kind="warning" title={`Bienes de ${previous.name}`} message={`${previous.active ? '' : 'Ya no pertenece a la institución. '}Cargamos los bienes que tiene a cargo y que no están prestados. Elige a quién se entregan.`} /></div>}
+    <ProposalNotice />
+    {previous && <div style={{ marginBottom: 18 }}><StatusNotice kind="warning" title={`Bienes de ${previous.name}`} message={`${previous.active ? '' : 'Ya no pertenece a la institución. '}${lines.length ? 'Cargamos los bienes que tiene a cargo y que no están prestados. Elige a quién se entregan.' : 'No hay bienes para entregar ahora.'}${pending ? ` Un acta admite hasta ${maxDocumentItems} bienes: cargamos los primeros ${maxDocumentItems}; al guardar, repite «Entregar sus bienes» con los ${pending} restantes.` : ''}${onLoanCount ? ` ${onLoanCount === 1 ? 'Un bien suyo está en préstamo' : `${onLoanCount} bienes suyos están en préstamo`}: registra la devolución para poder entregarlo${onLoanCount === 1 ? '' : 's'}.` : ''}`} /></div>}
     {presetAsset.data?.loan && <div style={{ marginBottom: 18 }}><StatusNotice kind="warning" title="Este bien está en préstamo" message="Registra su devolución antes de entregarlo a otra persona." /></div>}
     <div className="assets-form-layout">
       <form className="assets-form" noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
@@ -88,10 +91,11 @@ export function DeliveryCreate() {
           <PersonPicker id="delivery-receiver" label="Persona que recibe" value={receiver} onChange={person => { setReceiver(person); setErrors({ ...errors, receiver: '' }); }} error={errors.receiver} />
         </fieldset>
         <fieldset><legend>2. ¿Qué bienes se entregan?</legend>
-          <AssetPicker id="delivery-asset" label="Agregar un bien del inventario" exclude={lines.flatMap(line => line.asset ? [line.asset.id] : [])} error={errors.items}
+          <AssetPicker id="delivery-asset" label="Agregar un bien del inventario" disabled={full} exclude={lines.flatMap(line => line.asset ? [line.asset.id] : [])} error={errors.items}
             onPick={asset => { setLines([...lines, { key: asset.id, asset }]); setErrors({ ...errors, items: '' }); }} />
           <div style={{ marginTop: 12 }}><ItemsTable items={items} onRemove={key => setLines(lines.filter(line => line.key !== key))}
             empty={<p className="assets-sub" style={{ margin: 0 }}>Todavía no agregas bienes. Búscalos arriba por código, serie o descripción.</p>} /></div>
+          {full && <p className="assets-sub" style={{ margin: '8px 0 0' }}>Un acta admite hasta {maxDocumentItems} bienes para que quepa en una hoja. Guarda esta entrega y registra otra con el resto.</p>}
           {fresh ? <div className="assets-newperson" role="group" aria-label="Bien que no está en el inventario">
             <p>Bien que no está en el inventario</p>
             <div className="assets-grid assets-grid--3">
@@ -104,13 +108,13 @@ export function DeliveryCreate() {
             </div>
             {errors.fresh && <p className="assets-error" role="alert">{errors.fresh}</p>}
             <div><button type="button" className="cenit-button" onClick={addFresh}>Agregar a la entrega</button><button type="button" className="cenit-button cenit-button--quiet" onClick={() => setFresh(null)}>Cancelar</button></div>
-          </div> : <button type="button" className="cenit-button cenit-button--quiet assets-add-row" onClick={() => setFresh({ kind: 'accesorio', quantity: '1', description: '', brand: '', serialNumber: '' })}>
+          </div> : !full && <button type="button" className="cenit-button cenit-button--quiet assets-add-row" onClick={() => setFresh({ kind: 'accesorio', quantity: '1', description: '', brand: '', serialNumber: '' })}>
             <PlusIcon size={15} aria-hidden="true" />Agregar un bien que no está en el inventario</button>}
         </fieldset>
         <fieldset><legend>3. Detalle de la entrega</legend>
           <div className="assets-grid">
             <TextField id="delivery-reason" label="Motivo" wide value={reason} onChange={value => { setReason(value); setErrors({ ...errors, reason: '' }); }} error={errors.reason} placeholder="Por ejemplo: Para uso asistencial docente." />
-            <div className="assets-field"><label htmlFor="delivery-date">Fecha de entrega</label><DateField id="delivery-date" label="Fecha de entrega" value={date} onValueChange={setDate} />{errors.date && <p className="assets-error">{errors.date}</p>}</div>
+            <DateBlock id="delivery-date" label="Fecha de entrega" value={date} onChange={value => { setDate(value); setErrors({ ...errors, date: '' }); }} error={errors.date} />
             <TextField id="delivery-destination" label="Nueva ubicación" optional value={destination} onChange={setDestination} list="delivery-locations"
               hint={receiver?.unit ? `Si la dejas en blanco, los bienes conservan su ubicación actual. Unidad de quien recibe: ${receiver.unit}.` : 'Si la dejas en blanco, los bienes conservan su ubicación actual.'} />
             <datalist id="delivery-locations">{[...new Set([...(receiver?.unit ? [receiver.unit] : []), ...locations])].map(place => <option key={place} value={place} />)}</datalist>

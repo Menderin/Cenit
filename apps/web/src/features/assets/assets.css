@@ -115,7 +115,11 @@
 .assets-timeline a, .assets-link-button { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; padding: 0; border: 0; background: none; color: var(--color-ink-secondary); font: inherit; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-size: 13px; }
 .assets-hint { display: flex; gap: 10px; padding: 12px 14px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface-subtle); color: var(--color-ink-label); font-size: 12px; }
 .assets-hint svg { flex: none; color: var(--color-info-icon); }
-.assets-error { margin: 8px 0 0; color: var(--color-danger); font-size: 12px; }
+.assets-error { margin: 8px 0 0; color: var(--color-danger); font-size: 14px; font-weight: 500; }
+
+/* Aviso de propuesta */
+.assets-proposal { margin: 0 0 18px; padding: 10px 14px; border-left: 3px solid var(--color-focus); border-radius: var(--radius-md); background: var(--color-info-soft); color: var(--color-ink-secondary); font-size: 14px; line-height: 1.5; }
+.assets-proposal strong { color: var(--color-ink); font-weight: 600; }
 
 /* Formularios */
 .assets-form-layout { display: grid; grid-template-columns: minmax(0, 1fr) clamp(320px, 28vw, 520px); gap: 32px; align-items: start; }
@@ -129,7 +133,8 @@
 .assets-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .assets-field > label { color: var(--color-ink-label); font-size: 14px; font-weight: 500; }
 .assets-field > label small { color: var(--color-ink-subtle); font-size: 13px; font-weight: 400; }
-.assets-field > p { margin: 0; color: var(--color-ink-muted); font-size: 13px; }
+.assets-field > p { margin: 0; color: var(--color-ink-muted); font-size: 14px; }
+.assets-field > p.assets-error { color: var(--color-danger); font-weight: 500; }
 .assets-field textarea.cenit-input { line-height: 1.5; }
 .assets-kinds { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; }
 .assets-kinds label { position: relative; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 10px 12px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-ink-secondary); font-size: 13px; cursor: pointer; transition: border-color 150ms ease-out, background-color 150ms ease-out; }

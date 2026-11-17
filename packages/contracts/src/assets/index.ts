@@ -98,6 +98,9 @@ export const AssetSummarySchema = object({ data: object({
 }) });
 export type AssetSummary = Static<typeof AssetSummarySchema>['data'];
 
+// Cantidad máxima de bienes por acta o préstamo: más no caben en una hoja carta.
+export const maxDocumentItems = 10;
+
 // Un ítem de entrega es un bien del inventario o un bien nuevo que se registra al guardar (p. ej., un gasto controlado).
 export const NewDeliveryAssetSchema = object({
   kind: AssetKindSchema, quantity: Type.Integer({ minimum: 1, maximum: 9999 }), description: text(500), brand: optional(), serialNumber: optional(120),
@@ -107,7 +110,7 @@ export type DeliveryItemInput = Static<typeof DeliveryItemInputSchema>;
 export const CreateDeliverySchema = object({
   operationId: uuid, receiverId: uuid, deliveredOn: day, reason: text(500), destination: optional(),
   giverName: text(200), giverPosition: optional(), giverUnit: optional(), notes: optional(1000),
-  items: Type.Array(DeliveryItemInputSchema, { minItems: 1, maxItems: 30 }),
+  items: Type.Array(DeliveryItemInputSchema, { minItems: 1, maxItems: maxDocumentItems }),
 });
 export type CreateDelivery = Static<typeof CreateDeliverySchema>;
 const DocumentItemSchema = object({
@@ -144,7 +147,7 @@ export type LoanStatus = Static<typeof LoanStatusSchema>;
 export const CreateLoanSchema = object({
   operationId: uuid, borrowerId: uuid, loanedOn: day, dueOn: nullable(day), location: optional(),
   authorizerName: text(200), authorizerUnit: optional(), notes: optional(1000),
-  assetIds: Type.Array(uuid, { minItems: 1, maxItems: 10, uniqueItems: true }),
+  assetIds: Type.Array(uuid, { minItems: 1, maxItems: maxDocumentItems, uniqueItems: true }),
 });
 export type CreateLoan = Static<typeof CreateLoanSchema>;
 export const ReturnLoanSchema = object({ returnedOn: day, note: optional(500) });

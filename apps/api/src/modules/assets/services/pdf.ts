@@ -1,17 +1,27 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import type { AssetDetail, Delivery, DocumentItem, Loan } from '@cenit/contracts/assets';
+import { ApiError } from '../../../infrastructure/errors.js';
 
 // Documentos de Bienes en una hoja carta. Siguen la estructura de los formularios recibidos
 // (alta de la Sección Registro, entrega y préstamo internos), con firmas vacías y sin datos del ejemplo.
 // El formato es una propuesta pendiente de validación institucional.
 const W = 612, H = 792, M = 54, ink = rgb(0.13, 0.13, 0.15), muted = rgb(0.38, 0.38, 0.42), line = rgb(0.2, 0.2, 0.22);
 const winAnsi = new Set('–—‘’“”•…€™'.split(''));
-const clean = (value: string) => [...value.replace(/\r/g, '')].map(char => char === '\n' || (char.charCodeAt(0) >= 32 && char.charCodeAt(0) <= 255) || winAnsi.has(char) ? char : '?').join('');
+const printable = (char: string) => { const code = char.charCodeAt(0); return char === '\n' || char === '\t' || (code >= 32 && code <= 255 && (code < 127 || code > 159)) || winAnsi.has(char); };
+/** Primer carácter que la fuente estándar del PDF no puede imprimir (p. ej. ✓, ≥ o un emoji). */
+export const unprintableChar = (value: string) => [...value.replace(/\r/g, '')].find(char => !printable(char));
+// Un carácter no admitido se rechaza con su nombre; nunca se imprime un «?» en su lugar.
+const clean = (value: string) => {
+  const bad = unprintableChar(value);
+  if (bad) throw new ApiError(422, 'VALIDATION_ERROR', `El texto contiene «${bad}», un carácter que no se puede imprimir en el documento. Reemplázalo y vuelve a intentar.`);
+  return value.replace(/\r/g, '').replace(/\t/g, ' ');
+};
 const dateParts = (value: string) => { const [y, m, d] = value.split('-'); return [d!, m!, y!]; };
 const dateText = (value: string) => dateParts(value).join('/');
 
 class Sheet {
   y = H - M;
+  low = H; // punto más bajo dibujado: si invade el pie, el documento no cabe en una hoja
   private constructor(readonly pdf: PDFDocument, readonly page: PDFPage, readonly regular: PDFFont, readonly bold: PDFFont) {}
   static async create() {
     const pdf = await PDFDocument.create();
@@ -41,10 +51,12 @@ class Sheet {
       const w = font.widthOfTextAtSize(text, size);
       const dx = !width || align === 'left' ? 0 : align === 'center' ? (width - w) / 2 : width - w;
       this.page.drawText(text, { x: x + dx, y: y - index * size * 1.25, size, font, color });
+      this.low = Math.min(this.low, y - index * size * 1.25 - size * 0.25);
     });
     return lines.length * size * 1.25;
   }
   rect(x: number, y: number, w: number, h: number, fill?: ReturnType<typeof rgb>) {
+    this.low = Math.min(this.low, y - h);
     this.page.drawRectangle({ x, y: y - h, width: w, height: h, borderColor: line, borderWidth: 0.7, color: fill });
   }
   hline(x: number, y: number, w: number) { this.page.drawLine({ start: { x, y }, end: { x: x + w, y }, thickness: 0.7, color: line }); }
@@ -93,7 +105,9 @@ class Sheet {
     detail.filter(Boolean).forEach((value, index) => this.text(value, x, this.y - 22 - index * 10, { size: 8, color: muted, width, align: 'center' }));
   }
   async finish(generatedOn: string) {
-    this.text(`Generado en Cenit el ${dateText(generatedOn)}. Formato propuesto, pendiente de validación institucional. Las firmas se gestionan fuera de Cenit.`, M, 30, { size: 6.5, color: muted, width: W - 2 * M, align: 'center' });
+    if (this.low < 46) throw new ApiError(422, 'DOCUMENT_TOO_LONG', 'El documento no cabe en una hoja carta. Acorta las descripciones u observaciones, o registra los bienes en dos documentos.');
+    this.text('BORRADOR · Formato propuesto, pendiente de validación', M, H - 30, { size: 9, font: this.bold, color: muted, width: W - 2 * M, align: 'right' });
+    this.text(`Generado en Cenit el ${dateText(generatedOn)}. Formato propuesto, pendiente de validación institucional. Las firmas se gestionan fuera de Cenit.`, M, 30, { size: 8, color: muted, width: W - 2 * M, align: 'center' });
     return this.pdf.save();
   }
 }
