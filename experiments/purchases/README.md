@@ -57,12 +57,51 @@ Requiere OCR en `127.0.0.1:8090`, sin otra inferencia simultánea. No utiliza cr
 
 Las mismas muestras se usaron para ajustar la segmentación v3. Sus resultados son una regresión sobre desarrollo; una evaluación independiente necesita nuevas capturas preparadas por otra persona.
 
+### Evaluar capturas recibidas
+
+Las cinco capturas recibidas el 17/11/2026 están en `.local/ocr/purchases/2026-11-17/samples`, dentro del repositorio y excluidas de Git. Sus etiquetas, nombres originales y respuestas completas permanecen en esa carpeta privada. El procesamiento autorizado de estas muestras se ejecuta localmente en un contenedor sin red, con fuentes/modelos en sólo lectura, 1 CPU y 1 GiB. El evaluador y el worker se comunican mediante loopback dentro del contenedor. Este ensayo usa el endpoint privado `/extract` y conserva los contratos de revisión humana y guardado explícito de la aplicación.
+
+`oracle_format.py --manifest` permite evaluar archivos existentes y reutiliza el comparador de la batería sintética. El manifiesto contiene `samples`, con `case`, `file` relativo al manifiesto, `sha256`, `expected.header`, `expected.lines` y `excluded`. Un ejemplo de estructura con valores ficticios es el siguiente.
+
+```json
+{
+  "samples": [{
+    "case": "sample-01",
+    "file": "samples/sample-01.png",
+    "sha256": "<SHA-256 del archivo>",
+    "expected": {
+      "header": {"requestNumber": "000125", "totalAmount": "0"},
+      "lines": [{"provider": "PROVEEDOR DEMO", "amount": "0"}]
+    },
+    "excluded": []
+  }]
+}
+```
+
+Transcribir únicamente campos visibles y señalar recortes o dudas. Los campos omitidos de `expected` quedan fuera de la puntuación. `excluded` admite rutas exactas y `/lines/*/<campo>`; el valor predeterminado conserva la exclusión histórica de cuenta de cargo de la batería sintética. Una lista vacía permite puntuar ese campo cuando está completo. El comparador normaliza espacios y saltos de línea; conserva letras, tildes, signos y dígitos. Los valores desconocidos del procesador se contabilizan como ausentes y conservan su estado de candidato en la respuesta privada. Las etiquetas de las capturas recibidas requieren cotejo independiente; se conservó la primera transcripción al corregir el número de ceros de un centro de costos.
+
+Desde el entorno aislado que tenga acceso al OCR local, ejecutar el equivalente a este comando y mantener las salidas privadas en `.local`.
+
+```sh
+python experiments/purchases/oracle_format.py --evaluate \
+  --manifest .local/ocr/purchases/2026-11-17/manifest.json \
+  --output .local/ocr/purchases/2026-11-17/results/repeticion \
+  --url http://127.0.0.1:8090
+```
+
+El manifiesto se valida antes de enviar las imágenes y cada resultado identifica su hash. Los fuentes deben permanecer congelados durante la medición. La memoria registrada corresponde al máximo acumulado del cgroup e incluye el cliente evaluador; fuera de cgroup se informa como no disponible. El tiempo HTTP incluye el arranque del modelo en el subprocess de cada solicitud. El tiempo hasta `/health/live` se registra por separado y depende también del sondeo del motor de contenedores. Las capturas utilizadas para corregir el parser pasan a ser muestras de desarrollo.
+
+La corrección mantiene los pesos preentrenados. Reconstruye el borde exterior a partir de las líneas horizontales visibles, verifica las ocho etiquetas de columna, evita recortar caracteres pegados al margen, lee proveedores por líneas y vuelve a detección cuando la proyección de tinta une varias líneas. La fecha admite un separador de etiqueta `:` y conserva la validación de fecha/hora. No se sustituyen letras por dígitos ni se calculan importes a partir de otros campos.
+
+El ajuste fino se reconsidera si una evaluación separada sigue mostrando errores sistemáticos de detección o reconocimiento, con recortes/transcripciones revisados y datos de entrenamiento y validación separados. La documentación de PaddleOCR describe entrenamiento de modelos personalizados y su evaluación. Los resultados de un parser corregido y los cambios de pesos se miden por separado. [Guía oficial de PaddleOCR](https://www.paddleocr.ai/latest/en/version3.x/pipeline_usage/OCR.html).
+
 ## Resultados conservados
 
 Cada archivo de evidencia identifica muestras, fuentes, configuración y límites de su ejecución. Los resultados de conjuntos distintos no se comparan como una mejora directa.
 
 | Conjunto | Evidencia | Lectura del resultado |
 | --- | --- | --- |
+| Capturas recibidas y regresión sintética, 17/11/2026 | [Evaluación actual agregada](current-evaluation-evidence.json) | En cinco capturas recibidas, 43 exactos/0 erróneos/50 ausentes y cero ítems antes; 86 exactos/7 erróneos/0 ausentes y seis ítems después. Cabeceras 45/45, proveedores e importes 6/6. Las ocho ficticias conservan 118/11/35. Las etiquetas visuales requieren cotejo independiente; las capturas se usaron para desarrollo. |
 | Comparación inicial | [Resumen inicial](baseline/evidence.json) | Referencia histórica de motores y parser; plantilla simplificada. |
 | Segmentación por celdas | [Segunda batería](battery-evidence.json) | La ampliación y las celdas no mejoraron globalmente la lectura; algunos números no nulos eran incorrectos. |
 | Recorte numérico y contraste entre motores | [Tercera batería](round3-evidence.json) | El contraste omitió más valores sin beneficio de exactitud en ese conjunto. |
@@ -71,6 +110,8 @@ Cada archivo de evidencia identifica muestras, fuentes, configuración y límite
 | Mismas muestras, procesador v3 | [Regresión v3](oracle-format-v3-evidence.json) | 118 exactos, 11 incorrectos y 35 ausentes. Recupera los ítems de PNG nativos y del recorte superior; falla la tabla en JPEG, escalados y gris. Mediana 14,32 s, máximo 28,67 s. |
 
 Los dos últimos registros corresponden al ensayo local del 14 de octubre de 2026. HTTP 200 significa que hubo respuesta, no que la lectura fuera correcta. Los pesos no fueron entrenados ni cambiados en esos ajustes. No se reparan dígitos a partir de los valores esperados, de sumas ni de acuerdos supuestos entre motores.
+
+La evaluación del 17/11 conserva hashes de los dos fuentes y de cada captura, versiones efectivas de dependencias, respuestas agregadas por muestra/campo y huellas de las respuestas privadas. Mediana HTTP de 8,281 s antes y 14,302 s después; máximos de 9,169 s y 19,740 s. La versión inicial omitía todos los ítems. El ensayo final tuvo 1 CPU y 1 GiB efectivos, con máximo acumulado del cgroup de 984.141.824 bytes (incluye cliente evaluador) y cero eventos OOM. La inicialización aislada del modelo tardó 0,763 s en una ejecución; el inicio del contenedor hasta salud se informa aparte. Son observaciones locales de una pasada por muestra, con estas dimensiones y pesos. No se publican percentiles ni se acredita capacidad de la VM Azure. Las siete diferencias restantes están en descripción y centro de costos.
 
 PP-OCRv5 móvil latino mediante ONNX quedó como motor candidato. Las mejoras de geometría deben evaluarse separadamente de detección, reconocimiento y normalización. El acuerdo con Tesseract no garantiza corrección y puede añadir tiempo. Las pruebas de muestras reales, calidad mínima aceptada y recursos del destino siguen siendo necesarias para aceptar un uso institucional.
 
@@ -112,6 +153,8 @@ La revisión recupera su healthcheck para el servicio OCR y adapta su caso de im
 Antes de evaluar una sustitución del motor se debe resolver el fallback de `extract` del PR #55, que reintenta PNG como JPEG o viceversa pese al MIME declarado. La regresión del punto de entrada está en `tests/ocr/test_extractor.py`. Su Compose también hace obligatorio OCR para arrancar la aplicación, mientras la configuración vigente permite usar login y compras con el procesador apagado. La selección del motor requiere contrastar aciertos, errores, ausencias y tiempos sobre las mismas capturas. Esta revisión conserva PaddleOCR y su procedencia vigentes.
 
 Las pruebas Python están en `tests/ocr`, separadas de las baterías. Ejecutarlas con las dependencias del OCR instaladas en un entorno aislado o en su imagen:
+
+Las pruebas del servidor recuperan el aporte de ihelo en `d19e41e` (SCRUM-134). La revisión refuerza cancelación para exigir terminación del worker y liberación del turno, comprueba terminación en timeout con reloj controlado y ejecuta una subida inválida al verificar limpieza de temporales. Los casos de servidor emplean dobles para el ciclo de vida; las mediciones HTTP de exactitud y memoria usan inferencia real. Se mantienen las regresiones existentes de límites y tipos de archivo.
 
 ```sh
 PYTHONPATH=apps/ocr python3 -m unittest discover -s tests/ocr -v
