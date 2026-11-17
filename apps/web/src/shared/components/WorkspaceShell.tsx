@@ -5,10 +5,10 @@ import type { useSidebar } from '../lib/use-sidebar.js';
 import './workspace.css';
 
 // Shared frame for the administrative and academic workspaces; each page keeps its own navigation, toolbar and main content.
-export function WorkspaceShell({ sidebarState, className, rootProps, skip, navigationId, navigationLabel, brand, navigation, account, logout, toolbarStart, toolbarEnd, toolbarClassName = '', children }: {
+export function WorkspaceShell({ sidebarState, className, rootProps, skip, navigationId, navigationLabel, brand, navigation, account, accountActions, logout, toolbarStart, toolbarEnd, toolbarClassName = '', children }: {
   sidebarState: ReturnType<typeof useSidebar>; className: string; rootProps?: HTMLAttributes<HTMLDivElement>;
   skip: { href: string; label: string }; navigationId: string; navigationLabel: string; brand: ReactNode; navigation: ReactNode;
-  account: { name: string; role: string }; logout: (origin?: HTMLElement) => Promise<void>;
+  account: { name: string; role: string }; accountActions?: ReactNode; logout: (origin?: HTMLElement) => Promise<void>;
   toolbarStart: ReactNode; toolbarEnd?: ReactNode; toolbarClassName?: string; children: ReactNode;
 }) {
   const { collapsed, setCollapsed } = sidebarState;
@@ -22,7 +22,7 @@ export function WorkspaceShell({ sidebarState, className, rootProps, skip, navig
           {navigation}
           <div className="workspace-sidebar__bottom">
             <button type="button" className="workspace-nav-item" onClick={event => signOut(event.currentTarget)}><SignOutIcon size={18} aria-hidden="true" />Cerrar sesión</button>
-            <div className="workspace-account"><span className="workspace-avatar" aria-hidden="true">{account.name.trim().charAt(0)}</span><div><strong>{account.name}</strong><span>{account.role}</span></div></div>
+            {accountActions ?? <div className="workspace-account"><span className="workspace-avatar" aria-hidden="true">{account.name.trim().charAt(0)}</span><div><strong>{account.name}</strong><span>{account.role}</span></div></div>}
           </div>
         </div>
       </aside>

@@ -5,6 +5,8 @@ import { createReadiness } from './infrastructure/database/readiness.js';
 import { AcademicRepository } from './modules/academic/repositories/academic.js';
 import { AuthRepository } from './modules/auth/repositories/auth.js';
 import { AuthService } from './modules/auth/services/auth.js';
+import { GoogleRepository } from './modules/auth/repositories/google.js';
+import { GoogleService, googleTokenVerifier, readGoogleConfig } from './modules/auth/services/google.js';
 import { readAuthConfig } from './modules/auth/routes/index.js';
 import { PurchaseRepository } from './modules/purchases/repositories/purchases.js';
 import { ExtractionService, httpExtractionProcessor } from './modules/purchases/services/extractions.js';
@@ -21,10 +23,13 @@ export function createRuntimeApp() {
   const target = purchaseCapabilities.sheetsSyncEnabled ? readSheetsTarget() : undefined;
   const writer = target ? createGoogleSheetsWriter(target.spreadsheetId, target.keyFile, purchaseCapabilities.secondReviewEnabled) : undefined;
   const pool = createPool();
+  const auth = new AuthService(new AuthRepository(pool));
+  const googleConfig = readGoogleConfig();
+  const google = new GoogleService(googleConfig, new GoogleRepository(pool), auth, googleConfig.enabled ? googleTokenVerifier(googleConfig.clientId) : undefined);
   const purchases = new PurchaseRepository(pool);
   const sheets = target ? { repository: new PurchaseSheetsRepository(pool, purchases), spreadsheetId: target.spreadsheetId } : undefined;
   const readiness = createReadiness(databaseUrl(), fileURLToPath(new URL('../../../db/migrations/', import.meta.url)));
-  const app = buildAcademicApp({ extraction, captureReceipts, repository: new AcademicRepository(pool), purchases, purchaseCapabilities, sheets, frontendRoot: process.env.NODE_ENV === 'production' ? fileURLToPath(new URL('../../web/dist/', import.meta.url)) : undefined, auth: { service: new AuthService(new AuthRepository(pool)), config } });
+  const app = buildAcademicApp({ extraction, captureReceipts, repository: new AcademicRepository(pool), purchases, purchaseCapabilities, sheets, frontendRoot: process.env.NODE_ENV === 'production' ? fileURLToPath(new URL('../../web/dist/', import.meta.url)) : undefined, auth: { service: auth, google, config } });
   if (sheets && writer) {
     let stop: (() => Promise<void>) | undefined;
     app.addHook('onReady', async () => { stop = startSheetsSync(sheets.repository, sheets.spreadsheetId, writer); });

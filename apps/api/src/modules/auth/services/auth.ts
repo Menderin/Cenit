@@ -2,6 +2,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { LoginRequest, SessionResponse } from '@cenit/contracts/auth';
 import { ApiError } from '../../../infrastructure/errors.js';
 import type { AuthRepository } from '../repositories/auth.js';
+import type { AuthAccount } from '../repositories/auth.js';
+import type { GoogleIdentity } from './google.js';
 import { dummyPasswordHash, verifyPassword } from './password.js';
 
 export const SESSION_SECONDS = 2 * 60 * 60;
@@ -14,12 +16,25 @@ export class AuthService {
     const account = await this.repository.account(input.email.trim().toLowerCase());
     const valid = await verifyPassword(input.password, account?.passwordHash ?? dummyPasswordHash);
     if (!account?.active || !valid) throw new ApiError(401, 'INVALID_CREDENTIALS', 'Correo o contraseña incorrectos.');
+    return this.establish(account, previousToken);
+  }
+  async loginGoogle(identity: GoogleIdentity, previousToken?: string): Promise<{ token: string; response: SessionResponse }> {
+    const account = await this.repository.googleAccount(identity);
+    if (!account?.active) throw new ApiError(403, 'GOOGLE_NOT_AUTHORIZED', 'Esta identidad Google no tiene acceso autorizado a Cenit.');
+    return this.establish(account, previousToken, identity);
+  }
+  private async establish(account: AuthAccount, previousToken?: string, google?: GoogleIdentity): Promise<{ token: string; response: SessionResponse }> {
     const now = this.clock(), expiresAt = new Date(now.getTime() + SESSION_SECONDS * 1000), token = randomBytes(32).toString('hex');
-    if (!await this.repository.createSession(account.id, sessionHash(token)!, sessionHash(previousToken), now, expiresAt)) {
+    if (!await this.repository.createSession(account.id, sessionHash(token)!, sessionHash(previousToken), now, expiresAt, google)) {
       throw new ApiError(401, 'INVALID_CREDENTIALS', 'Correo o contraseña incorrectos.');
     }
     const { id, email, name, role } = account;
     return { token, response: { data: { account: { id, email, name, role }, expiresAt: expiresAt.toISOString() } } };
+  }
+  async localSession(token?: string): Promise<SessionResponse | null> {
+    const hash = sessionHash(token);
+    if (!hash || !await this.repository.isLocalSession(hash, this.clock())) return null;
+    return this.session(token);
   }
   async session(token?: string): Promise<SessionResponse | null> {
     const hash = sessionHash(token);

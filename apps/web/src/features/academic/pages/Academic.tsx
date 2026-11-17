@@ -10,6 +10,7 @@ import { SquaresFourIcon } from '@phosphor-icons/react/dist/csr/SquaresFour';
 import type { AcademicCourse, AcademicPlan } from '@cenit/contracts/academic';
 import { useAuth } from '../../auth/model/session.js';
 import { SessionWarning } from '../../auth/components/SessionWarning.js';
+import { AccountProfileLink } from '../../auth/components/AccountProfileLink.js';
 import { HttpError } from '../../../shared/lib/http.js';
 import { getPlans, getPlan, getProgress, retryAcademicRead } from '../api/academic.js';
 import { groupBySemester, semesterLabel } from '../model/group-by-semester.js';
@@ -81,7 +82,7 @@ export function Academic() {
   return <WorkspaceShell sidebarState={sidebarState} className={`academic-workspace${pointerFocus ? ' academic-workspace--pointer' : ''}`}
     rootProps={{ onPointerDownCapture: () => setPointerFocus(true), onKeyDownCapture: () => setPointerFocus(false) }}
     skip={{ href: '#academic-content', label: 'Ir a la malla' }} navigationId="academic-navigation" navigationLabel="Área académica"
-    account={{ name: account.name, role }} logout={auth.logout}
+    account={{ name: account.name, role }} accountActions={<AccountProfileLink to="/academico/perfil" />} logout={auth.logout}
     brand={<div className="workspace-brand">Cenit<span>Consulta académica</span></div>}
     navigation={<nav className="workspace-nav" aria-label="Navegación académica">
       <p className="workspace-eyebrow">Académico</p>

@@ -15,7 +15,8 @@ export async function api(path: string, init: RequestInit = {}): Promise<Respons
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
     const message = Value.Check(ErrorResponseSchema, body) ? body.error.message : 'No se pudo completar la solicitud.';
-    if (response.status === 401 && !['/auth/login', '/auth/session'].includes(path)) window.dispatchEvent(new Event('cenit:unauthenticated'));
+    const credentialRejected = init.method === 'POST' && ['/auth/google/login', '/auth/google/link', '/auth/google/challenge'].includes(path);
+    if (response.status === 401 && !credentialRejected && !['/auth/login', '/auth/session'].includes(path)) window.dispatchEvent(new Event('cenit:unauthenticated'));
     throw new HttpError(response.status, message, body);
   }
   return response;

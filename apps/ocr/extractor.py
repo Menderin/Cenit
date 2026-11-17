@@ -117,6 +117,13 @@ def read_cell(engine, image, detect=False):
             bands.append([int(y)])
         else:
             bands[-1].append(int(y))
+    # Tightly stacked text can merge into a single ink band. Compare its height
+    # with the connected glyphs before sending several lines to the recognizer.
+    _, _, components, _ = cv2.connectedComponentsWithStats(ink.astype(np.uint8), 8)
+    heights = components[1:, cv2.CC_STAT_HEIGHT]
+    heights = heights[heights >= 4]
+    if bands and len(heights) and max(len(band) for band in bands) > np.median(heights)*1.8:
+        return read_cell(engine, image, detect=True)
     texts = []
     for band in bands:
         crop = image.crop((0, band[0], image.width, band[-1]+1))
@@ -173,10 +180,18 @@ def table(engine, image, groups, regions=None):
     vertical = cv2.morphologyEx(edge, cv2.MORPH_CLOSE, np.ones((7, 1), np.uint8))
     vertical = cv2.morphologyEx(vertical, cv2.MORPH_OPEN, np.ones((max(15, int((ys[-1]-ys[0])*.4)), 1), np.uint8))
     xs = collapse(np.flatnonzero((vertical[ys[0]:ys[-1]] > 0).sum(axis=0) > (ys[-1]-ys[0])*.5))
-    span = np.flatnonzero(horizontal[ys[-1]] > 0)
+    # Canny can place edges beside a collapsed center. Use all visible rules so
+    # a tooltip covering part of the bottom border does not shorten the table.
+    span = np.flatnonzero(np.any(horizontal[max(0, ys[0]-2):ys[-1]+3] > 0, axis=0))
     if len(span):
         # Exclude page/frame borders outside the table's horizontal extent.
         xs = [x for x in xs if span[0]-2 <= x <= span[-1]+2]
+        # An open table can end with a horizontal rule instead of a vertical border.
+        # Use the visible rule endpoints; all eight column labels are still required.
+        for boundary in [int(span[0]), int(span[-1])]:
+            if all(abs(boundary-x) > 3 for x in xs):
+                xs.append(boundary)
+        xs.sort()
     section_left = min(w['x'] for w in start['words'])
     tolerance = max(5, max(w['h'] for w in start['words'])*.4)
     xs = [x for x in xs if x >= section_left-tolerance]
@@ -212,8 +227,10 @@ def table(engine, image, groups, regions=None):
     for position, (top, bottom) in enumerate(zip(body, body[1:])):
         row = {}
         for i, (key, _) in enumerate(COLUMNS):
-            bounds = (xs[i]+3, top+3, xs[i+1]-3, bottom-3)
-            row[key] = read_cell(engine, image.crop(bounds), detect=i < 3)
+            bounds = (xs[i]+1, top+1, xs[i+1]-1, bottom-1)
+            # Providers wrap into horizontal text lines. Re-detecting words in
+            # an enlarged narrow cell can duplicate fragments of those lines.
+            row[key] = read_cell(engine, image.crop(bounds), detect=i in [0, 2])
             if row[key]:
                 add_region(regions, f'/lines/{position}/{key}', bounds, image)
         rows.append(row)
@@ -313,7 +330,7 @@ MONTHS = {name: i+1 for i, names in enumerate(['ene jan', 'feb', 'mar', 'abr apr
 
 
 def sent(raw):
-    match = re.fullmatch(r'(\d{2})[-/](\d{2}|[A-Za-z]{3,4})[-/](\d{4})(?:\s+(\d{2}:\d{2}:\d{2}))?', raw)
+    match = re.fullmatch(r'(?::\s*)?(\d{2})[-/](\d{2}|[A-Za-z]{3,4})[-/](\d{4})(?:\s+(\d{2}:\d{2}:\d{2}))?', raw)
     if not match:
         return None, None
     day, month, year, time = match.groups()
