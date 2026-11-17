@@ -80,6 +80,7 @@ jobs:
   deploy:
     name: Deploy Azure
     needs: publish
+    if: vars.CENIT_DEPLOY_TARGET != 'aws'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -123,4 +124,50 @@ jobs:
             curl --fail --silent --retry 6 --retry-delay 10 --retry-all-errors --max-time 15 \
               https://cenit-famed.chilecentral.cloudapp.azure.com/health/ready | python3 -c 'import json,sys; assert json.load(sys.stdin)=={"status":"ready"}'
           fi
+          echo "Cenit: $origin — commit $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-aws:
+    name: Deploy AWS
+    needs: publish
+    if: vars.CENIT_DEPLOY_TARGET == 'aws'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Read public AWS identifiers
+        id: aws
+        run: |
+          python3 - <<'PY'
+          import json,os
+          config = json.load(open('deploy/aws/config.json'))
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              output.write(f"region={config['region']}\n")
+          PY
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          # The organization's SCP forbids GitHub OIDC providers; this IAM user can only call SendCommand on the node.
+          aws-access-key-id: ${{ secrets.CENIT_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.CENIT_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ steps.aws.outputs.region }}
+      - name: Deploy through Systems Manager
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CENIT_APP_IMAGE: ${{ needs.publish.outputs.app }}
+          CENIT_OCR_IMAGE: ${{ needs.publish.outputs.ocr }}
+        run: python3 deploy/aws/run-command-aws.py
+      - name: Verify public HTTPS
+        # Enable CENIT_AWS_PUBLIC_VERIFY only after DNS points at the AWS node.
+        if: vars.CENIT_AWS_PUBLIC_VERIFY == 'true'
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          origin=$(python3 -c "import json,os;c=json.load(open('deploy/aws/config.json'))['environments'];print('https://'+c['production' if os.environ['BRANCH']=='main' else 'staging']['hosts'][0])")
+          curl --fail --silent --retry 6 --retry-delay 10 --retry-all-errors --max-time 15 \
+            "$origin/health/ready" | python3 -c 'import json,sys; assert json.load(sys.stdin)=={"status":"ready"}'
           echo "Cenit: $origin — commit $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
