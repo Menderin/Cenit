@@ -7,6 +7,7 @@ import { PackageIcon } from '@phosphor-icons/react/dist/csr/Package';
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
 import type { Account } from '@cenit/contracts/auth';
 import { SessionWarning } from '../features/auth/components/SessionWarning.js';
+import { AccountProfileLink } from '../features/auth/components/AccountProfileLink.js';
 import { usePurchaseReturnTo } from '../features/purchases/model/location.js';
 import { usePurchaseGuard } from '../features/purchases/model/guard.js';
 import { useSidebar } from '../shared/lib/use-sidebar.js';
@@ -70,7 +71,7 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
     </NavLink>;
   }
   const current = navigation.find(link => link.end ? location.pathname === link.to : location.pathname.startsWith(link.to));
-  const page = location.pathname === '/administracion/compras/nueva' ? 'Registrar compra'
+  const page = location.pathname === '/administracion/perfil' ? 'Mi perfil' : location.pathname === '/administracion/compras/nueva' ? 'Registrar compra'
     : location.pathname === '/administracion/compras/captura' ? 'Registrar desde captura'
     : location.pathname === '/administracion/compras/laboratorio' ? 'Revisar datos'
     : /\/administracion\/compras\/[^/]+\/editar$/.test(location.pathname) ? 'Editar compra'
@@ -86,7 +87,7 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
     main.current?.scrollTo(0, 0); window.scrollTo(0, 0); main.current?.focus({ preventScroll: true });
   }, [location.pathname]);
   return <WorkspaceShell sidebarState={sidebarState} className="admin-workspace" skip={{ href: '#admin-content', label: 'Ir al contenido' }}
-    navigationId="admin-navigation" navigationLabel="Navegación administrativa" account={{ name: account.name, role: 'Administrativo' }} logout={logout}
+    navigationId="admin-navigation" navigationLabel="Navegación administrativa" account={{ name: account.name, role: 'Administrativo' }} accountActions={<AccountProfileLink to="/administracion/perfil" onClick={follow} />} logout={logout}
     brand={<NavLink to="/administracion" onClick={follow} className="workspace-brand" aria-label="Cenit, inicio administrativo">Cenit<span>Espacio administrativo</span></NavLink>}
     navigation={<nav className="workspace-nav" aria-label="Sistemas administrativos">
       <p className="workspace-eyebrow">Administración</p>

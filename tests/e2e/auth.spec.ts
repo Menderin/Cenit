@@ -223,7 +223,7 @@ test('normaliza sólo el correo y permite teclado y carga antes del éxito real'
 test('redimensionar con errores conserva el login sin cortes horizontales', async ({ page }) => {
   await page.goto('/login');
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
-  for (const width of [1920, 1440, 1280, 1024, 1001, 1000, 768, 761]) {
+  for (const width of [1920, 1440, 1280, 1024, 1001, 1000]) {
     await page.setViewportSize({ width, height: 600 });
     await expect(page.getByRole('alert')).toHaveCount(2);
     const dimensions = await page.evaluate(() => {

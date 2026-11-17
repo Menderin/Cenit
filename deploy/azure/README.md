@@ -114,6 +114,25 @@ No copiar `.env` local a Azure. `deploy.sh` genera en cada directorio privado la
 
 Los archivos privados no se incluyen en Git, imágenes ni artefactos públicos. El runtime no recibe las claves ficticias de login para arrancar. Antes de usar una cuenta en un entorno nuevo, su preparación/transferencia debe comprobarse de forma explícita; el deploy no acredita que exista.
 
+### Habilitar Google en un entorno
+
+Cada entorno admite un archivo opcional `/opt/cenit/<entorno>/.local/google.env`, leído únicamente por `app`. Compose debe admitir `env_file.required` (Docker Compose 2.24 o posterior). Si el archivo falta, el proveedor permanece deshabilitado y el acceso local sigue disponible. El archivo pertenece al entorno de la VM y se conserva entre entregas; `deploy.sh` regenera `.env` sin sobrescribirlo.
+
+El operador crea o edita ese archivo con permisos `0600`, dentro del directorio privado del entorno, con estos valores de ejemplo. El ID se sustituye por el ID público del cliente web del proyecto.
+
+```dotenv
+AUTH_GOOGLE_ENABLED=true
+AUTH_GOOGLE_CLIENT_ID=123456789-example.apps.googleusercontent.com
+```
+
+Registrar el origen HTTPS exacto del entorno en Google Auth Platform y añadir las cuentas de prueba si la aplicación sigue en modo de pruebas. El cliente usa Google Identity Services con callback en ventana emergente; las URLs de redirección se dejan vacías. Sólo se configura el ID público del cliente. La autorización exacta de correos y la primera vinculación desde una sesión local se preparan por separado mediante el [procedimiento Google](../LOCAL.md#acceso-google-opcional). Cada base conserva sus propias autorizaciones y vínculos.
+
+Aplicar la configuración mediante la siguiente entrega habitual de Actions al entorno. Comprobar `GET /api/v1/auth/google` después de la entrega. Debe devolver `enabled: true` y el ID esperado. Un `404` indica que el destino todavía no publica ese endpoint; `enabled: false` requiere revisar configuración y formato del ID. Un readiness correcto acredita salud del runtime, mientras que el recorrido Google se comprueba con una cuenta autorizada.
+
+Para aceptar el recorrido, entrar con contraseña local, abrir **Mi perfil**, vincular la cuenta Google, cerrar sesión e ingresar con Google. Verificar cuenta, rol, permisos y foto en perfil y menú lateral; cerrar sesión y comprobar que el API vuelve a rechazar consultas protegidas. Registrar fecha, entorno, SHA entregado, casos y resultados, sin JWT, cookies ni credenciales. Las pruebas automáticas con identidades ficticias complementan este recorrido. La aprobación de otro integrante se registra en el PR o Jira.
+
+Para deshabilitar Google en una entrega posterior, establecer `AUTH_GOOGLE_ENABLED=false` en el archivo del entorno y realizar la entrega habitual. Retirar el permiso de una cuenta concreta requiere además el comando explícito `revoke`, que invalida sus sesiones Google según el contrato documentado.
+
 ## Publicar el catálogo académico (operación explícita)
 
 Responsable: quien opera el despliegue Azure, con revisión del catálogo por el equipo académico/backend. La entrega instala el cargador compilado, `diagrama-r2` y sólo sus fuentes de imagen/cotejo en la misma imagen de aplicación. No necesita `tsx`, dependencias de desarrollo, clonar el repositorio ni compilar en la VM. El servicio `catalog` usa un perfil explícito y la credencial de `cenit_migrator`; no se ejecuta al arrancar la aplicación ni durante CD.

@@ -5,6 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import { ApiError } from './infrastructure/errors.js';
 import { authRoutes, SESSION_COOKIE, type AuthConfig } from './modules/auth/routes/index.js';
 import type { AuthService } from './modules/auth/services/auth.js';
+import type { GoogleService } from './modules/auth/services/google.js';
 import { academicRoutes, type AuthenticateAcademic } from './modules/academic/routes/index.js';
 import { AcademicService, type AcademicReadRepository } from './modules/academic/services/academic.js';
 
@@ -21,7 +22,7 @@ import { defaultPurchaseCapabilities } from './modules/purchases/services/config
 import type { PurchaseSheetsRepository } from './modules/purchases/repositories/sheets.js';
 import type { CaptureReceipts } from './modules/purchases/services/capture-receipts.js';
 
-export function buildAcademicApp(options: { repository: AcademicReadRepository; purchases?: PurchaseRepository; assets?: AssetRepository; purchaseCapabilities?: PurchaseCapabilities; sheets?: { repository: PurchaseSheetsRepository; spreadsheetId: string }; extraction?: ExtractionService; captureReceipts?: CaptureReceipts; frontendRoot?: string; authenticate?: AuthenticateAcademic; auth?: { service: AuthService; config: AuthConfig } }) {
+export function buildAcademicApp(options: { repository: AcademicReadRepository; purchases?: PurchaseRepository; assets?: AssetRepository; purchaseCapabilities?: PurchaseCapabilities; sheets?: { repository: PurchaseSheetsRepository; spreadsheetId: string }; extraction?: ExtractionService; captureReceipts?: CaptureReceipts; frontendRoot?: string; authenticate?: AuthenticateAcademic; auth?: { service: AuthService; config: AuthConfig; google?: GoogleService } }) {
   if (options.auth && options.authenticate) throw new Error('No combinar sesión real con adaptador de identidad de prueba.');
   const app = Fastify({ bodyLimit: 128 * 1024, genReqId: () => randomUUID(), ajv: { customOptions: { removeAdditional: false, coerceTypes: false } } });
   // Query-only coercion keeps HTTP pagination usable without accepting role/body coercion.

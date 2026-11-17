@@ -1,5 +1,5 @@
 {
-  "id": "6bab6ed1-9011-444c-9a99-8fe1746b9704",
+  "id": "d53cef86-6073-4c23-a698-19e85c801a93",
   "prevId": "969d4c08-4937-41d8-a469-470dd962934a",
   "version": "7",
   "dialect": "postgresql",
@@ -592,6 +592,218 @@
       },
       "isRLSEnabled": false
     },
+    "cenit.google_authorizations": {
+      "name": "google_authorizations",
+      "schema": "cenit",
+      "columns": {
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "google_authorizations_account_id_accounts_id_fk": {
+          "name": "google_authorizations_account_id_accounts_id_fk",
+          "tableFrom": "google_authorizations",
+          "tableTo": "accounts",
+          "schemaTo": "cenit",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "google_authorizations_email_unique": {
+          "name": "google_authorizations_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "google_authorization_email": {
+          "name": "google_authorization_email",
+          "value": "length(\"cenit\".\"google_authorizations\".\"email\") BETWEEN 3 AND 254 AND \"cenit\".\"google_authorizations\".\"email\" = lower(btrim(\"cenit\".\"google_authorizations\".\"email\")) AND \"cenit\".\"google_authorizations\".\"email\" ~ '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "cenit.google_challenges": {
+      "name": "google_challenges",
+      "schema": "cenit",
+      "columns": {
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nonce_hash": {
+          "name": "nonce_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "session_hash": {
+          "name": "session_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "google_challenge_expiration": {
+          "name": "google_challenge_expiration",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "google_challenges_account_id_accounts_id_fk": {
+          "name": "google_challenges_account_id_accounts_id_fk",
+          "tableFrom": "google_challenges",
+          "tableTo": "accounts",
+          "schemaTo": "cenit",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "google_challenge_hashes": {
+          "name": "google_challenge_hashes",
+          "value": "\"cenit\".\"google_challenges\".\"token_hash\" ~ '^[0-9a-f]{64}$' AND \"cenit\".\"google_challenges\".\"nonce_hash\" ~ '^[0-9a-f]{64}$' AND (\"cenit\".\"google_challenges\".\"session_hash\" IS NULL OR \"cenit\".\"google_challenges\".\"session_hash\" ~ '^[0-9a-f]{64}$')"
+        },
+        "google_challenge_purpose": {
+          "name": "google_challenge_purpose",
+          "value": "(\"cenit\".\"google_challenges\".\"purpose\" = 'login' AND \"cenit\".\"google_challenges\".\"account_id\" IS NULL) OR (\"cenit\".\"google_challenges\".\"purpose\" = 'link' AND \"cenit\".\"google_challenges\".\"account_id\" IS NOT NULL AND \"cenit\".\"google_challenges\".\"session_hash\" IS NOT NULL)"
+        },
+        "google_challenge_duration": {
+          "name": "google_challenge_duration",
+          "value": "\"cenit\".\"google_challenges\".\"expires_at\" = \"cenit\".\"google_challenges\".\"created_at\" + interval '5 minutes'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "cenit.google_identities": {
+      "name": "google_identities",
+      "schema": "cenit",
+      "columns": {
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "subject": {
+          "name": "subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "linked_at": {
+          "name": "linked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "google_identities_account_id_accounts_id_fk": {
+          "name": "google_identities_account_id_accounts_id_fk",
+          "tableFrom": "google_identities",
+          "tableTo": "accounts",
+          "schemaTo": "cenit",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "google_identities_subject_unique": {
+          "name": "google_identities_subject_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "subject"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "google_identity_subject": {
+          "name": "google_identity_subject",
+          "value": "\"cenit\".\"google_identities\".\"subject\" ~ '^[A-Za-z0-9_-]{1,255}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "cenit.sessions": {
       "name": "sessions",
       "schema": "cenit",
@@ -625,6 +837,13 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "authentication_method": {
+          "name": "authentication_method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'local'"
         }
       },
       "indexes": {
@@ -690,6 +909,10 @@
         "session_revocation": {
           "name": "session_revocation",
           "value": "\"cenit\".\"sessions\".\"revoked_at\" IS NULL OR \"cenit\".\"sessions\".\"revoked_at\" >= \"cenit\".\"sessions\".\"created_at\""
+        },
+        "session_authentication_method": {
+          "name": "session_authentication_method",
+          "value": "\"cenit\".\"sessions\".\"authentication_method\" IN ('local','google')"
         }
       },
       "isRLSEnabled": false
@@ -1684,1205 +1907,6 @@
         "student_rut_search_value": {
           "name": "student_rut_search_value",
           "value": "\"cenit\".\"academic_students\".\"rut_search\" = upper(replace(\"cenit\".\"academic_students\".\"rut\", '.', ''))"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "cenit.asset_deliveries": {
-      "name": "asset_deliveries",
-      "schema": "cenit",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "operation_id": {
-          "name": "operation_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "year": {
-          "name": "year",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "number": {
-          "name": "number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "delivered_on": {
-          "name": "delivered_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "receiver_id": {
-          "name": "receiver_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "reason": {
-          "name": "reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "destination": {
-          "name": "destination",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "giver_name": {
-          "name": "giver_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "giver_position": {
-          "name": "giver_position",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "giver_unit": {
-          "name": "giver_unit",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "notes": {
-          "name": "notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "asset_deliveries_receiver_id_asset_people_id_fk": {
-          "name": "asset_deliveries_receiver_id_asset_people_id_fk",
-          "tableFrom": "asset_deliveries",
-          "tableTo": "asset_people",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "receiver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "asset_deliveries_created_by_accounts_id_fk": {
-          "name": "asset_deliveries_created_by_accounts_id_fk",
-          "tableFrom": "asset_deliveries",
-          "tableTo": "accounts",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "asset_delivery_operation": {
-          "name": "asset_delivery_operation",
-          "nullsNotDistinct": false,
-          "columns": [
-            "created_by",
-            "operation_id"
-          ]
-        },
-        "asset_delivery_number": {
-          "name": "asset_delivery_number",
-          "nullsNotDistinct": false,
-          "columns": [
-            "year",
-            "number"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "asset_delivery_folio": {
-          "name": "asset_delivery_folio",
-          "value": "\"cenit\".\"asset_deliveries\".\"number\" > 0 AND \"cenit\".\"asset_deliveries\".\"year\" = extract(year FROM \"cenit\".\"asset_deliveries\".\"delivered_on\")"
-        },
-        "asset_delivery_reason": {
-          "name": "asset_delivery_reason",
-          "value": "length(\"cenit\".\"asset_deliveries\".\"reason\") BETWEEN 1 AND 500 AND \"cenit\".\"asset_deliveries\".\"reason\" ~ '[^[:space:]]'"
-        },
-        "asset_delivery_giver": {
-          "name": "asset_delivery_giver",
-          "value": "length(\"cenit\".\"asset_deliveries\".\"giver_name\") BETWEEN 1 AND 200 AND \"cenit\".\"asset_deliveries\".\"giver_name\" ~ '[^[:space:]]'"
-        },
-        "asset_delivery_notes": {
-          "name": "asset_delivery_notes",
-          "value": "\"cenit\".\"asset_deliveries\".\"notes\" IS NULL OR (length(\"cenit\".\"asset_deliveries\".\"notes\") BETWEEN 1 AND 1000 AND \"cenit\".\"asset_deliveries\".\"notes\" ~ '[^[:space:]]')"
-        },
-        "asset_delivery_text_0": {
-          "name": "asset_delivery_text_0",
-          "value": "\"cenit\".\"asset_deliveries\".\"destination\" IS NULL OR (length(\"cenit\".\"asset_deliveries\".\"destination\") BETWEEN 1 AND 255 AND \"cenit\".\"asset_deliveries\".\"destination\" ~ '[^[:space:]]')"
-        },
-        "asset_delivery_text_1": {
-          "name": "asset_delivery_text_1",
-          "value": "\"cenit\".\"asset_deliveries\".\"giver_position\" IS NULL OR (length(\"cenit\".\"asset_deliveries\".\"giver_position\") BETWEEN 1 AND 255 AND \"cenit\".\"asset_deliveries\".\"giver_position\" ~ '[^[:space:]]')"
-        },
-        "asset_delivery_text_2": {
-          "name": "asset_delivery_text_2",
-          "value": "\"cenit\".\"asset_deliveries\".\"giver_unit\" IS NULL OR (length(\"cenit\".\"asset_deliveries\".\"giver_unit\") BETWEEN 1 AND 255 AND \"cenit\".\"asset_deliveries\".\"giver_unit\" ~ '[^[:space:]]')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "cenit.asset_delivery_items": {
-      "name": "asset_delivery_items",
-      "schema": "cenit",
-      "columns": {
-        "delivery_id": {
-          "name": "delivery_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "position": {
-          "name": "position",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "asset_id": {
-          "name": "asset_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "asset_delivery_item_asset": {
-          "name": "asset_delivery_item_asset",
-          "columns": [
-            {
-              "expression": "asset_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "asset_delivery_items_delivery_id_asset_deliveries_id_fk": {
-          "name": "asset_delivery_items_delivery_id_asset_deliveries_id_fk",
-          "tableFrom": "asset_delivery_items",
-          "tableTo": "asset_deliveries",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "delivery_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "asset_delivery_items_asset_id_assets_id_fk": {
-          "name": "asset_delivery_items_asset_id_assets_id_fk",
-          "tableFrom": "asset_delivery_items",
-          "tableTo": "assets",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "asset_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "asset_delivery_items_delivery_id_position_pk": {
-          "name": "asset_delivery_items_delivery_id_position_pk",
-          "columns": [
-            "delivery_id",
-            "position"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "asset_delivery_item": {
-          "name": "asset_delivery_item",
-          "nullsNotDistinct": false,
-          "columns": [
-            "delivery_id",
-            "asset_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "asset_delivery_item_position": {
-          "name": "asset_delivery_item_position",
-          "value": "\"cenit\".\"asset_delivery_items\".\"position\" BETWEEN 1 AND 30"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "cenit.asset_events": {
-      "name": "asset_events",
-      "schema": "cenit",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "asset_id": {
-          "name": "asset_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "occurred_on": {
-          "name": "occurred_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "person_id": {
-          "name": "person_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "location_from": {
-          "name": "location_from",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "location_to": {
-          "name": "location_to",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "note": {
-          "name": "note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "delivery_id": {
-          "name": "delivery_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "loan_id": {
-          "name": "loan_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "asset_event_asset": {
-          "name": "asset_event_asset",
-          "columns": [
-            {
-              "expression": "asset_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "occurred_on",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "asset_events_asset_id_assets_id_fk": {
-          "name": "asset_events_asset_id_assets_id_fk",
-          "tableFrom": "asset_events",
-          "tableTo": "assets",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "asset_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "asset_events_person_id_asset_people_id_fk": {
-          "name": "asset_events_person_id_asset_people_id_fk",
-          "tableFrom": "asset_events",
-          "tableTo": "asset_people",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "person_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "asset_events_delivery_id_asset_deliveries_id_fk": {
-          "name": "asset_events_delivery_id_asset_deliveries_id_fk",
-          "tableFrom": "asset_events",
-          "tableTo": "asset_deliveries",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "delivery_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "asset_events_loan_id_asset_loans_id_fk": {
-          "name": "asset_events_loan_id_asset_loans_id_fk",
-          "tableFrom": "asset_events",
-          "tableTo": "asset_loans",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "loan_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "asset_events_created_by_accounts_id_fk": {
-          "name": "asset_events_created_by_accounts_id_fk",
-          "tableFrom": "asset_events",
-          "tableTo": "accounts",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "asset_event_kind": {
-          "name": "asset_event_kind",
-          "value": "\"cenit\".\"asset_events\".\"kind\" IN ('alta','entrega','prestamo','devolucion','ubicacion','edicion')"
-        },
-        "asset_event_links": {
-          "name": "asset_event_links",
-          "value": "(\"cenit\".\"asset_events\".\"kind\" = 'entrega') = (\"cenit\".\"asset_events\".\"delivery_id\" IS NOT NULL) AND (\"cenit\".\"asset_events\".\"kind\" IN ('prestamo','devolucion')) = (\"cenit\".\"asset_events\".\"loan_id\" IS NOT NULL)"
-        },
-        "asset_event_note": {
-          "name": "asset_event_note",
-          "value": "\"cenit\".\"asset_events\".\"note\" IS NULL OR (length(\"cenit\".\"asset_events\".\"note\") BETWEEN 1 AND 1000 AND \"cenit\".\"asset_events\".\"note\" ~ '[^[:space:]]')"
-        },
-        "asset_event_location_from": {
-          "name": "asset_event_location_from",
-          "value": "\"cenit\".\"asset_events\".\"location_from\" IS NULL OR (length(\"cenit\".\"asset_events\".\"location_from\") BETWEEN 1 AND 255 AND \"cenit\".\"asset_events\".\"location_from\" ~ '[^[:space:]]')"
-        },
-        "asset_event_location_to": {
-          "name": "asset_event_location_to",
-          "value": "\"cenit\".\"asset_events\".\"location_to\" IS NULL OR (length(\"cenit\".\"asset_events\".\"location_to\") BETWEEN 1 AND 255 AND \"cenit\".\"asset_events\".\"location_to\" ~ '[^[:space:]]')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "cenit.asset_loan_items": {
-      "name": "asset_loan_items",
-      "schema": "cenit",
-      "columns": {
-        "loan_id": {
-          "name": "loan_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "position": {
-          "name": "position",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "asset_id": {
-          "name": "asset_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "asset_loan_item_asset": {
-          "name": "asset_loan_item_asset",
-          "columns": [
-            {
-              "expression": "asset_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "asset_loan_items_loan_id_asset_loans_id_fk": {
-          "name": "asset_loan_items_loan_id_asset_loans_id_fk",
-          "tableFrom": "asset_loan_items",
-          "tableTo": "asset_loans",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "loan_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "asset_loan_items_asset_id_assets_id_fk": {
-          "name": "asset_loan_items_asset_id_assets_id_fk",
-          "tableFrom": "asset_loan_items",
-          "tableTo": "assets",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "asset_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "asset_loan_items_loan_id_position_pk": {
-          "name": "asset_loan_items_loan_id_position_pk",
-          "columns": [
-            "loan_id",
-            "position"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "asset_loan_item": {
-          "name": "asset_loan_item",
-          "nullsNotDistinct": false,
-          "columns": [
-            "loan_id",
-            "asset_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "asset_loan_item_position": {
-          "name": "asset_loan_item_position",
-          "value": "\"cenit\".\"asset_loan_items\".\"position\" BETWEEN 1 AND 10"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "cenit.asset_loans": {
-      "name": "asset_loans",
-      "schema": "cenit",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "operation_id": {
-          "name": "operation_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "year": {
-          "name": "year",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "number": {
-          "name": "number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "loaned_on": {
-          "name": "loaned_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "due_on": {
-          "name": "due_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "borrower_id": {
-          "name": "borrower_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "location": {
-          "name": "location",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "authorizer_name": {
-          "name": "authorizer_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "authorizer_unit": {
-          "name": "authorizer_unit",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "notes": {
-          "name": "notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "returned_on": {
-          "name": "returned_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "return_note": {
-          "name": "return_note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "returned_by": {
-          "name": "returned_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "asset_loans_borrower_id_asset_people_id_fk": {
-          "name": "asset_loans_borrower_id_asset_people_id_fk",
-          "tableFrom": "asset_loans",
-          "tableTo": "asset_people",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "borrower_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "asset_loans_returned_by_accounts_id_fk": {
-          "name": "asset_loans_returned_by_accounts_id_fk",
-          "tableFrom": "asset_loans",
-          "tableTo": "accounts",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "returned_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "asset_loans_created_by_accounts_id_fk": {
-          "name": "asset_loans_created_by_accounts_id_fk",
-          "tableFrom": "asset_loans",
-          "tableTo": "accounts",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "asset_loan_operation": {
-          "name": "asset_loan_operation",
-          "nullsNotDistinct": false,
-          "columns": [
-            "created_by",
-            "operation_id"
-          ]
-        },
-        "asset_loan_number": {
-          "name": "asset_loan_number",
-          "nullsNotDistinct": false,
-          "columns": [
-            "year",
-            "number"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "asset_loan_folio": {
-          "name": "asset_loan_folio",
-          "value": "\"cenit\".\"asset_loans\".\"number\" > 0 AND \"cenit\".\"asset_loans\".\"year\" = extract(year FROM \"cenit\".\"asset_loans\".\"loaned_on\")"
-        },
-        "asset_loan_dates": {
-          "name": "asset_loan_dates",
-          "value": "(\"cenit\".\"asset_loans\".\"due_on\" IS NULL OR \"cenit\".\"asset_loans\".\"due_on\" >= \"cenit\".\"asset_loans\".\"loaned_on\") AND (\"cenit\".\"asset_loans\".\"returned_on\" IS NULL OR \"cenit\".\"asset_loans\".\"returned_on\" >= \"cenit\".\"asset_loans\".\"loaned_on\")"
-        },
-        "asset_loan_return": {
-          "name": "asset_loan_return",
-          "value": "(\"cenit\".\"asset_loans\".\"returned_on\" IS NULL AND \"cenit\".\"asset_loans\".\"returned_by\" IS NULL AND \"cenit\".\"asset_loans\".\"return_note\" IS NULL) OR (\"cenit\".\"asset_loans\".\"returned_on\" IS NOT NULL AND \"cenit\".\"asset_loans\".\"returned_by\" IS NOT NULL)"
-        },
-        "asset_loan_authorizer": {
-          "name": "asset_loan_authorizer",
-          "value": "length(\"cenit\".\"asset_loans\".\"authorizer_name\") BETWEEN 1 AND 200 AND \"cenit\".\"asset_loans\".\"authorizer_name\" ~ '[^[:space:]]'"
-        },
-        "asset_loan_notes": {
-          "name": "asset_loan_notes",
-          "value": "\"cenit\".\"asset_loans\".\"notes\" IS NULL OR (length(\"cenit\".\"asset_loans\".\"notes\") BETWEEN 1 AND 1000 AND \"cenit\".\"asset_loans\".\"notes\" ~ '[^[:space:]]')"
-        },
-        "asset_loan_return_note": {
-          "name": "asset_loan_return_note",
-          "value": "\"cenit\".\"asset_loans\".\"return_note\" IS NULL OR (length(\"cenit\".\"asset_loans\".\"return_note\") BETWEEN 1 AND 500 AND \"cenit\".\"asset_loans\".\"return_note\" ~ '[^[:space:]]')"
-        },
-        "asset_loan_text_0": {
-          "name": "asset_loan_text_0",
-          "value": "\"cenit\".\"asset_loans\".\"location\" IS NULL OR (length(\"cenit\".\"asset_loans\".\"location\") BETWEEN 1 AND 255 AND \"cenit\".\"asset_loans\".\"location\" ~ '[^[:space:]]')"
-        },
-        "asset_loan_text_1": {
-          "name": "asset_loan_text_1",
-          "value": "\"cenit\".\"asset_loans\".\"authorizer_unit\" IS NULL OR (length(\"cenit\".\"asset_loans\".\"authorizer_unit\") BETWEEN 1 AND 255 AND \"cenit\".\"asset_loans\".\"authorizer_unit\" ~ '[^[:space:]]')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "cenit.asset_people": {
-      "name": "asset_people",
-      "schema": "cenit",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "rut": {
-          "name": "rut",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "unit": {
-          "name": "unit",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "position": {
-          "name": "position",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "active": {
-          "name": "active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "inactive_since": {
-          "name": "inactive_since",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "asset_people_created_by_accounts_id_fk": {
-          "name": "asset_people_created_by_accounts_id_fk",
-          "tableFrom": "asset_people",
-          "tableTo": "accounts",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "asset_person_name": {
-          "name": "asset_person_name",
-          "value": "length(\"cenit\".\"asset_people\".\"name\") BETWEEN 1 AND 200 AND \"cenit\".\"asset_people\".\"name\" ~ '[^[:space:]]'"
-        },
-        "asset_person_rut": {
-          "name": "asset_person_rut",
-          "value": "\"cenit\".\"asset_people\".\"rut\" IS NULL OR (length(\"cenit\".\"asset_people\".\"rut\") BETWEEN 1 AND 20 AND \"cenit\".\"asset_people\".\"rut\" ~ '[^[:space:]]')"
-        },
-        "asset_person_unit": {
-          "name": "asset_person_unit",
-          "value": "\"cenit\".\"asset_people\".\"unit\" IS NULL OR (length(\"cenit\".\"asset_people\".\"unit\") BETWEEN 1 AND 255 AND \"cenit\".\"asset_people\".\"unit\" ~ '[^[:space:]]')"
-        },
-        "asset_person_position": {
-          "name": "asset_person_position",
-          "value": "\"cenit\".\"asset_people\".\"position\" IS NULL OR (length(\"cenit\".\"asset_people\".\"position\") BETWEEN 1 AND 255 AND \"cenit\".\"asset_people\".\"position\" ~ '[^[:space:]]')"
-        },
-        "asset_person_status": {
-          "name": "asset_person_status",
-          "value": "(\"cenit\".\"asset_people\".\"active\" AND \"cenit\".\"asset_people\".\"inactive_since\" IS NULL) OR (NOT \"cenit\".\"asset_people\".\"active\" AND \"cenit\".\"asset_people\".\"inactive_since\" IS NOT NULL)"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "cenit.assets": {
-      "name": "assets",
-      "schema": "cenit",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "number": {
-          "name": "number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "identity": {
-            "type": "always",
-            "name": "assets_number_seq",
-            "schema": "cenit",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
-        },
-        "operation_id": {
-          "name": "operation_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "quantity": {
-          "name": "quantity",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "inventory_number": {
-          "name": "inventory_number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "brand": {
-          "name": "brand",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "model": {
-          "name": "model",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "serial_number": {
-          "name": "serial_number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "furniture_type": {
-          "name": "furniture_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "material": {
-          "name": "material",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "dimensions": {
-          "name": "dimensions",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "area": {
-          "name": "area",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "system_part": {
-          "name": "system_part",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "wall_mounted": {
-          "name": "wall_mounted",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "assembled": {
-          "name": "assembled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "notes": {
-          "name": "notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "location": {
-          "name": "location",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "custodian_id": {
-          "name": "custodian_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "purchase_id": {
-          "name": "purchase_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "registered_on": {
-          "name": "registered_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "search_text": {
-          "name": "search_text",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "generated": {
-            "as": "cenit.normalize_purchase_search(description || ' ' || coalesce(inventory_number, '') || ' ' || coalesce(brand, '') || ' ' || coalesce(model, '') || ' ' || coalesce(serial_number, '') || ' ' || location || ' ' || coalesce(material, '') || ' ' || coalesce(furniture_type, ''))",
-            "type": "stored"
-          }
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "asset_custodian": {
-          "name": "asset_custodian",
-          "columns": [
-            {
-              "expression": "custodian_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "assets_custodian_id_asset_people_id_fk": {
-          "name": "assets_custodian_id_asset_people_id_fk",
-          "tableFrom": "assets",
-          "tableTo": "asset_people",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "custodian_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "assets_purchase_id_purchase_requests_id_fk": {
-          "name": "assets_purchase_id_purchase_requests_id_fk",
-          "tableFrom": "assets",
-          "tableTo": "purchase_requests",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "purchase_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "assets_created_by_accounts_id_fk": {
-          "name": "assets_created_by_accounts_id_fk",
-          "tableFrom": "assets",
-          "tableTo": "accounts",
-          "schemaTo": "cenit",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "assets_number_unique": {
-          "name": "assets_number_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "number"
-          ]
-        },
-        "asset_operation": {
-          "name": "asset_operation",
-          "nullsNotDistinct": false,
-          "columns": [
-            "created_by",
-            "operation_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "asset_kind": {
-          "name": "asset_kind",
-          "value": "\"cenit\".\"assets\".\"kind\" IN ('equipo_computacional','equipo','mueble','maquinaria','construccion','accesorio','otro')"
-        },
-        "asset_quantity": {
-          "name": "asset_quantity",
-          "value": "\"cenit\".\"assets\".\"quantity\" BETWEEN 1 AND 9999"
-        },
-        "asset_version": {
-          "name": "asset_version",
-          "value": "\"cenit\".\"assets\".\"version\" > 0"
-        },
-        "asset_description": {
-          "name": "asset_description",
-          "value": "length(\"cenit\".\"assets\".\"description\") BETWEEN 1 AND 500 AND \"cenit\".\"assets\".\"description\" ~ '[^[:space:]]'"
-        },
-        "asset_location": {
-          "name": "asset_location",
-          "value": "length(\"cenit\".\"assets\".\"location\") BETWEEN 1 AND 255 AND \"cenit\".\"assets\".\"location\" ~ '[^[:space:]]'"
-        },
-        "asset_notes": {
-          "name": "asset_notes",
-          "value": "\"cenit\".\"assets\".\"notes\" IS NULL OR (length(\"cenit\".\"assets\".\"notes\") BETWEEN 1 AND 1000 AND \"cenit\".\"assets\".\"notes\" ~ '[^[:space:]]')"
-        },
-        "asset_inventory_number": {
-          "name": "asset_inventory_number",
-          "value": "\"cenit\".\"assets\".\"inventory_number\" IS NULL OR (length(\"cenit\".\"assets\".\"inventory_number\") BETWEEN 1 AND 60 AND \"cenit\".\"assets\".\"inventory_number\" ~ '[^[:space:]]')"
-        },
-        "asset_serial_number": {
-          "name": "asset_serial_number",
-          "value": "\"cenit\".\"assets\".\"serial_number\" IS NULL OR (length(\"cenit\".\"assets\".\"serial_number\") BETWEEN 1 AND 120 AND \"cenit\".\"assets\".\"serial_number\" ~ '[^[:space:]]')"
-        },
-        "asset_area": {
-          "name": "asset_area",
-          "value": "\"cenit\".\"assets\".\"area\" IS NULL OR (length(\"cenit\".\"assets\".\"area\") BETWEEN 1 AND 60 AND \"cenit\".\"assets\".\"area\" ~ '[^[:space:]]')"
-        },
-        "asset_text_0": {
-          "name": "asset_text_0",
-          "value": "\"cenit\".\"assets\".\"brand\" IS NULL OR (length(\"cenit\".\"assets\".\"brand\") BETWEEN 1 AND 255 AND \"cenit\".\"assets\".\"brand\" ~ '[^[:space:]]')"
-        },
-        "asset_text_1": {
-          "name": "asset_text_1",
-          "value": "\"cenit\".\"assets\".\"model\" IS NULL OR (length(\"cenit\".\"assets\".\"model\") BETWEEN 1 AND 255 AND \"cenit\".\"assets\".\"model\" ~ '[^[:space:]]')"
-        },
-        "asset_text_2": {
-          "name": "asset_text_2",
-          "value": "\"cenit\".\"assets\".\"furniture_type\" IS NULL OR (length(\"cenit\".\"assets\".\"furniture_type\") BETWEEN 1 AND 255 AND \"cenit\".\"assets\".\"furniture_type\" ~ '[^[:space:]]')"
-        },
-        "asset_text_3": {
-          "name": "asset_text_3",
-          "value": "\"cenit\".\"assets\".\"material\" IS NULL OR (length(\"cenit\".\"assets\".\"material\") BETWEEN 1 AND 255 AND \"cenit\".\"assets\".\"material\" ~ '[^[:space:]]')"
-        },
-        "asset_text_4": {
-          "name": "asset_text_4",
-          "value": "\"cenit\".\"assets\".\"dimensions\" IS NULL OR (length(\"cenit\".\"assets\".\"dimensions\") BETWEEN 1 AND 255 AND \"cenit\".\"assets\".\"dimensions\" ~ '[^[:space:]]')"
         }
       },
       "isRLSEnabled": false

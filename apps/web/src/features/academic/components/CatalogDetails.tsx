@@ -51,8 +51,15 @@ export function CatalogDetails({ course, plan, progress, student, statuses = new
   }, []);
   useEffect(() => {
     if (!closing) return;
-    const timer = window.setTimeout(() => ref.current?.close(), 150);
-    return () => clearTimeout(timer);
+    const dialog = ref.current!;
+    let active = true;
+    // Flush the closing styles and wait for the browser's actual transitions.
+    // A timer can expire before a delayed rendering frame starts the exit.
+    const animations = dialog.getAnimations();
+    void Promise.allSettled(animations.map(animation => animation.finished)).then(() => {
+      if (active) dialog.close();
+    });
+    return () => { active = false; };
   }, [closing]);
   const incoming = plan.prerequisiteEdges.filter(edge => edge.toCode === course.code);
   const outgoing = plan.prerequisiteEdges.filter(edge => edge.fromCode === course.code);
@@ -61,7 +68,7 @@ export function CatalogDetails({ course, plan, progress, student, statuses = new
   const range = semesterLabel(course.semester, course.semesterEnd);
   const lastGrade = progress?.attempts.at(-1)?.grade ?? null;
   return <dialog ref={ref} className={`academic-detail academic-detail--${side}${closing ? ' academic-detail--closing' : ''}`} aria-labelledby="academic-detail-title" onClose={onClose}
-    onCancel={event => { event.preventDefault(); setClosing(true); }} onTransitionEnd={event => { if (closing && event.target === event.currentTarget && event.propertyName === 'opacity') ref.current?.close(); }} onClick={event => {
+    onCancel={event => { event.preventDefault(); setClosing(true); }} onClick={event => {
     if (event.target === event.currentTarget) setClosing(true);
   }}>
     <div className="academic-detail__surface">

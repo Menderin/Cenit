@@ -18,8 +18,32 @@ export const sessions = cenit.table('sessions', {
   tokenHash: text('token_hash').primaryKey(), accountId: uuid('account_id').notNull().references(() => accounts.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(), expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  authenticationMethod: text('authentication_method').notNull().default('local'),
 }, t => [index('session_account').on(t.accountId), index('session_expiration').on(t.expiresAt),
   check('session_hash', sql`${t.tokenHash} ~ '^[0-9a-f]{64}$'`),
   check('session_duration', sql`${t.expiresAt} = ${t.createdAt} + interval '2 hours'`),
   check('session_revocation', sql`${t.revokedAt} IS NULL OR ${t.revokedAt} >= ${t.createdAt}`),
+  check('session_authentication_method', sql`${t.authenticationMethod} IN ('local','google')`),
+]);
+
+export const googleAuthorizations = cenit.table('google_authorizations', {
+  accountId: uuid('account_id').primaryKey().references(() => accounts.id),
+  email: text('email').notNull().unique(),
+}, t => [check('google_authorization_email', sql`length(${t.email}) BETWEEN 3 AND 254 AND ${t.email} = lower(btrim(${t.email})) AND ${t.email} ~ '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$'`)]);
+export const googleIdentities = cenit.table('google_identities', {
+  accountId: uuid('account_id').primaryKey().references(() => accounts.id),
+  subject: text('subject').notNull().unique(),
+  linkedAt: timestamp('linked_at', { withTimezone: true }).notNull().defaultNow(),
+  pictureUrl: text('picture_url'),
+}, t => [check('google_identity_subject', sql`${t.subject} ~ '^[A-Za-z0-9_-]{1,255}$'`),
+  check('google_identity_picture_url', sql`${t.pictureUrl} IS NULL OR (length(${t.pictureUrl}) <= 2048 AND ${t.pictureUrl} ~ '^https://([a-z0-9-]+\\.)*googleusercontent\\.com/[^[:space:]]*$')`),
+]);
+export const googleChallenges = cenit.table('google_challenges', {
+  tokenHash: text('token_hash').primaryKey(), nonceHash: text('nonce_hash').notNull(), purpose: text('purpose').notNull(),
+  accountId: uuid('account_id').references(() => accounts.id), sessionHash: text('session_hash'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(), expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+}, t => [index('google_challenge_expiration').on(t.expiresAt),
+  check('google_challenge_hashes', sql`${t.tokenHash} ~ '^[0-9a-f]{64}$' AND ${t.nonceHash} ~ '^[0-9a-f]{64}$' AND (${t.sessionHash} IS NULL OR ${t.sessionHash} ~ '^[0-9a-f]{64}$')`),
+  check('google_challenge_purpose', sql`(${t.purpose} = 'login' AND ${t.accountId} IS NULL) OR (${t.purpose} = 'link' AND ${t.accountId} IS NOT NULL AND ${t.sessionHash} IS NOT NULL)`),
+  check('google_challenge_duration', sql`${t.expiresAt} = ${t.createdAt} + interval '5 minutes'`),
 ]);

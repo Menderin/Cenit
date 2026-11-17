@@ -1,12 +1,14 @@
-"""Synthetic reference-layout captures, independent from the frozen OCR extractor.
+"""Generate fictitious captures or evaluate an explicitly supplied private manifest.
 
-No source screenshot, personal data or expected values are sent to the processor.
-Run from the repository root; generated images/reports belong in ignored tmp/.
+Only image bytes reach the local processor; expected values stay in the evaluator.
+Run from the repository root; private captures/reports stay in ignored .local/.
 """
 import argparse
 import hashlib
 import json
 import statistics
+import platform
+import re
 import time
 import urllib.error
 import urllib.request
@@ -188,8 +190,28 @@ def main():
     parser.add_argument('--output', type=Path, default=Path('tmp/ocr-oracle-format'))
     parser.add_argument('--evaluate', action='store_true')
     parser.add_argument('--url', default='http://127.0.0.1:8090')
+    parser.add_argument('--manifest', type=Path, help='Evaluar capturas existentes con etiquetas privadas, sin generar imágenes')
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
+    if args.manifest:
+        if not args.evaluate:
+            parser.error('--manifest requiere --evaluate')
+        manifest = json.loads(args.manifest.read_text(encoding='utf-8'))
+        cases = []
+        root = args.manifest.resolve().parent
+        for sample in manifest['samples']:
+            if not re.fullmatch(r'[A-Za-z0-9_-]+', sample['case']):
+                raise ValueError('El identificador de muestra debe ser un nombre de archivo simple')
+            path = (root / sample['file']).resolve()
+            if not path.is_relative_to(root) or not path.is_file():
+                raise ValueError('La captura debe estar dentro de la carpeta del manifiesto')
+            if hashlib.sha256(path.read_bytes()).hexdigest() != sample['sha256']:
+                raise ValueError('La captura no coincide con su hash')
+            cases.append({**sample, 'path': str(path)})
+        if not cases:
+            raise ValueError('El manifiesto debe contener al menos una captura')
+        evaluate(args, cases, manifest)
+        return
     cases = []
     variants = [('01-completa',1,1,'png'),('02-dos-items',2,1,'png'),('03-tres-items',3,1,'png'),
                 ('04-jpeg',1,1,'jpg'),('05-reducida',1,.85,'png'),('06-ampliada',2,1.25,'png'),
@@ -235,22 +257,41 @@ def evaluate(args, cases, manifest):
             for n, fields in entries:
                 values = actual.get(group,{}) if n is None else (actual.get(group,[])[n] if n<len(actual.get(group,[])) else {})
                 for key, value in fields.items():
-                    if group=='lines' and key=='chargeAccount':
+                    field_path = f'/{group}/'+('' if n is None else str(n)+'/')+key
+                    excluded = case.get('excluded', ['/lines/*/chargeAccount'])
+                    wildcard = f'/{group}/*/{key}' if n is not None else field_path
+                    if field_path in excluded or wildcard in excluded:
                         continue
                     found = values.get(key,{}).get('value')
-                    checks.append(dict(path=f'/{group}/'+('' if n is None else str(n)+'/')+key,
-                                       expected=value,actual=found,outcome='exact' if value==found else 'missing' if found is None else 'wrong'))
+                    exact = ' '.join(value.split()) == ' '.join(found.split()) if isinstance(value, str) and isinstance(found, str) else value == found
+                    checks.append(dict(path=field_path, expected=value,actual=found,
+                                       outcome='exact' if exact else 'missing' if found is None else 'wrong'))
         results.append(dict(case=case['case'],httpStatus=status,seconds=round(time.perf_counter()-started,3),
+                            imageSha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                            memoryPeakBytes=read_cgroup('memory.peak'),
                             rowsExpected=len(case['expected']['lines']),rowsActual=len(actual.get('lines',[])),checks=checks))
         (args.output/(case['case']+'-response.json')).write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
         print(case['case'], status, results[-1]['rowsActual'], 'items', flush=True)
     if sources != {p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in Path('apps/ocr').glob('*.py')}:
         raise RuntimeError('Extractor changed during evaluation')
-    summary = dict(sourceHashes=sources,generatorSha256=manifest['generatorSha256'],samples=results,
+    summary = dict(sourceHashes=sources,generatorSha256=manifest.get('generatorSha256'),samples=results,
+                   evaluatorSha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                   environment=dict(python=platform.python_version(),platform=platform.platform(),
+                                    cpuMax=read_cgroup('cpu.max'),memoryMax=read_cgroup('memory.max'),
+                                    memoryMeasurement='Cgroup cumulative high-water mark including evaluation client'),
+                   maxSeconds=max(r['seconds'] for r in results),
                    medianSeconds=statistics.median(r['seconds'] for r in results),
                    counts={k:sum(c['outcome']==k for r in results for c in r['checks']) for k in ['exact','wrong','missing']})
     (args.output/'summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps(summary['counts']))
+
+
+def read_cgroup(name):
+    path = Path('/sys/fs/cgroup') / name
+    if not path.exists():
+        return None
+    value = path.read_text().strip()
+    return int(value) if value.isdigit() else value
 
 
 if __name__ == '__main__':
