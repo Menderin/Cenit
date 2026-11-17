@@ -101,6 +101,16 @@ Las baterías anteriores usan siete columnas. La de formato de referencia usa oc
 
 ## Comprobar el procesador integrado
 
+### Alternativa Tesseract conservada de la revisión
+
+Los aportes de ihelo (`pistaco92`) están en los [PR #49](https://github.com/Menderin/Cenit/pull/49), SHA `275901a2dccb090d55cb329de01daa7875ae4fbb`, y [PR #55](https://github.com/Menderin/Cenit/pull/55), SHA `35f336af193ce35c6fed00f443bc5322a36cecd8`. El segundo incluye al primero. Su propuesta usa Tesseract español y segmentación morfológica por celdas. La evidencia original se conserva en [oracle-format-tesseract-evidence.json](oracle-format-tesseract-evidence.json), atribuida a su autor y separada de las mediciones del procesador integrado.
+
+El archivo declara 125 campos exactos, 30 erróneos y nueve ausentes, mediana 2,206 segundos y 0/12 proveedores exactos. Su hash de extractor `6312ebc14c3b49b199daad9c004ef374c45704f9abb13e38d9dc09780b31f7d3` coincide con el fuente del SHA del PR #55. Es evidencia histórica del autor, pendiente de reproducción independiente con el runtime congelado y muestras representativas. La descripción del PR #49 conserva métricas y hash de una revisión anterior.
+
+La revisión recupera su healthcheck para el servicio OCR y adapta su caso de impuesto ambiguo → revisión → payload de guardado a las fixtures compartidas existentes. Los casos ya cubiertos de límites, fechas, proveedores, ceros y copia independiente se conservan en sus pruebas actuales.
+
+Antes de evaluar una sustitución del motor se debe resolver el fallback de `extract` del PR #55, que reintenta PNG como JPEG o viceversa pese al MIME declarado. La regresión del punto de entrada está en `tests/ocr/test_extractor.py`. Su Compose también hace obligatorio OCR para arrancar la aplicación, mientras la configuración vigente permite usar login y compras con el procesador apagado. La selección del motor requiere contrastar aciertos, errores, ausencias y tiempos sobre las mismas capturas. Esta revisión conserva PaddleOCR y su procedencia vigentes.
+
 Las pruebas Python están en `tests/ocr`, separadas de las baterías. Ejecutarlas con las dependencias del OCR instaladas en un entorno aislado o en su imagen:
 
 ```sh

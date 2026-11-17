@@ -5,11 +5,14 @@ import { EyeIcon } from '@phosphor-icons/react/dist/csr/Eye';
 import { EyeSlashIcon } from '@phosphor-icons/react/dist/csr/EyeSlash';
 import { useAuth } from '../model/session.js';
 import { StatusNotice } from '../../../shared/components/StatusNotice.js';
+import { GoogleAccess, useGoogleAvailability } from '../components/GoogleAccess.js';
 
 type Errors = { email?: string; password?: string };
 
 export function Login() {
   const auth = useAuth();
+  const google = useGoogleAvailability();
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [email, setEmail] = useState(''), [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
@@ -27,7 +30,7 @@ export function Login() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || googleBusy) return;
     const normalizedEmail = normalizeEmail(emailRef.current!);
     const nextErrors: Errors = {};
     if (!normalizedEmail) nextErrors.email = 'Escribe tu correo electrónico.';
@@ -52,7 +55,7 @@ export function Login() {
     </header>
     {auth.message && <StatusNotice kind={auth.notice === 'signed-out' ? 'success' : 'warning'} title={auth.notice === 'signed-out' ? 'Saliste de Cenit' : 'Vuelve a iniciar sesión'} message={auth.message} />}
     {error && <p className="cenit-access__notice cenit-access__error" role="alert">{error}</p>}
-    <form className="cenit-access__form" noValidate onSubmit={submit} aria-busy={busy}>
+    <form className="cenit-access__form" noValidate onSubmit={submit} aria-busy={busy} inert={googleBusy}>
       <div className="cenit-access__field">
         <label htmlFor="email">Correo electrónico</label>
         <input className="cenit-input" id="email" ref={emailRef} name="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={254} placeholder="nombre@ejemplo.cl" value={email} required disabled={busy} aria-invalid={!!errors.email} aria-describedby={errors.email ? 'email-error' : undefined} onBlur={event => normalizeEmail(event.currentTarget)} onChange={event => { setEmail(event.target.value); if (errors.email) setErrors(current => ({ ...current, email: undefined })); }} />
@@ -73,5 +76,6 @@ export function Login() {
       </button>
       {busy && <span className="cenit-access__sr-only" role="status">Cargando…</span>}
     </form>
+    {google.data?.enabled && <GoogleAccess clientId={google.data.clientId} purpose="login" disabled={busy} onBusy={setGoogleBusy} />}
   </>;
 }

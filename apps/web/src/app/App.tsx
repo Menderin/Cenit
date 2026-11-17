@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { useAuth } from '../features/auth/model/session.js';
 import { Login } from '../features/auth/pages/Login.js';
+import { Profile, AcademicProfile } from '../features/auth/pages/Profile.js';
 import { PurchaseReview } from '../features/purchases/pages/PurchaseReview.js';
 import { PurchaseCapture } from '../features/purchases/pages/PurchaseCapture.js';
 import { Purchases } from '../features/purchases/pages/Purchases.js';
@@ -27,6 +28,7 @@ function AdministrativeArea() {
   return <AdministrativeLayout account={session.account} expiresAt={session.expiresAt} logout={logout}>
     <Routes>
       <Route path="/administracion" element={<Home />} />
+      <Route path="/administracion/perfil" element={<Profile key={session.account.id} />} />
       <Route path="/administracion/compras" element={<Purchases key={session.account.id} />} />
       <Route path="/administracion/compras/nueva" element={<PurchaseCreate key={session.account.id} />} />
       <Route path="/administracion/compras/laboratorio" element={<PurchaseReview key={session.account.id} />} />
@@ -45,7 +47,7 @@ function AdministrativeArea() {
 export function App() {
   const auth = useAuth();
   if (auth.status === 'authenticated' && auth.session && auth.session.account.role !== 'administrativo') {
-    return <Routes><Route path="/academico" element={<Academic key={auth.session.account.id} />} /><Route path="*" element={<Navigate to="/academico" replace />} /></Routes>;
+    return <Routes><Route path="/academico" element={<Academic key={auth.session.account.id} />} /><Route path="/academico/perfil" element={<AcademicProfile key={auth.session.account.id} />} /><Route path="*" element={<Navigate to="/academico" replace />} /></Routes>;
   }
   let content;
   if (auth.status === 'checking' || auth.status === 'closing') content = <>

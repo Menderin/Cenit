@@ -1,8 +1,10 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { ErrorResponseSchema } from '@cenit/contracts';
-import { LoginRequestSchema, LogoutRequestSchema, SessionResponseSchema, type LoginRequest } from '@cenit/contracts/auth';
+import { LoginRequestSchema, LogoutRequestSchema, ProfileResponseSchema, SessionResponseSchema, type LoginRequest } from '@cenit/contracts/auth';
 import { ApiError } from '../../../infrastructure/errors.js';
 import { AuthService, SESSION_SECONDS } from '../services/auth.js';
+import type { GoogleService } from '../services/google.js';
+import { googleRoutes, GOOGLE_COOKIE } from './google.js';
 
 export const SESSION_COOKIE = 'cenit_session';
 export type AuthConfig = { allowedOrigins: string[]; cookieSecure: boolean };
@@ -16,13 +18,14 @@ export function readAuthConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig
   })) throw new Error('AUTH_ALLOWED_ORIGINS requiere orígenes exactos.');
   return { allowedOrigins, cookieSecure: raw === 'true' };
 }
-export async function authRoutes(app: FastifyInstance, options: { service: AuthService; config: AuthConfig }) {
+export async function authRoutes(app: FastifyInstance, options: { service: AuthService; config: AuthConfig; google?: GoogleService }) {
   const { service, config } = options;
   const origin = async (request: FastifyRequest) => {
     if (!request.headers.origin || !config.allowedOrigins.includes(request.headers.origin)) throw new ApiError(403, 'FORBIDDEN', 'Origen no autorizado.');
   };
   const errors = Object.fromEntries([400, 401, 403, 429, 500, 503].map(status => [status, ErrorResponseSchema]));
   const cookieOptions = { path: '/', httpOnly: true, sameSite: 'lax' as const, secure: config.cookieSecure };
+  app.register(googleRoutes, { google: options.google, config });
   app.post<{ Body: LoginRequest }>('/login', {
     schema: { body: LoginRequestSchema, response: { 200: SessionResponseSchema, ...errors } }, onRequest: origin,
     preValidation: async request => { if (request.body && typeof request.body.email === 'string') request.body.email = request.body.email.trim(); },
@@ -37,8 +40,17 @@ export async function authRoutes(app: FastifyInstance, options: { service: AuthS
     if (!result) throw new ApiError(401, 'AUTHENTICATION_REQUIRED', 'Debes iniciar sesión.');
     return result;
   });
+  app.get('/profile', { schema: { response: { 200: ProfileResponseSchema, ...errors } } }, async request => {
+    const session = await service.session(request.cookies[SESSION_COOKIE]);
+    if (!session) throw new ApiError(401, 'AUTHENTICATION_REQUIRED', 'Debes iniciar sesión.');
+    const google = await options.google?.profile(session.data.account.id)
+      ?? { enabled: false, linked: false, email: null, pictureUrl: null };
+    return { data: { account: session.data.account, google } };
+  });
   app.post('/logout', { schema: { body: LogoutRequestSchema, response: errors }, onRequest: origin }, async (request, reply) => {
     await service.logout(request.cookies[SESSION_COOKIE]);
+    // Its narrower Path means a browser does not send this cookie to /logout.
+    if (options.google?.config.enabled || request.cookies[GOOGLE_COOKIE]) reply.clearCookie(GOOGLE_COOKIE, { path: '/api/v1/auth/google', httpOnly: true, sameSite: 'strict', secure: config.cookieSecure });
     return reply.clearCookie(SESSION_COOKIE, cookieOptions).code(204).send();
   });
 }

@@ -10,12 +10,12 @@ Este archivo es el SDD vigente del repositorio. README es el punto de entrada; `
 
 | Área | Implementado | Preparado o pendiente |
 | --- | --- | --- |
-| Plataforma | Login local, rol por cuenta, sesión de dos horas, frontend compilado servido por API, PostgreSQL persistente | Aceptación de usuarios y comprobación del destino elegido |
+| Plataforma | Login local y Google opcional con vinculación explícita, rol por cuenta, sesión de dos horas, frontend compilado servido por API, PostgreSQL persistente | Cliente web Google y recorrido real pendientes de configuración; aceptación de usuarios y comprobación del destino elegido |
 | Administrativo | Compras: captura, revisión, alta manual, persistencia, búsqueda, resumen, validación local, eliminación y descarga Excel de las coincidencias | Copia opcional a Google Sheets, apagada por defecto y sin conector real comprobado con una planilla dedicada; precisión OCR acordada con nuevas muestras; actualización de una copia desde otra captura |
 | Académico | Consulta por rol, versiones del catálogo, detalle, reglas simples/conjuntas e historiales ficticios | Carga explícita de `diagrama-r2` en cada entorno; año, códigos y aceptación institucional pendientes |
 | Personal | Entrada con dos tarjetas grandes, que ocupan todo el alto disponible y muestran la hoja de cada documento (inclinada, con efecto al pasar el cursor), para elegir. Cada documento ofrece «Cambiar de documento» y una ruta superior «Administración › Personal › documento» para volver; con datos sin completar se pide confirmar antes de salir. Comisión de servicios y Solicitud de permiso: formulario por secciones, búsqueda de funcionario ficticio, vista previa aproximada y PDF carta generado por el servidor; borrador sólo en memoria | Validaciones y formato pendientes de confirmación institucional y revisión del recorrido integrado |
 | Bienes | Navegación y página de construcción | Requisitos y módulo funcional pendientes; no se presenta como entregado |
-| Planificado, sin código integrado | Ninguno | Acceso con Google y respaldos cifrados con copia fuera de la VM están planificados en Jira, pero no existen en `develop`: el login sigue siendo local y las guías no describen cifrado propio de los respaldos. Las mejoras del procesador OCR están en ramas aún sin integrar. Cada uno se documenta cuando tenga código, configuración y evidencia |
+| Entregas en ramas | Google incorpora backend e interfaz en la rama de acceso | Google requiere revisión, CI e integración. Los respaldos cifrados con copia fuera de la VM y las mejoras OCR se revisan en sus ramas correspondientes |
 | Entrega | CI, imágenes por digest, despliegue Azure, migrador separado y recuperación de configuración ante fallos de activación | Catálogo/cuentas se preparan por separado; restauración completa de datos y retiro del servidor anterior requieren ensayo y aprobación |
 
 La [matriz de aceptación](PRUEBAS-Y-ACEPTACION.md) identifica pruebas y evidencia histórica. El estado operativo se obtiene de Actions, `current.json`, health y recorridos autenticados, siguiendo la [guía Azure](../deploy/azure/README.md#diagnóstico-y-recuperación).
@@ -77,7 +77,7 @@ El componente académico muestra la malla, las relaciones curriculares recibidas
 
 El Charter sitúa el desarrollo entre agosto y diciembre de 2026, con cierre estimado el 11 de diciembre. Esa planificación no acredita que una funcionalidad esté entregada o aceptada. La aceptación requiere pruebas y revisión con los responsables administrativos o académicos. Jira conserva el backlog, las asignaciones y los criterios de cada tarea; este documento resume el funcionamiento y las decisiones técnicas que necesita conocer quien mantiene el sistema.
 
-Quedan fuera del MVP la autenticación institucional y la simulación académica. La iteración de registro incorpora una integración opcional Cenit → Google Sheets, desactivada por defecto; amplía la base del Charter que dejaba Sheets como mejora opcional y requiere coordinación documental de ese alcance. El Charter también excluye simulaciones e integración con la API de Oracle del alcance descrito. No se incorporan procesos de Banner, importación masiva ni nuevos flujos institucionales por inferencia. El uso de datos reales requiere autorización de sus fuentes y acuerdos específicos; los datos ficticios no acreditan esas condiciones.
+Quedan fuera del MVP la autenticación institucional por dominio y la simulación académica. La iteración de identidad incorpora Google como alternativa opcional para cuentas exactas previamente autorizadas y vinculadas a cuentas locales; no acredita una integración institucional UCN. La iteración de registro incorpora una integración opcional Cenit → Google Sheets, desactivada por defecto; amplía la base del Charter que dejaba Sheets como mejora opcional y requiere coordinación documental de ese alcance. El Charter también excluye simulaciones e integración con la API de Oracle del alcance descrito. No se incorporan procesos de Banner, importación masiva ni nuevos flujos institucionales por inferencia. El uso de datos reales requiere autorización de sus fuentes y acuerdos específicos; los datos ficticios no acreditan esas condiciones.
 
 ## Organización del código
 
@@ -134,7 +134,7 @@ Los tests unitarios se colocan junto al código. Los escenarios con PostgreSQL p
 
 ## Autenticación y sesión
 
-El acceso es local, mediante correo y contraseña. Cada cuenta tiene un rol; el login no acepta asignación de rol desde el navegador. No hay registro público, recuperación de contraseña ni autenticación Google implementados.
+El acceso local usa correo y contraseña y permanece disponible. Google es una alternativa opcional, desactivada por defecto, para cuentas autorizadas explícitamente. Su interfaz consulta la disponibilidad del servidor y ofrece vinculación desde la navegación de los tres roles. El recorrido con un cliente Google real requiere configuración y comprobación explícitas. Cada cuenta tiene un rol; el login no acepta asignación de rol desde el navegador. No hay registro público ni recuperación de contraseña.
 
 | Recurso | Acceso |
 | --- | --- |
@@ -148,6 +148,32 @@ Los permisos se aplican en el servidor incluso si se consulta el API directament
 Las contraseñas se guardan con scrypt y salt; los tokens de sesión son aleatorios y la base conserva sólo su digest. La cookie `cenit_session` es HttpOnly, SameSite=Lax y Secure por defecto. La sesión dura dos horas fijas desde el login y no se renueva al consultar. Logout revoca la sesión. El rol y la activación de la cuenta se comprueban en el servidor.
 
 Rutas de acceso: `POST /api/v1/auth/login`, `GET /api/v1/auth/session` y `POST /api/v1/auth/logout`. Login y logout requieren un Origin exacto autorizado. El login limita diez intentos por minuto/IP. La excepción de cookie sin Secure se admite sólo con configuración explícita de desarrollo, test o demo HTTP; no es la configuración por defecto de una instalación institucional.
+
+### Acceso opcional con Google
+
+El bloque de usuario del menú lateral abre **Mi perfil**, en `/administracion/perfil` o `/academico/perfil`, y muestra un engranaje de configuración. Esa página reúne nombre, correo local, rol y estado de vinculación Google. La foto del bloque y la del perfil comparten la misma consulta por cuenta y su componente de avatar, con inicial cuando falla la imagen. `GET /api/v1/auth/profile` exige sesión vigente y consulta exclusivamente la cuenta de esa sesión. Los datos del perfil se limpian con la misma caché de autenticación al salir, vencer o cambiar de cuenta. La vinculación se realiza desde el perfil, después de un acceso local.
+
+La migración aditiva `0011_google_profile_picture` incorpora `picture_url` nullable a `google_identities`. La dirección procede del claim `picture` de un ID token verificado, se actualiza al vincular o ingresar con Google y admite únicamente HTTPS en `googleusercontent.com` o sus subdominios, hasta 2.048 caracteres. El navegador carga la imagen con `referrerPolicy="no-referrer"`; PostgreSQL conserva su dirección. El perfil usa la inicial cuando falta la foto o falla su carga. Los vínculos anteriores mantienen `null` hasta otro acceso Google. Esta versión contempla la foto de Google; la subida de una imagen propia requiere una definición posterior de almacenamiento.
+
+Los [contratos Google](../packages/contracts/src/auth/google.ts) separan disponibilidad, desafío y presentación de credencial. La [interfaz compartida de acceso y vinculación](../apps/web/src/features/auth/components/GoogleAccess.tsx) los valida antes de mostrar resultados. El backend no registra cuentas, no cambia roles ni vincula por coincidencia de correo. Se solicita únicamente identidad mediante Google Identity Services, sin permisos de Gmail/Drive ni tokens de acceso o refresh almacenados.
+
+| Ruta bajo `/api/v1/auth` | Entrada y resultado |
+| --- | --- |
+| `GET /google` | `{data:{enabled,clientId}}`; deshabilitado devuelve `false` y `null`, sin consultar Google |
+| `POST /google/challenge` | `{purpose:"login"\|"link"}`; devuelve nonce y vencimiento, y cookie de desafío HttpOnly/SameSite=Strict/Secure según entorno |
+| `POST /google/login` | `{credential}` con ID token y cookie del desafío; devuelve el mismo `SessionResponse` que el acceso local |
+| `GET /google/link` | Sesión Cenit válida; devuelve `{data:{linked:boolean}}` de esa cuenta |
+| `POST /google/link` | `{credential}` y desafío de vinculación; exige la misma sesión local autenticada y devuelve `{data:{linked:true}}` |
+
+Todas las escrituras requieren Origin exacto y admiten diez intentos por minuto/IP por ruta. El desafío tiene cinco minutos de vigencia, se liga a la cookie de navegador, propósito y sesión actual, y se consume atómicamente incluso si después falla la credencial. No se reutiliza tras error, cambio de cuenta o éxito. El navegador entrega el nonce a `google.accounts.id.initialize` y presenta el `credential` del callback como JSON mediante fetch con cookies. No se recibe un formulario de redirección de Google ni se transportan tokens en URL. El contrato acepta hasta 16.384 caracteres de credencial y rechaza propiedades adicionales.
+
+`google-auth-library` verifica firma y destinatario con certificados de Google. Cenit verifica también emisor, vencimiento sin aceptar tokens ya expirados, emisión, correo verificado y nonce. El acceso se resuelve por `sub` previamente vinculado y autorización exacta vigente. La consulta y creación de sesión vuelven a comprobar cuenta activa y autorización con locks de PostgreSQL. Se reutilizan tokens aleatorios, hashes, rotación de la sesión anterior, revocación y vencimiento fijo de dos horas. No se infieren dominios institucionales ni permisos desde claims de Google.
+
+La migración aditiva `0010_google_identity` conserva cuentas/sesiones y añade `authentication_method` con valor inicial `local`, `google_authorizations` (cuenta FK y correo autorizado único), `google_identities` (cuenta FK y sub únicos) y `google_challenges` (hashes de cookie/nonce, propósito, cuenta/sesión vinculadas y fechas restringidas). Cada cuenta admite una identidad Google, sin reemplazo automático. La lista se prepara explícitamente mediante un archivo privado con [el procedimiento operativo](../deploy/LOCAL.md#acceso-google-opcional). La revocación conserva la asociación por sub e invalida las sesiones Google de la cuenta, sin alterar sus sesiones locales. Ni migraciones, arranque ni CD autorizan cuentas automáticamente.
+
+Los errores usan el envelope común y `requestId`: estructura `400`, credencial/desafío inválidos o sesión local requerida `401`, Origin/autorización `403`, identidad o cuenta ya vinculada de otra forma `409`, límite `429`, proveedor deshabilitado o indisponible `503` y fallo inesperado `500`. Todas las respuestas son `no-store`. Una vinculación rechazada conserva la sesión local y su error visible. Ante un `401` del intento de vinculación, la interfaz vuelve a consultar la sesión para distinguir credencial rechazada de sesión vencida. El cliente conserva los desafíos/credenciales sólo durante el intento, permite cancelarlo y descarta callbacks tardíos al cerrar, salir o cambiar de cuenta. El SDK se carga cuando se muestra el acceso habilitado y presenta su botón oficial. La configuración y el ensayo con Google real siguen pendientes.
+
+El botón oficial se prepara al mostrar el acceso habilitado por el servidor, con el nonce obtenido automáticamente y una sola acción para abrir Google. Su logo y texto localizado proceden del SDK; en español el acceso usa «Iniciar sesión con Google». La implementación sigue la [verificación oficial de ID tokens](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token) y el [nonce de Google Identity Services](https://developers.google.com/identity/gsi/web/reference/js-reference#nonce). Los comandos y configuración se mantienen en la guía operativa.
 
 ### Iteración de jornada pendiente
 

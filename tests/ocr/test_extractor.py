@@ -1,7 +1,7 @@
 import io
 import unittest
 from PIL import Image
-from extractor import decode, candidates, money, sent, capture_layout, header, grouped, table, add_region, ProcessingError, MAX_BYTES
+from extractor import decode, candidates, money, sent, capture_layout, header, grouped, table, add_region, extract, ProcessingError, MAX_BYTES
 from unittest.mock import patch
 from PIL import ImageDraw
 
@@ -48,6 +48,12 @@ class ImageValidation(unittest.TestCase):
     def test_fake_mime(self):
         with self.assertRaises(ProcessingError) as error:
             decode(image_bytes(), 'image/jpeg')
+        self.assertEqual(error.exception.status, 415)
+
+    def test_extract_rejects_mime_mismatch_despite_admitted_filename(self):
+        # Regression found reviewing ihelo's PR #55 (35f336a).
+        with self.assertRaises(ProcessingError) as error:
+            extract(None, image_bytes(), 'capture.jpg', 'image/jpeg')
         self.assertEqual(error.exception.status, 415)
 
     def test_animated_png(self):

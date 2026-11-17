@@ -1,0 +1,4 @@
+.google-access { display: grid; gap: .75rem; margin-top: 1rem; max-width: 100%; }
+.google-access p { margin: 0; font-size: .875rem; line-height: 1.5; }
+.google-access__button { min-width: 0; max-width: 100%; }
+.google-access__button:empty { display: none; }
