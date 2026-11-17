@@ -114,6 +114,8 @@ test('leyenda adaptable y detalle lateral conservan visibilidad, dirección y fo
   for (const [side, direction] of [['right', 1], ['left', -1]] as const) {
     const enter = transitions.find(item => item.side.includes(`academic-detail--${side}`) && !item.side.includes('closing'));
     const exit = transitions.find(item => item.side.includes(`academic-detail--${side}`) && item.side.includes('closing'));
+    expect(enter, `transición de entrada desde ${side}`).toBeDefined();
+    expect(exit, `transición de salida hacia ${side}`).toBeDefined();
     expect(parseFloat(enter!.from) * direction).toBeGreaterThan(0);
     expect(parseFloat(enter!.to)).toBe(0);
     expect(parseFloat(exit!.to) * direction).toBeGreaterThan(0);
@@ -124,6 +126,30 @@ test('leyenda adaptable y detalle lateral conservan visibilidad, dirección y fo
   const dialog = page.getByRole('dialog');
   await expect(dialog).toHaveCSS('translate', 'none');
   await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0); await expect(first).toBeFocused();
+});
+
+test('el detalle espera las transiciones de salida antes de cerrarse', async ({ page }) => {
+  await page.addInitScript(() => {
+    document.addEventListener('transitionrun', event => {
+      if (!(event.target instanceof HTMLDialogElement) || !event.target.classList.contains('academic-detail--closing')) return;
+      for (const animation of event.target.getAnimations()) animation.pause();
+    }, true);
+  });
+  await login(page);
+  const card = courses(page).first();
+  await card.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toHaveCSS('translate', '0px');
+  await page.clock.install();
+  await page.keyboard.press('Escape');
+  await expect.poll(() => dialog.evaluate(element => element.getAnimations().some(animation => animation.playState === 'paused'))).toBe(true);
+  await page.clock.runFor(250);
+  await expect(dialog).toBeVisible();
+  await dialog.evaluate(element => {
+    for (const animation of element.getAnimations()) animation.finish();
+  });
+  await expect(dialog).toHaveCount(0);
+  await expect(card).toBeFocused();
 });
 
 test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado y detalle', async ({ page }, testInfo) => {
