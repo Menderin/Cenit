@@ -9,7 +9,7 @@ import { PackageIcon } from '@phosphor-icons/react/dist/csr/Package';
 import { assetKinds, assetStatuses, type AssetKind, type AssetStatus } from '@cenit/contracts/assets';
 import { listAssets, listPeople } from '../api/assets.js';
 import { brandLine, kinds, statuses } from '../model/labels.js';
-import { AssetsHeader, LoadState, StatusChip } from '../components/AssetsUi.js';
+import { LoadState, StatusChip } from '../components/AssetsUi.js';
 import { Select } from '../../../shared/components/Select.js';
 import { PurchasePagination } from '../../purchases/components/PurchasePagination.js';
 import '../assets.css';
@@ -45,8 +45,7 @@ export function Inventory() {
     if (event.button || event.metaKey || event.ctrlKey || (event.target as HTMLElement).closest('a, button') || window.getSelection()?.toString()) return;
     navigate(`/administracion/bienes/${id}`);
   }
-  return <section className="assets-page purchase-records">
-    <AssetsHeader />
+  return <>
     <div className="assets-toolbar" role="search">
       <label className="assets-search"><span className="assets-sr">Buscar bienes</span><MagnifyingGlassIcon size={16} aria-hidden="true" />
         <input className="cenit-input" type="search" value={text} onChange={event => setText(event.target.value)} placeholder="Código, N° inventario, serie, descripción, marca, responsable o ubicación" autoComplete="off" /></label>
@@ -83,5 +82,5 @@ export function Inventory() {
       <PurchasePagination title="Inventario" page={page} pageSize={pageSize} total={data.pagination.total} updating={query.isFetching}
         setPage={value => update({ pagina: String(value) })} setPageSize={value => update({ porPagina: String(value) })} />
     </>)}
-  </section>;
+  </>;
 }

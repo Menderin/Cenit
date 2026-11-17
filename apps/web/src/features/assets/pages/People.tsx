@@ -7,7 +7,7 @@ import { UsersIcon } from '@phosphor-icons/react/dist/csr/Users';
 import { UserPlusIcon } from '@phosphor-icons/react/dist/csr/UserPlus';
 import type { PeopleQuery, Person } from '@cenit/contracts/assets';
 import { createPerson, listPeople, setPersonStatus } from '../api/assets.js';
-import { AssetsHeader, Avatar, LoadState, TextField, nullable } from '../components/AssetsUi.js';
+import { Avatar, LoadState, TextField, nullable } from '../components/AssetsUi.js';
 import { useListParams } from './Deliveries.js';
 import { ContextualConfirm } from '../../../shared/components/ContextualConfirm.js';
 import { HttpError } from '../../../shared/lib/http.js';
@@ -40,7 +40,7 @@ function StatusButton({ person }: { person: Person }) {
   </>;
 }
 
-function AddPerson() {
+export function AddPerson() {
   const button = useRef<HTMLButtonElement>(null), client = useQueryClient();
   const [open, setOpen] = useState(false), [draft, setDraft] = useState({ name: '', rut: '', unit: '', position: '' });
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
@@ -72,8 +72,7 @@ export function People() {
   const view = views.some(item => item.value === list.params.get('estado')) ? list.params.get('estado') as View : 'all';
   const query = useQuery({ queryKey: ['assets', 'people', 'list', list.q, view], queryFn: ({ signal }) => listPeople({ q: list.q || undefined, status: view }, signal) });
   const people = query.data;
-  return <section className="assets-page">
-    <AssetsHeader actions={<AddPerson />} />
+  return <>
     <div className="assets-toolbar">
       <div className="assets-segmented" role="group" aria-label="Mostrar personas">{views.map(item => <button key={item.value} type="button" aria-pressed={view === item.value} onClick={() => list.update({ estado: item.value === 'all' ? undefined : item.value })}>{item.label}</button>)}</div>
       <label className="assets-search" role="search"><span className="assets-sr">Buscar personas</span><MagnifyingGlassIcon size={16} aria-hidden="true" />
@@ -97,5 +96,5 @@ export function People() {
             <StatusButton person={person} />
           </div></td>
         </tr>)}</tbody></table></div>)}
-  </section>;
+  </>;
 }

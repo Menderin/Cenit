@@ -28,6 +28,9 @@ function assetPage(path: string) {
 const personnelDocuments: Record<string, string> = {
   '/administracion/personal/comision': 'Comisión de servicios', '/administracion/personal/permiso': 'Solicitud de permiso',
 };
+// Los listados de Bienes comparten encabezado: la animación de entrada no debe repetirse al cambiar entre ellos.
+const bienesLists = new Set(['/administracion/bienes', '/administracion/bienes/entregas', '/administracion/bienes/prestamos', '/administracion/bienes/responsables']);
+
 export function AdministrativeLayout({ account, expiresAt, logout, children }: {
   account: Account; expiresAt: string; logout: (origin?: HTMLElement) => Promise<void>; children: ReactNode;
 }) {
@@ -92,7 +95,7 @@ export function AdministrativeLayout({ account, expiresAt, logout, children }: {
     toolbarStart={<nav className="admin-breadcrumb" aria-label="Ubicación"><NavLink to="/administracion" onClick={follow}>Administración</NavLink><CaretRightIcon size={12} aria-hidden="true" />{parent && <><NavLink to={parent.to} onClick={follow}>{parent.label}</NavLink><CaretRightIcon size={12} aria-hidden="true" /></>}<span aria-current="page" data-confirm-fallback tabIndex={-1}>{page}</span></nav>}>
     <main className={`admin-content${location.pathname === '/administracion/compras/captura' ? ' admin-content--capture' : ''}${location.pathname === '/administracion/personal' ? ' admin-content--fill' : ''}`} id="admin-content" ref={main} tabIndex={-1} onFocusCapture={event => revealFocus(event.target)}>
       <SessionWarning expiresAt={expiresAt} logout={logout} />
-      <div key={location.pathname} className="cenit-page-enter">{children}</div>
+      <div key={bienesLists.has(location.pathname) ? 'bienes' : location.pathname} className="cenit-page-enter">{children}</div>
     </main>
   </WorkspaceShell>;
 }

@@ -35,7 +35,7 @@ export function AssetsHeader({ actions }: { actions?: ReactNode }) {
   return <>
     <header className="assets-heading">
       <div><h1>Bienes</h1><p>Inventario, entregas y préstamos. Cada movimiento queda en la ficha del bien.</p></div>
-      <div className="assets-actions">{actions ?? <>
+      <div className="assets-actions" key={path}>{actions ?? <>
         <Link className="cenit-button" to="/administracion/bienes/prestamos/nuevo">Nuevo préstamo</Link>
         <Link className="cenit-button" to="/administracion/bienes/entregas/nueva">Nueva entrega</Link>
         <Link className="cenit-button cenit-button--primary" to="/administracion/bienes/nuevo"><PlusIcon size={16} aria-hidden="true" />Registrar bien</Link>

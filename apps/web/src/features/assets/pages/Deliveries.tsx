@@ -5,7 +5,7 @@ import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGl
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
 import { HandArrowDownIcon } from '@phosphor-icons/react/dist/csr/HandArrowDown';
 import { documentPath, getDelivery, listDeliveries } from '../api/assets.js';
-import { AssetsHeader, BackLink, LoadState, PdfButton } from '../components/AssetsUi.js';
+import { BackLink, LoadState, PdfButton } from '../components/AssetsUi.js';
 import { PersonCard } from '../components/Pickers.js';
 import { ItemsTable } from '../components/Documents.js';
 import { PurchasePagination } from '../../purchases/components/PurchasePagination.js';
@@ -44,8 +44,7 @@ export function Deliveries() {
   const filters = { q: list.q || undefined, page: list.page, pageSize: list.pageSize };
   const query = useQuery({ queryKey: ['assets', 'deliveries', filters], queryFn: ({ signal }) => listDeliveries(filters, signal), placeholderData: keepPreviousData });
   const data = query.data;
-  return <section className="assets-page purchase-records">
-    <AssetsHeader actions={<Link className="cenit-button cenit-button--primary" to="/administracion/bienes/entregas/nueva"><HandArrowDownIcon size={16} aria-hidden="true" />Nueva entrega</Link>} />
+  return <>
     <div className="assets-toolbar" role="search"><label className="assets-search"><span className="assets-sr">Buscar entregas</span><MagnifyingGlassIcon size={16} aria-hidden="true" />
       <input className="cenit-input" type="search" value={list.text} onChange={event => list.setText(event.target.value)} placeholder="Número, persona que recibe, motivo o bien" autoComplete="off" /></label></div>
     <LoadState query={query} label="las entregas" />
@@ -65,7 +64,7 @@ export function Deliveries() {
       <PurchasePagination title="Entregas" page={list.page} pageSize={list.pageSize} total={data.pagination.total} updating={query.isFetching}
         setPage={value => list.update({ pagina: String(value) })} setPageSize={value => list.update({ porPagina: String(value) })} />
     </>)}
-  </section>;
+  </>;
 }
 
 export function DeliveryDetail() {

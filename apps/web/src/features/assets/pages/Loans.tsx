@@ -2,11 +2,10 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass';
 import { ArrowsLeftRightIcon } from '@phosphor-icons/react/dist/csr/ArrowsLeftRight';
-import { PlusIcon } from '@phosphor-icons/react/dist/csr/Plus';
 import type { LoanStatus } from '@cenit/contracts/assets';
 import { documentPath, getLoan, listLoans } from '../api/assets.js';
 import { relativeDue, daysFromToday } from '../model/labels.js';
-import { AssetsHeader, BackLink, LoadState, LoanChip, PdfButton } from '../components/AssetsUi.js';
+import { BackLink, LoadState, LoanChip, PdfButton } from '../components/AssetsUi.js';
 import { PersonCard } from '../components/Pickers.js';
 import { ItemsTable } from '../components/Documents.js';
 import { ReturnLoanButton } from '../components/Movements.js';
@@ -26,8 +25,7 @@ export function Loans() {
   const query = useQuery({ queryKey: ['assets', 'loans', filters], queryFn: ({ signal }) => listLoans(filters, signal), placeholderData: keepPreviousData });
   const data = query.data, rows = data?.data ?? [];
   const counts = data?.counts, count = (value: typeof view) => !counts ? undefined : value === 'abierto' ? counts.activo + counts.vencido : value === 'all' ? counts.activo + counts.vencido + counts.devuelto : counts[value];
-  return <section className="assets-page purchase-records">
-    <AssetsHeader actions={<Link className="cenit-button cenit-button--primary" to="/administracion/bienes/prestamos/nuevo"><PlusIcon size={16} aria-hidden="true" />Nuevo préstamo</Link>} />
+  return <>
     <div className="assets-toolbar">
       <div className="assets-segmented" role="group" aria-label="Mostrar préstamos">{tabs.map(tab => <button key={tab.value} type="button" aria-pressed={view === tab.value}
         onClick={() => list.update({ estado: tab.value === 'abierto' ? undefined : tab.value })}>{tab.label}{count(tab.value) !== undefined && <span className={`assets-count${tab.value === 'vencido' && count('vencido') ? ' assets-count--late' : ''}`}>{count(tab.value)}</span>}</button>)}</div>
@@ -52,7 +50,7 @@ export function Loans() {
       <PurchasePagination title="Préstamos" page={list.page} pageSize={list.pageSize} total={data.pagination.total} updating={query.isFetching}
         setPage={value => list.update({ pagina: String(value) })} setPageSize={value => list.update({ porPagina: String(value) })} />
     </>)}
-  </section>;
+  </>;
 }
 
 export function LoanDetail() {
