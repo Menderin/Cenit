@@ -43,6 +43,15 @@ class AzureDeliveryTests(unittest.TestCase):
         self.assertEqual(''.join(line[6:] for line in inline.splitlines(keepends=True)),
                          (ROOT/'deploy/azure/Caddyfile').read_text())
 
+    def test_google_configuration_is_optional_and_environment_local(self):
+        compose = (ROOT/'deploy/azure/compose.yaml').read_text()
+        app = compose.split('  app:\n', 1)[1].split('\nvolumes:', 1)[0]
+        self.assertIn('path: ./.local/google.env\n        required: false', app)
+        self.assertNotIn('AUTH_GOOGLE_ENABLED:', app)
+        self.assertNotIn('AUTH_GOOGLE_CLIENT_ID:', app)
+        deploy = (ROOT/'deploy/azure/deploy.sh').read_text()
+        self.assertNotIn('> .local/google.env', deploy)
+
 
 if __name__ == '__main__':
     unittest.main()
