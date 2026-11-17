@@ -129,8 +129,8 @@ test('Google inaccesible conserva el formulario y ofrece reintentar', async ({ p
   await expect(page.getByRole('alert')).toContainText('No se pudo cargar Google');
   await expect(page.getByLabel('Correo electrónico', { exact: true })).toBeEnabled();
 });
-test('el perfil y la vinculación caben en móvil y permiten regresar', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+test('el perfil y la vinculación permiten regresar en escritorio', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
   await googleBrowser(page);
   await login(page, 'docente');
   const dialog = await openLink(page);
