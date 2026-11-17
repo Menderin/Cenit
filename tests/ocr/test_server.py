@@ -182,8 +182,12 @@ class ServerRobustnessAndLifecycle(unittest.TestCase):
     def test_run_worker_handles_processing_error(self):
         from server import run, ProcessingError
         parent, child = mp.Pipe(duplex=False)
-        with patch('server.extract', side_effect=ProcessingError('UNSUPPORTED_CAPTURE_LAYOUT', 422)):
+        engine = object()
+        with patch('server.load_engine', return_value=engine) as load_engine, \
+             patch('server.extract', side_effect=ProcessingError('UNSUPPORTED_CAPTURE_LAYOUT', 422)) as extract:
             run(child, b'fake', 'test.png', 'image/png')
+        load_engine.assert_called_once_with('/models')
+        extract.assert_called_once_with(engine, b'fake', 'test.png', 'image/png')
         status, payload = parent.recv()
         parent.close()
         self.assertEqual(status, 422)
@@ -192,8 +196,12 @@ class ServerRobustnessAndLifecycle(unittest.TestCase):
     def test_run_worker_handles_unexpected_exception(self):
         from server import run
         parent, child = mp.Pipe(duplex=False)
-        with patch('server.extract', side_effect=RuntimeError('Unexpected failure')):
+        engine = object()
+        with patch('server.load_engine', return_value=engine) as load_engine, \
+             patch('server.extract', side_effect=RuntimeError('Unexpected failure')) as extract:
             run(child, b'fake', 'test.png', 'image/png')
+        load_engine.assert_called_once_with('/models')
+        extract.assert_called_once_with(engine, b'fake', 'test.png', 'image/png')
         status, payload = parent.recv()
         parent.close()
         self.assertEqual(status, 503)
