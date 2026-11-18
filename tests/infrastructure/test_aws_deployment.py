@@ -25,10 +25,10 @@ class AwsDeliveryTests(unittest.TestCase):
         production = delivery.deployment(self.environment)
         staging = delivery.deployment({**self.environment, 'GITHUB_REF_NAME': 'develop'})
         self.assertIn('CENIT_ENV=production', production)
-        self.assertIn('CENIT_ORIGIN=https://cenit.dpdns.org', production)
+        self.assertIn('CENIT_ORIGIN=https://cenit.gaelo.tech', production)
         self.assertIn('CENIT_HTTP_PORT=8081', production)
         self.assertIn('CENIT_ENV=staging', staging)
-        self.assertIn('CENIT_ORIGIN=https://develop.cenit.dpdns.org', staging)
+        self.assertIn('CENIT_ORIGIN=https://develop.cenit.gaelo.tech', staging)
         self.assertIn('CENIT_HTTP_PORT=8082', staging)
         self.assertNotIn('GH_TOKEN', production)
 
