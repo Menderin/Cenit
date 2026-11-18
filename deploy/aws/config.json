@@ -11,14 +11,14 @@
       "branch": "main",
       "httpPort": 8081,
       "hosts": [
-        "cenit.dpdns.org"
+        "cenit.gaelo.tech"
       ]
     },
     "staging": {
       "branch": "develop",
       "httpPort": 8082,
       "hosts": [
-        "develop.cenit.dpdns.org"
+        "develop.cenit.gaelo.tech"
       ]
     }
   },
