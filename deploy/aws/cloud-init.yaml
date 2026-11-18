@@ -1,0 +1,26 @@
+#cloud-config
+# EC2 user data. Systems Manager registers the node through its instance profile; no secret is needed here.
+package_update: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - caddy
+  - curl
+  - python3
+  - unzip
+write_files:
+  - path: /etc/caddy/Caddyfile
+    permissions: '0644'
+    content: |
+      # Replaced by the first delivery with the versioned host configuration.
+      :80 {
+        respond "Cenit is waiting for its first delivery." 200
+      }
+runcmd:
+  - [bash, -c, 'if [ ! -f /swapfile ]; then fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile && echo "/swapfile none swap sw 0 0" >> /etc/fstab; fi']
+  - systemctl enable --now docker
+  - systemctl enable caddy
+  - systemctl restart caddy
+  - [bash, -c, 'curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip && unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install && rm -rf /tmp/aws /tmp/awscliv2.zip']
+  - [bash, -c, 'snap list amazon-ssm-agent >/dev/null 2>&1 || snap install amazon-ssm-agent --classic']
+  - systemctl enable --now snap.amazon-ssm-agent.amazon-ssm-agent

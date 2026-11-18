@@ -32,6 +32,9 @@
       ],
       "@cenit/contracts/academic": [
         "../../packages/contracts/src/academic/index.ts"
+      ],
+      "@cenit/contracts/assets": [
+        "../../packages/contracts/src/assets/index.ts"
       ]
     },
     "resolveJsonModule": true

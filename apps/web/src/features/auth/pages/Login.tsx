@@ -5,11 +5,14 @@ import { EyeIcon } from '@phosphor-icons/react/dist/csr/Eye';
 import { EyeSlashIcon } from '@phosphor-icons/react/dist/csr/EyeSlash';
 import { useAuth } from '../model/session.js';
 import { StatusNotice } from '../../../shared/components/StatusNotice.js';
+import { GoogleAccess, useGoogleAvailability } from '../components/GoogleAccess.js';
 
 type Errors = { email?: string; password?: string };
 
 export function Login() {
   const auth = useAuth();
+  const google = useGoogleAvailability();
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [email, setEmail] = useState(''), [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
@@ -27,7 +30,7 @@ export function Login() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || googleBusy) return;
     const normalizedEmail = normalizeEmail(emailRef.current!);
     const nextErrors: Errors = {};
     if (!normalizedEmail) nextErrors.email = 'Escribe tu correo electrónico.';
@@ -52,26 +55,27 @@ export function Login() {
     </header>
     {auth.message && <StatusNotice kind={auth.notice === 'signed-out' ? 'success' : 'warning'} title={auth.notice === 'signed-out' ? 'Saliste de Cenit' : 'Vuelve a iniciar sesión'} message={auth.message} />}
     {error && <p className="cenit-access__notice cenit-access__error" role="alert">{error}</p>}
-    <form className="cenit-access__form" noValidate onSubmit={submit} aria-busy={busy}>
+    <form className="cenit-access__form" noValidate onSubmit={submit} aria-busy={busy} inert={googleBusy}>
       <div className="cenit-access__field">
         <label htmlFor="email">Correo electrónico</label>
-        <input id="email" ref={emailRef} name="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={254} placeholder="nombre@ejemplo.cl" value={email} required disabled={busy} aria-invalid={!!errors.email} aria-describedby={errors.email ? 'email-error' : undefined} onBlur={event => normalizeEmail(event.currentTarget)} onChange={event => { setEmail(event.target.value); if (errors.email) setErrors(current => ({ ...current, email: undefined })); }} />
+        <input className="cenit-input" id="email" ref={emailRef} name="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={254} placeholder="nombre@ejemplo.cl" value={email} required disabled={busy} aria-invalid={!!errors.email} aria-describedby={errors.email ? 'email-error' : undefined} onBlur={event => normalizeEmail(event.currentTarget)} onChange={event => { setEmail(event.target.value); if (errors.email) setErrors(current => ({ ...current, email: undefined })); }} />
         {errors.email && <p id="email-error" className="cenit-access__error" role="alert">{errors.email}</p>}
       </div>
       <div className="cenit-access__field">
         <label htmlFor="password">Contraseña</label>
         <div className="cenit-access__password">
-          <input id="password" ref={passwordRef} name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" maxLength={128} placeholder="Escribe una contraseña" value={password} required disabled={busy} aria-invalid={!!errors.password} aria-describedby={errors.password ? 'password-error' : undefined} onChange={event => { setPassword(event.target.value); if (errors.password) setErrors(current => ({ ...current, password: undefined })); }} />
+          <input className="cenit-input" id="password" ref={passwordRef} name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" maxLength={128} placeholder="Escribe una contraseña" value={password} required disabled={busy} aria-invalid={!!errors.password} aria-describedby={errors.password ? 'password-error' : undefined} onChange={event => { setPassword(event.target.value); if (errors.password) setErrors(current => ({ ...current, password: undefined })); }} />
           <button className="cenit-access__reveal" type="button" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showPassword} disabled={busy} onClick={() => setShowPassword(current => !current)}>
             <span className="cenit-access__eye" data-visible={!showPassword}><EyeIcon size={18} weight="regular" aria-hidden="true" /></span><span className="cenit-access__eye" data-visible={showPassword}><EyeSlashIcon size={18} weight="regular" aria-hidden="true" /></span>
           </button>
         </div>
         {errors.password && <p id="password-error" className="cenit-access__error" role="alert">{errors.password}</p>}
       </div>
-      <button className="cenit-access__primary" type="submit" disabled={busy}>
+      <button className="cenit-button cenit-button--primary cenit-access__primary" type="submit" disabled={busy}>
         {busy ? <><span className="cenit-access__spinner" aria-hidden="true" />Entrando…</> : 'Iniciar sesión'}
       </button>
       {busy && <span className="cenit-access__sr-only" role="status">Cargando…</span>}
     </form>
+    {google.data?.enabled && <GoogleAccess clientId={google.data.clientId} purpose="login" disabled={busy} onBusy={setGoogleBusy} />}
   </>;
 }

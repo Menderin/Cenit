@@ -29,6 +29,8 @@ Al iniciar una rama, partir de `develop` actualizado con avance rápido. Si hay 
 
 Los commits describen el resultado, por ejemplo `fix: conservar el filtro al volver del detalle` o `docs: explicar la preparación del entorno local`. Después del commit, el push de la rama ejecuta CI; un commit sólo local no tiene comprobaciones remotas. CI se ejecuta en ramas de tarea y en PR hacia `develop`/`main`, y vuelve a comprobar el SHA integrado. Un CI correcto de una rama no sustituye la revisión del PR ni autoriza por sí solo una entrega.
 
+El filtro de push también admite las ramas `SCRUM-*` y `scrum-*`. Los PR vuelven a ejecutar CI al abrirse, recibir commits, reabrirse, editarse —incluido un cambio de destino— o pasar a revisión. Configurar `CI required` como obligatorio tanto en `develop` como en `main`; comprobar únicamente GitGuardian no acredita las pruebas de la aplicación.
+
 ## Revisión e integración
 
 El PR describe problema y resultado, alcance, criterios satisfechos, verificación y pendientes. Incluir capturas cuando ayuden a revisar una interfaz. Un PR en borrador sirve para coordinar y no se considera listo para integrar.
@@ -37,11 +39,12 @@ Antes del merge deben pasar `CI required`, las comprobaciones aplicables y al me
 
 | Área | Referencia de revisión |
 | --- | --- |
-| Frontend e interfaz | Gael |
-| Backend, contratos, datos e infraestructura | Víctor |
-| Pruebas, criterios, evidencias y documentación | Kevin |
+| Frontend, interfaz y pruebas funcionales | Gael |
+| Backend, contratos, datos, infraestructura, pruebas técnicas e integración | Víctor |
 
-El autor elige otro integrante con capacidad para revisar su propio trabajo. Confirmar disponibilidad antes de asignar esfuerzo a Andrés o Ignacio. Víctor coordina integración y promoción a `main`; sus cambios también necesitan revisión independiente. La ausencia de un revisor no autoriza a eludir los controles.
+Kevin e Ignacio desarrollan funcionalidades. Cada autor documenta y prueba su propio cambio; Gael consolida la documentación de usuario y las pruebas funcionales, y Víctor revisa lo técnico. Andrés ya no participa en el proyecto.
+
+El autor elige otro integrante para revisar su trabajo: Gael revisa el funcionamiento y Víctor la parte técnica, y nadie aprueba su propio cambio. Víctor coordina integración y promoción a `main`; sus cambios también necesitan revisión independiente. La ausencia de un revisor no autoriza a eludir los controles.
 
 El líder crea los PR. Los agentes preparan cambios, commits y evidencia local; sólo publican, crean PR o integran cuando reciben una instrucción explícita. No cambian estados/asignaciones de Jira ni envían mensajes a compañeros sin esa autorización.
 
