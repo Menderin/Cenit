@@ -73,10 +73,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { window.removeEventListener('focus', focus); window.removeEventListener('cenit:unauthenticated', invalidate); };
   }, [state.status, invalidate, refresh]);
   const login = async (input: LoginRequest) => {
-    clear(); const generation = epoch.current;
+    const generation = ++epoch.current;
     const session = await signIn(input);
     if (generation !== epoch.current) return;
     if (Date.parse(session.expiresAt) <= Date.now()) { invalidate(); return; }
+    clear();
     client.setQueryData(['auth', 'session'], session); hadSession.current = true;
     setState({ status: 'authenticated', session, message: '' });
   };

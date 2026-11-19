@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useLocation } from 'react-router';
+import { Navigate, Route, Routes, matchPath, useLocation } from 'react-router';
 import { useAuth } from '../features/auth/model/session.js';
 import { Login } from '../features/auth/pages/Login.js';
 import { Profile, AcademicProfile } from '../features/auth/pages/Profile.js';
@@ -29,9 +29,8 @@ import { PurchaseGuardProvider, usePurchaseGuard } from '../features/purchases/m
 import { StatusNotice } from '../shared/components/StatusNotice.js';
 import { LoadingLabel, Skeleton, TableSkeleton } from '../shared/components/Skeleton.js';
 
-function SessionLoading() {
-  const { pathname } = useLocation();
-  if (/^\/(administracion|academico)(\/|$)/.test(pathname)) return <div className="workspace">
+function WorkspaceSessionLoading() {
+  return <div className="workspace">
     <LoadingLabel>Comprobando sesión…</LoadingLabel>
     <div className="workspace-shell" aria-hidden="true">
       <div className="workspace-sidebar"><div className="workspace-sidebar-content">
@@ -42,14 +41,6 @@ function SessionLoading() {
       </div>
     </div>
   </div>;
-  return <AccessLayout>
-    <LoadingLabel>Comprobando sesión…</LoadingLabel>
-    <div className="cenit-access__heading"><h1 id="access-title" className="cenit-loading-label">Acceso a Cenit</h1><Skeleton width="10rem" height="31px" /><Skeleton width="12rem" height="21px" className="cenit-access__loading-intro" /></div>
-    <div className="cenit-access__form" aria-hidden="true">
-      {[0, 1].map(index => <div className="cenit-access__field" key={index}><Skeleton width="7rem" height="18px" /><Skeleton height="42px" className="cenit-access__loading-field" /></div>)}
-      <Skeleton height="44px" className="cenit-access__loading-field" />
-    </div>
-  </AccessLayout>;
 }
 
 function AdministrativeArea() {
@@ -89,7 +80,9 @@ function AdministrativeArea() {
 
 export function App() {
   const auth = useAuth();
-  if (auth.status === 'checking') return <SessionLoading />;
+  const { pathname } = useLocation();
+  const checking = auth.status === 'checking';
+  if (checking && /^\/(administracion|academico)(\/|$)/.test(pathname)) return <WorkspaceSessionLoading />;
   if (auth.status === 'authenticated' && auth.session && auth.session.account.role !== 'administrativo') {
     return <Routes><Route path="/academico" element={<Academic key={auth.session.account.id} />} /><Route path="/academico/perfil" element={<AcademicProfile key={auth.session.account.id} />} /><Route path="*" element={<Navigate to="/academico" replace />} /></Routes>;
   }
@@ -103,7 +96,10 @@ export function App() {
     <StatusNotice kind="error" title={auth.status === 'logout-error' ? 'Cierre sin confirmar' : 'Sesión sin comprobar'} message={auth.message} />
     <button className="cenit-button cenit-button--primary cenit-access__primary" onClick={() => { void (auth.status === 'logout-error' ? auth.logout() : auth.refresh()); }}>Reintentar</button>
   </>;
-  else if (!auth.session) content = <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Navigate to="/login" replace />} /></Routes>;
+  else if (checking || !auth.session) content = <>
+    <Login checking={checking} />
+    {!checking && !matchPath('/login', pathname) && <Navigate to="/login" replace />}
+  </>;
   if (auth.status === 'authenticated' && auth.session?.account.role === 'administrativo') return <PurchaseTransferProvider key={auth.session.account.id}>
     <PurchaseGuardProvider><AdministrativeArea /></PurchaseGuardProvider>
   </PurchaseTransferProvider>;

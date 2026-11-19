@@ -81,15 +81,88 @@ async function expectDiscardedGoogleCallback(page: Page, purpose: 'login' | 'lin
   expect(observation).toEqual({ delivered: true, submissions: 0 });
 }
 
-test('Google apagado mantiene el acceso local', async ({ page }) => {
-  await page.goto('/login');
-  await expect(page.getByRole('button', { name: 'Iniciar sesión', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Iniciar sesión con Google/ })).toHaveCount(0);
+test('Google apagado deja el botón visible y el acceso local en la misma posición', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  let finishSession!: () => void;
+  const sessionPending = new Promise<void>(resolve => { finishSession = resolve; });
+  await page.route('**/api/v1/auth/session', async route => { await sessionPending; await route.continue(); });
+  const positions = () => page.locator('.cenit-access__heading, #email, #password, button[type="submit"], .google-access__action button, .cenit-access__institution')
+    .evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top));
+  const submit = page.getByRole('button', { name: 'Iniciar sesión', exact: true });
+  const google = page.getByRole('button', { name: 'Iniciar sesión con Google', exact: true });
+  const email = page.getByLabel('Correo electrónico', { exact: true });
+  const password = page.getByLabel('Contraseña', { exact: true });
+  try {
+    await page.goto('/');
+    await expect(page.getByRole('status')).toHaveText('Comprobando sesión…');
+    await expect(submit).toBeDisabled();
+    await expect(google).toBeVisible();
+    await expect(google).toBeDisabled();
+    const initial = await positions();
+    const initialEmail = await email.elementHandle();
+
+    finishSession();
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(submit).toBeEnabled();
+    expect(await initialEmail?.evaluate(element => element.isConnected)).toBe(true);
+    await expect(google).toHaveAccessibleDescription('Google no está disponible en este momento.');
+    expect(await positions()).toEqual(initial);
+
+    await submit.click();
+    await expect(page.getByRole('alert')).toHaveCount(2);
+    expect(await positions()).toEqual(initial);
+
+    await email.fill('cuenta-inexistente@cenit.invalid');
+    await password.fill('clave-ficticia');
+    await submit.click();
+    await expect(page.getByRole('alert')).toHaveText('Correo o contraseña incorrectos.');
+    expect(await positions()).toEqual(initial);
+  } finally {
+    finishSession();
+  }
+});
+test('el login mantiene su posición mientras se prepara el botón de Google', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await googleBrowser(page);
+  let showProvider!: () => void, showButton!: () => void;
+  const providerPending = new Promise<void>(resolve => { showProvider = resolve; });
+  const challengePending = new Promise<void>(resolve => { showButton = resolve; });
+  await page.route('**/api/v1/auth/google', async route => { await providerPending; await route.fallback(); });
+  await page.route('**/api/v1/auth/google/challenge', async route => { await challengePending; await route.fallback(); });
+  const positions = () => page.locator('.cenit-access__heading, .cenit-access__form, .cenit-access__institution')
+    .evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top));
+  try {
+    await page.goto('/login');
+    await expect(page.getByLabel('Correo electrónico', { exact: true })).toBeVisible();
+    const initial = await positions();
+
+    showProvider();
+    const cancel = page.getByRole('button', { name: 'Cancelar intento' });
+    await expect(cancel).toBeVisible();
+    const googleTop = (await cancel.boundingBox())?.y;
+    expect(await positions()).toEqual(initial);
+
+    showButton();
+    const googleButton = page.getByRole('button', { name: 'Iniciar sesión con Google', exact: true });
+    await expect(googleButton).toBeVisible();
+    expect((await googleButton.boundingBox())?.y).toBe(googleTop);
+    expect(await positions()).toEqual(initial);
+  } finally {
+    showProvider();
+    showButton();
+  }
 });
 test('acceso Google de pantalla usa sesión Cenit y cierre confirmado', async ({ page }) => {
   await googleBrowser(page);
   await page.goto('/login');
-  await page.getByRole('button', { name: 'Iniciar sesión con Google', exact: true }).click();
+  const google = page.getByRole('button', { name: 'Iniciar sesión con Google', exact: true });
+  await expect(google).toHaveAttribute('data-nonce', '1'.padStart(64, '0'));
+  await page.getByLabel('Correo electrónico', { exact: true }).fill('cuenta-inexistente@cenit.invalid');
+  await page.getByLabel('Contraseña', { exact: true }).fill('clave-ficticia');
+  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveText('Correo o contraseña incorrectos.');
+  await expect(google).toHaveAttribute('data-nonce', '1'.padStart(64, '0'));
+  await google.click();
   await expect(page).toHaveURL(/\/academico$/);
   await page.goto('/academico?review=google');
   await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
