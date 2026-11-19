@@ -60,7 +60,12 @@ export function GoogleAccess({ clientId, purpose, disabled = false, onBusy, onLi
         setStage('verifying'); busyCallback.current?.(true);
         void complete(response.credential, controller);
       } });
-      sdk.renderButton(button.current!, { type: 'standard', theme: 'outline', size: 'large', text: purpose === 'login' ? 'signin_with' : 'continue_with', shape: 'rectangular', locale: 'es', width: Math.min(400, button.current!.parentElement!.clientWidth) });
+      sdk.renderButton(button.current!, {
+        type: 'standard', theme: 'outline', size: 'large', shape: 'rectangular', locale: 'es',
+        text: purpose === 'login' ? 'signin_with' : 'continue_with',
+        logo_alignment: purpose === 'login' ? 'center' : 'left',
+        width: Math.min(400, button.current!.parentElement!.clientWidth),
+      });
       setStage('choosing');
       expiry.current = window.setTimeout(() => {
         cancel(); setStage('idle'); setMessage('El intento venció. Vuelve a intentarlo.'); retry.current?.focus();
@@ -88,7 +93,8 @@ export function GoogleAccess({ clientId, purpose, disabled = false, onBusy, onLi
       if (!controller.signal.aborted) { clearTimeout(expiry.current); busyCallback.current?.(false); }
     } catch (error) { await failure(error, controller); }
   }
-  return <section className="google-access" aria-label={purpose === 'login' ? 'Acceso con Google' : 'Vincular Google'} aria-busy={stage === 'loading' || stage === 'verifying'}>
+  return <section className="google-access" data-purpose={purpose} aria-label={purpose === 'login' ? 'Acceso con Google' : 'Vincular Google'} aria-busy={stage === 'loading' || stage === 'verifying'}>
+    {purpose === 'login' && <div className="google-access__separator" aria-hidden="true">o</div>}
     {stage === 'idle' && <button ref={retry} type="button" className="cenit-button" disabled={disabled} onClick={() => { void prepare(); }}>Reintentar Google</button>}
     <div ref={button} className="google-access__button" inert={disabled || stage !== 'choosing'} />
     {(stage === 'loading' || stage === 'verifying') && <p role="status">{stage === 'loading' ? 'Preparando Google…' : 'Verificando con Cenit…'}</p>}

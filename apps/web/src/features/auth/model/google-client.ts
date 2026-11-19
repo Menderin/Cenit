@@ -1,7 +1,7 @@
 type CredentialResponse = { credential: string };
 export type GoogleClient = {
   initialize: (options: { client_id: string; nonce: string; auto_select: false; ux_mode: 'popup'; callback: (response: CredentialResponse) => void }) => void;
-  renderButton: (element: HTMLElement, options: { type: 'standard'; theme: 'outline'; size: 'large'; text: 'signin_with' | 'continue_with'; shape: 'rectangular'; locale: 'es'; width: number }) => void;
+  renderButton: (element: HTMLElement, options: { type: 'standard'; theme: 'outline'; size: 'large'; text: 'signin_with' | 'continue_with'; shape: 'rectangular'; logo_alignment: 'center' | 'left'; locale: 'es'; width: number }) => void;
   cancel: () => void;
   disableAutoSelect: () => void;
 };

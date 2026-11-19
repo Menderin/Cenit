@@ -1,4 +1,7 @@
 .google-access { display: grid; gap: .75rem; margin-top: 1rem; max-width: 100%; }
 .google-access p { margin: 0; font-size: .875rem; line-height: 1.5; }
+.google-access[data-purpose="login"] { margin-top: 1.25rem; }
+.google-access__separator { display: flex; align-items: center; gap: .75rem; color: var(--color-ink-subtle); font-size: .75rem; line-height: 1; }
+.google-access__separator::before, .google-access__separator::after { content: ''; flex: 1; border-top: 1px solid var(--color-line); }
 .google-access__button { min-width: 0; max-width: 100%; }
 .google-access__button:empty { display: none; }
