@@ -9,6 +9,7 @@ Cenit es un monolito modular para la Facultad de Medicina de la UCN. El proyecto
 - Antes de modificar una funcionalidad, leer su sección de Arquitectura y sus contratos/código. Para operaciones, consultar [entorno local](deploy/LOCAL.md), [Azure](deploy/azure/README.md) o [servidor anterior](deploy/README.md), según el destino.
 - Identificar resultado observable, archivos afectados y comprobaciones necesarias antes de editar. Explicar y consultar contradicciones que afecten alcance, permisos o reglas de negocio; continuar el trabajo independiente.
 - Usar los mismos prefijos del equipo (`feat/`, `fix/`, `test/`, `docs/`). No crear tickets, PR, merges, mensajes a compañeros o cambios de Jira sin autorización explícita.
+- En los commits y PR autorizados, usar la identidad Git/GitHub configurada por la persona responsable. No añadir a Codex ni a otros asistentes como autores, coautores o contribuidores, incluidos los trailers `Co-authored-by` y las menciones de crédito en el PR.
 
 ## Límites del producto
 
