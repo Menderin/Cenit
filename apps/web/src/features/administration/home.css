@@ -76,9 +76,11 @@
 .dashboard-review { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0 0; margin-top: auto; border-top: 1px solid var(--admin-line); line-height: 18px; }
 .dashboard-review > strong { min-width: 0; max-width: 100%; margin-left: auto; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; font-size: 13px; }
 .dashboard-review p, .dashboard-review a { margin: 0; font-size: 12px; }
-.dashboard-skeleton { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.dashboard-skeleton > span { grid-column: 1 / -1; color: var(--admin-muted); }
-.dashboard-skeleton i { min-height: 124px; background: var(--color-surface-muted); border-radius: var(--radius-lg); }
+.dashboard-loading__value { display: flex; align-items: center; margin: 8px 0 4px; height: 1.15em; font-size: clamp(24px, 2.2vw, 32px); }
+.dashboard-loading__bars { align-items: flex-end; }
+.dashboard-loading__bars > span { flex: 1; border-radius: 5px 5px 0 0; }
+.dashboard-loading__donut { border: 15px solid var(--color-surface-muted); border-radius: 50%; }
+.dashboard-loading__recent { display: grid; align-content: center; gap: 6px; height: 58px; padding-inline: 8px; }
 .dashboard-types .purchase-sync { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; margin: 16px 0 0; padding: 12px 0 0; border: 0; border-top: 1px solid var(--admin-line); border-radius: 0; background: transparent; line-height: 18px; }
 .dashboard-types .purchase-sync :is(p, a) { margin: 0; }
 @media (hover: hover) {
@@ -89,7 +91,7 @@
 }
 @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: minmax(0, 1fr); } }
 /* Escritorio: Inicio cabe completo en la ventana; si falta alto, desplaza sólo la lista de últimos registros. */
-@media (min-width: 1001px) and (min-height: 600px) {
+@media (min-width: 1101px) and (min-height: 600px) {
   .admin-content:has(.admin-home) { display: flex; flex-direction: column; padding-block: 20px; }
   .admin-content:has(.admin-home) > .cenit-page-enter { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .admin-home, .dashboard-purchases { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -97,6 +99,7 @@
   .dashboard-kpis { margin-bottom: 14px; }
   .dashboard-kpis > div { padding: 12px 16px; }
   .dashboard-kpis dd { margin: 4px 0 2px; font-size: clamp(22px, 3.4vh, 32px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dashboard-loading__value { margin: 4px 0 2px; font-size: clamp(22px, 3.4vh, 32px); }
   .dashboard-grid { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px; }
   .dashboard-card { display: flex; flex-direction: column; min-height: 0; padding: 14px 18px; }
   .dashboard-section-heading { margin-bottom: 8px; }

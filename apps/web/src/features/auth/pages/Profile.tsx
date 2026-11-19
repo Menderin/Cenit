@@ -6,6 +6,7 @@ import { AccountProfileLink } from '../components/AccountProfileLink.js';
 import { useAuth } from '../model/session.js';
 import { GoogleAccess, useGoogleAvailability } from '../components/GoogleAccess.js';
 import { WorkspaceShell } from '../../../shared/components/WorkspaceShell.js';
+import { LoadingLabel, Skeleton } from '../../../shared/components/Skeleton.js';
 import { useSidebar } from '../../../shared/lib/use-sidebar.js';
 import '../profile.css';
 
@@ -28,7 +29,7 @@ export function Profile() {
     </section>
     <section className="profile-card" aria-labelledby="profile-google-title">
       <h2 id="profile-google-title">Acceso con Google</h2>
-      {profile.isPending && <p role="status">Consultando vinculación…</p>}
+      {profile.isPending && <><LoadingLabel>Consultando vinculación…</LoadingLabel><div className="profile-loading" aria-hidden="true"><Skeleton width="13rem" /><Skeleton width="19rem" /></div></>}
       {profile.isError && <><p role="alert">{profile.error.message}</p><button className="cenit-button" onClick={() => { void profile.refetch(); }}>Reintentar</button></>}
       {google && <>
         <p role={google.linked ? 'status' : undefined}>{google.linked ? 'Cuenta Google vinculada.' : 'Tu cuenta todavía no está vinculada a Google.'}</p>

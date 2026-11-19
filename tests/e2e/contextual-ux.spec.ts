@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
-import { credential, login, selectCalendarDate } from './support/browser.js';
+import { credential, login, santiagoToday, selectCalendarDate } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 import { amountLabel, dateLabel } from '../../apps/web/src/features/purchases/model/fields.js';
 
@@ -62,6 +62,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   // Pending examples also require opening the detail before deleting.
   const example = structuredClone(manualPurchaseExample); example.operationId = crypto.randomUUID();
   example.origin = { type: 'contract_example', exampleId: 'recovered' }; example.header.requestNumber = `${number}-PENDING`;
+  example.header.sentDate = santiagoToday();
   const response = await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data: example });
   expect(response.status()).toBe(201);
   await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
@@ -117,6 +118,8 @@ test('Inicio presenta carga y error con reintento sin mostrar cifras ficticias',
     await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'Resumen temporalmente indisponible', requestId: 'summary-error' } }) });
   });
   await page.reload(); await expect(page.getByRole('status').filter({ hasText: 'Cargando resumen' })).toBeVisible();
+  await expect(page.locator('.dashboard-loading .dashboard-kpis > div')).toHaveCount(3);
+  await expect(page.locator('.dashboard-loading .dashboard-card')).toHaveCount(3);
   expect(await page.getByRole('definition').count()).toBe(0);
   await expect.poll(() => !!release).toBe(true); release!();
   await expect(page.getByRole('alert')).toContainText('Resumen temporalmente indisponible');
@@ -129,12 +132,13 @@ test('Inicio presenta carga y error con reintento sin mostrar cifras ficticias',
 const dialog = (page: Page) => page.getByRole('alertdialog');
 const pending = (page: Page) => page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
 const toolbar = (page: Page) => page.getByRole('button', { name: /^(Mostrar|Ocultar) navegación$/ });
-async function fixtures(page: Page, count = 8) {
+async function fixtures(page: Page, count = 8, sentDate = santiagoToday()) {
   const prefix = `CTX-${crypto.randomUUID().slice(0, 8)}`;
   const records: { id: string; number: string }[] = [];
   for (let index = 0; index < count; index++) {
     const data = structuredClone(manualPurchaseExample); data.operationId = crypto.randomUUID();
     data.header.requestNumber = `${prefix}-${index}`;
+    data.header.sentDate = sentDate;
     const response = await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data });
     expect(response.status()).toBe(201);
     records.push({ id: (await response.json()).data.id, number: data.header.requestNumber });
@@ -278,7 +282,8 @@ test('filtros vacíos, repetidos y quitados no generan consultas ni historial re
 });
 
 test('filtros automáticos aplican un día específico, agrupan escritura y conservan foco', async ({ page }) => {
-  await login(page, 'administrativo'); const records = await fixtures(page, 2);
+  const sentDate = santiagoToday();
+  await login(page, 'administrativo'); const records = await fixtures(page, 2, sentDate);
   await page.request.post(`/api/v1/purchases/${records[1]!.id}/validation`, { headers: { Origin: new URL(page.url()).origin }, data: { expectedVersion: 1 } });
   await page.goto('/administracion/compras?pendingPage=2&reviewedPage=2');
   await expect(page.getByText(/^Página 2 de /)).toHaveCount(2);
@@ -288,18 +293,19 @@ test('filtros automáticos aplican un día específico, agrupan escritura y cons
   await page.clock.install(); await page.clock.pauseAt(new Date());
   await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
   await page.getByRole('button', { name: 'Abrir calendario: Fecha de envío', exact: true }).click();
-  await selectCalendarDate(page, '2026-10-12');
+  await selectCalendarDate(page, sentDate);
   await page.clock.runFor(249);
   expect(queries).toHaveLength(0); await page.clock.runFor(1); await page.clock.resume();
-  await expect(page).toHaveURL(/dateFrom=2026-10-12&dateTo=2026-10-12$/);
+  const period = `dateFrom=${sentDate}&dateTo=${sentDate}`;
+  await expect(page).toHaveURL(new RegExp(`${period}$`));
   expect(await page.evaluate(() => window.history.length)).toBe(history);
   await page.keyboard.press('Escape');
   queries.length = 0;
   await search.fill(prefix);
-  await expect(page).toHaveURL(new RegExp(`q=${prefix}&dateFrom=2026-10-12&dateTo=2026-10-12$`));
+  await expect(page).toHaveURL(new RegExp(`q=${prefix}&${period}$`));
   await expect.poll(() => queries.length).toBe(2);
   await expect(page.getByText(/^Página 1 de /)).toHaveCount(2);
-  for (const query of queries) { expect(query.searchParams.get('q')).toBe(prefix); expect(query.searchParams.get('dateFrom')).toBe('2026-10-12'); expect(query.searchParams.get('dateTo')).toBe('2026-10-12'); }
+  for (const query of queries) { expect(query.searchParams.get('q')).toBe(prefix); expect(query.searchParams.get('dateFrom')).toBe(sentDate); expect(query.searchParams.get('dateTo')).toBe(sentDate); }
   await expect(search).toBeFocused();
   await expect(pending(page).getByText('1 registro', { exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Revisados en Cenit', exact: true }).getByText('1 registro', { exact: true })).toBeVisible();

@@ -59,12 +59,10 @@ textarea.cenit-input { resize: vertical; }
 .cenit-toast-title { font-size: 13px; font-weight: 550; }
 .cenit-toast-description { color: var(--color-ink-muted); font-size: 12px; }
 .cenit-toast-close { color: var(--color-ink-muted) !important; background: var(--color-surface) !important; min-height: 20px; }
-.cenit-page-enter { animation: cenit-enter-opacity 150ms ease-out both; }
 .academic-detail { transition: opacity 300ms ease-out; }
 .academic-detail--closing { opacity: 0; transition-duration: 150ms; }
 .cenit-closing { opacity: 0; pointer-events: none; transition-duration: 150ms; }
 @starting-style { .cenit-popover, .academic-detail[open] { opacity: 0; } }
-@keyframes cenit-enter-opacity { from { opacity: 0; } }
 @media (hover: hover) {
   .cenit-button:hover:not(:disabled), .cenit-date-field .cenit-date-trigger:hover:not(:disabled) { background: var(--color-surface-hover); }
   .cenit-button.cenit-button--primary:hover:not(:disabled) { border-color: var(--color-primary-hover); background: var(--color-primary-hover); }
@@ -178,3 +176,8 @@ textarea.cenit-input { resize: vertical; }
 .cenit-export-options strong, .cenit-export-scope strong { color: var(--color-ink); font-weight: 600; }
 .cenit-export-options small, .cenit-export-scope small { color: var(--color-ink-muted); font-size: 12px; overflow-wrap: anywhere; }
 .cenit-export-scope { margin-top: 14px !important; padding: 10px 12px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface-subtle); }
+.cenit-loading-label { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.cenit-skeleton { display: block; max-width: 100%; height: .8rem; border-radius: var(--radius-sm); background: var(--color-surface-muted); }
+.cenit-table-skeleton > div { display: grid; grid-template-columns: var(--skeleton-columns); align-items: center; gap: 12px; min-height: var(--skeleton-row, 46px); padding: 0 14px; }
+.cenit-table-skeleton > div:first-child { min-height: 42px; background: var(--color-surface-header); }
+.cenit-table-skeleton > div + div { border-top: 1px solid var(--color-line-soft); }

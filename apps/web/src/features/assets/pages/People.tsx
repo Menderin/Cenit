@@ -79,7 +79,7 @@ export function People() {
         <input className="cenit-input" type="search" value={list.text} onChange={event => list.setText(event.target.value)} placeholder="Nombre, RUT, unidad o cargo" autoComplete="off" /></label>
     </div>
     {view === 'review' && <p className="assets-sub" style={{ margin: '-4px 0 12px', fontSize: 13 }}>Personas que ya no pertenecen a la institución pero todavía tienen bienes a cargo. Usa «Entregar sus bienes» para pasarlos a otra persona de una vez.</p>}
-    <LoadState query={query} label="las personas" />
+    <LoadState query={query} label="las personas" columns={[2, 1.5, 1, 1, 1]} />
     {people && !query.isError && (!people.length ? <div className="cenit-empty cenit-empty--bordered"><span className="cenit-empty__icon"><UsersIcon size={26} aria-hidden="true" /></span>
       <h3>{view === 'review' ? 'No hay responsables por revisar' : 'No encontramos personas'}</h3><p>{view === 'review' ? 'Todos los bienes tienen un responsable vigente.' : 'Agrega a una persona o prueba con otra búsqueda.'}</p></div>
       : <div className="assets-table-wrap"><table className="assets-table assets-people"><caption className="assets-sr">Responsables</caption>

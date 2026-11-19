@@ -3,21 +3,26 @@ import { credential, login } from './support/browser.js';
 
 // Browser doubles cover UI states. Cryptographic and PostgreSQL checks run
 // separately in the Google unit and integration suites.
-async function googleBrowser(page: Page, failure?: 401 | 403 | 503) {
+async function googleBrowser(page: Page, linkFailure?: 401) {
   await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ contentType: 'text/javascript', body: `
     window.google = { accounts: { id: {
       initialize(options) {
         this.options = options;
-        window.addEventListener('test-google-callback', () => options.callback({credential: 'fictitious-browser-credential'}));
+        window.addEventListener('test-google-callback', event => {
+          event.preventDefault();
+          options.callback({credential: 'fictitious-browser-credential'});
+        });
       },
       renderButton(element, options) { this.optionsText = options.text;
         const button = document.createElement('button'); button.textContent = this.optionsText === 'signin_with' ? 'Iniciar sesión con Google' : 'Continuar con Google';
+        button.dataset.nonce = this.options.nonce;
         button.onclick = () => this.options.callback({credential: 'fictitious-browser-credential'});
         element.append(button);
       }, cancel() {}, disableAutoSelect() {}
     } } };
   ` }));
   let linked = false;
+  let challenges = 0;
   let accountRole = 'docente';
   page.on('request', request => {
     if (request.url().endsWith('/auth/login') && request.method() === 'POST') {
@@ -32,18 +37,17 @@ async function googleBrowser(page: Page, failure?: 401 | 403 | 503) {
     } } } });
   });
   await page.route('**/api/v1/auth/google', route => route.fulfill({ json: { data: { enabled: true, clientId: 'browser-demo.apps.googleusercontent.com' } } }));
-  await page.route('**/api/v1/auth/google/challenge', route => route.fulfill({ json: { data: { nonce: 'a'.repeat(64), expiresAt: new Date(Date.now() + 300000).toISOString() } } }));
+  await page.route('**/api/v1/auth/google/challenge', route => route.fulfill({ json: { data: { nonce: (++challenges).toString(16).padStart(64, '0'), expiresAt: new Date(Date.now() + 300000).toISOString() } } }));
   await page.route('**/api/v1/auth/google/link', async route => {
     if (route.request().method() === 'POST') {
       expect(route.request().postDataJSON()).toEqual({ credential: 'fictitious-browser-credential' });
-      if (failure) { await route.fulfill({ status: failure, json: { error: { code: 'GOOGLE_REJECTED', message: 'No se pudo verificar Google. Reintenta.', requestId: 'browser-test' } } }); return; }
+      if (linkFailure) { await route.fulfill({ status: linkFailure, json: { error: { code: 'GOOGLE_REJECTED', message: 'No se pudo verificar Google. Reintenta.', requestId: 'browser-test' } } }); return; }
       linked = true;
     }
     await route.fulfill({ json: { data: { linked } } });
   });
   await page.route('**/api/v1/auth/google/login', async route => {
     expect(route.request().postDataJSON()).toEqual({ credential: 'fictitious-browser-credential' });
-    if (failure) { await route.fulfill({ status: failure, json: { error: { code: 'GOOGLE_REJECTED', message: 'No se pudo verificar Google. Reintenta.', requestId: 'browser-test' } } }); return; }
     const account = credential('docente');
     const response = await page.request.post('/api/v1/auth/login', { headers: { origin: 'http://127.0.0.1:5174' }, data: { email: account.email, password: account.password } });
     expect(response.status()).toBe(200);
@@ -58,6 +62,25 @@ async function openLink(page: Page) {
   await expect(dialog).toBeVisible();
   return dialog;
 }
+
+async function expectDiscardedGoogleCallback(page: Page, purpose: 'login' | 'link') {
+  const observation = await page.evaluate(purpose => {
+    const originalFetch = window.fetch;
+    let submissions = 0;
+    window.fetch = (input, init) => {
+      const url = new URL(input instanceof Request ? input.url : input, window.location.href);
+      if (url.pathname === `/api/v1/auth/google/${purpose}` && init?.method === 'POST') submissions++;
+      return originalFetch(input, init);
+    };
+    try {
+      // Sólo el doble de GIS cancela el evento, justo antes de entregar la credencial.
+      const delivered = !window.dispatchEvent(new Event('test-google-callback', { cancelable: true }));
+      return { delivered, submissions };
+    } finally { window.fetch = originalFetch; }
+  }, purpose);
+  expect(observation).toEqual({ delivered: true, submissions: 0 });
+}
+
 test('Google apagado mantiene el acceso local', async ({ page }) => {
   await page.goto('/login');
   await expect(page.getByRole('button', { name: 'Iniciar sesión', exact: true })).toBeVisible();
@@ -75,17 +98,28 @@ test('acceso Google de pantalla usa sesión Cenit y cierre confirmado', async ({
   await page.goBack();
   await expect(page.getByLabel('Correo electrónico', { exact: true })).toBeVisible();
 });
-for (const failure of [401, 403, 503] as const) test(`Google ${failure} permite reintentar y usar contraseña`, async ({ page }) => {
-  await googleBrowser(page, failure);
+test('un error transitorio de Google permite entrar tras reintentar con un desafío nuevo', async ({ page }) => {
+  await googleBrowser(page);
+  let attempts = 0;
+  await page.route('**/api/v1/auth/google/login', route => {
+    if (++attempts > 1) return route.fallback();
+    return route.fulfill({ status: 503, json: { error: { code: 'GOOGLE_UNAVAILABLE', message: 'No se pudo verificar Google. Reintenta.', requestId: 'browser-test' } } });
+  });
   await page.goto('/login');
-  await page.getByRole('button', { name: 'Iniciar sesión con Google', exact: true }).click();
+  const googleButton = page.getByRole('button', { name: 'Iniciar sesión con Google', exact: true });
+  await expect(googleButton).toHaveAttribute('data-nonce', '1'.padStart(64, '0'));
+  await googleButton.click();
   await expect(page.getByRole('alert')).toContainText('No se pudo verificar Google');
-  await expect(page.getByRole('button', { name: 'Reintentar Google' })).toBeFocused();
+  const retry = page.getByRole('button', { name: 'Reintentar Google' });
+  await expect(retry).toBeFocused();
   await expect(page.getByLabel('Correo electrónico', { exact: true })).toBeEnabled();
-  await login(page, 'docente');
+  await retry.press('Enter');
+  await expect(googleButton).toHaveAttribute('data-nonce', '2'.padStart(64, '0'));
+  await googleButton.click();
   await expect(page).toHaveURL(/\/academico$/);
+  expect(attempts).toBe(2);
 });
-test('cancelar descarta callbacks tardíos y restaura el formulario local', async ({ page }) => {
+test('cancelar un desafío pendiente mantiene disponible el acceso con contraseña', async ({ page }) => {
   await googleBrowser(page);
   let release!: () => void;
   const pending = new Promise<void>(resolve => { release = resolve; });
@@ -93,15 +127,29 @@ test('cancelar descarta callbacks tardíos y restaura el formulario local', asyn
     await pending;
     await route.fulfill({ json: { data: { nonce: 'a'.repeat(64), expiresAt: new Date(Date.now() + 300000).toISOString() } } }).catch(() => {});
   });
-  let submissions = 0;
-  page.on('request', request => { if (request.url().endsWith('/auth/google/login')) submissions++; });
+  const challenge = page.waitForRequest('**/api/v1/auth/google/challenge');
   await page.goto('/login');
+  await challenge;
   await page.getByRole('button', { name: 'Cancelar intento' }).click();
   release();
-  await page.evaluate(() => window.dispatchEvent(new Event('test-google-callback')));
   await expect(page.getByRole('button', { name: 'Iniciar sesión con Google', exact: true })).toHaveCount(0);
+  const account = credential('docente');
+  await page.getByLabel('Correo electrónico', { exact: true }).fill(account.email);
+  await page.getByLabel('Contraseña', { exact: true }).fill(account.password);
+  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
+  await expect(page).toHaveURL(/\/academico$/);
+});
+
+test('un callback Google registrado se ignora al vencer el desafío de acceso', async ({ page }) => {
+  await googleBrowser(page);
+  await page.clock.install();
+  await page.goto('/login');
+  await expect(page.getByRole('button', { name: 'Iniciar sesión con Google', exact: true })).toBeVisible();
+  await page.clock.fastForward(305_000);
+  await expect(page.getByRole('alert')).toContainText('El intento venció');
+  await expectDiscardedGoogleCallback(page, 'login');
+  await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByLabel('Correo electrónico', { exact: true })).toBeEnabled();
-  expect(submissions).toBe(0);
 });
 for (const role of ['administrativo', 'docente', 'estudiante']) test(`vinculación explícita y teclado desde cuenta local ${role}`, async ({ page }) => {
   await googleBrowser(page);
@@ -127,6 +175,7 @@ test('Google inaccesible conserva el formulario y ofrece reintentar', async ({ p
   await page.route('https://accounts.google.com/gsi/client', route => route.abort());
   await page.goto('/login');
   await expect(page.getByRole('alert')).toContainText('No se pudo cargar Google');
+  await expect(page.getByRole('button', { name: 'Reintentar Google' })).toBeFocused();
   await expect(page.getByLabel('Correo electrónico', { exact: true })).toBeEnabled();
 });
 test('el perfil y la vinculación permiten regresar en escritorio', async ({ page }) => {
@@ -145,13 +194,10 @@ test('vencer la sesión descarta la vinculación y su callback tardío', async (
   await login(page, 'docente');
   const dialog = await openLink(page);
   await expect(dialog.getByRole('button', { name: 'Continuar con Google', exact: true })).toBeVisible();
-  let writes = 0;
-  page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/google/link')) writes++; });
   await page.clock.fastForward(7201000);
   await expect(page).toHaveURL(/\/login$/);
-  await page.evaluate(() => window.dispatchEvent(new Event('test-google-callback')));
+  await expectDiscardedGoogleCallback(page, 'link');
   await expect(page.getByLabel('Correo electrónico', { exact: true })).toBeVisible();
-  expect(writes).toBe(0);
 });
 test('cambiar de cuenta descarta el intento de vinculación anterior', async ({ page }) => {
   await googleBrowser(page);
@@ -165,12 +211,9 @@ test('cambiar de cuenta descarta el intento de vinculación anterior', async ({ 
   await page.getByLabel('Contraseña', { exact: true }).fill(account.password);
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
   await expect(page.locator('.workspace-account')).toContainText(account.name);
-  let writes = 0;
-  page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/google/link')) writes++; });
-  await page.evaluate(() => window.dispatchEvent(new Event('test-google-callback')));
+  await expectDiscardedGoogleCallback(page, 'link');
   await openLink(page);
   await expect(dialog.getByRole('button', { name: 'Continuar con Google', exact: true })).toBeVisible();
-  expect(writes).toBe(0);
 });
 for (const role of ['administrativo', 'docente', 'estudiante']) test(`perfil real de la cuenta local ${role}`, async ({ page }) => {
   const account = await login(page, role);

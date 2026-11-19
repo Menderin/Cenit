@@ -490,7 +490,7 @@ test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezcl
   await expectLatestGrade(page, '6,5');
   await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
   await page.getByLabel('Nombre', { exact: true }).fill('Estudiante');
-  await expect(page.getByRole('status')).toContainText('No hay estudiantes que coincidan');
+  await expect(page.getByRole('region', { name: 'Estudiantes de Nutrición' }).getByRole('status')).toContainText('No hay estudiantes que coincidan');
   await expect(first).not.toContainText('Aprobada');
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
   await expect(results.getByRole('button')).toHaveCount(3);
@@ -564,7 +564,7 @@ test('búsqueda automática por coincidencias y formato/verificación de RUT mie
   await expect(rut).toHaveValue('21.123.456-3');
   await expect(results).toContainText('Camila Demo');
   await name.fill('Tomás');
-  await expect(page.getByRole('status')).toContainText('No hay estudiantes que coincidan');
+  await expect(page.getByRole('region', { name: 'Estudiantes de Nutrición' }).getByRole('status')).toContainText('No hay estudiantes que coincidan');
   await rut.fill('');
   await expect(results).toContainText('Tomás Demo');
   await rut.fill('20000003k');
@@ -611,9 +611,10 @@ test('40 coincidencias se recorren en páginas de seis y un filtro nuevo vuelve 
     await route.fulfill({ json: { data, page: current, pageSize: 6, totalItems: total } });
   });
   await login(page);
-  const results = page.locator('.academic-students__results');
+  const students = page.getByRole('region', { name: 'Estudiantes de Nutrición' });
+  const results = students.locator('.academic-students__results');
   await expect(results.getByRole('button')).toHaveCount(6);
-  await expect(page.getByRole('status')).toContainText('40 estudiantes encontrados · Mostrando 1–6');
+  await expect(students.getByRole('status')).toContainText('40 estudiantes encontrados · Mostrando 1–6');
   await expect(page.getByRole('button', { name: 'Anterior', exact: true })).toBeDisabled();
   await results.getByRole('button', { name: /^Estudiante de prueba 1 / }).click();
   await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();

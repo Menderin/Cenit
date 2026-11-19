@@ -1,5 +1,5 @@
 import { commissionAllowance, commissionDate, type CommissionDraft } from '../model/commission.js';
-import { commissionCells } from '../model/commission-layout.js';
+import { commissionCells, commissionSheet } from '../model/commission-layout.js';
 import { TemplateDocument } from './TemplateDocument.js';
 import template from './commission-template.svg';
 
@@ -32,5 +32,5 @@ export function CommissionDocument({ draft }: { draft: CommissionDraft }) {
   });
   return <TemplateDocument variant="commission" label="Documento de comisión de servicios" template={template}
     alt="Comisión de servicios UCN: datos generales, datos del evento, descripción y tres espacios de autorización."
-    sheet={{ width: 910, height: 1278 }} cells={commissionCells} values={values as Record<string, string>} left={left} keepCase={keepCase} />;
+    sheet={commissionSheet} cells={commissionCells} values={values as Record<string, string>} left={left} keepCase={keepCase} />;
 }

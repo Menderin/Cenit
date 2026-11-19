@@ -11,6 +11,7 @@ import { listAssets, listPeople } from '../api/assets.js';
 import { brandLine, kinds, statuses } from '../model/labels.js';
 import { LoadState, StatusChip } from '../components/AssetsUi.js';
 import { Select } from '../../../shared/components/Select.js';
+import { LoadingLabel } from '../../../shared/components/Skeleton.js';
 import { PurchasePagination } from '../../purchases/components/PurchasePagination.js';
 import '../assets.css';
 import '../../purchases/records.css';
@@ -56,8 +57,8 @@ export function Inventory() {
       {custodianId && <button type="button" onClick={() => update({ responsable: undefined })} aria-label="Quitar filtro de responsable">Responsable: {custodianName ?? '…'}<XIcon size={12} aria-hidden="true" /></button>}
       {filtered && <button type="button" onClick={() => { setText(''); setParams({}, { replace: true }); }}>Limpiar filtros<XIcon size={12} aria-hidden="true" /></button>}
     </div>}
-    {query.isFetching && !query.isPending && <p className="assets-updating" role="status">Actualizando resultados…</p>}
-    <LoadState query={query} label="el inventario" />
+    {query.isFetching && !query.isPending && <LoadingLabel>Actualizando resultados…</LoadingLabel>}
+    <LoadState query={query} label="el inventario" columns={[1, 2, 1, 1.5, 1, 1, .15]} />
     {data && !query.isError && (!data.data.length ? <div className="cenit-empty cenit-empty--bordered">
       <span className="cenit-empty__icon">{filtered ? <MagnifyingGlassIcon size={26} aria-hidden="true" /> : <PackageIcon size={26} aria-hidden="true" />}</span>
       <h3>{filtered ? 'No encontramos bienes con estos filtros' : 'Aún no hay bienes registrados'}</h3>
@@ -65,7 +66,7 @@ export function Inventory() {
       {filtered ? <button type="button" className="cenit-button" onClick={() => { setText(''); setParams({}, { replace: true }); }}>Quitar filtros</button>
         : <Link className="cenit-button cenit-button--primary" to="/administracion/bienes/nuevo">Registrar bien</Link>}
     </div> : <>
-      <div className="assets-table-wrap"><table className="assets-table assets-inventory assets-uniform">
+      <div className="assets-table-wrap" aria-busy={query.isFetching}><table className="assets-table assets-inventory assets-uniform">
         <caption className="assets-sr">Inventario de bienes</caption>
         <thead><tr><th scope="col">Código</th><th scope="col">Bien</th><th scope="col">N° de serie</th><th scope="col">Responsable</th><th scope="col">Ubicación</th><th scope="col">Estado</th><th aria-hidden="true" className="assets-caret" /></tr></thead>
         <tbody>{data.data.map(asset => <tr key={asset.id} data-href onClick={event => open(event, asset.id)}>

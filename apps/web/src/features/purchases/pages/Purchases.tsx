@@ -8,7 +8,7 @@ import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { validatePurchaseListQuery, type PurchaseFilters, type PurchaseListQuery } from '@cenit/contracts/purchases';
 import { listPurchases } from '../api/purchases.js';
-import { usePurchaseCapabilities } from '../model/capabilities.js';
+import { PurchaseCapabilitiesProvider } from '../model/capabilities.js';
 import { SheetsSyncStatus } from '../components/SheetsSyncStatus.js';
 import { ValidateRecord } from '../components/ValidateRecord.js';
 import { PurchasePagination } from '../components/PurchasePagination.js';
@@ -16,6 +16,7 @@ import { Select } from '../../../shared/components/Select.js';
 import { dateLabel, amountLabel, sentenceCase } from '../model/fields.js';
 import { periodRange, selectedPeriod } from '../model/list.js';
 import { DateField } from '../../../shared/components/DateField.js';
+import { LoadingLabel, Skeleton, TableSkeleton } from '../../../shared/components/Skeleton.js';
 import { useExitPresence } from '../../../shared/lib/use-exit-presence.js';
 import { PurchaseDateRangeField } from '../components/PurchaseDateRangeField.js';
 import { ExportExcel } from '../components/ExportExcel.js';
@@ -58,9 +59,8 @@ function RequestTable({ state, title, filters, page, setPage, view, setPageSize,
     navigate(detail(id), { state: { purchasesReturnTo: returnTo } });
   }
   return <section className="purchase-list" aria-label={title} aria-busy={updating}>
-    <div className="purchase-list-heading"><h2 ref={heading} tabIndex={-1}>{title}</h2>{data && !query.isError && <><span className="purchase-count">{data.pagination.total} {data.pagination.total === 1 ? 'registro' : 'registros'}</span><span className="purchase-total">Total documental · CLP <strong>{amountLabel(data.totals.documentTotal)}</strong></span></>}</div>
-    {updating && <p className="purchase-updating" role="status">Actualizando resultados…</p>}
-    {!valid ? <p className="purchase-state">Corrige los filtros para consultar las compras.</p> : query.isPending ? <div className="purchase-list-skeleton" role="status">Cargando compras…<i /><i /><i /></div> : query.isError ? <div className="purchase-state" role="alert"><p>{query.error.message}</p><button className="cenit-button" onClick={() => { void query.refetch(); }}>Reintentar</button></div> : data && <>
+    <div className="purchase-list-heading"><h2 ref={heading} tabIndex={-1}>{title}</h2>{data && !query.isError && <><span className="purchase-count">{data.pagination.total} {data.pagination.total === 1 ? 'registro' : 'registros'}</span>{updating && <span className="purchase-updating" role="status">Actualizando resultados…</span>}<span className="purchase-total">Total documental · CLP <strong>{amountLabel(data.totals.documentTotal)}</strong></span></>}</div>
+    {!valid ? <p className="purchase-state">Corrige los filtros para consultar las compras.</p> : query.isPending ? <><LoadingLabel>Cargando compras…</LoadingLabel><TableSkeleton className="purchase-table-scroll" columns={hasActions ? [1, 1, 3, 1, 1, 1, .15] : [1, 1, 3, 1, 1, .15]} /></> : query.isError ? <div className="purchase-state" role="alert"><p>{query.error.message}</p><button className="cenit-button" onClick={() => { void query.refetch(); }}>Reintentar</button></div> : data && <>
       {!data.data.length ? <div className="cenit-empty cenit-empty--bordered"><span className="cenit-empty__icon"><MagnifyingGlassIcon size={26} aria-hidden="true" /></span><h3>{page > 1 ? 'Esta página ya no tiene compras' : Object.keys(filters).length ? 'No encontramos compras con estos filtros' : 'Aún no hay compras registradas'}</h3><p>{page > 1 ? 'Vuelve al inicio del listado para ver los resultados disponibles.' : Object.keys(filters).length ? 'Prueba con otro período, número o código.' : 'Sube una captura o registra la primera compra manualmente.'}</p>{page > 1 ? <button className="cenit-button" type="button" disabled={updating} onClick={() => setPage(1)}>Ir a la primera página</button> : onClearFilters && <button className="cenit-button" type="button" disabled={updating} onClick={onClearFilters}>Quitar filtros</button>}</div> : <>
       <div className="purchase-table-scroll" tabIndex={0} role="region" aria-label={`Tabla: ${title}`}><table className={hasActions ? 'purchase-table--actions' : undefined}><caption className="purchase-sr-only">{title}</caption><thead><tr><th scope="col">Nº Solicitud</th><th scope="col">Fecha de envío</th><th scope="col">Detalle</th><th scope="col">Tipo de documento</th><th scope="col" className="purchase-money">Monto · CLP</th>{hasActions && <th scope="col"><span className="purchase-sr-only">Acciones</span></th>}<th aria-hidden="true" className="purchase-row-caret" /></tr></thead>
         <tbody>{data.data.map(record => <tr key={record.id} className="purchase-row" onClick={event => openRow(event, record.id)}><th scope="row" className="purchase-request-number"><Link to={detail(record.id)} aria-disabled={updating} onClick={event => { if (updating) event.preventDefault(); }} state={{ purchasesReturnTo: returnTo }} aria-label={`Ver detalles de ${record.requestNumber}`}>{record.requestNumber}</Link></th><td className="purchase-sent-date" data-label="Fecha de envío">{dateLabel(record.sentDate)}</td><td className="purchase-description"><span>{record.description}</span>{record.source === 'contract_example' && <span className="purchase-origin-tag">Ejemplo de demostración</span>}</td><td className="purchase-document-type" data-label="Documento">{record.documentType ? sentenceCase(record.documentType) : 'Sin dato'}</td><td className="purchase-money">{amountLabel(record.totalAmount)}</td>{hasActions && <td className="purchase-row-actions">{!updating && <ValidateRecord id={record.id} version={record.version} requestNumber={record.requestNumber} fallbackFocus={heading} />}</td>}<td aria-hidden="true" className="purchase-row-caret"><CaretRightIcon size={16} /></td></tr>)}</tbody>
@@ -72,7 +72,6 @@ function RequestTable({ state, title, filters, page, setPage, view, setPageSize,
 }
 
 export function Purchases() {
-  const { secondReviewEnabled } = usePurchaseCapabilities();
   const [params, setParams] = useSearchParams(), location = useLocation();
   const readInputs = (): FilterInput => ({ q: params.get('q') ?? '', dateFrom: params.get('dateFrom') ?? '', dateTo: params.get('dateTo') ?? '', unitCode: params.get('unitCode') ?? '', projectCode: params.get('projectCode') ?? '' });
   const [inputs, setInputs] = useState(readInputs), [touched, setTouched] = useState<string[]>([]);
@@ -203,7 +202,7 @@ export function Purchases() {
   return <section className="purchase-records"><div className="purchase-page-heading"><div><h1>Registro de compras</h1><p>Compras aprobadas en Oracle, conservadas en Cenit.</p></div><div className="purchase-heading-actions">
     <ExportExcel iconOnly options={exportOptions} sort={sort} />
     <Link className="cenit-button" to="/administracion/compras/nueva" state={{ purchasesReturnTo: returnTo }}>Registrar manualmente</Link><Link className="cenit-button cenit-button--primary" to="/administracion/compras/captura" state={{ purchasesReturnTo: returnTo }}><UploadSimpleIcon size={18} aria-hidden="true" />Subir captura</Link>
-  </div></div><SheetsSyncStatus />
+  </div></div>
     <form className="purchase-filters" noValidate aria-label="Filtros de solicitudes" onSubmit={event => event.preventDefault()}>
       <div className="purchase-search-bar">{input('q')}
         <div className="purchase-inline-select purchase-select-year"><Select className="cenit-button purchase-select-trigger" label="Año de envío" placeholder="Año" value={selected.year} onValueChange={value => setPeriod(value, selected.month)} options={[{ value: '', label: 'Todos los años' }, ...(selected.year === 'custom' ? [{ value: 'custom', label: 'Rango personalizado', disabled: true }] : []), ...years.map(year => ({ value: String(year).padStart(4, '0'), label: String(year) }))]} /></div>
@@ -216,6 +215,14 @@ export function Purchases() {
       {expanded && !availableYears?.length && <p className="purchase-filter-feedback">{yearsUnavailable ? 'No se pudieron cargar los años del historial.' : availableYears ? 'Las fechas estarán disponibles cuando haya compras registradas.' : 'Cargando años del historial…'}{yearsUnavailable && <button className="cenit-button" type="button" onClick={() => { void queryClient.invalidateQueries({ queryKey: ['purchases', 'list'] }); }}>Reintentar</button>}</p>}
       {!expanded && activeFilters.some(filter => filter.key !== 'q') && <div className="purchase-filter-chips" aria-label="Filtros activos">{activeFilters.filter(filter => filter.key !== 'q').map(filter => <button className="cenit-button" type="button" key={filter.key} aria-label={`Quitar filtro: ${filter.label}`} onClick={() => remove(filter.key)}>{filter.label}<XIcon size={14} aria-hidden="true" /></button>)}</div>}
     </form>
-    {(secondReviewEnabled ? [{ state: 'pending' as const, title: 'Por revisar en Cenit' }, { state: 'reviewed' as const, title: 'Revisados en Cenit' }] : [{ state: 'all' as const, title: 'Compras registradas' }]).map(list => <RequestTable key={list.state} {...list} filters={filters} page={page(list.state)} setPage={value => setPage(list.state, value)} view={view} setPageSize={size => setView('pageSize', String(size))} onYears={receiveYears} valid={valid} searching={changed && !errors.length} returnTo={returnTo} onClearFilters={hasNonDefaultQuickPeriod || activeFilters.length > 0 ? () => remove() : undefined} />)}
+    <PurchaseCapabilitiesProvider fallback={<div className="purchase-list">
+      <LoadingLabel>Preparando el registro de compras…</LoadingLabel><div className="purchase-list-heading"><Skeleton width="10rem" /></div>
+      <TableSkeleton className="purchase-table-scroll" columns={[1, 1, 3, 1, 1, .15]} />
+    </div>}>
+      {({ secondReviewEnabled }) => <>
+        <SheetsSyncStatus />
+        {(secondReviewEnabled ? [{ state: 'pending' as const, title: 'Por revisar en Cenit' }, { state: 'reviewed' as const, title: 'Revisados en Cenit' }] : [{ state: 'all' as const, title: 'Compras registradas' }]).map(list => <RequestTable key={list.state} {...list} filters={filters} page={page(list.state)} setPage={value => setPage(list.state, value)} view={view} setPageSize={size => setView('pageSize', String(size))} onYears={receiveYears} valid={valid} searching={changed && !errors.length} returnTo={returnTo} onClearFilters={hasNonDefaultQuickPeriod || activeFilters.length > 0 ? () => remove() : undefined} />)}
+      </>}
+    </PurchaseCapabilitiesProvider>
   </section>;
 }

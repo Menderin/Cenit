@@ -1,4 +1,5 @@
 // Coordenadas de las casillas de COMISION (XLSM recibido), en una hoja de 910 × 1278.
+export const commissionSheet = { width: 910, height: 1278 } as const;
 export const commissionCells = {
   "E11": [
     278,

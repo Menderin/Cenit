@@ -8,6 +8,7 @@ import type { AssetStatus, LoanStatus } from '@cenit/contracts/assets';
 import { downloadPdf, getAssetSummary } from '../api/assets.js';
 import { initials, loanStatuses, statuses } from '../model/labels.js';
 import { DateField } from '../../../shared/components/DateField.js';
+import { LoadingLabel, Skeleton, TableSkeleton } from '../../../shared/components/Skeleton.js';
 import { HttpError } from '../../../shared/lib/http.js';
 
 export const summaryKey = ['assets', 'summary'] as const;
@@ -17,12 +18,12 @@ export function useAssetSummary() {
 
 // Encabezado común de las cuatro vistas: acciones, cifras que filtran y pestañas.
 export function AssetsHeader({ actions }: { actions?: ReactNode }) {
-  const summary = useAssetSummary().data, location = useLocation(), [params] = useSearchParams();
+  const summaryQuery = useAssetSummary(), summary = summaryQuery.data, location = useLocation(), [params] = useSearchParams();
   const path = location.pathname, status = params.get('estado');
   const tiles = [
     { to: '/administracion/bienes', label: 'Bienes registrados', value: summary?.total, detail: 'Todos los tipos', current: path === '/administracion/bienes' && !status && !params.get('responsable') },
     { to: '/administracion/bienes/prestamos', label: 'En préstamo', value: summary?.onLoan, current: path === '/administracion/bienes/prestamos',
-      detail: summary?.overdue ? `${summary.overdue} con devolución vencida` : 'Sin devoluciones vencidas', tone: summary?.overdue ? 'late' : '' },
+      detail: summary && (summary.overdue ? `${summary.overdue} con devolución vencida` : 'Sin devoluciones vencidas'), tone: summary?.overdue ? 'late' : '' },
     { to: '/administracion/bienes?estado=revisar', label: 'Por revisar', value: summary?.review, current: status === 'revisar',
       detail: 'Su responsable ya no pertenece', tone: summary?.review ? 'warn' : '' },
     { to: '/administracion/bienes?estado=sin_responsable', label: 'Sin responsable', value: summary?.unassigned, detail: 'Registrados, sin entregar', current: status === 'sin_responsable' },
@@ -43,14 +44,16 @@ export function AssetsHeader({ actions }: { actions?: ReactNode }) {
       </>}</div>
     </header>
     <ProposalNotice />
+    {summaryQuery.isPending && <LoadingLabel>Cargando el resumen de bienes…</LoadingLabel>}
     <ul className="assets-tiles" aria-label="Resumen de bienes">
       {tiles.map(tile => <li key={tile.label}><Link className="assets-tile" to={tile.to} aria-current={tile.current ? 'true' : undefined}>
-        <span>{tile.label}</span><strong>{tile.value ?? '—'}</strong><small className={tile.tone ? `assets-${tile.tone}` : undefined}>{tile.detail}</small>
+        <span>{tile.label}</span><strong>{summaryQuery.isPending ? <Skeleton width="2.5rem" height="1.15em" /> : tile.value ?? '—'}</strong>
+        <small className={tile.tone ? `assets-${tile.tone}` : undefined}>{tile.detail ?? (summaryQuery.isPending ? <Skeleton width="8rem" height="1em" /> : 'Estado sin consultar')}</small>
       </Link></li>)}
     </ul>
     <nav className="assets-tabs" aria-label="Secciones de Bienes">
       {tabs.map(tab => <Link key={tab.to} to={tab.to} aria-current={path === tab.to ? 'page' : undefined}>
-        {tab.label}{tab.count !== undefined && <span className={`assets-count${tab.tone ? ` assets-count--${tab.tone}` : ''}`}>{tab.count}</span>}
+        {tab.label}{tab.count !== undefined ? <span className={`assets-count${tab.tone ? ` assets-count--${tab.tone}` : ''}`}>{tab.count}</span> : summaryQuery.isPending && <Skeleton className="assets-count" width="1.6rem" height="1.55em" />}
       </Link>)}
     </nav>
   </>;
@@ -73,8 +76,16 @@ export function Avatar({ name, inactive = false }: { name: string; inactive?: bo
 export function BackLink({ to = '/administracion/bienes', children = 'Volver a Bienes' }: { to?: string; children?: ReactNode }) {
   return <Link className="assets-back" to={to}><ArrowLeftIcon size={14} aria-hidden="true" />{children}</Link>;
 }
-export function LoadState({ query, label }: { query: { isPending: boolean; isError: boolean; error: Error | null; refetch: () => unknown }; label: string }) {
-  if (query.isPending) return <div className="assets-skeleton" role="status">Cargando {label}…<i /><i /><i /></div>;
+export function LoadState({ query, label, columns }: { query: { isPending: boolean; isError: boolean; error: Error | null; refetch: () => unknown }; label: string; columns?: number[] }) {
+  if (query.isPending) return <>
+    <LoadingLabel>{`Cargando ${label}…`}</LoadingLabel>
+    {columns ? <TableSkeleton className="assets-table-wrap assets-table-loading" columns={columns} /> : <div className="assets-loading" aria-hidden="true">
+      <Skeleton width="15rem" height="34px" /><Skeleton width="23rem" />
+      <div className="assets-layout">{[0, 1].map(index => <div className="assets-card assets-loading__card" key={index}>
+        <Skeleton width="9rem" height="22px" /><Skeleton /><Skeleton width="75%" /><Skeleton width="55%" />
+      </div>)}</div>
+    </div>}
+  </>;
   if (query.isError) return <div className="assets-state" role="alert"><p>{query.error?.message}</p><button type="button" className="cenit-button" onClick={() => { void query.refetch(); }}>Reintentar</button></div>;
   return null;
 }
