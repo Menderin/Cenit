@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { credential, login, selectCalendarDate } from './support/browser.js';
+import { credential, login, santiagoToday, selectCalendarDate } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 
 async function navigateAdministration(page: Page, name: string) {
@@ -452,7 +452,7 @@ async function manualForm(page: Page, number: string) {
   await page.goto('/administracion/compras');
   await page.getByRole('link', { name: 'Registrar manualmente' }).click();
   await page.getByLabel('Nº Documento / solicitud *', { exact: true }).fill(number);
-  await page.getByLabel('Fecha de envío *', { exact: true }).fill('13/10/2026');
+  await page.getByLabel('Fecha de envío *', { exact: true }).fill(santiagoToday().split('-').reverse().join('/'));
   await page.getByLabel('Descripción *', { exact: true }).fill('Solicitud ficticia de prueba');
   await page.getByLabel('Monto total (CLP) *', { exact: true }).fill('200000');
 }
@@ -708,7 +708,7 @@ test('listado: validación, error/reintento, carga y filtros descartados al camb
   await login(page, 'administrativo'); await page.goto('/administracion/compras');
   const fixture = structuredClone(manualPurchaseExample); fixture.operationId = crypto.randomUUID();
   fixture.header.requestNumber = 'RETRY-' + crypto.randomUUID();
-  fixture.header.sentDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date());
+  fixture.header.sentDate = santiagoToday();
   expect((await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data: fixture })).status()).toBe(201);
   const search = page.getByLabel('Buscar solicitudes', { exact: true });
   await page.goto('/administracion/compras?dateFrom=2026-10-14&dateTo=2026-10-13');
@@ -754,11 +754,18 @@ test('listado: validación, error/reintento, carga y filtros descartados al camb
 
 test('solicitudes: paginación independiente y vistas sin desbordamiento horizontal', async ({ page }) => {
   await login(page, 'administrativo');
-  for (let index = 0; index < 21; index++) {
-    const response = await page.request.post('/api/v1/purchases', { headers: { origin: 'http://127.0.0.1:5174' }, data: { ...manualPurchaseExample, operationId: crypto.randomUUID(), header: { ...manualPurchaseExample.header, requestNumber: `PAGE-${index}` } } });
+  const prefix = `PAGE-${crypto.randomUUID().slice(0, 8)}`, sentDate = santiagoToday();
+  const headers = { Origin: new URL(page.url()).origin };
+  for (let index = 0; index < 22; index++) {
+    const response = await page.request.post('/api/v1/purchases', { headers, data: { ...manualPurchaseExample, operationId: crypto.randomUUID(), header: { ...manualPurchaseExample.header, requestNumber: `${prefix}-${index}`, sentDate } } });
     expect(response.status()).toBe(201);
+    if (index === 21) {
+      const { data: record } = await response.json();
+      const review = await page.request.post(`/api/v1/purchases/${record.id}/validation`, { headers, data: { expectedVersion: record.version } });
+      expect(review.status()).toBe(200);
+    }
   }
-  await page.goto('/administracion/compras');
+  await page.goto(`/administracion/compras?q=${prefix}`);
   const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
   const reviewed = page.getByRole('region', { name: 'Revisados en Cenit', exact: true });
   await pending.getByRole('button', { name: 'Siguiente' }).click();
