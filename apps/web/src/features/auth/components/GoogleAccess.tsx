@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { GooglePurpose } from '@cenit/contracts/auth';
 import { createGoogleChallenge, getGoogleAvailability, linkGoogle } from '../api/google.js';
@@ -7,8 +7,16 @@ import { useAuth } from '../model/session.js';
 import { HttpError } from '../../../shared/lib/http.js';
 import './google.css';
 
-export function useGoogleAvailability() {
-  return useQuery({ queryKey: ['auth', 'google'], queryFn: ({ signal }) => getGoogleAvailability(signal), retry: false, staleTime: Infinity });
+export function useGoogleAvailability(enabled = true) {
+  return useQuery({ queryKey: ['auth', 'google'], queryFn: ({ signal }) => getGoogleAvailability(signal), enabled, retry: false, staleTime: Infinity });
+}
+
+export function GoogleLoginLayout({ controls, children, busy = false }: { controls: ReactNode; children?: ReactNode; busy?: boolean }) {
+  return <section className="google-access" data-purpose="login" aria-label="Acceso con Google" aria-busy={busy}>
+    <div className="google-access__separator" aria-hidden="true">o</div>
+    <div className="google-access__action">{controls}</div>
+    {children}
+  </section>;
 }
 
 export function GoogleAccess({ clientId, purpose, disabled = false, onBusy, onLinked }: {
@@ -93,12 +101,17 @@ export function GoogleAccess({ clientId, purpose, disabled = false, onBusy, onLi
       if (!controller.signal.aborted) { clearTimeout(expiry.current); busyCallback.current?.(false); }
     } catch (error) { await failure(error, controller); }
   }
-  return <section className="google-access" data-purpose={purpose} aria-label={purpose === 'login' ? 'Acceso con Google' : 'Vincular Google'} aria-busy={stage === 'loading' || stage === 'verifying'}>
-    {purpose === 'login' && <div className="google-access__separator" aria-hidden="true">o</div>}
-    {stage === 'idle' && <button ref={retry} type="button" className="cenit-button" disabled={disabled} onClick={() => { void prepare(); }}>Reintentar Google</button>}
+  const controls = <>
+    {stage === 'idle' && <button ref={retry} type="button" className="cenit-button google-access__retry" disabled={disabled} onClick={() => { void prepare(); }}>Reintentar Google</button>}
     <div ref={button} className="google-access__button" inert={disabled || stage !== 'choosing'} />
     {(stage === 'loading' || stage === 'verifying') && <p role="status">{stage === 'loading' ? 'Preparando Google…' : 'Verificando con Cenit…'}</p>}
     {stage === 'loading' && <button type="button" className="cenit-button" onClick={() => { cancel(); setStage('idle'); setMessage('Intento cancelado. Puedes volver a intentarlo.'); }}>Cancelar intento</button>}
-    {message && <p role={stage === 'linked' ? 'status' : 'alert'}>{message}</p>}
+  </>;
+  const working = stage === 'loading' || stage === 'verifying';
+  const feedback = message && <p role={stage === 'linked' ? 'status' : 'alert'}>{message}</p>;
+  if (purpose === 'login') return <GoogleLoginLayout controls={controls} busy={working}>{feedback}</GoogleLoginLayout>;
+  return <section className="google-access" data-purpose={purpose} aria-label="Vincular Google" aria-busy={working}>
+    {controls}
+    {feedback}
   </section>;
 }

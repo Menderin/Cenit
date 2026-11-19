@@ -7,7 +7,7 @@ test('Bienes: registrar, encontrar, prestar y confirmar la devolución', async (
   const description = `Proyector ficticio ${suffix}`, borrower = `Persona ficticia ${suffix}`;
   const inventory = page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link', { name: 'Bienes', exact: true });
   await inventory.click();
-  await page.getByRole('link', { name: 'Registrar bien', exact: true }).click();
+  await page.locator('.assets-heading').getByRole('link', { name: 'Registrar bien', exact: true }).click();
   await page.getByLabel('Descripción', { exact: true }).fill(description);
   await page.getByRole('combobox', { name: 'Ubicación', exact: true }).fill('Laboratorio ficticio');
   await page.getByRole('button', { name: 'Registrar bien', exact: true }).click();
@@ -27,6 +27,7 @@ test('Bienes: registrar, encontrar, prestar y confirmar la devolución', async (
   await page.getByRole('combobox', { name: 'Persona que recibe el préstamo', exact: true }).fill(borrower);
   await page.getByRole('option', { name: `Agregar «${borrower}» como persona nueva`, exact: true }).click();
   await page.getByRole('group', { name: 'Persona nueva' }).getByRole('button', { name: 'Agregar persona', exact: true }).click();
+  await expect(page.locator('.assets-picked').getByText(borrower, { exact: true })).toBeVisible();
   await page.getByLabel('Nombre de quien autoriza', { exact: true }).fill('Autorización ficticia');
   await page.getByRole('button', { name: 'Guardar préstamo', exact: true }).click();
   await expect(page.getByRole('heading', { name: /^Préstamo N° \d+\/\d{4}$/ })).toBeVisible();
