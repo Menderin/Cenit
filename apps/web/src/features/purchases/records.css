@@ -5,7 +5,7 @@
 .purchase-heading-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
 .purchase-secondary-link { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; color: var(--color-ink-subtle) !important; font-size: 13px; text-decoration: none; }
 .purchase-list { margin-top: 30px; }
-.purchase-list-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.purchase-list-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 22.5px; margin-bottom: 12px; }
 .purchase-count { display: inline-flex; padding: 1px 6px; border-radius: 4px; color: var(--color-ink-subtle); background: var(--color-surface-chip); font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; }
 .purchase-total { min-width: 0; max-width: 100%; margin-left: auto; color: var(--admin-muted); font-size: 12px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .purchase-total strong { margin-left: 8px; color: var(--color-ink); font-size: 13px; font-weight: 500; }
@@ -19,7 +19,7 @@
 .purchase-records table td:nth-child(2) { white-space: nowrap; }
 .purchase-description { min-width: 220px; max-width: 440px; }
 .purchase-description > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
-.purchase-row-actions { width: 1%; white-space: nowrap; }
+.purchase-row-actions { width: 1%; min-width: 94px; white-space: nowrap; }
 .purchase-records tbody tr.purchase-row > :is(th, td) { vertical-align: middle; }
 .purchase-records .purchase-row-caret { width: 1%; padding-inline: 4px 14px; color: var(--color-icon); }
 .purchase-row-caret > svg { display: block; transition: translate 150ms ease-out; }
@@ -151,9 +151,10 @@
 .purchase-money { text-align: right !important; font-variant-numeric: tabular-nums; max-width: 240px; }
 .purchase-request-number > [aria-disabled="true"] { opacity: .5; cursor: progress; }
 .purchase-list { position: relative; }
-.purchase-updating { color: var(--admin-muted); font-size: 12px; margin: 0 0 10px; }
-.purchase-list-skeleton { display: grid; gap: 12px; color: var(--admin-muted); }
-.purchase-list-skeleton i { height: 52px; border-radius: 8px; background: var(--color-surface-muted); }
+.purchase-updating { color: var(--admin-muted); font-size: 12px; }
+.purchase-loading__item { display: flex; justify-content: space-between; gap: 16px; align-items: center; min-height: 48px; padding: 12px 14px; }
+.purchase-loading__panel { display: grid; gap: 12px; }
+.purchase-loading__value { margin-top: 10px; }
 .purchase-technical { margin-top: 14px; color: var(--admin-muted); font-size: 12px; }
 .purchase-technical summary { display: flex; align-items: center; gap: 6px; cursor: pointer; padding-block: 8px; list-style: none; }
 .purchase-technical summary::-webkit-details-marker { display: none; }

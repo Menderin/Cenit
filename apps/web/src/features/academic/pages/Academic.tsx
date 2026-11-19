@@ -22,7 +22,34 @@ import { progressLabels } from '../model/progress-presentation.js';
 import { courseRelations } from '../model/course-relations.js';
 import { useSidebar } from '../../../shared/lib/use-sidebar.js';
 import { WorkspaceShell } from '../../../shared/components/WorkspaceShell.js';
+import { LoadingLabel, Skeleton } from '../../../shared/components/Skeleton.js';
 import '../academic.css';
+
+function BoardSkeleton() {
+  return <>
+    <LoadingLabel>Cargando la malla…</LoadingLabel>
+    <div className="academic-board academic-board--loading" aria-hidden="true">
+      <div className="academic-columns" style={{ '--semester-count': 9 } as CSSProperties}>
+        {Array.from({ length: 9 }, (_, semester) => <div className="academic-semester" key={semester}>
+          <div className="academic-semester__header"><Skeleton width="24px" /></div>
+          <ul>{Array.from({ length: 5 }, (_, course) => <li key={course} className="academic-course academic-course--loading">
+            <Skeleton width={course % 2 === 0 ? '88%' : '68%'} /><Skeleton width="36px" />
+          </li>)}</ul>
+        </div>)}
+      </div>
+    </div>
+  </>;
+}
+
+function ProgressSkeleton() {
+  return <>
+    <LoadingLabel>Cargando el avance curricular…</LoadingLabel>
+    <div className="academic-student-summary" aria-hidden="true">
+      <div className="academic-student-summary__person"><Skeleton className="academic-loading-avatar" width="34px" height="34px" /><div><Skeleton width="8rem" /><Skeleton width="6rem" /></div></div>
+      <div className="academic-student-summary__credits"><Skeleton width="56%" height="18px" /><Skeleton height="8px" /><Skeleton width="85%" height="18px" /></div>
+    </div>
+  </>;
+}
 
 export function Academic() {
   const auth = useAuth();
@@ -102,26 +129,28 @@ export function Academic() {
     </>}>
         <main id="academic-content" className="academic-content" tabIndex={-1}>
           <SessionWarning expiresAt={auth.session!.expiresAt} logout={auth.logout} />
-          {loading && !error && <div className="academic-state"><span className="academic-loading" aria-hidden="true" /><p role="status">Cargando la malla…</p></div>}
           {error && <div className="cenit-empty"><span className="cenit-empty__icon"><InfoIcon size={26} aria-hidden="true" /></span><h2>{error instanceof HttpError && error.status === 403 ? 'Acceso no autorizado' : 'No pudimos cargar la malla'}</h2><p role="alert">{error.message}</p><button className="cenit-button" type="button" onClick={() => { void (plans.error ? plans.refetch() : catalog.refetch()); }}>Reintentar</button></div>}
           {!loading && !error && !version && <div className="cenit-empty"><span className="cenit-empty__icon"><BookOpenIcon size={26} aria-hidden="true" /></span><h2>La malla todavía no está disponible</h2><p>La malla vigente de Nutrición y Dietética aún no está publicada.</p><button className="cenit-button" type="button" onClick={() => { void plans.refetch(); }}>Volver a consultar</button></div>}
-          {!error && plan && <>
+          {!error && (loading || plan) && <>
             <div className="academic-board-context">
             <section className="academic-progress-context" aria-label="Avance curricular">
               {account.role === 'docente' && <StudentLookup accountId={account.id} selected={selectedStudent} onSelect={student => { setDetail(null); setSelectedStudent(student); }} />}
               {hasStudent && <>
-              {progress.isPending && <p role="status">Cargando el avance curricular…</p>}
+              {progress.isPending && <ProgressSkeleton />}
               {progress.error && <div className="academic-inline-error"><p role="alert">{progress.error instanceof HttpError && progress.error.status === 404 ? 'Este estudiante aún no tiene un perfil académico preparado.' : progress.error.message}</p><button className="cenit-button" onClick={() => { void progress.refetch(); }}>Reintentar historial</button></div>}
-              {!progress.error && matchingProgress && <StudentProgressSummary plan={plan} progress={matchingProgress} />}
+              {!progress.error && plan && matchingProgress && <StudentProgressSummary plan={plan} progress={matchingProgress} />}
               {!progress.error && matchingProgress && <><ul className="academic-progress-legend" aria-label="Estados del historial">{Object.entries(progressLabels).map(([status, label]) => <li key={status}><span className={`academic-progress-dot academic-progress-dot--${status}`} aria-hidden="true" />{label}</li>)}</ul></>}
               </>}
             </section>
-            {(boardScroll.previous || boardScroll.next) && <div className="academic-board-actions" role="group" aria-label="Navegación de semestres">
+            {plan && (boardScroll.previous || boardScroll.next) && <div className="academic-board-actions" role="group" aria-label="Navegación de semestres">
               <span className="academic-board-hint">Arrastra para recorrer</span>
               <button className="cenit-button cenit-button--icon" type="button" aria-label="Ver semestres anteriores" aria-controls="academic-semesters" disabled={!boardScroll.previous} onClick={() => board.current?.scrollBy({ left: -board.current.clientWidth * .8 })}><CaretLeftIcon size={16} weight="regular" aria-hidden="true" /></button>
               <button className="cenit-button cenit-button--icon" type="button" aria-label="Ver semestres siguientes" aria-controls="academic-semesters" disabled={!boardScroll.next} onClick={() => board.current?.scrollBy({ left: board.current.clientWidth * .8 })}><CaretRightIcon size={16} weight="regular" aria-hidden="true" /></button>
             </div>}
             </div>
+            {loading && <BoardSkeleton />}
+          </>}
+          {!error && plan && <>
             <p id="academic-scroll-hint" className="academic-sr-only">Asignaturas por semestre. Abre una asignatura para consultar su nombre completo, historial y prerrequisitos. Arrastra con el mouse o usa los controles de semestres y las flechas del teclado para recorrer el tablero cuando no quepa completo.</p>
             <div ref={board} id="academic-semesters" className={`academic-board${boardScroll.previous || boardScroll.next ? ' academic-board--scrollable' : ''}${boardDragging ? ' academic-board--dragging' : ''}`} tabIndex={0} role="region" aria-label="Asignaturas por semestre" aria-describedby="academic-scroll-hint"
               onPointerDown={event => {

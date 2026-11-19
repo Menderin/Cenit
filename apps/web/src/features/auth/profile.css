@@ -15,4 +15,4 @@
 .profile-card dt { font-size: 12px; color: var(--color-ink-muted); margin-bottom: 4px; }
 .profile-card dd { margin: 0; overflow-wrap: anywhere; }
 .profile-hint { font-size: 12px; }
-@media (max-width: 600px) { .profile-content { padding: 20px; } .profile-card { padding: 20px; } .profile-identity { gap: 16px; } }
+.profile-loading { display: grid; gap: 12px; padding-block: 6px; }

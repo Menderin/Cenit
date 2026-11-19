@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router';
+import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { useAuth } from '../features/auth/model/session.js';
 import { Login } from '../features/auth/pages/Login.js';
 import { Profile, AcademicProfile } from '../features/auth/pages/Profile.js';
@@ -27,7 +27,30 @@ import { AccessLayout } from '../features/auth/components/AccessLayout.js';
 import { Academic } from '../features/academic/pages/Academic.js';
 import { PurchaseGuardProvider, usePurchaseGuard } from '../features/purchases/model/guard.js';
 import { StatusNotice } from '../shared/components/StatusNotice.js';
-import { PurchaseCapabilitiesProvider } from '../features/purchases/model/capabilities.js';
+import { LoadingLabel, Skeleton, TableSkeleton } from '../shared/components/Skeleton.js';
+
+function SessionLoading() {
+  const { pathname } = useLocation();
+  if (/^\/(administracion|academico)(\/|$)/.test(pathname)) return <div className="workspace">
+    <LoadingLabel>Comprobando sesión…</LoadingLabel>
+    <div className="workspace-shell" aria-hidden="true">
+      <div className="workspace-sidebar"><div className="workspace-sidebar-content">
+        <Skeleton width="4rem" height="24px" /><div className="workspace-nav">{[0, 1, 2].map(index => <div className="workspace-nav-item" key={index}><Skeleton width="1rem" /><Skeleton width="68%" /></div>)}</div>
+      </div></div>
+      <div className="workspace-main"><div className="workspace-toolbar"><Skeleton width="11rem" /></div>
+        <div className="admin-content"><Skeleton width="13rem" height="30px" /><div className="purchase-list"><TableSkeleton className="purchase-table-scroll" columns={[1, 2, 1]} /></div></div>
+      </div>
+    </div>
+  </div>;
+  return <AccessLayout>
+    <LoadingLabel>Comprobando sesión…</LoadingLabel>
+    <div className="cenit-access__heading"><h1 id="access-title" className="cenit-loading-label">Acceso a Cenit</h1><Skeleton width="10rem" height="31px" /><Skeleton width="12rem" height="21px" className="cenit-access__loading-intro" /></div>
+    <div className="cenit-access__form" aria-hidden="true">
+      {[0, 1].map(index => <div className="cenit-access__field" key={index}><Skeleton width="7rem" height="18px" /><Skeleton height="42px" className="cenit-access__loading-field" /></div>)}
+      <Skeleton height="44px" className="cenit-access__loading-field" />
+    </div>
+  </AccessLayout>;
+}
 
 function AdministrativeArea() {
   const auth = useAuth(), guard = usePurchaseGuard();
@@ -66,13 +89,14 @@ function AdministrativeArea() {
 
 export function App() {
   const auth = useAuth();
+  if (auth.status === 'checking') return <SessionLoading />;
   if (auth.status === 'authenticated' && auth.session && auth.session.account.role !== 'administrativo') {
     return <Routes><Route path="/academico" element={<Academic key={auth.session.account.id} />} /><Route path="/academico/perfil" element={<AcademicProfile key={auth.session.account.id} />} /><Route path="*" element={<Navigate to="/academico" replace />} /></Routes>;
   }
   let content;
-  if (auth.status === 'checking' || auth.status === 'closing') content = <>
+  if (auth.status === 'closing') content = <>
     <h1 id="access-title">Cenit</h1>
-    <p className="cenit-access__intro" role="status">{auth.status === 'closing' ? 'Cerrando sesión…' : 'Comprobando sesión…'}</p>
+    <p className="cenit-access__intro" role="status">Cerrando sesión…</p>
   </>;
   else if (auth.status === 'error' || auth.status === 'logout-error') content = <>
     <h1 id="access-title">No pudimos completar la operación</h1>
@@ -81,7 +105,7 @@ export function App() {
   </>;
   else if (!auth.session) content = <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Navigate to="/login" replace />} /></Routes>;
   if (auth.status === 'authenticated' && auth.session?.account.role === 'administrativo') return <PurchaseTransferProvider key={auth.session.account.id}>
-    <PurchaseCapabilitiesProvider><PurchaseGuardProvider><AdministrativeArea /></PurchaseGuardProvider></PurchaseCapabilitiesProvider>
+    <PurchaseGuardProvider><AdministrativeArea /></PurchaseGuardProvider>
   </PurchaseTransferProvider>;
   return <AccessLayout>{content}</AccessLayout>;
 }

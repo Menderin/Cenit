@@ -60,10 +60,13 @@ export function usePersonnelPdf({ request, fileName, printTitle, onFieldErrors }
 }
 
 export function PdfActions({ pdf }: { pdf: ReturnType<typeof usePersonnelPdf> }) {
-  const preparing = pdf.action !== null;
+  const downloading = pdf.action === 'download', printing = pdf.action === 'print';
   return <div className="personnel-download__actions">
-    {preparing && <button type="button" className="cenit-button cenit-button--quiet" onClick={pdf.cancel}>Cancelar</button>}
-    <button type="button" className="cenit-button" onClick={() => { void pdf.run('download'); }} disabled={preparing} aria-busy={pdf.action === 'download'}><DownloadSimpleIcon size={16} aria-hidden="true" />{pdf.action === 'download' ? 'Preparando…' : 'Descargar'}</button>
-    <button type="button" className="cenit-button cenit-button--primary" onClick={() => { void pdf.run('print'); }} disabled={preparing} aria-busy={pdf.action === 'print'}><PrinterIcon size={16} aria-hidden="true" />{pdf.action === 'print' ? 'Preparando…' : 'Imprimir'}</button>
+    <button type="button" className={`cenit-button${printing ? ' cenit-button--quiet' : ''}`} onClick={printing ? pdf.cancel : () => { void pdf.run('download'); }} disabled={downloading} aria-busy={downloading}>
+      {printing ? 'Cancelar' : <><DownloadSimpleIcon size={16} aria-hidden="true" />{downloading ? 'Preparando…' : 'Descargar'}</>}
+    </button>
+    <button type="button" className={`cenit-button${downloading ? ' cenit-button--quiet' : ' cenit-button--primary'}`} onClick={downloading ? pdf.cancel : () => { void pdf.run('print'); }} disabled={printing} aria-busy={printing}>
+      {downloading ? 'Cancelar' : <><PrinterIcon size={16} aria-hidden="true" />{printing ? 'Preparando…' : 'Imprimir'}</>}
+    </button>
   </div>;
 }

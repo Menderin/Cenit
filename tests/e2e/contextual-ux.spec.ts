@@ -117,6 +117,8 @@ test('Inicio presenta carga y error con reintento sin mostrar cifras ficticias',
     await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'Resumen temporalmente indisponible', requestId: 'summary-error' } }) });
   });
   await page.reload(); await expect(page.getByRole('status').filter({ hasText: 'Cargando resumen' })).toBeVisible();
+  await expect(page.locator('.dashboard-loading .dashboard-kpis > div')).toHaveCount(3);
+  await expect(page.locator('.dashboard-loading .dashboard-card')).toHaveCount(3);
   expect(await page.getByRole('definition').count()).toBe(0);
   await expect.poll(() => !!release).toBe(true); release!();
   await expect(page.getByRole('alert')).toContainText('Resumen temporalmente indisponible');

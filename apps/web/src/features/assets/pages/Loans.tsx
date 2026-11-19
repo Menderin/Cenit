@@ -32,7 +32,7 @@ export function Loans() {
       <label className="assets-search" role="search"><span className="assets-sr">Buscar préstamos</span><MagnifyingGlassIcon size={16} aria-hidden="true" />
         <input className="cenit-input" type="search" value={list.text} onChange={event => list.setText(event.target.value)} placeholder="Número, persona o bien" autoComplete="off" /></label>
     </div>
-    <LoadState query={query} label="los préstamos" />
+    <LoadState query={query} label="los préstamos" columns={[1, 2, 1.5, 1, 1, 1]} />
     {data && !query.isError && (!rows.length ? <div className="cenit-empty cenit-empty--bordered"><span className="cenit-empty__icon"><ArrowsLeftRightIcon size={26} aria-hidden="true" /></span>
       <h3>{list.q ? 'No encontramos préstamos con esa búsqueda' : view === 'vencido' ? 'No hay préstamos vencidos' : view === 'abierto' ? 'No hay préstamos por devolver' : 'Aún no hay préstamos'}</h3>
       <p>{view === 'vencido' || view === 'abierto' ? 'Todo lo prestado ya fue devuelto.' : 'Cuando prestes un bien, aparecerá aquí hasta su devolución.'}</p></div> : <>

@@ -6,6 +6,52 @@ import { login } from './support/browser.js';
 
 const endpoint = '**/api/v1/personnel/service-commissions/pdf';
 const section = (page: Page, name: string) => page.getByRole('navigation', { name: 'Secciones' }).getByRole('button').filter({ hasText: name });
+
+test('Personal abre con Compras pendiente y conserva la geometría de las plantillas lentas', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  let releaseCapabilities!: () => void;
+  const capabilities = new Promise<void>(resolve => { releaseCapabilities = resolve; });
+  await page.route('**/api/v1/purchases/capabilities', async route => {
+    await capabilities;
+    await route.abort().catch(() => {});
+  });
+  let releaseImages!: () => void;
+  let images = new Promise<void>(resolve => { releaseImages = resolve; });
+  await page.route(/\/(?:commission|leave)-template[^/]*\.svg$/, async route => {
+    await images;
+    await route.continue().catch(() => {});
+  });
+  try {
+    await login(page, 'administrativo');
+    await page.getByRole('link', { name: 'Personal', exact: true }).click();
+    const cards = page.locator('.personnel-documents .personnel-template');
+    await expect(cards).toHaveCount(2);
+    await expect(cards.first()).toHaveAttribute('data-state', 'loading');
+    await expect(cards.last()).toHaveAttribute('data-state', 'loading');
+    const dimensions = () => cards.evaluateAll(items => items.map(el => [el.clientWidth, el.clientHeight]));
+    const waiting = await dimensions();
+    expect(waiting.every(([, height]) => height! > 200)).toBe(true);
+    releaseImages();
+    await expect(cards.first()).toHaveAttribute('data-state', 'ready');
+    await expect(cards.last()).toHaveAttribute('data-state', 'ready');
+    expect(await dimensions()).toEqual(waiting);
+
+    await page.getByRole('link', { name: /Comisión de servicios/ }).click();
+    images = new Promise<void>(resolve => { releaseImages = resolve; });
+    await page.getByRole('button', { name: 'Vista previa', exact: true }).click();
+    const paper = page.getByRole('article', { name: 'Documento de comisión de servicios' });
+    await expect(paper.getByRole('status')).toHaveText('Cargando la plantilla del documento…');
+    const previewHeight = await paper.evaluate(el => el.clientHeight);
+    releaseImages();
+    await expect(paper.getByRole('img')).toBeVisible();
+    expect(await paper.evaluate(el => el.clientHeight)).toBe(previewHeight);
+  } finally {
+    releaseCapabilities();
+    releaseImages();
+  }
+});
+
 async function fillCommission(page: Page, signedIn = false) {
   if (!signedIn) await login(page, 'administrativo');
   await page.goto('/administracion/personal/comision');
@@ -156,9 +202,13 @@ test('comisión: cancelar una respuesta tardía y revisar la vista previa', asyn
     finally { finished(); }
   });
   const pending = page.waitForRequest(endpoint);
+  const actions = page.locator('.personnel-download__actions');
+  const dimensions = () => actions.evaluate(el => [el.clientWidth, el.clientHeight]);
+  const readySize = await dimensions();
   await page.getByRole('button', { name: 'Descargar', exact: true }).click();
   await pending;
   await expect(page.getByRole('button', { name: 'Cancelar', exact: true })).toBeVisible();
+  expect(await dimensions()).toEqual(readySize);
   await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
   release();
   await handled;

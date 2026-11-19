@@ -12,6 +12,7 @@
 .assets-tile > span { display: block; color: var(--color-ink-label); font-size: 14px; }
 .assets-tile > strong { display: block; margin: 4px 0 2px; font-size: clamp(22px, 2vw, 28px); font-weight: 600; letter-spacing: -.9px; line-height: 1.15; font-variant-numeric: tabular-nums; }
 .assets-tile > small { display: block; color: var(--color-ink-muted); font-size: 13px; }
+.assets-tile > small:has(.cenit-skeleton) { display: flex; min-height: 1.55em; align-items: center; }
 .assets-tile > small.assets-warn { color: var(--color-warning); }
 .assets-tile > small.assets-late { color: var(--color-danger); }
 
@@ -63,9 +64,10 @@
 
 .assets-state { padding: 24px 16px; border: 1px solid var(--color-line); border-radius: 8px; background: var(--color-surface-subtle); color: var(--color-ink-muted); font-size: 13px; }
 .assets-state p { margin: 0 0 10px; }
-.assets-skeleton { display: grid; gap: 8px; color: var(--color-ink-muted); font-size: 13px; }
-.assets-skeleton i { display: block; height: 44px; border-radius: 8px; background: var(--color-surface-muted); }
-.assets-updating { margin: 0 0 8px; color: var(--color-ink-muted); font-size: 12px; }
+.assets-table-loading { --skeleton-row: 64px; }
+.assets-loading { display: grid; gap: 12px; }
+.assets-loading__card { display: grid; gap: 16px; }
+.assets-table-wrap[aria-busy="true"] { border-color: var(--color-focus); }
 
 /* Ficha */
 .assets-back { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin-bottom: 14px; color: var(--color-ink-label); font-size: 14px; text-decoration: none; }

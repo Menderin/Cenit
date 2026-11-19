@@ -85,7 +85,8 @@
 .personnel-review dd { margin: 0; overflow-wrap: anywhere; }
 .personnel-unknown { color: var(--color-ink-subtle); font-style: italic; }
 .personnel-review-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin: 16px 0 0; }
-.personnel-download__actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.personnel-download__actions { display: grid; grid-template-columns: repeat(2, 140px); gap: 8px; }
+.personnel-download__actions > .cenit-button { min-height: 44px; white-space: nowrap; }
 
 .personnel-summary { position: sticky; top: 0; padding: 16px 18px; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); }
 .personnel-summary dl { display: flex; flex-direction: column; gap: 12px; margin: 12px 0 0; }
@@ -107,7 +108,12 @@
 .personnel-paper * { box-sizing: border-box; }
 .personnel-paper__canvas { position: relative; width: var(--paper-width); aspect-ratio: var(--paper-ratio); font-family: "Bookman Old Style", Bookman, Georgia, serif; }
 .personnel-paper--leave .personnel-paper__canvas { font-family: Arial, Helvetica, sans-serif; }
-.personnel-paper__template { display: block; width: 100%; height: 100%; max-width: none; }
+.personnel-template { position: relative; display: block; }
+.personnel-template > img { display: block; width: 100%; height: auto; }
+.personnel-template:not([data-state="ready"]) > img, .personnel-paper__canvas:has(.personnel-template:not([data-state="ready"])) .personnel-paper__value { visibility: hidden; }
+.personnel-template__placeholder { position: absolute; inset: 0; display: grid; align-content: start; justify-items: center; gap: 12px; padding: 8% 10%; overflow: hidden; color: var(--color-ink-muted); font: 13px/1.5 var(--font-sans); }
+.personnel-template__fields { display: grid; gap: 10px; width: 100%; margin-top: 18px; }
+.personnel-template__fields > .cenit-skeleton { height: clamp(20px, 3vw, 32px); }
 .personnel-paper__value { position: absolute; display: flex; align-items: center; justify-content: center; padding: 0 2px; text-align: center; text-transform: uppercase; }
 .personnel-paper__value > span { display: block; width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; font-size: calc(var(--paper-width) / var(--paper-sheet-width) * 13.3333); line-height: 1.1; }
 .personnel-paper__value--keep-case { text-transform: none; }
@@ -141,7 +147,6 @@
 .personnel-page--home { display: flex; flex: 1; flex-direction: column; min-height: 0; }
 .personnel-documents { display: grid; flex: 1; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(420px, 1fr); gap: 24px; margin: 0; padding: 0; list-style: none; }
 .personnel-documents a { display: flex; flex-direction: column; height: 100%; overflow: hidden; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-ink); text-decoration: none; transition: border-color 150ms ease-out, box-shadow 200ms ease-out; }
-.personnel-documents a:hover { border-color: var(--color-line-strong); box-shadow: 0 12px 32px #0000001a; }
 .personnel-documents a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .personnel-documents__sheet { --tilt: -4deg; position: relative; display: flex; flex: 1; align-items: flex-start; justify-content: center; container-type: size; overflow: hidden; padding: 64px 32px 0; background: radial-gradient(90% 70% at 50% 0%, #f3f3f7, #e0e0e8); }
 .personnel-documents li:nth-child(even) .personnel-documents__sheet { --tilt: 4deg; }
@@ -149,18 +154,19 @@
 .personnel-documents__stack::before, .personnel-documents__stack::after { content: ""; position: absolute; inset: 0; border-radius: 2px; background: #fff; box-shadow: 0 1px 3px #0000001f; }
 .personnel-documents__stack::before { transform: rotate(calc(var(--tilt) * -1.6)) translate(-4%, 1%); opacity: .75; }
 .personnel-documents__stack::after { transform: rotate(calc(var(--tilt) * 1.2)) translate(5%, 0); opacity: .9; }
-.personnel-documents__stack img { position: relative; z-index: 1; display: block; width: 100%; height: auto; padding: 12px; background: #fff; border-radius: 2px; box-shadow: 0 2px 4px #0000001a, 0 18px 36px #0000002b; }
-.personnel-documents a:hover .personnel-documents__stack { transform: rotate(0deg) translateY(-8px); }
+.personnel-documents__stack .personnel-template { z-index: 1; padding: 12px; background: #fff; border-radius: 2px; box-shadow: 0 2px 4px #0000001a, 0 18px 36px #0000002b; }
 .personnel-documents__tag { position: absolute; z-index: 2; top: 14px; left: 14px; padding: 4px 10px; border-radius: 999px; background: var(--color-surface); color: var(--color-ink-secondary); font-size: 12px; font-weight: 500; box-shadow: var(--shadow-control); }
 .personnel-documents__body { position: relative; z-index: 3; display: flex; flex-direction: column; gap: 8px; min-height: 108px; padding: 20px 24px 22px; background: var(--color-surface); box-shadow: 0 -10px 24px -12px #00000040; }
 .personnel-documents h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 17px; }
-.personnel-documents p { margin: 0; color: var(--color-ink-muted); font-size: 13px; line-height: 1.5; }
+.personnel-documents p { min-height: 3em; margin: 0; color: var(--color-ink-muted); font-size: 13px; line-height: 1.5; }
 .personnel-documents__go { display: inline-flex; align-items: center; gap: 6px; margin-top: auto; padding-top: 6px; font-size: 13px; font-weight: 600; }
 .personnel-documents__go svg { transition: transform 150ms ease-out; }
-.personnel-documents a:hover .personnel-documents__go svg { transform: translateX(3px); }
-@media (prefers-reduced-motion: reduce) {
-  .personnel-documents__stack, .personnel-documents__go svg { transition: none; }
-  .personnel-documents a:hover .personnel-documents__stack { transform: rotate(var(--tilt)); }
+@media (hover: hover) {
+  .personnel-documents a:hover { border-color: var(--color-line-strong); box-shadow: 0 12px 32px #0000001a; }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .personnel-documents a:hover .personnel-documents__stack { transform: rotate(0deg) translateY(-8px); }
+  .personnel-documents a:hover .personnel-documents__go svg { transform: translateX(3px); }
 }
 .personnel-search__input::-webkit-search-decoration, .personnel-search__input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
 .personnel-preview__pending { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; border-top: 1px solid var(--color-line-soft); background: var(--color-surface); }

@@ -49,7 +49,7 @@ export function Deliveries() {
   return <>
     <div className="assets-toolbar" role="search"><label className="assets-search"><span className="assets-sr">Buscar entregas</span><MagnifyingGlassIcon size={16} aria-hidden="true" />
       <input className="cenit-input" type="search" value={list.text} onChange={event => list.setText(event.target.value)} placeholder="Número, persona que recibe, motivo o bien" autoComplete="off" /></label></div>
-    <LoadState query={query} label="las entregas" />
+    <LoadState query={query} label="las entregas" columns={[1, 2, 1.5, 1, 1, 1]} />
     {data && !query.isError && (!data.data.length ? <div className="cenit-empty cenit-empty--bordered"><span className="cenit-empty__icon"><HandArrowDownIcon size={26} aria-hidden="true" /></span>
       <h3>{list.q ? 'No encontramos entregas con esa búsqueda' : 'Aún no hay entregas'}</h3><p>{list.q ? 'Prueba con el nombre de la persona o la descripción del bien.' : 'Cuando entregues un bien a una persona, el acta quedará aquí.'}</p>
       {!list.q && <Link className="cenit-button cenit-button--primary" to="/administracion/bienes/entregas/nueva">Nueva entrega</Link>}</div> : <>

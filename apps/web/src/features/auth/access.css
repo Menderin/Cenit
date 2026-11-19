@@ -14,6 +14,9 @@
 .cenit-access h1 { font-size: 23px; font-weight: 550; letter-spacing: -.65px; line-height: 1.35; margin: 0 0 9px; }
 .cenit-access__intro { color: var(--color-ink-subtle); font-size: 13px; line-height: 1.6; margin: 0; }
 .cenit-access__form { display: grid; gap: 20px; }
+.cenit-access__loading-intro { margin-top: 9px; }
+.cenit-access__loading-field { margin-top: 8px; border-radius: var(--radius-md); }
+.cenit-access__form > .cenit-access__loading-field { margin-top: 4px; }
 .cenit-access__field label { display: block; color: var(--color-ink); font-size: 12px; line-height: 1.5; font-weight: 500; margin-bottom: 8px; }
 .cenit-access__password { position: relative; }
 .cenit-access__password input { padding-right: 60px; }
