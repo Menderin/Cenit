@@ -215,14 +215,24 @@ test('cancelar un desafío pendiente mantiene disponible el acceso con contrase�
 
 test('un callback Google registrado se ignora al vencer el desafío de acceso', async ({ page }) => {
   await googleBrowser(page);
+  let showProvider!: () => void;
+  const providerPending = new Promise<void>(resolve => { showProvider = resolve; });
+  await page.route('**/api/v1/auth/google', async route => { await providerPending; await route.fallback(); });
   await page.clock.install();
-  await page.goto('/login');
-  await expect(page.getByRole('button', { name: 'Iniciar sesión con Google', exact: true })).toBeVisible();
-  await page.clock.fastForward(305_000);
-  await expect(page.getByRole('alert')).toContainText('El intento venció');
-  await expectDiscardedGoogleCallback(page, 'login');
-  await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByLabel('Correo electrónico', { exact: true })).toBeEnabled();
+  try {
+    await page.goto('/login');
+    const googleButton = page.getByRole('button', { name: 'Iniciar sesión con Google', exact: true });
+    await expect(googleButton).toBeDisabled();
+    showProvider();
+    await expect(googleButton).toHaveAttribute('data-nonce', '1'.padStart(64, '0'));
+    await page.clock.fastForward(305_000);
+    await expect(page.getByRole('alert')).toContainText('El intento venció');
+    await expectDiscardedGoogleCallback(page, 'login');
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(page.getByLabel('Correo electrónico', { exact: true })).toBeEnabled();
+  } finally {
+    showProvider();
+  }
 });
 for (const role of ['administrativo', 'docente', 'estudiante']) test(`vinculación explícita y teclado desde cuenta local ${role}`, async ({ page }) => {
   await googleBrowser(page);
