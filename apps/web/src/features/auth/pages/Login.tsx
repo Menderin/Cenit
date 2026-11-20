@@ -85,7 +85,7 @@ export function Login({ checking }: { checking: boolean }) {
         : <GoogleLoginLayout busy={google.isFetching} controls={
           <button type="button" className="cenit-button google-access__unavailable" disabled aria-describedby={googleUnavailable ? 'google-unavailable' : undefined}>Iniciar sesión con Google</button>
         }>
-          {googleUnavailable && <p id="google-unavailable" role="status">Google no está disponible en este momento.</p>}
+          {googleUnavailable && <p id="google-unavailable" role="status">{google.data?.enabled === false ? 'El acceso con Google no está habilitado.' : 'Google no está disponible en este momento.'}</p>}
         </GoogleLoginLayout>}
     </div>
   </>;

@@ -105,7 +105,7 @@ test('Google apagado deja el botón visible y el acceso local en la misma posici
     await expect(page).toHaveURL(/\/login$/);
     await expect(submit).toBeEnabled();
     expect(await initialEmail?.evaluate(element => element.isConnected)).toBe(true);
-    await expect(google).toHaveAccessibleDescription('Google no está disponible en este momento.');
+    await expect(google).toHaveAccessibleDescription('El acceso con Google no está habilitado.');
     expect(await positions()).toEqual(initial);
 
     await submit.click();
