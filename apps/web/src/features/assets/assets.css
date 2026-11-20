@@ -224,11 +224,12 @@
 .assets-inventory td:nth-child(6) { white-space: nowrap; }
 .assets-serial-inline { display: none; }
 /* Ventanas medianas: la serie pasa bajo la descripción y la tabla cabe sin desplazamiento lateral. */
-@media (max-width: 1440px) {
-  .assets-inventory :is(th, td) { padding-inline: 10px; }
+@media (max-width: 1600px) {
   .assets-inventory :is(th, td):nth-child(3) { display: none; }
   .assets-inventory .assets-serial-inline { display: block; }
-  .assets-inventory td:nth-child(4) { min-width: 150px; }
+}
+@media (max-width: 1440px) {
+  .assets-inventory :is(th, td) { padding-inline: 10px; }
 }
 /* Ventanas de escritorio reducidas (1000–1180 px): columnas sin mínimos y sin la flecha decorativa. */
 @media (max-width: 1180px) {
@@ -317,47 +318,52 @@
 .assets-uniform .assets-narrow-only { display: none; }
 .assets-uniform .assets-caret { width: 40px; }
 .assets-inventory.assets-uniform :is(th, td) { min-width: 0 !important; max-width: none !important; }
-.assets-inventory thead th:nth-child(1) { width: 110px; }
-.assets-inventory thead th:nth-child(2) { width: 32%; }
-.assets-inventory thead th:nth-child(3) { width: 150px; }
-.assets-inventory thead th:nth-child(4) { width: 20%; }
+.assets-inventory thead th:nth-child(1) { width: 120px; }
+.assets-inventory thead th:nth-child(3) { width: 140px; }
+.assets-inventory thead th:nth-child(4) { width: 19%; }
+.assets-inventory thead th:nth-child(5) { width: 16%; }
 .assets-inventory thead th:nth-child(6) { width: 180px; }
 .assets-inventory thead th:nth-child(7) { width: 40px; }
-.assets-deliveries thead th:nth-child(1) { width: 100px; }
+.assets-deliveries thead th:nth-child(1) { width: 88px; }
 .assets-deliveries thead th:nth-child(2) { width: 120px; }
 .assets-deliveries thead th:nth-child(3) { width: 26%; }
 .assets-deliveries thead th:nth-child(4) { width: 30%; }
 .assets-deliveries thead th:nth-child(6) { width: 40px; }
 .assets-loans.assets-uniform :is(th, td) { min-width: 0 !important; max-width: none !important; }
-.assets-loans thead th:nth-child(1) { width: 100px; }
-.assets-loans thead th:nth-child(4) { width: 120px; }
-.assets-loans thead th:nth-child(5) { width: 170px; }
+.assets-loans thead th:nth-child(1) { width: 88px; }
+.assets-loans thead th:nth-child(4) { width: 108px; }
+.assets-loans thead th:nth-child(5) { width: 156px; }
 .assets-loans thead th:nth-child(6) { width: 120px; }
 .assets-loans thead th:nth-child(7) { width: 210px; }
 @media (max-width: 1360px) {
   .assets-loans .assets-narrow-only { display: inline; }
   .assets-loans .assets-narrow-hide { display: none; }
-  .assets-inventory thead th:nth-child(6) { width: 160px; }
+  .assets-inventory thead th:nth-child(6) { width: 172px; }
 }
 @media (max-width: 1180px) {
-  .assets-inventory thead th:nth-child(1) { width: 92px; }
-  .assets-deliveries thead th:nth-child(2) { width: 104px; }
+  .assets-inventory thead th:nth-child(1) { width: 100px; }
+  .assets-deliveries thead th:nth-child(1) { width: 84px; }
+  .assets-deliveries thead th:nth-child(2) { width: 96px; }
   .assets-deliveries :is(th, td):last-child { display: none; }
   .assets-loans thead th:nth-child(1) { width: 84px; }
   .assets-loans thead th:nth-child(5) { width: 140px; }
   .assets-loans thead th:nth-child(7) { width: 150px; }
   .assets-uniform tbody :is(th, td) { height: 72px; }
 }
-@media (max-width: 1440px) { .assets-inventory.assets-uniform .assets-serial-inline { display: inline; } }
+@media (max-width: 1600px) { .assets-inventory.assets-uniform .assets-serial-inline { display: inline; } }
 .assets-uniform .assets-chip + .assets-sub { margin-top: 2px; line-height: 1.3; }
 .assets-uniform td:has(.assets-chip) .assets-chip { padding-block: 2px; }
 .assets-uniform .assets-holder.assets-clip { display: flex; align-items: center; gap: 6px; }
 .assets-uniform tbody :is(th, td) { height: 68px; }
 @media (max-width: 1180px) { .assets-uniform tbody :is(th, td), .assets-people tbody :is(th, td) { height: 76px; } }
-/* En ventanas reducidas la ubicación usa dos líneas en vez de cortarse («Bodeg…»). */
+/* La ubicación usa hasta dos líneas antes de cortarse («Bodeg…»). */
+.assets-inventory.assets-uniform td:nth-child(5) .assets-clip { display: -webkit-box; white-space: normal; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+/* «Bien» recibe el resto; Código y Estado miden lo que necesitan su dato y el chip más largo («Préstamo vencido»). */
+@media (max-width: 1440px) { .assets-inventory thead th:nth-child(1) { width: 112px; } }
 @media (max-width: 1180px) {
-  .assets-inventory.assets-uniform td:nth-child(5) .assets-clip { display: -webkit-box; white-space: normal; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-  .assets-inventory thead th:nth-child(2) { width: 27%; }
-  .assets-inventory thead th:nth-child(4) { width: 19%; }
-  .assets-inventory thead th:nth-child(6) { width: 152px; }
+  .assets-inventory thead th:nth-child(1) { width: 92px; }
+  .assets-inventory thead th:nth-child(4) { width: 16%; }
+  .assets-inventory thead th:nth-child(5) { width: 19%; }
+  .assets-inventory thead th:nth-child(6) { width: 166px; }
+  .assets-inventory.assets-uniform td:nth-child(4) .assets-muted { white-space: normal; }
 }
