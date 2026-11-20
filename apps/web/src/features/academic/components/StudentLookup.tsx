@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass';
 import { UserIcon } from '@phosphor-icons/react/dist/csr/User';
 import { Value } from '@sinclair/typebox/value';
 import { StudentSearchSchema, compactRut, formatRutInput, isValidRutSearch, type StudentSearch, type StudentsResponse } from '@cenit/contracts/academic';
 import { getStudents, retryAcademicRead } from '../api/academic.js';
+import { Skeleton } from '../../../shared/components/Skeleton.js';
 
 export type Student = StudentsResponse['data'][number];
 export function StudentLookup({ accountId, selected, onSelect }: { accountId: string; selected: Student | null; onSelect: (student: Student | null) => void }) {
@@ -36,7 +37,8 @@ export function StudentLookup({ accountId, selected, onSelect }: { accountId: st
     const timer = setTimeout(() => setSearch(current => current.name === input.name && current.rut === input.rut ? current : input), 250);
     return () => clearTimeout(timer);
   }, [expanded, input.name, input.rut, validation]);
-  const query = useQuery({ queryKey: ['academic', accountId, 'students', search], queryFn: ({ signal }) => getStudents(search, signal), enabled: expanded && !validation && !waiting, retry: retryAcademicRead });
+  const query = useQuery({ queryKey: ['academic', accountId, 'students', search], queryFn: ({ signal }) => getStudents(search, signal), enabled: expanded && !validation && !waiting, placeholderData: keepPreviousData, retry: retryAcademicRead });
+  const updating = waiting || query.isFetching || query.isPlaceholderData;
   const dropStudent = () => { setExpanded(true); onSelect(null); nameInput.current?.focus(); };
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -57,7 +59,7 @@ export function StudentLookup({ accountId, selected, onSelect }: { accountId: st
     {selected && <div className="academic-students__heading">
       <p className="academic-student-identity"><strong>{selected.name}</strong><span>RUT {selected.rut}</span></p>
       <button ref={switchButton} type="button" className="cenit-button" aria-expanded={expanded} aria-controls="academic-students-search" onClick={() => setExpanded(!expanded)}><MagnifyingGlassIcon size={16} aria-hidden="true" />Cambiar estudiante</button>
-      <button type="button" className="academic-link-button" onClick={dropStudent}>Ver sólo catálogo</button>
+      <button type="button" className="cenit-button cenit-button--quiet" onClick={dropStudent}>Ver sólo catálogo</button>
     </div>}
     <div id="academic-students-search" hidden={!expanded}>
     <form className="academic-students__search" onSubmit={submit}>
@@ -67,9 +69,16 @@ export function StudentLookup({ accountId, selected, onSelect }: { accountId: st
       {selected && <button type="button" className="cenit-button" onClick={() => setExpanded(false)}>Cancelar</button>}
     </form>
     {validation && <p id="academic-students-error" className="academic-students__error" role="alert">{validation}</p>}
-    {!validation && (waiting || query.isFetching) && <p role="status">Buscando estudiantes…</p>}
+    {!validation && updating && <>
+      <p className="academic-students__count" role="status">Buscando estudiantes…</p>
+      <ul className="academic-students__results" aria-hidden="true">
+        {Array.from({ length: query.data?.data.length ?? search.pageSize }, (_, index) => <li key={index} className="academic-student-loading">
+          <Skeleton width="17px" height="17px" /><span><Skeleton width="6rem" /><Skeleton width="4rem" /></span>
+        </li>)}
+      </ul>
+    </>}
     {!validation && !waiting && query.error && <div className="academic-inline-error"><p role="alert">{query.error.message}</p><button className="cenit-button" onClick={() => { void query.refetch(); }}>Reintentar búsqueda</button></div>}
-    {!validation && !waiting && !query.isFetching && !query.error && query.data && <>
+    {!validation && !updating && !query.error && query.data && <>
       <p className="academic-students__count" role="status">{query.data.totalItems === 0 ? 'No hay estudiantes que coincidan con la búsqueda.' : `${query.data.totalItems} ${query.data.totalItems === 1 ? 'estudiante encontrado' : 'estudiantes encontrados'}${query.data.totalItems > search.pageSize ? ` · Mostrando ${(search.page - 1) * search.pageSize + 1}–${Math.min(search.page * search.pageSize, query.data.totalItems)}` : ''}`}</p>
       <ul className="academic-students__results">{query.data.data.map(student => <li key={student.id}><button type="button" aria-pressed={selected?.id === student.id} onClick={() => { setExpanded(false); onSelect(student); }}><UserIcon size={17} weight={selected?.id === student.id ? 'fill' : 'regular'} aria-hidden="true" /><span><strong>{student.name}</strong><small>{student.rut}</small></span></button></li>)}</ul>
       {query.data.totalItems > search.pageSize && <div className="academic-students__pagination"><button className="cenit-button" disabled={search.page === 1} onClick={() => setSearch({ ...search, page: search.page - 1 })}>Anterior</button><span>Página {search.page} de {Math.ceil(query.data.totalItems / search.pageSize)}</span><button className="cenit-button" disabled={search.page * search.pageSize >= query.data.totalItems} onClick={() => setSearch({ ...search, page: search.page + 1 })}>Siguiente</button></div>}

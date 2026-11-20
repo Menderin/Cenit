@@ -4,6 +4,7 @@ import type { CreatePurchase, PurchasePayload, PurchaseRecord, PurchaseListQuery
 import { headerFields, lineFields, administrativeFields } from '@cenit/contracts/purchases';
 import { ApiError } from '../../../infrastructure/errors.js';
 import { enqueuePurchaseSheets } from './sheets.js';
+import type { PurchaseExportRow, PurchaseExportBatch } from '../services/export.js';
 
 // Column names come exclusively from the versioned contract, never request keys.
 const column = (key: string) => key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
@@ -14,6 +15,27 @@ const canonical = (input: PurchasePayload) => JSON.stringify({
   lines: input.lines.map(line => lineKeys.map(key => line[key as keyof typeof line])),
 });
 type Db = Pick<PoolClient, 'query'>;
+
+function purchaseFilters(query: PurchaseListQuery) {
+  const values: unknown[] = [];
+  const parameter = (value: unknown) => { values.push(value); return `$${values.length}`; };
+  const predicates = [query.reviewStatus === 'all' ? 'TRUE' : `p.review_status=${parameter(query.reviewStatus)}`];
+  if (query.dateFrom) predicates.push(`p.sent_date >= ${parameter(query.dateFrom)}::date`);
+  if (query.dateTo) predicates.push(`p.sent_date <= ${parameter(query.dateTo)}::date`);
+  if (query.q) {
+    const escaped = query.q.replace(/[\\%_]/g, '\\$&');
+    const pattern = `('%' || cenit.normalize_purchase_search(${parameter(escaped)}) || '%')`;
+    predicates.push(`(p.request_number_search LIKE ${pattern} ESCAPE chr(92) OR p.description_search LIKE ${pattern} ESCAPE chr(92)
+      OR EXISTS (SELECT 1 FROM cenit.purchase_request_lines s WHERE s.request_id=p.id AND s.provider_search LIKE ${pattern} ESCAPE chr(92)))`);
+  }
+  const codes: string[] = [];
+  if (query.unitCode) codes.push(`l.unit_code=${parameter(query.unitCode)}`);
+  if (query.projectCode) codes.push(`l.project_code=${parameter(query.projectCode)}`);
+  if (codes.length) predicates.push(`EXISTS (SELECT 1 FROM cenit.purchase_request_lines l WHERE l.request_id=p.id AND ${codes.join(' AND ')})`);
+  const where = predicates.join(' AND ');
+  return { where, values };
+}
+
 export class PurchaseRepository {
   constructor(private readonly pool: Pool) {}
   private async transaction<T>(run: (db: PoolClient) => Promise<T>, readOnly = false): Promise<T> {
@@ -49,6 +71,7 @@ export class PurchaseRepository {
         date_trunc('year',now() AT TIME ZONE 'America/Santiago')::date AS year_start,
         to_char(now() AT TIME ZONE 'America/Santiago','YYYY-MM') AS registration_month
     ) SELECT coalesce(sum(total_amount),0)::text AS amount,
+      coalesce(sum(total_amount) FILTER (WHERE sent_date >= period.year_start AND sent_date < (period.year_start + interval '1 year')::date),0)::text AS year_amount,
       coalesce(sum(total_amount) FILTER (WHERE sent_date >= period.month_start AND sent_date < (period.month_start + interval '1 month')::date),0)::text AS month_amount,
       period.registration_month,
       (count(*) FILTER (WHERE sent_date >= period.year_start AND sent_date < (period.year_start + interval '1 year')::date))::int AS year,
@@ -63,14 +86,25 @@ export class PurchaseRepository {
     ), counts AS (SELECT (created_at AT TIME ZONE 'America/Santiago')::date AS day,count(*)::int AS count FROM cenit.purchase_requests
       WHERE created_at >= (((now() AT TIME ZONE 'America/Santiago')::date-29)::timestamp AT TIME ZONE 'America/Santiago') GROUP BY 1)
       SELECT dates.day::text AS date,coalesce(counts.count,0)::int AS count FROM dates LEFT JOIN counts USING(day) ORDER BY dates.day`);
+    const months = await db.query<{ month: string; count: number; amount: string }>(`WITH months AS (
+      SELECT generate_series(date_trunc('year',now() AT TIME ZONE 'America/Santiago')::date,date_trunc('year',now() AT TIME ZONE 'America/Santiago')::date + interval '11 month','1 month')::date AS start
+    ) SELECT to_char(months.start,'YYYY-MM') AS month,count(requests.id)::int AS count,coalesce(sum(requests.total_amount),0)::text AS amount
+      FROM months LEFT JOIN cenit.purchase_requests requests ON requests.sent_date >= months.start AND requests.sent_date < (months.start + interval '1 month')::date
+      GROUP BY months.start ORDER BY months.start`);
+    // Types are grouped without case so «COTIZACIÓN» and «Cotización» count once; the stored spelling is shown as written.
+    const types = await db.query<{ documentType: string | null; count: number; amount: string }>(`WITH period AS (SELECT date_trunc('year',now() AT TIME ZONE 'America/Santiago')::date AS year_start)
+      SELECT min(document_type) AS "documentType",count(*)::int AS count,sum(total_amount)::text AS amount
+      FROM cenit.purchase_requests,period WHERE sent_date >= period.year_start AND sent_date < (period.year_start + interval '1 year')::date
+      GROUP BY upper(document_type) ORDER BY sum(total_amount) DESC,2 DESC LIMIT 6`);
     const recent = await db.query(`SELECT id,request_number AS "requestNumber",description,sent_date::text AS "sentDate",total_amount AS "totalAmount",created_at AS "createdAt",source
-      FROM cenit.purchase_requests ORDER BY created_at DESC,id DESC LIMIT 5`);
+      FROM cenit.purchase_requests ORDER BY created_at DESC,id DESC LIMIT 8`);
     return { data: {
       requests: rows.reduce((total, row) => total + row.requests, 0), pending: rows.reduce((total, row) => total + row.pending, 0),
       currency: 'CLP', pendingAmount: rows.reduce((total, row) => total + BigInt(row.amount), 0n).toString(),
       days: rows.map(row => ({ date: row.date, count: row.pending })),
       overview: { documentTotal: metrics.amount, documentTotalThisMonth: metrics.month_amount, registrationMonth: metrics.registration_month,
         registeredThisYear: metrics.year, registeredThisMonth: metrics.month,
+        documentTotalThisYear: metrics.year_amount, monthlyTotals: months.rows, documentTypes: types.rows,
         sourceCounts: { manual: metrics.manual, image_capture: metrics.image_capture, contract_example: metrics.contract_example },
         registrationDays: activity.rows, recentRecords: recent.rows.map(row => ({ ...row, createdAt: row.createdAt.toISOString() })),
       },
@@ -149,22 +183,7 @@ export class PurchaseRepository {
   }
   async list(query: PurchaseListQuery): Promise<PurchaseListResponse> {
     return this.transaction(async db => {
-      const values: unknown[] = [];
-      const parameter = (value: unknown) => { values.push(value); return `$${values.length}`; };
-      const predicates = [query.reviewStatus === 'all' ? 'TRUE' : `p.review_status=${parameter(query.reviewStatus)}`];
-      if (query.dateFrom) predicates.push(`p.sent_date >= ${parameter(query.dateFrom)}::date`);
-      if (query.dateTo) predicates.push(`p.sent_date <= ${parameter(query.dateTo)}::date`);
-      if (query.q) {
-        const escaped = query.q.replace(/[\\%_]/g, '\\$&');
-        const pattern = `('%' || cenit.normalize_purchase_search(${parameter(escaped)}) || '%')`;
-        predicates.push(`(p.request_number_search LIKE ${pattern} ESCAPE chr(92) OR p.description_search LIKE ${pattern} ESCAPE chr(92)
-          OR EXISTS (SELECT 1 FROM cenit.purchase_request_lines s WHERE s.request_id=p.id AND s.provider_search LIKE ${pattern} ESCAPE chr(92)))`);
-      }
-      const codes: string[] = [];
-      if (query.unitCode) codes.push(`l.unit_code=${parameter(query.unitCode)}`);
-      if (query.projectCode) codes.push(`l.project_code=${parameter(query.projectCode)}`);
-      if (codes.length) predicates.push(`EXISTS (SELECT 1 FROM cenit.purchase_request_lines l WHERE l.request_id=p.id AND ${codes.join(' AND ')})`);
-      const where = predicates.join(' AND ');
+      const { where, values } = purchaseFilters(query);
       // EXISTS preserves one row per request. Both statements share this transaction's snapshot.
       const count = await db.query(`SELECT count(*)::int AS total,coalesce(sum(p.total_amount),0)::text AS amount,
         ARRAY(SELECT DISTINCT extract(year FROM sent_date)::int FROM cenit.purchase_requests ORDER BY 1 DESC) AS years
@@ -174,6 +193,36 @@ export class PurchaseRepository {
         CASE WHEN p.source='image_capture' THEN json_build_object('type','image_capture','extractionId',p.extraction_id,'processorVersion',p.processor_version,'processedAt',to_char(p.processed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) ELSE NULL END AS capture
         FROM cenit.purchase_requests p WHERE ${where} ORDER BY p.sent_date ${direction},p.id ${direction} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`, [...values, query.pageSize, (query.page - 1) * query.pageSize]);
       return { data: rows, pagination: { page: query.page, pageSize: query.pageSize, total: count.rows[0].total }, availableYears: count.rows[0].years, totals: { currency: 'CLP', documentTotal: count.rows[0].amount } };
+    }, true);
+  }
+  async export(query: PurchaseListQuery, consume: (batch: PurchaseExportBatch) => Promise<void>, signal: AbortSignal) {
+    return this.transaction(async db => {
+      const { where, values } = purchaseFilters(query);
+      signal.throwIfAborted();
+      const count = await db.query<{ total: number; amount: string }>(`SELECT count(*)::int AS total,coalesce(sum(p.total_amount),0)::text AS amount FROM cenit.purchase_requests p WHERE ${where}`, values);
+      if (count.rows[0]!.total > 10_000) throw new ApiError(413, 'EXPORT_LIMIT', 'La exportación supera el límite de 10.000 compras.');
+      const items = await db.query<{ total: number }>(`SELECT count(*)::int AS total FROM cenit.purchase_request_lines l JOIN cenit.purchase_requests p ON p.id=l.request_id WHERE ${where}`, values);
+      await consume({ kind: 'summary', purchaseCount: count.rows[0]!.total, itemCount: items.rows[0]!.total, documentTotal: count.rows[0]!.amount });
+      const direction = query.sort === 'sentDateAsc' ? 'ASC' : 'DESC';
+      for (let offset = 0; offset < count.rows[0]!.total; offset += 100) {
+        signal.throwIfAborted();
+        const batch = await db.query<Omit<PurchaseExportRow, 'line'>>(`SELECT p.id,p.request_number AS "requestNumber",p.sent_date::text AS "sentDate",p.description,p.total_amount AS "totalAmount",p.document_type AS "documentType",p.review_status AS "reviewStatus"
+          FROM cenit.purchase_requests p WHERE ${where} ORDER BY p.sent_date ${direction},p.id ${direction} LIMIT 100 OFFSET $${values.length + 1}`, [...values, offset]);
+        await consume({ kind: 'purchases', rows: batch.rows });
+      }
+      await consume({ kind: 'purchasesComplete' });
+      // A cursor bounds item batches independently of the number of lines in each purchase.
+      await db.query(`DECLARE purchase_export_items NO SCROLL CURSOR FOR SELECT l.request_id AS "requestId",l.position,${lineKeys.map(key => `l.${column(key)} AS "${key}"`).join(',')}
+        FROM cenit.purchase_request_lines l JOIN cenit.purchase_requests p ON p.id=l.request_id WHERE ${where}
+        ORDER BY p.sent_date ${direction},p.id ${direction},l.position`, values);
+      while (true) {
+        signal.throwIfAborted();
+        const batch = await db.query<NonNullable<PurchaseExportRow['line']> & { requestId: string }>('FETCH FORWARD 100 FROM purchase_export_items');
+        if (!batch.rows.length) break;
+        await consume({ kind: 'items', rows: batch.rows });
+      }
+      await db.query('CLOSE purchase_export_items');
+      signal.throwIfAborted();
     }, true);
   }
   async validate(id: string, expectedVersion: number, accountId: string): Promise<PurchaseRecord> {

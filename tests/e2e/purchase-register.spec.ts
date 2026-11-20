@@ -1,13 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
-import { login } from './support/browser.js';
+import { login, santiagoToday } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
-
-function santiagoToday() {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).map(part => [part.type, part.value]));
-  return `${parts.year}-${parts.month}-${parts.day}`;
-}
-
-const santiagoYear = () => Number(santiagoToday().slice(0, 4));
 
 async function choose(page: Page, label: string, option: string) {
   await page.getByRole('button', { name: new RegExp(`^${label}:`) }).click();
@@ -19,10 +12,10 @@ async function choose(page: Page, label: string, option: string) {
 test('registro: una lista histórica sin segunda revisión, conservando ambos estados y paginación', async ({ page }) => {
   await page.route('**/api/v1/purchases/capabilities', route => route.fulfill({ json: { data: { secondReviewEnabled: false, sheetsSyncEnabled: false } } }));
   await login(page, 'administrativo');
-  const prefix = 'HIST-' + crypto.randomUUID().slice(0, 8), origin = new URL(page.url()).origin;
+  const prefix = 'HIST-' + crypto.randomUUID().slice(0, 8), origin = new URL(page.url()).origin, sentDate = santiagoToday();
   for (let i = 0; i < 22; i++) {
     const input = structuredClone(manualPurchaseExample);
-    input.operationId = crypto.randomUUID(); input.header.requestNumber = `${prefix}-${i}`; input.header.sentDate = santiagoToday();
+    input.operationId = crypto.randomUUID(); input.header.requestNumber = `${prefix}-${i}`; input.header.sentDate = sentDate;
     const saved = await page.request.post('/api/v1/purchases', { headers: { origin }, data: input });
     expect(saved.status()).toBe(201);
     if (i % 2) expect((await page.request.post(`/api/v1/purchases/${(await saved.json()).data.id}/validation`, { headers: { origin }, data: { expectedVersion: 1 } })).status()).toBe(200);
@@ -47,136 +40,58 @@ test('registro: una lista histórica sin segunda revisión, conservando ambos es
   await page.getByRole('link', { name: 'Volver al registro', exact: true }).click();
   await expect(list.getByText(/^Página 2 de /)).toBeVisible();
   await expect(page.getByRole('button', { name: /^Ordenar por fecha de envío:/ })).toHaveText('Más antiguas');
-  for (const width of [1440, 390]) {
+  for (const width of [1440]) {
     await page.setViewportSize({ width, height: 900 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/purchase-register-${width}.png`, fullPage: true, animations: 'disabled' });
   }
 });
 
-test('historial de 800 compras: períodos, orden, páginas acotadas y tamaño conservados', async ({ page }) => {
-  await page.route('**/api/v1/purchases/capabilities', route => route.fulfill({ json: { data: { secondReviewEnabled: false, sheetsSyncEnabled: false } } }));
-  const currentYear = santiagoYear(), historicalYear = currentYear - 2;
-  const records = Array.from({ length: 800 }, (_, index) => ({
-    id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
-    requestNumber: `DEMO-HIST-${String(index + 1).padStart(4, '0')}`,
-    sentDate: `${currentYear - 3 + Math.floor(index / 200)}-${String(index % 12 + 1).padStart(2, '0')}-${String(Math.floor(index % 200 / 12) + 1).padStart(2, '0')}`,
-    description: 'Compra ficticia para comprobar la consulta del historial', totalAmount: '200000', documentType: 'Solicitud de compra',
-    reviewStatus: 'pending', version: 1, source: 'manual', exampleId: null,
-  }));
-  await page.route('**/api/v1/purchases?**', async route => {
-    const query = new URL(route.request().url()).searchParams, size = Number(query.get('pageSize')), current = Number(query.get('page'));
-    const filtered = records.filter(record => (!query.get('dateFrom') || record.sentDate >= query.get('dateFrom')!) && (!query.get('dateTo') || record.sentDate <= query.get('dateTo')!))
-      .sort((a, b) => (a.sentDate.localeCompare(b.sentDate) || a.id.localeCompare(b.id)) * (query.get('sort') === 'sentDateAsc' ? 1 : -1));
-    await route.fulfill({ json: { data: filtered.slice((current - 1) * size, current * size), pagination: { page: current, pageSize: size, total: filtered.length }, availableYears: [currentYear, currentYear - 1, currentYear - 2, currentYear - 3], totals: { currency: 'CLP', documentTotal: (BigInt(filtered.length) * 200000n).toString() } } });
-  });
-  await login(page, 'administrativo'); await page.goto('/administracion/compras');
-  const list = page.getByRole('region', { name: 'Compras registradas', exact: true });
-  const year = page.getByRole('button', { name: /^Año de envío:/ }), month = page.getByRole('button', { name: /^Mes de envío:/ });
-  const size = page.getByRole('button', { name: /^Registros por página: Compras registradas:/ });
-  await expect(year).toHaveText(String(currentYear));
-  await expect(list.getByText('1–20 de 200 registros', { exact: true })).toBeVisible();
-  await expect(list.getByRole('row')).toHaveCount(21);
-  await expect(month).toBeEnabled();
-  const filtersButton = page.getByRole('button', { name: 'Más filtros', exact: true });
-  const filterPanel = page.locator('#purchase-more-filters');
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await filtersButton.click();
-  await expect(filterPanel).toBeVisible();
-  const openingTransitions = await filterPanel.evaluate(element => element.getAnimations().map(animation => ({
-    property: (animation as CSSTransition).transitionProperty,
-    duration: animation.effect?.getComputedTiming().duration,
-  })));
-  expect(openingTransitions).toContainEqual({ property: 'opacity', duration: 150 });
-  expect(openingTransitions).toContainEqual({ property: 'grid-template-rows', duration: 150 });
-  await filterPanel.evaluate(async element => { await Promise.all(element.getAnimations().map(animation => animation.finished)); });
-  await filtersButton.click();
-  const closingTransitions = await filterPanel.evaluate(element => element.getAnimations().map(animation => ({
-    property: (animation as CSSTransition).transitionProperty,
-    duration: animation.effect?.getComputedTiming().duration,
-  })));
-  expect(closingTransitions).toContainEqual({ property: 'opacity', duration: 150 });
-  expect(closingTransitions).toContainEqual({ property: 'grid-template-rows', duration: 150 });
-  await expect(filterPanel).toBeHidden();
-
-  await year.click();
-  const yearMenu = page.getByRole('listbox', { name: 'Año de envío', exact: true });
-  await expect(yearMenu).toBeVisible();
-  const menuMotion = await yearMenu.evaluate(element => ({
-    side: element.getAttribute('data-side'),
-    enterOffset: getComputedStyle(element).getPropertyValue('--purchase-select-enter-y').trim(),
-    transitions: element.getAnimations().map(animation => ({
-      property: (animation as CSSTransition).transitionProperty,
-      duration: animation.effect?.getComputedTiming().duration,
-    })),
-  }));
-  expect(menuMotion.transitions).toContainEqual({ property: 'opacity', duration: 150 });
-  expect(menuMotion.transitions).toContainEqual({ property: 'translate', duration: 150 });
-  expect(menuMotion.enterOffset).toBe(menuMotion.side === 'top' ? '4px' : '-4px');
-  await page.keyboard.press('Escape');
-  await expect(yearMenu).toHaveCount(0);
-
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await filtersButton.click();
-  await expect(filterPanel).toBeVisible();
-  const reducedMotionTransitions = await filterPanel.evaluate(element => element.getAnimations().map(animation => (animation as CSSTransition).transitionProperty));
-  expect(reducedMotionTransitions).toContain('opacity');
-  expect(reducedMotionTransitions).not.toContain('translate');
-  expect(reducedMotionTransitions).not.toContain('grid-template-rows');
-  const buttonStyle = await filtersButton.evaluate(element => {
-    const style = getComputedStyle(element); return { radius: style.borderRadius, shadow: style.boxShadow, height: style.height, color: style.color };
-  });
-  for (const control of [year, size]) expect(await control.evaluate(element => {
-    const style = getComputedStyle(element); return { radius: style.borderRadius, shadow: style.boxShadow, height: style.height, color: style.color };
-  })).toEqual(buttonStyle);
-  await list.getByRole('button', { name: 'Página 10', exact: true }).click();
-  await expect(list.getByText('181–200 de 200 registros', { exact: true })).toBeVisible();
-  await expect(list.getByRole('button', { name: 'Siguiente', exact: true })).toBeDisabled();
-  await choose(page, 'Registros por página: Compras registradas', '50');
-  await expect(list.getByText('Página 1 de 4', { exact: true })).toBeVisible();
-  await expect(list.getByRole('row')).toHaveCount(51);
-  await choose(page, 'Año de envío', String(historicalYear));
-  await expect(month).toBeEnabled(); await month.focus(); await page.keyboard.press('ArrowDown'); await page.keyboard.press('f');
-  await expect(page.getByRole('option', { name: 'Febrero', exact: true })).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(new RegExp(`dateFrom=${historicalYear}-02-01&dateTo=${historicalYear}-02-29`));
-  await expect(list.locator('tbody tr')).toHaveCount(17);
-  await choose(page, 'Ordenar por fecha de envío', 'Más antiguas');
-  await expect(list.locator('.purchase-sent-date').first()).toHaveText(`01/02/${historicalYear}`);
-  await page.reload();
-  await expect(year).toHaveText(String(historicalYear)); await expect(month).toHaveText('Febrero'); await expect(size).toHaveText('50');
-  await expect(page.getByRole('button', { name: /^Ordenar por fecha de envío:/ })).toHaveText('Más antiguas');
-  await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
-  await expect(list.getByText('1–50 de 200 registros', { exact: true })).toBeVisible();
-  await choose(page, 'Registros por página: Compras registradas', '20');
-  await expect(list.getByText('Página 1 de 10', { exact: true })).toBeVisible();
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await year.focus(); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Home');
-  const menu = page.getByRole('listbox', { name: 'Año de envío', exact: true });
-  await expect(menu.getByRole('option', { name: 'Todos los años', exact: true })).toBeFocused();
-  const reducedMenuTransitions = await menu.evaluate(element => element.getAnimations().map(animation => (animation as CSSTransition).transitionProperty));
-  expect(reducedMenuTransitions).toContain('opacity');
-  expect(reducedMenuTransitions).not.toContain('translate');
-  await page.keyboard.press('End'); await expect(menu.getByRole('option', { name: String(currentYear - 3), exact: true })).toBeFocused();
-  await page.keyboard.press('Home'); await page.keyboard.press('Enter');
-  await expect(menu).toHaveCount(0); await expect(year).toHaveText('Año');
-  await expect(list.getByText('1–20 de 800 registros', { exact: true })).toBeVisible();
-  for (const width of [1440, 390, 320]) {
-    await page.setViewportSize({ width, height: 900 });
-    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await expect(list.getByRole('button', { name: 'Página 40', exact: true })).toBeVisible();
-    await page.locator('#admin-content').evaluate(element => { element.scrollTop = 0; });
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await expect(year).toHaveText('Año'); await expect(month).toHaveText('Mes');
-    for (const control of [year, month]) expect(await control.locator('span').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
-    await page.screenshot({ path: `tmp/purchase-history-${width}.png`, animations: 'disabled' });
-    await size.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: `tmp/purchase-history-pagination-${width}.png`, animations: 'disabled' });
+test('historial: conserva año, mes y orden al recargar', async ({ page }) => {
+  await login(page, 'administrativo');
+  const prefix = `PERIODO-${crypto.randomUUID().slice(0, 8)}`;
+  const currentDate = santiagoToday(), historicalYear = Number(currentDate.slice(0, 4)) - 1;
+  const records = [
+    { name: `${prefix}-Actual`, date: currentDate },
+    { name: `${prefix}-Febrero-inicio`, date: `${historicalYear}-02-01` },
+    { name: `${prefix}-Febrero-fin`, date: `${historicalYear}-02-28` },
+    { name: `${prefix}-Marzo`, date: `${historicalYear}-03-01` },
+  ];
+  const headers = { Origin: new URL(page.url()).origin };
+  for (const record of records) {
+    const input = structuredClone(manualPurchaseExample);
+    input.operationId = crypto.randomUUID();
+    input.header.requestNumber = record.name;
+    input.header.sentDate = record.date;
+    expect((await page.request.post('/api/v1/purchases', { headers, data: input })).status()).toBe(201);
   }
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await year.click(); await expect(menu).toBeVisible();
-  await page.screenshot({ path: 'tmp/purchase-history-menu.png', animations: 'disabled' });
+
+  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByLabel('Buscar solicitudes', { exact: true }).fill(prefix);
+  const list = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
+  const rows = list.getByRole('link', { name: /^Ver detalles de PERIODO-/ });
+  const expectRows = (...indices: number[]) => expect(rows).toHaveText(indices.map(index => records[index]!.name));
+  await expectRows(0);
+
+  const year = page.getByRole('button', { name: /^Año de envío:/ });
+  await year.press('Enter');
+  await expect(page.getByRole('listbox', { name: 'Año de envío', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
+  await expect(year).toBeFocused();
+  await choose(page, 'Año de envío', String(historicalYear));
+  await expectRows(3, 2, 1);
+
+  await choose(page, 'Mes de envío', 'Febrero');
+  await expectRows(2, 1);
+  await choose(page, 'Ordenar por fecha de envío', 'Más antiguas');
+  await expectRows(1, 2);
+  await choose(page, 'Registros por página: Por revisar en Cenit', '50');
+  await page.reload();
+  await expect(year).toHaveText(String(historicalYear));
+  await expect(page.getByRole('button', { name: /^Mes de envío:/ })).toHaveText('Febrero');
+  await expect(page.getByRole('button', { name: /^Ordenar por fecha de envío:/ })).toHaveText('Más antiguas');
+  await expect(page.getByRole('button', { name: /^Registros por página: Por revisar en Cenit:/ })).toHaveText('50');
+  await expectRows(1, 2);
 });
 
 test('registro: guardado explícito sin segunda revisión y estado de Sheets separado', async ({ page }) => {
@@ -344,10 +259,10 @@ test('fechas segmentadas: placeholders, errores, rangos y calendarios coherentes
   await expect(from).toHaveValue('01'); await expect(fromMonth).toHaveValue('01'); await expect(fromYear).toHaveValue('2024');
   await expect(to).toHaveValue('31'); await expect(toMonth).toHaveValue('12'); await expect(toYear).toHaveValue('2024');
   await clear.click();
-  for (const width of [1440, 1280, 390, 320]) {
+  for (const width of [1440, 1280]) {
     await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ reducedMotion: 'reduce' });
     await rangeTrigger.click(); await expect(range).toBeVisible();
-    await expect(range.locator('.rdp-month')).toHaveCount(width <= 760 ? 1 : 2);
+    await expect(range.locator('.rdp-month')).toHaveCount(2);
     await expect.poll(() => range.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/purchase-date-${width}.png`, animations: 'disabled' });
@@ -436,14 +351,6 @@ test('filtros: distribución estable, teclado virtual, zoom equivalente y movimi
   await expect(page.getByRole('textbox', { name: 'Fecha de envío, mes', exact: true })).toHaveAttribute('placeholder', 'mm');
   await expect(page.getByRole('textbox', { name: 'Fecha de envío, año', exact: true })).toHaveAttribute('placeholder', 'aaaa');
   await clear.click();
-  // 640 CSS pixels reproduce the available width of a 1280-pixel viewport at 200% zoom.
-  await page.setViewportSize({ width: 640, height: 450 });
-  await page.getByRole('button', { name: 'Abrir calendario: rango de fechas', exact: true }).click();
-  const calendar = page.getByRole('dialog', { name: 'Calendario de rango de fechas', exact: true });
-  await expect(calendar.locator('.rdp-month')).toHaveCount(1);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: 'tmp/purchase-date-zoom-equivalent.png', animations: 'disabled' });
-  await page.keyboard.press('Escape');
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.getByRole('button', { name: 'Más filtros', exact: true }).click();

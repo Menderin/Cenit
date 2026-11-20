@@ -1,5 +1,5 @@
 import { Value } from '@sinclair/typebox/value';
-import { SessionResponseSchema, type LoginRequest, type SessionResponse } from '@cenit/contracts/auth';
+import { ProfileResponseSchema, SessionResponseSchema, type LoginRequest, type SessionResponse } from '@cenit/contracts/auth';
 import { api, HttpError } from '../../../shared/lib/http.js';
 
 async function readSession(response: Response): Promise<SessionResponse['data']> {
@@ -8,6 +8,12 @@ async function readSession(response: Response): Promise<SessionResponse['data']>
   return value.data;
 }
 export const getSession = async (signal?: AbortSignal) => readSession(await api('/auth/session', { signal }));
+export async function getProfile(signal: AbortSignal) {
+  const response = await api('/auth/profile', { signal });
+  const value: unknown = await response.json().catch(() => null);
+  if (!Value.Check(ProfileResponseSchema, value)) throw new HttpError(0, 'El servidor devolvió un perfil inválido.');
+  return value.data;
+}
 export const signIn = async (input: LoginRequest) => readSession(await api('/auth/login', {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
 }));

@@ -1,7 +1,7 @@
 import io
 import unittest
 from PIL import Image
-from extractor import decode, candidates, money, sent, capture_layout, header, grouped, table, add_region, ProcessingError, MAX_BYTES
+from extractor import decode, candidates, money, sent, capture_layout, header, grouped, table, read_cell, add_region, extract, ProcessingError, MAX_BYTES
 from unittest.mock import patch
 from PIL import ImageDraw
 
@@ -50,6 +50,12 @@ class ImageValidation(unittest.TestCase):
             decode(image_bytes(), 'image/jpeg')
         self.assertEqual(error.exception.status, 415)
 
+    def test_extract_rejects_mime_mismatch_despite_admitted_filename(self):
+        # Regression found reviewing ihelo's PR #55 (35f336a).
+        with self.assertRaises(ProcessingError) as error:
+            extract(None, image_bytes(), 'capture.jpg', 'image/jpeg')
+        self.assertEqual(error.exception.status, 415)
+
     def test_animated_png(self):
         output = io.BytesIO()
         Image.new('RGB', (20, 20), 'white').save(output, format='PNG', save_all=True, append_images=[Image.new('RGB', (20, 20), 'black')], duration=100, loop=0)
@@ -82,14 +88,39 @@ class CandidateMapping(unittest.TestCase):
         self.assertFalse(any(r['path'].startswith('/administrative/') for r in regions))
 
     def test_grid_skips_toolbar_and_page_frame(self):
+        for open_border, covered_border in [(False, False), (True, False), (True, True)]:
+            with self.subTest(open_border=open_border, covered_border=covered_border):
+                self.check_grid(open_border, covered_border)
+
+    def test_tightly_stacked_cell_lines_are_detected_separately(self):
+        image = Image.new('RGB', (100, 30), 'white')
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((5, 3, 30, 10), fill='black')
+        draw.rectangle((5, 13, 30, 20), fill='black')
+        calls = []
+
+        class Reading:
+            txts = ['PROVEEDOR', 'DEMO']
+
+        def engine(crop, **options):
+            calls.append(options)
+            return Reading()
+
+        self.assertEqual(read_cell(engine, image), 'PROVEEDOR DEMO')
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(calls[0]['use_det'])
+
+    def check_grid(self, open_border, covered_border):
         image=Image.new('RGB',(1085,658),'white')
         draw=ImageDraw.Draw(image)
         draw.line((1,0,1,658),fill='#204d6b',width=2)
         xs=[20,364,452,721,766,822,864,914,1069]
         for y in [211,226,249,285,341]:
             draw.line((20,y,1069,y),fill='#d5e0eb')
-        for x in xs:
+        for x in xs[:-1] if open_border else xs:
             draw.line((x,249,x,341),fill='#d5e0eb')
+        if covered_border:
+            draw.rectangle((20,338,450,344), fill='white')
         groups=[dict(center=198,text='Líneas de Solicitud Interna',words=[dict(x=20,h=14)]),
                 dict(center=380,text='Secuencia de Aprobación',words=[dict(x=20,h=14)])]
         labels=['Descripción','Proveedor','Centro de Costos','Unidad','Cantidad','Precio (CLP)','Importe (CLP)','Cuenta de Cargo']
@@ -134,6 +165,7 @@ class CandidateMapping(unittest.TestCase):
     def test_calendar(self):
         self.assertEqual(sent('08-Dic-2025 16:35:54'), ('2025-12-08', '16:35:54'))
         self.assertEqual(sent('08-Dec-2025'), ('2025-12-08', None))
+        self.assertEqual(sent(': 08-Dic-2025 16:35:54'), ('2025-12-08', '16:35:54'))
         for raw in ['31-Feb-2026 10:00:00', '08-Dec-2025 25:00:00', '01/01/0000', 'unknown']:
             self.assertEqual(sent(raw), (None, None))
 

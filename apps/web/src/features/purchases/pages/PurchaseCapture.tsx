@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft';
 import { UploadSimpleIcon } from '@phosphor-icons/react/dist/csr/UploadSimple';
+import { ImageIcon } from '@phosphor-icons/react/dist/csr/Image';
+import { CheckCircleIcon } from '@phosphor-icons/react/dist/csr/CheckCircle';
+import { CircleNotchIcon } from '@phosphor-icons/react/dist/csr/CircleNotch';
+import { WarningCircleIcon } from '@phosphor-icons/react/dist/csr/WarningCircle';
 import { createReviewDraft, type ExtractionResponse } from '@cenit/contracts/purchases';
 import { extractPurchase } from '../api/purchases.js';
 import { PurchaseForm } from '../components/PurchaseForm.js';
@@ -27,6 +31,8 @@ export function PurchaseCapture() {
   const [busy, setBusy] = useState(false), [checking, setChecking] = useState(false), [saving, setSaving] = useState(false);
   const [error, setError] = useState(restored?.file && !restored.original ? 'El análisis se interrumpió. Puedes reintentarlo.' : '');
   const [dragging, setDragging] = useState(false), [activePath, setActivePath] = useState('');
+  // When reading fails, the person may still transcribe the image by hand; that record is saved as a manual entry.
+  const [manual, setManual] = useState(() => !!restored && !restored.original && JSON.stringify(restored.draft) !== JSON.stringify(emptyDraft()));
   const input = useRef<HTMLInputElement>(null), workspace = useRef<HTMLDivElement>(null);
   const preview = useRef<string | null>(selected?.url ?? null), saved = useRef(false);
   const request = useRef<AbortController | null>(null), generation = useRef(0);
@@ -39,7 +45,7 @@ export function PurchaseCapture() {
 
   async function runExtraction(file: File) {
     const current = ++generation.current, controller = new AbortController();
-    request.current?.abort(); request.current = controller; setBusy(true); setError('');
+    request.current?.abort(); request.current = controller; setBusy(true); setError(''); setManual(false);
     try {
       const result = await extractPurchase(file, controller.signal);
       if (current !== generation.current) return;
@@ -50,7 +56,7 @@ export function PurchaseCapture() {
   }
   async function applyFile(file: File) {
     const current = ++generation.current;
-    request.current?.abort(); setBusy(false); setChecking(true); setError(''); setOriginal(null); setDraft(emptyDraft()); setLineKeys([]); setActivePath(''); setOperationId(crypto.randomUUID());
+    request.current?.abort(); setBusy(false); setChecking(true); setError(''); setManual(false); setOriginal(null); setDraft(emptyDraft()); setLineKeys([]); setActivePath(''); setOperationId(crypto.randomUUID());
     if (preview.current) URL.revokeObjectURL(preview.current);
     preview.current = null; setSelected(null);
     try {
@@ -90,13 +96,20 @@ export function PurchaseCapture() {
     </div>
     <div ref={workspace} className="capture-workspace">
       <div className={`capture-image-area${dragging ? ' capture-image-area--dragging' : ''}`} onDragOver={event => { event.preventDefault(); if (!saving) setDragging(true); }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); }} onDrop={event => { event.preventDefault(); setDragging(false); select(event.dataTransfer.files, fileTrigger.current); }}>
-        {selected ? <CapturePreview selected={selected} regions={(original?.data.regions ?? []).filter(region => !region.path.startsWith('/lines/') || lineKeys.includes(`capture-${region.path.split('/')[2]}`))} activePath={activePath} onSelect={chooseRegion} /> : <button type="button" className="capture-placeholder capture-drop" disabled={checking} onClick={event => { fileTrigger.current = event.currentTarget; input.current?.click(); }}><UploadSimpleIcon size={40} aria-hidden="true" /><strong>Arrastra la imagen aquí</strong><span>O haz clic para seleccionarla desde tu equipo</span><small>PNG o JPEG · hasta 5 MiB y 20 megapíxeles</small></button>}
+        {selected ? <CapturePreview selected={selected} regions={(original?.data.regions ?? []).filter(region => !region.path.startsWith('/lines/') || lineKeys.includes(`capture-${region.path.split('/')[2]}`))} activePath={activePath} onSelect={chooseRegion} /> : <button type="button" className="capture-placeholder capture-drop" disabled={checking} onClick={event => { fileTrigger.current = event.currentTarget; input.current?.click(); }}><span className="capture-drop__icon"><ImageIcon size={28} aria-hidden="true" /></span><strong>Arrastra la imagen aquí</strong><span>o</span><span className="cenit-button cenit-button--primary capture-drop__choose"><UploadSimpleIcon size={18} aria-hidden="true" />Elegir imagen</span><small>PNG o JPEG · hasta 5 MiB y 20 megapíxeles</small></button>}
       </div>
       <div className="capture-review" aria-busy={busy || checking}>
         {original && <div className="capture-layout" role="status"><strong>{original.data.captureLayout?.status === 'compatible' ? 'Formato compatible' : 'Captura parcial'}</strong><span>Revisa los datos antes de guardar.</span></div>}
-        {selected && <PurchaseForm draft={draft} onChange={setDraft} lineKeys={lineKeys} onLineKeysChange={setLineKeys} operationId={operationId} origin={original?.data.origin ?? null} original={original ?? undefined}
-          activePath={activePath} onFieldFocus={setActivePath} disabled={!original || busy || checking} onSavingChange={setSaving} returnTo={returnTo} onSaved={() => { saved.current = true; }} />}
-        {!selected && <div className="capture-placeholder capture-placeholder--form"><h2>Datos de la compra</h2><p>Aquí podrás revisar y completar la cabecera y los ítems.</p><div className="capture-placeholder__fields" aria-hidden="true"><span /><span /><span /><span /></div></div>}
+        {selected && (original || manual) && <PurchaseForm draft={draft} onChange={setDraft} lineKeys={lineKeys} onLineKeysChange={setLineKeys} operationId={operationId} origin={original?.data.origin ?? null} original={original ?? undefined}
+          activePath={activePath} onFieldFocus={setActivePath} disabled={busy || checking} onSavingChange={setSaving} returnTo={returnTo} onSaved={() => { saved.current = true; }} />}
+        {selected && !original && !manual && (busy || checking ? <div className="capture-panel"><span className="capture-panel__icon"><CircleNotchIcon className="capture-spin" size={26} aria-hidden="true" /></span><h2>Leyendo la solicitud…</h2><p>Cenit propone los datos y tú los revisas antes de guardar. Mientras tanto puedes mirar la imagen o cambiarla.</p>
+          <ul className="capture-steps"><li data-state="done"><CheckCircleIcon size={18} aria-hidden="true" />Imagen recibida</li><li data-state="current"><CircleNotchIcon className="capture-spin" size={18} aria-hidden="true" />Leyendo los datos</li></ul></div>
+          : <div className="capture-panel capture-panel--problem"><span className="capture-panel__icon"><WarningCircleIcon size={26} aria-hidden="true" /></span><h2>No pudimos leer la imagen</h2><p>Tu imagen sigue aquí. Puedes reintentar la lectura en un momento o completar los campos mirando la imagen al lado; en ese caso se guarda como ingreso manual.</p>
+            <button className="cenit-button" type="button" onClick={() => setManual(true)}>Completar a mano con la imagen al lado</button></div>)}
+        {!selected && <div className="capture-panel capture-guide"><h2>Así funciona</h2>
+          <ol className="capture-guide__steps"><li><b>1</b><div><strong>Sube la imagen</strong><span>Una captura de pantalla o foto de la solicitud aprobada en Oracle.</span></div></li><li><b>2</b><div><strong>Revisa los campos</strong><span>Cenit propone los datos; compara cada uno con la imagen y corrige lo necesario.</span></div></li><li><b>3</b><div><strong>Guarda el registro</strong><span>Nada se guarda hasta que lo confirmes.</span></div></li></ol>
+          <p className="capture-guide__tip"><strong>Para una mejor lectura:</strong> que se vean completos el número de solicitud, la fecha de envío y el monto total.</p>
+          <Link className="capture-guide__manual" to="/administracion/compras/nueva" state={{ purchasesReturnTo: returnTo }}>¿Sin imagen? Registrar a mano</Link></div>}
       </div>
     </div>
   </section>;

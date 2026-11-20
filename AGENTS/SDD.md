@@ -13,6 +13,7 @@ El diseño vigente se mantiene en [Diseño de software: arquitectura y funcionam
 | Capturas, candidatos, límites y procedencia | [OCR](../Docs/ARQUITECTURA.md#capturas-y-ocr) |
 | Catálogo versionado, reglas interpretadas e historiales | [Académico](../Docs/ARQUITECTURA.md#académico) |
 | Persistencia, migrador y contratos públicos | [Persistencia y contratos](../Docs/ARQUITECTURA.md#persistencia-y-contratos) |
+| Diccionario y relaciones de cuentas, compras y entrega a Sheets | [Esquema administrativo](../Docs/ARQUITECTURA.md#esquema-administrativo) |
 | Distribución de archivos y límites de dependencia | [Estructura](ESTRUCTURA.md) |
 | Variables, secretos por referencia y arranque | [Entorno local](../deploy/LOCAL.md) |
 | CI/CD, VM actual, diagnóstico y recuperación | [Azure](../deploy/azure/README.md) |

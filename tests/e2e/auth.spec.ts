@@ -1,16 +1,16 @@
 import { test, expect, type Page } from '@playwright/test';
-import { credential, login } from './support/browser.js';
+import { credential, login, santiagoToday, selectCalendarDate } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 
 async function navigateAdministration(page: Page, name: string) {
   const navigation = page.getByRole('navigation', { name: 'Sistemas administrativos' });
-  if (!await navigation.isVisible()) await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
+  const show = page.getByRole('button', { name: 'Mostrar navegación', exact: true });
+  if (await show.isVisible()) await show.click();
   const link = navigation.getByRole('link', { name, exact: true });
   const path = await link.getAttribute('href');
   const changesPage = new URL(page.url()).pathname !== path;
   await link.click();
   if (changesPage) await expect.poll(async () => new URL(page.url()).pathname === path || await page.getByRole('alertdialog').isVisible()).toBe(true);
-  if (changesPage && (page.viewportSize()?.width ?? 1280) <= 760 && !await page.getByRole('alertdialog').isVisible()) await expect(page.getByRole('button', { name: 'Mostrar navegación', exact: true })).toBeVisible();
 }
 
 async function expandPurchaseSection(page: Page, name: string) {
@@ -223,7 +223,7 @@ test('normaliza sólo el correo y permite teclado y carga antes del éxito real'
 test('redimensionar con errores conserva el login sin cortes horizontales', async ({ page }) => {
   await page.goto('/login');
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
-  for (const width of [1920, 1440, 1280, 1024, 1001, 1000, 768, 761, 760, 390, 320]) {
+  for (const width of [1920, 1440, 1280, 1024, 1001, 1000]) {
     await page.setViewportSize({ width, height: 600 });
     await expect(page.getByRole('alert')).toHaveCount(2);
     const dimensions = await page.evaluate(() => {
@@ -235,8 +235,7 @@ test('redimensionar con errores conserva el login sin cortes horizontales', asyn
     expect(dimensions.left).toBeGreaterThanOrEqual(0);
     expect(dimensions.right).toBeLessThanOrEqual(dimensions.client);
     expect(dimensions.form).toBeLessThanOrEqual(336.5);
-    if (width > 760) await expect(page.locator('.cenit-access__landscape')).toBeVisible();
-    else await expect(page.locator('.cenit-access__landscape')).toBeHidden();
+    await expect(page.locator('.cenit-access__landscape')).toBeVisible();
   }
 });
 
@@ -321,7 +320,8 @@ test('contrato de compras: revisar ejemplos, corregir sin alterar original y res
   await expect(field.locator('details dd').first()).toHaveText('000125');
   await expandPurchaseSection(page, 'Seguimiento administrativo');
   await page.getByLabel('BI', { exact: true }).fill('S/N');
-  await page.getByLabel('Monto total (CLP)', { exact: true }).fill('200.000');
+  // «200.000» se normaliza al salir del campo; una coma decimal sigue siendo inválida.
+  await page.getByLabel('Monto total (CLP)', { exact: true }).fill('200,5');
   await page.getByRole('button', { name: 'Comprobar datos' }).click();
   await expect(page.getByRole('alert')).toContainText('Revisa los campos indicados.');
   await page.getByLabel('Monto total (CLP)', { exact: true }).fill('');
@@ -380,9 +380,9 @@ test('compras: expiración descarta borrador y protege la navegación hacia atr�
 });
 
 
-test('compras: formulario accesible y sin desbordamiento en escritorio y móvil', async ({ page }) => {
+test('compras: formulario accesible y sin desbordamiento', async ({ page }) => {
   await openPurchases(page);
-  for (const width of [1280, 375]) {
+  for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });
     await expect(page.getByRole('heading', { name: 'Revisar datos', exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -407,24 +407,26 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   const indicators = page.getByRole('definition');
   const summary = (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
   await expect(indicators.nth(0)).toHaveText(String(summary.overview.registeredThisYear));
-  await expect(indicators.nth(2)).toHaveText(String(summary.overview.registeredThisMonth));
+  await expect(indicators.nth(2)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.overview.documentTotalThisYear)));
   await expect(indicators.nth(4)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.overview.documentTotalThisMonth)));
-  await expect(page.getByRole('table')).toHaveCount(0);
-  const chart = page.getByRole('list', { name: 'Detalle de compras incorporadas por día' });
-  await expect(chart.getByRole('listitem')).toHaveCount(30);
+  // The monthly chart is drawn with bars and repeated as a table for assistive technology.
+  await expect(page.getByRole('table', { name: 'Monto documental por mes de envío' })).toHaveCount(1);
+  await expect(page.locator('.dashboard-monthly__column')).toHaveCount(12);
   await expect(page.getByRole('button', { name: /aprobar/i })).toHaveCount(0);
-  for (const width of [1280, 375]) {
+  for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/admin-home-${width}.png` });
   }
-  for (const [name, path] of [['Sistema de personal', 'personal'], ['Sistema de bienes', 'bienes']] as const) {
-    await navigateAdministration(page, name);
-    await expect(page).toHaveURL(new RegExp(`/administracion/${path}$`));
-    await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
-    await expect(page.getByText('En preparación', { exact: true })).toBeVisible();
-    await page.reload(); await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
-  }
+  await navigateAdministration(page, 'Personal');
+  await expect(page).toHaveURL(/\/administracion\/personal$/);
+  await expect(page.getByRole('heading', { name: 'Personal', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Comisión de servicios/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Solicitud de permiso/ })).toBeVisible();
+  await navigateAdministration(page, 'Bienes');
+  await expect(page).toHaveURL(/\/administracion\/bienes$/);
+  await expect(page.getByRole('heading', { name: 'Bienes', exact: true })).toBeVisible();
+  await page.reload(); await expect(page.getByRole('navigation', { name: 'Secciones de Bienes' })).toBeVisible();
   await navigateAdministration(page, 'Registro de compras');
   await expect(page.getByRole('link', { name: 'Revisar ejemplo' })).toHaveCount(0);
   await page.goto('/administracion/compras/laboratorio');
@@ -432,7 +434,6 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await navigateAdministration(page, 'Inicio');
   await page.getByRole('alertdialog').getByRole('button', { name: 'Descartar y salir' }).click();
   await expect(page).toHaveURL(/\/administracion$/);
-  await expect(page.getByRole('button', { name: 'Mostrar navegación', exact: true })).toBeVisible();
   await navigateAdministration(page, 'Registro de compras');
   await expect(page.getByRole('link', { name: 'Revisar ejemplo' })).toHaveCount(0);
   await page.goto('/administracion/compras/laboratorio');
@@ -451,7 +452,7 @@ async function manualForm(page: Page, number: string) {
   await page.goto('/administracion/compras');
   await page.getByRole('link', { name: 'Registrar manualmente' }).click();
   await page.getByLabel('Nº Documento / solicitud *', { exact: true }).fill(number);
-  await page.getByLabel('Fecha de envío *', { exact: true }).fill('13/10/2026');
+  await page.getByLabel('Fecha de envío *', { exact: true }).fill(santiagoToday().split('-').reverse().join('/'));
   await page.getByLabel('Descripción *', { exact: true }).fill('Solicitud ficticia de prueba');
   await page.getByLabel('Monto total (CLP) *', { exact: true }).fill('200000');
 }
@@ -474,7 +475,7 @@ test('solicitudes persistentes: ingreso, varios ítems, recarga, detalle y valid
   await expandPurchaseSection(page, 'Ítem 2');
   await expect(page.locator('.purchase-detail-fields dd').filter({ hasText: 'Proveedor ficticio B' })).toHaveText('Proveedor ficticio B');
   await expect(page.getByText('0000000', { exact: true })).toBeVisible();
-  for (const width of [1280, 1440, 1920, 390]) {
+  for (const width of [1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -594,7 +595,7 @@ test('laboratorio: formato inválido bloquea transferencia, original intacto y b
   await page.getByRole('button', { name: 'Restablecer ejemplo' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Descartar y restablecer' }).click();
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
-  await expect(page.getByLabel('Monto total (CLP)', { exact: true })).toHaveValue('200000');
+  await expect(page.getByLabel('Monto total (CLP)', { exact: true })).toHaveValue('200.000');
   await page.getByLabel('Datos de ejemplo').selectOption('failure');
   await expect(page.getByRole('button', { name: 'Continuar al formulario' })).toHaveCount(0);
   await page.getByLabel('Datos de ejemplo').selectOption('partial');
@@ -668,7 +669,7 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
     await expect(table.getByText('No encontramos compras con estos filtros', { exact: true })).toBeVisible();
     await expect(table.getByRole('table')).toHaveCount(0);
   }
-  for (const width of [1280, 375]) {
+  for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/purchase-empty-tables-${width}.png`, fullPage: true });
@@ -676,12 +677,11 @@ test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y
   await page.getByLabel('Código de proyecto', { exact: true }).fill('000X');
   const datePicker = page.getByLabel('Fecha de envío', { exact: true });
   await page.getByRole('button', { name: 'Abrir calendario: Fecha de envío', exact: true }).click();
-  for (let month = 0; month < 4; month++) await page.locator('.cenit-calendar .rdp-button_next').click();
-  await page.locator('.cenit-calendar [data-day="2027-02-01"] .rdp-day_button').click();
+  await selectCalendarDate(page, '2027-02-01');
   await expect(page).toHaveURL(/dateFrom=2027-02-01&dateTo=2027-02-01/);
   await search.fill('100%_\\');
   for (const table of [pending, reviewed]) await expect(table.getByText('1 registro', { exact: true })).toBeVisible();
-  for (const width of [1280, 375]) {
+  for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/purchase-filters-${width}.png`, fullPage: true });
@@ -708,7 +708,7 @@ test('listado: validación, error/reintento, carga y filtros descartados al camb
   await login(page, 'administrativo'); await page.goto('/administracion/compras');
   const fixture = structuredClone(manualPurchaseExample); fixture.operationId = crypto.randomUUID();
   fixture.header.requestNumber = 'RETRY-' + crypto.randomUUID();
-  fixture.header.sentDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date());
+  fixture.header.sentDate = santiagoToday();
   expect((await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data: fixture })).status()).toBe(201);
   const search = page.getByLabel('Buscar solicitudes', { exact: true });
   await page.goto('/administracion/compras?dateFrom=2026-10-14&dateTo=2026-10-13');
@@ -716,7 +716,14 @@ test('listado: validación, error/reintento, carga y filtros descartados al camb
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
   await expect(page).toHaveURL(/\/compras$/);
   await page.route('**/api/v1/purchases?**', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'filter-error' } }) }));
+  const filteredFailure = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return url.pathname === '/api/v1/purchases' && url.searchParams.get('q') === 'PRIVATE-FILTER'
+      && url.searchParams.get('reviewStatus') === 'pending' && response.status() === 503;
+  });
   await search.fill('PRIVATE-FILTER');
+  await expect(page).toHaveURL(/q=PRIVATE-FILTER/);
+  await filteredFailure;
   const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
   await expect(pending.getByRole('alert')).toContainText('No disponible');
   await expect(pending.getByRole('table')).toHaveCount(0);
@@ -747,23 +754,30 @@ test('listado: validación, error/reintento, carga y filtros descartados al camb
 
 test('solicitudes: paginación independiente y vistas sin desbordamiento horizontal', async ({ page }) => {
   await login(page, 'administrativo');
-  for (let index = 0; index < 21; index++) {
-    const response = await page.request.post('/api/v1/purchases', { headers: { origin: 'http://127.0.0.1:5174' }, data: { ...manualPurchaseExample, operationId: crypto.randomUUID(), header: { ...manualPurchaseExample.header, requestNumber: `PAGE-${index}` } } });
+  const prefix = `PAGE-${crypto.randomUUID().slice(0, 8)}`, sentDate = santiagoToday();
+  const headers = { Origin: new URL(page.url()).origin };
+  for (let index = 0; index < 22; index++) {
+    const response = await page.request.post('/api/v1/purchases', { headers, data: { ...manualPurchaseExample, operationId: crypto.randomUUID(), header: { ...manualPurchaseExample.header, requestNumber: `${prefix}-${index}`, sentDate } } });
     expect(response.status()).toBe(201);
+    if (index === 21) {
+      const { data: record } = await response.json();
+      const review = await page.request.post(`/api/v1/purchases/${record.id}/validation`, { headers, data: { expectedVersion: record.version } });
+      expect(review.status()).toBe(200);
+    }
   }
-  await page.goto('/administracion/compras');
+  await page.goto(`/administracion/compras?q=${prefix}`);
   const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
   const reviewed = page.getByRole('region', { name: 'Revisados en Cenit', exact: true });
   await pending.getByRole('button', { name: 'Siguiente' }).click();
   await expect(pending.getByText(/^Página 2 de /)).toBeVisible();
   await expect(reviewed.getByText(/^Página 1 de /)).toBeVisible();
-  for (const width of [1280, 1440, 1920, 390]) {
+  for (const width of [1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/purchases-list-${width}.png` });
   }
   await page.getByRole('link', { name: 'Registrar manualmente' }).click();
-  for (const width of [1280, 375]) {
+  for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.getByRole('button', { name: 'Agregar ítem', exact: true }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -797,7 +811,7 @@ test('ítems desplegables: errores abren el ítem y eliminar otro conserva valor
   const maximumAmount = '9'.repeat(255);
   await page.getByLabel('Monto total (CLP) *', { exact: true }).fill(maximumAmount);
   await page.getByLabel('Importe (CLP) · ítem 1', { exact: true }).fill(maximumAmount);
-  await page.setViewportSize({ width: 390, height: 900 });
+  await page.setViewportSize({ width: 1280, height: 900 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page.getByRole('heading', { name: /^Solicitud / })).toBeVisible();

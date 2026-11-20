@@ -3,8 +3,9 @@ name: Cenit CI
 on:
   pull_request:
     branches: [develop, main]
+    types: [opened, synchronize, reopened, edited, ready_for_review]
   push:
-    branches: [develop, main, 'feat/**', 'fix/**', 'test/**', 'docs/**', 'codex/**']
+    branches: [develop, main, 'feat/**', 'fix/**', 'test/**', 'docs/**', 'codex/**', 'SCRUM-*', 'scrum-*']
   workflow_dispatch:
   workflow_call:
 
@@ -49,7 +50,7 @@ jobs:
             bash -n "$script"
           done < <(find deploy -name '*.sh' -print0)
       - name: Compile Python utilities
-        run: python3 -m compileall -q deploy/scripts deploy/azure
+        run: python3 -m compileall -q deploy/scripts deploy/azure deploy/aws
       - name: Test application CI gate
         run: python3 -m unittest discover -s tests/infrastructure -v
       - name: Validate local Compose configuration

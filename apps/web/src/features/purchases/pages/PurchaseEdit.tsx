@@ -5,6 +5,9 @@ import { useQuery } from '@tanstack/react-query';
 import type { ExtractionReviewDraft } from '@cenit/contracts/purchases';
 import { getPurchase } from '../api/purchases.js';
 import { PurchaseForm } from '../components/PurchaseForm.js';
+import { PurchaseFormSummary } from '../components/PurchaseFormSummary.js';
+import { PurchaseReadError } from '../components/PurchaseReadError.js';
+import { PurchaseEditSkeleton } from '../components/PurchaseSkeletons.js';
 import { emptyDraft } from '../model/fields.js';
 import { usePurchaseGuard } from '../model/guard.js';
 import { usePurchaseReturnTo } from '../model/location.js';
@@ -40,9 +43,9 @@ export function PurchaseEdit() {
 
   return <section className="purchase-records">
     <Link className="purchase-back-link" to={detailPath} state={{ purchasesReturnTo: returnToList }} onClick={backToDetail}><ArrowLeftIcon size={16} aria-hidden="true" />Volver al detalle</Link>
-    {query.isPending ? <p className="purchase-state" role="status">Cargando detalle…</p> : query.isError ? <div className="purchase-state" role="alert"><p>{query.error.message}</p><button className="cenit-button" onClick={() => { void query.refetch(); }}>Reintentar</button></div> : record?.source === 'contract_example' ? <div className="purchase-state"><p>Los ejemplos de demostración no se pueden editar.</p><Link className="cenit-button" to={detailPath} state={{ purchasesReturnTo: returnToList }}>Volver al detalle</Link></div> : record && editDraft && editVersion !== null && <>
+    {query.isError ? <PurchaseReadError error={query.error} returnTo={returnToList} onRetry={() => { void query.refetch(); }} /> : record?.source === 'contract_example' ? <div className="purchase-state"><p>Los ejemplos de demostración no se pueden editar.</p><Link className="cenit-button" to={detailPath} state={{ purchasesReturnTo: returnToList }}>Volver al detalle</Link></div> : <>
       <div className="purchase-page-heading"><div><h1>Editar compra</h1><p>Corrige los datos de la copia guardada en Cenit.</p></div></div>
-      <PurchaseForm draft={draft} onChange={setDraft} lineKeys={lineKeys} onLineKeysChange={setLineKeys} origin={null} returnTo={detailPath} edit={{ id: record.id, expectedVersion: editVersion, initialDraft: editDraft, returnToList }} />
+      {record && editDraft && editVersion !== null ? <div className="purchase-form-layout"><PurchaseForm draft={draft} onChange={setDraft} lineKeys={lineKeys} onLineKeysChange={setLineKeys} origin={null} returnTo={detailPath} edit={{ id: record.id, expectedVersion: editVersion, initialDraft: editDraft, returnToList }} /><PurchaseFormSummary draft={draft} /></div> : <PurchaseEditSkeleton />}
     </>}
   </section>;
 }

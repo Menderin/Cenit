@@ -35,10 +35,14 @@ export const PurchaseSummaryResponseSchema = object({ data: object({
     registeredThisMonth: Type.Integer({ minimum: 0 }),
     sourceCounts: object({ manual: Type.Integer({ minimum: 0 }), image_capture: Type.Integer({ minimum: 0 }), contract_example: Type.Integer({ minimum: 0 }) }),
     registrationDays: Type.Array(object({ date: headerFields.sentDate, count: Type.Integer({ minimum: 0 }) }), { maxItems: 30 }),
+    // Year view for Inicio: amount by month (sent date) and by document type. Optional so older clients and mocks remain valid.
+    documentTotalThisYear: Type.Optional(Type.String({ pattern: '^(0|[1-9][0-9]*)$' })),
+    monthlyTotals: Type.Optional(Type.Array(object({ month: Type.String({ pattern: '^\\d{4}-(0[1-9]|1[0-2])$' }), count: Type.Integer({ minimum: 0 }), amount: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }) }), { maxItems: 12 })),
+    documentTypes: Type.Optional(Type.Array(object({ documentType: Type.Union([Type.String({ minLength: 1, maxLength: 255 }), Type.Null()]), count: Type.Integer({ minimum: 0 }), amount: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }) }), { maxItems: 6 })),
     recentRecords: Type.Array(object({ id: uuid, requestNumber: headerFields.requestNumber, description: headerFields.description,
       sentDate: headerFields.sentDate, totalAmount: headerFields.totalAmount, createdAt: stamp,
       source: Type.Union([Type.Literal('manual'), Type.Literal('image_capture'), Type.Literal('contract_example')]),
-    }), { maxItems: 5 }),
+    }), { maxItems: 8 }),
   })),
 }) });
 export type PurchaseSummaryResponse = Static<typeof PurchaseSummaryResponseSchema>;
@@ -93,7 +97,7 @@ export function validatePurchaseListQuery(input: unknown): ContractProblem[] {
 export function validateCreatePurchase(input: unknown): ContractProblem[] {
   if (!Value.Check(CreatePurchaseSchema, input)) return [...Value.Errors(CreatePurchaseSchema, input)].map(error => ({ path: error.path,
     message: error.value === null || error.value === '' || error.value === undefined ? 'Completa este campo obligatorio.'
-      : /\/(totalAmount|taxAmount|price|amount)$/.test(error.path) ? 'Escribe un monto entero sin puntos, comas ni signos.'
+      : /\/(totalAmount|taxAmount|price|amount)$/.test(error.path) ? 'Escribe sólo números, por ejemplo 1234567 o 1.234.567.'
       : error.path.endsWith('/sentDate') ? 'Escribe una fecha válida en formato dd/mm/aaaa.' : 'Revisa el formato o el límite de este campo.',
   }));
   return validatePurchasePayload({ header: input.header, lines: input.lines, administrative: input.administrative });
@@ -101,7 +105,7 @@ export function validateCreatePurchase(input: unknown): ContractProblem[] {
 export function validatePurchasePayload(input: unknown): ContractProblem[] {
   if (!Value.Check(PurchasePayloadSchema, input)) return [...Value.Errors(PurchasePayloadSchema, input)].map(error => ({ path: error.path,
     message: error.value === null || error.value === '' || error.value === undefined ? 'Completa este campo obligatorio.'
-      : /\/(totalAmount|taxAmount|price|amount)$/.test(error.path) ? 'Escribe un monto entero sin puntos, comas ni signos.'
+      : /\/(totalAmount|taxAmount|price|amount)$/.test(error.path) ? 'Escribe sólo números, por ejemplo 1234567 o 1.234.567.'
       : error.path.endsWith('/sentDate') ? 'Escribe una fecha válida en formato dd/mm/aaaa.' : 'Revisa el formato o el límite de este campo.',
   }));
   const problems = validateReviewDraft(input);

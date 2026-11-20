@@ -3,12 +3,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { flushSync } from 'react-dom';
 import type { LoginRequest, SessionResponse } from '@cenit/contracts/auth';
 import { getSession, signIn, signOut } from '../api/auth.js';
+import { signInGoogle } from '../api/google.js';
 import { HttpError } from '../../../shared/lib/http.js';
 
 type Session = SessionResponse['data'];
 type Status = 'checking' | 'authenticated' | 'guest' | 'error' | 'closing' | 'logout-error';
 type State = { status: Status; session: Session | null; message: string; notice?: 'signed-out' | 'expired' };
-type Auth = State & { login: (input: LoginRequest) => Promise<void>; logout: () => Promise<void>; refresh: () => Promise<void> };
+type Auth = State & { login: (input: LoginRequest) => Promise<void>; loginGoogle: (credential: string, signal: AbortSignal) => Promise<void>; logout: () => Promise<void>; refresh: () => Promise<void> };
 const Context = createContext<Auth | null>(null);
 const expiredMessage = 'Tu sesión ya no es válida. Vuelve a iniciar sesión.';
 export const destination = (session: Session) => session.account.role === 'administrativo' ? '/administracion' : '/academico';
@@ -72,10 +73,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { window.removeEventListener('focus', focus); window.removeEventListener('cenit:unauthenticated', invalidate); };
   }, [state.status, invalidate, refresh]);
   const login = async (input: LoginRequest) => {
-    clear(); const generation = epoch.current;
+    const generation = ++epoch.current;
     const session = await signIn(input);
     if (generation !== epoch.current) return;
     if (Date.parse(session.expiresAt) <= Date.now()) { invalidate(); return; }
+    clear();
     client.setQueryData(['auth', 'session'], session); hadSession.current = true;
     setState({ status: 'authenticated', session, message: '' });
   };
@@ -90,6 +92,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (epoch.current === generation) setState({ status: 'logout-error', session: null, message: 'No se pudo confirmar el cierre de sesión.' });
     }
   };
-  return <Context.Provider value={{ ...state, login, logout, refresh }}>{children}</Context.Provider>;
+  const loginGoogle = async (credential: string, signal: AbortSignal) => {
+    const generation = ++epoch.current;
+    const session = await signInGoogle(credential, signal);
+    if (signal.aborted || generation !== epoch.current) return;
+    if (Date.parse(session.expiresAt) <= Date.now()) { invalidate(); return; }
+    clear();
+    client.setQueryData(['auth', 'session'], session); hadSession.current = true;
+    setState({ status: 'authenticated', session, message: '' });
+  };
+  return <Context.Provider value={{ ...state, login, loginGoogle, logout, refresh }}>{children}</Context.Provider>;
 }
 export function useAuth() { const auth = useContext(Context); if (!auth) throw new Error('AuthProvider requerido'); return auth; }

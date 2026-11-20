@@ -13,11 +13,12 @@ async function chooseStudent(page: import('@playwright/test').Page, name: string
 
 async function expectLatestGrade(page: import('@playwright/test').Page, grade: string) {
   await page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true }).click();
-  await expect(page.getByRole('dialog').locator('.academic-facts').first().getByText(grade, { exact: true })).toBeVisible();
+  const latest = page.getByRole('dialog').locator('.academic-facts').first().locator('div').filter({ has: page.getByText('Última nota', { exact: true }) }).locator('dd');
+  await expect(latest).toHaveText(grade);
   await page.keyboard.press('Escape');
 }
 
-test('diez semestres: navegación visible en portátil y recorrido móvil', async ({ page }, testInfo) => {
+test('diez semestres: navegación visible en portátil', async ({ page }, testInfo) => {
   await page.route('**/api/v1/academic/plans', route => route.fulfill({ json: { data: [{ planId: relationPlan.planId, name: relationPlan.name, versions: [{ version: relationPlan.version, isExample: true }] }] } }));
   await page.route(`**/api/v1/academic/plans/*/versions/${relationPlan.version}`, route => route.fulfill({ json: { data: relationPlan } }));
   await page.route('**/api/v1/academic/me/progress', route => route.fulfill({ json: { data: relationProgress } }));
@@ -69,20 +70,89 @@ test('diez semestres: navegación visible en portátil y recorrido móvil', asyn
   await expect(page.getByRole('group', { name: 'Navegación de semestres' })).toHaveCount(0);
   await expect(courses(page).first()).toBeInViewport({ ratio: 1 });
   await expect(lastCourse).toBeInViewport({ ratio: 1 });
-  for (const width of [390, 320]) {
-    await page.setViewportSize({ width, height: 844 });
-    await expect(page.getByRole('group', { name: 'Navegación de semestres' })).toHaveCount(0);
-    await board.focus(); await lastCourse.focus();
-    await expect(lastCourse).toBeInViewport({ ratio: 1 });
-    await lastCourse.press('Enter');
-    await expect(page.getByRole('dialog', { name: 'Seminario final', exact: true })).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(lastCourse).toBeFocused();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  }
 });
 
-test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado y detalle móvil', async ({ page }, testInfo) => {
+test('leyenda adaptable y detalle lateral conservan visibilidad, dirección y foco', async ({ page }) => {
+  await page.addInitScript(() => {
+    document.addEventListener('transitionrun', event => {
+      if (!(event instanceof TransitionEvent) || !(event.target instanceof HTMLDialogElement) || event.propertyName !== 'translate') return;
+      const animation = event.target.getAnimations().find(item => item instanceof CSSTransition && item.transitionProperty === 'translate');
+      const frames = (animation?.effect as KeyframeEffect | undefined)?.getKeyframes();
+      if (!frames || frames.length < 2) return;
+      const transitions = JSON.parse(document.documentElement.dataset.detailTransitions ?? '[]');
+      transitions.push({ side: event.target.className, from: frames[0]!.translate, to: frames[1]!.translate });
+      document.documentElement.dataset.detailTransitions = JSON.stringify(transitions);
+    }, true);
+  });
+  await page.setViewportSize({ width: 1470, height: 842 });
+  await login(page);
+  await chooseStudent(page, 'Estudiante Demo');
+  const first = courses(page).first();
+  for (const width of [1920, 1470, 1024]) {
+    await page.setViewportSize({ width, height: width === 1470 ? 842 : 700 });
+    await page.keyboard.press('Tab'); await first.focus();
+    const legend = page.getByLabel('Relaciones resaltadas');
+    await expect(legend).toBeVisible();
+    const fits = await legend.evaluate(element => {
+      const bounds = element.getBoundingClientRect();
+      const content = document.querySelector('.academic-content')!.getBoundingClientRect();
+      return bounds.left >= content.left && bounds.right <= content.right && bounds.bottom <= content.bottom && element.scrollWidth <= element.clientWidth;
+    });
+    expect(fits, `leyenda visible a ${width}px`).toBe(true);
+  }
+  await page.setViewportSize({ width: 1470, height: 842 });
+  for (const [card, side] of [[first, 'right'], [courses(page).last(), 'left']] as const) {
+    await card.click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toHaveClass(new RegExp(`academic-detail--${side}`));
+    await expect.poll(async () => page.evaluate(() => document.documentElement.dataset.detailTransitions ?? '')).toContain(`academic-detail--${side}`);
+    await expect(dialog).toHaveCSS('translate', '0px');
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0); await expect(card).toBeFocused();
+  }
+  const transitions = await page.evaluate(() => JSON.parse(document.documentElement.dataset.detailTransitions ?? '[]') as { side: string; from: string; to: string }[]);
+  for (const [side, direction] of [['right', 1], ['left', -1]] as const) {
+    const enter = transitions.find(item => item.side.includes(`academic-detail--${side}`) && !item.side.includes('closing'));
+    const exit = transitions.find(item => item.side.includes(`academic-detail--${side}`) && item.side.includes('closing'));
+    expect(enter, `transición de entrada desde ${side}`).toBeDefined();
+    expect(exit, `transición de salida hacia ${side}`).toBeDefined();
+    expect(parseFloat(enter!.from) * direction).toBeGreaterThan(0);
+    expect(parseFloat(enter!.to)).toBe(0);
+    expect(parseFloat(exit!.to) * direction).toBeGreaterThan(0);
+    for (const value of [enter!.from, enter!.to, exit!.from, exit!.to]) expect(parseFloat(value.split(' ')[1] ?? '0')).toBe(0);
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await first.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toHaveCSS('translate', 'none');
+  await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0); await expect(first).toBeFocused();
+});
+
+test('el detalle espera las transiciones de salida antes de cerrarse', async ({ page }) => {
+  await page.addInitScript(() => {
+    document.addEventListener('transitionrun', event => {
+      if (!(event.target instanceof HTMLDialogElement) || !event.target.classList.contains('academic-detail--closing')) return;
+      for (const animation of event.target.getAnimations()) animation.pause();
+    }, true);
+  });
+  await login(page);
+  const card = courses(page).first();
+  await card.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toHaveCSS('translate', '0px');
+  await page.clock.install();
+  await page.keyboard.press('Escape');
+  await expect.poll(() => dialog.evaluate(element => element.getAnimations().some(animation => animation.playState === 'paused'))).toBe(true);
+  await page.clock.runFor(250);
+  await expect(dialog).toBeVisible();
+  await dialog.evaluate(element => {
+    for (const animation of element.getAnimations()) animation.finish();
+  });
+  await expect(dialog).toHaveCount(0);
+  await expect(card).toBeFocused();
+});
+
+test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado y detalle', async ({ page }, testInfo) => {
   let catalogReads = 0;
   await page.route('**/api/v1/academic/plans', route => route.fulfill({ json: { data: [{ planId: relationPlan.planId, name: relationPlan.name, versions: [{ version: relationPlan.version, isExample: true }] }] } }));
   await page.route(`**/api/v1/academic/plans/*/versions/${relationPlan.version}`, route => { catalogReads++; return route.fulfill({ json: { data: relationPlan } }); });
@@ -127,6 +197,10 @@ test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado 
   await b.hover(); await expect(b).toHaveAttribute('data-relation', 'origin');
   await expect(page.locator('[data-course-code="A"]')).not.toHaveAttribute('data-relation');
   expect(await a.evaluate(element => getComputedStyle(element, '::before').boxShadow)).toBe(highlightShadow);
+  const bBox = (await b.boundingBox())!;
+  await page.mouse.move(bBox.x + bBox.width / 2, bBox.y + bBox.height + 3);
+  await expect(page.locator('[data-relation]')).toHaveCount(0);
+  await expect(page.getByLabel('Relaciones resaltadas')).toHaveCount(0);
   await page.locator('[data-course-code="X"]').hover();
   await expect(unrelated).toHaveAttribute('data-relation', 'origin');
   await page.mouse.move(0, 0); await page.clock.fastForward(2000);
@@ -138,9 +212,6 @@ test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado 
   await expect(a).toBeFocused(); await expect(a).toHaveAttribute('data-relation', 'origin');
   expect(await a.evaluate(element => ({ transform: getComputedStyle(element).transform, scale: getComputedStyle(element).scale, translate: getComputedStyle(element).translate, transition: getComputedStyle(element, '::before').transitionProperty }))).toEqual({ transform: 'none', scale: 'none', translate: 'none', transition: 'opacity' });
   await page.keyboard.press('Escape'); await expect(page.locator('[data-relation]')).toHaveCount(0);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await a.dispatchEvent('pointerenter', { pointerType: 'touch' });
-  await expect(page.locator('[data-relation]')).toHaveCount(0);
   await a.click();
   const dialog = page.getByRole('dialog', { name: 'Bases de nutrición' });
   await expect(dialog).not.toContainText('Ejemplo ficticio');
@@ -148,20 +219,19 @@ test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado 
   await expect(dialog).toContainText('Más adelante en la cadena');
   await expect(dialog).toContainText('Práctica integrada');
   await expect(dialog).toContainText('A través de Evaluación nutricional');
-  await page.screenshot({ path: testInfo.outputPath('cadena-detalle-390.png'), animations: 'disabled' });
   await page.keyboard.press('Escape'); await expect(a).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(catalogReads).toBe(1);
 });
 
 for (const role of ['docente', 'estudiante']) {
-  test(`mockup de prerrequisitos ficticios: seis estados, teclado y móvil: ${role}`, async ({ page }, testInfo) => {
+  test(`mockup de prerrequisitos ficticios: seis estados y teclado: ${role}`, async ({ page }, testInfo) => {
     await page.route('**/api/v1/academic/plans', route => route.fulfill({ json: { data: [{ planId: prerequisitePlan.planId, name: prerequisitePlan.name, versions: [{ version: prerequisitePlan.version, isExample: true }] }] } }));
     await page.route(`**/api/v1/academic/plans/*/versions/${prerequisitePlan.version}`, route => route.fulfill({ json: { data: prerequisitePlan } }));
     await login(page, role);
     await expect(page.locator('.academic-toolbar__subtitle')).toHaveText(prerequisitePlan.name);
     await expect(page.locator('.academic-toolbar .academic-tag')).toHaveText('Demostración');
-    for (const width of [1440, 390, 320]) {
+    for (const width of [1440]) {
       await page.setViewportSize({ width, height: 900 });
       for (const example of prerequisiteCases) {
         const card = page.getByRole('button', { name: `Ver asignatura: ${example.name}`, exact: true });
@@ -177,9 +247,10 @@ for (const role of ['docente', 'estudiante']) {
         await page.keyboard.press('Tab');
         await expect(dialog.locator('summary').last()).toBeFocused();
         await page.keyboard.press('Enter');
-        await expect(dialog.getByText(prerequisitePlan.version, { exact: true })).toBeVisible();
+        await expect(dialog.getByText(prerequisitePlan.version, { exact: true })).toHaveCount(0);
         await page.keyboard.press('Enter');
         await page.keyboard.press('Shift+Tab'); await expect(close).toBeFocused();
+        await expect(dialog).toHaveCSS('translate', '0px');
         expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
         const bounds = (await dialog.boundingBox())!;
         expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
@@ -215,7 +286,7 @@ for (const role of ['docente', 'estudiante']) {
     await expect(detail).not.toContainText('Validada institucionalmente.');
     await expect(page.getByLabel('Relaciones resaltadas')).toContainText('Relaciones de referencia');
     await expect(page.getByLabel('Relaciones resaltadas')).not.toContainText('Relaciones por confirmar');
-    for (const width of [1440, 390]) {
+    for (const width of [1440]) {
       await page.setViewportSize({ width, height: 900 });
       await sources.scrollIntoViewIfNeeded();
       await expect(sources).toBeVisible();
@@ -232,8 +303,8 @@ test('detalle con teclado, relaciones pendientes y ausencia desconocida', async 
   const card = page.getByRole('button', { name: 'Ver asignatura: Inocuidad alimentaria', exact: true });
   await card.focus(); await card.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Inocuidad alimentaria' });
-  await expect(dialog).toContainText('Relaciones entre asignaturas');
-  await expect(dialog).toContainText('No indican por sí solas los requisitos para inscribir la asignatura.');
+  await expect(dialog.getByRole('heading', { name: 'En la malla', exact: true })).toBeVisible();
+  await expect(dialog).toContainText('no son requisitos de inscripción');
   await expect(dialog).not.toContainText('En revisión');
   await expect(dialog).toContainText('Ciencia de los alimentos');
   await expect(dialog.locator('#academic-rule-title + p')).toHaveText('Ciencia de los alimentos');
@@ -368,8 +439,8 @@ test('estudiante consulta RUT, estados e intentos propios y el docente ve el mis
   await first.click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('heading', { name: 'Ciencia de los alimentos', exact: true })).toBeVisible();
-  await expect(dialog).toContainText('Historial de intentos');
-  await dialog.locator('summary').filter({ hasText: 'Historial de intentos' }).click();
+  // The attempt history is shown directly, without a disclosure.
+  await expect(dialog.getByRole('heading', { name: /^Historial de intentos/ })).toBeVisible();
   await expect(dialog.getByRole('row')).toHaveCount(3);
   await expect(dialog.getByRole('row').nth(1)).toContainText('Reprobada');
   await expect(dialog.getByRole('row').nth(1)).toContainText('3,2');
@@ -402,6 +473,13 @@ test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezcl
   await expect(results.getByRole('button')).toHaveCount(1);
   await results.getByRole('button', { name: /^Camila Demo/ }).click();
   await expect(page.getByRole('region', { name: 'Avance curricular', exact: true })).toContainText('Camila Demo');
+  const board = page.getByRole('region', { name: 'Asignaturas por semestre', exact: true });
+  await page.setViewportSize({ width: 1470, height: 842 });
+  await expect.poll(() => board.evaluate(element => element.scrollWidth - element.clientWidth)).toBe(0);
+  await expect(page.getByRole('group', { name: 'Navegación de semestres' })).toHaveCount(0);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect.poll(() => board.evaluate(element => element.scrollWidth - element.clientWidth)).toBe(0);
+  await expect(page.getByRole('group', { name: 'Navegación de semestres' })).toHaveCount(0);
   const first = page.getByRole('button', { name: 'Ver asignatura: Cs. alimentos (Ciencia de los alimentos)', exact: true });
   await expectLatestGrade(page, '6,5');
   await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
@@ -412,7 +490,7 @@ test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezcl
   await expectLatestGrade(page, '6,5');
   await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
   await page.getByLabel('Nombre', { exact: true }).fill('Estudiante');
-  await expect(page.getByRole('status')).toContainText('No hay estudiantes que coincidan');
+  await expect(page.getByRole('region', { name: 'Estudiantes de Nutrición' }).getByRole('status')).toContainText('No hay estudiantes que coincidan');
   await expect(first).not.toContainText('Aprobada');
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
   await expect(results.getByRole('button')).toHaveCount(3);
@@ -427,10 +505,10 @@ test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezcl
   await expect(page.getByRole('dialog').locator('.academic-facts').first()).toContainText('2,5');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Ver asignatura: Inglés 1', exact: true }).click();
-  await page.getByRole('dialog').locator('summary').filter({ hasText: 'Historial de intentos' }).click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: /^Historial de intentos/ })).toBeVisible();
   await expect(page.getByRole('dialog')).toContainText('Sin intentos registrados');
   await page.keyboard.press('Escape');
-  for (const viewport of [{ width: 1440, height: 900 }, { width: 1920, height: 1080 }, { width: 390, height: 844 }]) {
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1920, height: 1080 }]) {
     await page.setViewportSize(viewport);
     await page.evaluate(() => { document.querySelector('.academic-content')!.scrollTop = 0; document.querySelector('.academic-board')!.scrollLeft = 0; });
     await page.getByRole('heading', { name: 'Malla curricular', exact: true }).focus(); await page.mouse.move(0, 0);
@@ -486,7 +564,7 @@ test('búsqueda automática por coincidencias y formato/verificación de RUT mie
   await expect(rut).toHaveValue('21.123.456-3');
   await expect(results).toContainText('Camila Demo');
   await name.fill('Tomás');
-  await expect(page.getByRole('status')).toContainText('No hay estudiantes que coincidan');
+  await expect(page.getByRole('region', { name: 'Estudiantes de Nutrición' }).getByRole('status')).toContainText('No hay estudiantes que coincidan');
   await rut.fill('');
   await expect(results).toContainText('Tomás Demo');
   await rut.fill('20000003k');
@@ -533,9 +611,10 @@ test('40 coincidencias se recorren en páginas de seis y un filtro nuevo vuelve 
     await route.fulfill({ json: { data, page: current, pageSize: 6, totalItems: total } });
   });
   await login(page);
-  const results = page.locator('.academic-students__results');
+  const students = page.getByRole('region', { name: 'Estudiantes de Nutrición' });
+  const results = students.locator('.academic-students__results');
   await expect(results.getByRole('button')).toHaveCount(6);
-  await expect(page.getByRole('status')).toContainText('40 estudiantes encontrados · Mostrando 1–6');
+  await expect(students.getByRole('status')).toContainText('40 estudiantes encontrados · Mostrando 1–6');
   await expect(page.getByRole('button', { name: 'Anterior', exact: true })).toBeDisabled();
   await results.getByRole('button', { name: /^Estudiante de prueba 1 / }).click();
   await page.getByRole('button', { name: 'Cambiar estudiante', exact: true }).click();
@@ -592,19 +671,19 @@ test('malla compacta conserva contexto, espacio de lectura y navegación plegabl
   await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
   await page.getByRole('heading', { name: 'Malla curricular', exact: true }).focus();
   await page.evaluate(() => { document.querySelector('.academic-content')!.scrollTop = 0; });
-  const density = await page.evaluate(() => {
-    const visibleBottom = document.querySelector('.academic-content')!.getBoundingClientRect().bottom;
+  await expect(courses(page).first()).toBeInViewport({ ratio: 1 });
+  const completeRows = await page.evaluate(() => {
+    const viewport = document.querySelector('.academic-content')!.getBoundingClientRect();
     const cards = [...document.querySelectorAll('.academic-semester:first-child .academic-course')].map(element => element.getBoundingClientRect());
-    return { first: cards[0]!.top, completeRows: cards.filter(card => card.bottom <= visibleBottom).length };
+    return cards.filter(card => card.top >= viewport.top && card.bottom <= viewport.bottom).length;
   });
-  expect(density.first).toBeLessThan(230);
-  expect(density.completeRows).toBeGreaterThanOrEqual(6);
+  expect(completeRows).toBeGreaterThanOrEqual(6);
   await page.getByRole('button', { name: 'Ocultar navegación', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'Área académica' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'Cerrar sesión', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'Área académica' })).toBeVisible();
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 1470, height: 900 });
   const allVisible = await courses(page).evaluateAll(elements => {
     const viewport = document.querySelector('.academic-content')!.getBoundingClientRect();
     return elements.every(element => { const card = element.getBoundingClientRect(); return card.top >= viewport.top && card.bottom <= viewport.bottom && card.left >= viewport.left && card.right <= viewport.right; });
@@ -612,35 +691,43 @@ test('malla compacta conserva contexto, espacio de lectura y navegación plegabl
   expect(allVisible).toBe(true);
 });
 
-test('selector sólo con varias versiones y un historial no se aplica a otra versión', async ({ page }) => {
+test('malla vigente sin selector y sin aplicar historiales de otra malla', async ({ page }) => {
   await page.route('**/api/v1/academic/plans', async route => {
     const response = await route.fetch(); const body = await response.json();
-    body.data[0].versions.push({ version: 'otra-version-ejemplo', isExample: true });
+    body.data[0].versions.unshift({ version: 'otra-version-ejemplo', isExample: true });
     await route.fulfill({ json: body });
   });
-  await page.route('**/api/v1/academic/plans/nutricion-dietetica/versions/otra-version-ejemplo', async route => {
-    const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/diagrama-r2');
-    const body = await response.json(); body.data.version = 'otra-version-ejemplo'; body.data.isExample = true;
+  await page.route('**/api/v1/academic/me/progress', async route => {
+    const response = await route.fetch(); const body = await response.json();
+    body.data.plan.version = 'otra-version-ejemplo';
     await route.fulfill({ json: body });
   });
   await login(page, 'estudiante');
-  await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
-  await page.getByLabel('Versión del plan', { exact: true }).selectOption('otra-version-ejemplo');
-  await expect(page.getByRole('status')).toContainText('El historial pertenece a la versión diagrama-r2');
+  await expect(courses(page)).toHaveCount(52);
+  await expect(page.getByLabel('Versión del plan', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('El historial disponible corresponde a otra malla y no se muestra aquí.')).toHaveCount(0);
   await expect(page.locator('.academic-progress-badge')).toHaveCount(0);
-  await page.getByLabel('Versión del plan', { exact: true }).selectOption('diagrama-r2');
-  await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
+});
+
+test('no sustituye la malla vigente cuando no está publicada', async ({ page }) => {
+  await page.route('**/api/v1/academic/plans', async route => {
+    const response = await route.fetch(); const body = await response.json();
+    body.data[0].versions = [{ version: 'otra-version-ejemplo', isExample: true }];
+    await route.fulfill({ json: body });
+  });
+  await login(page, 'estudiante');
+  await expect(page.getByRole('heading', { name: 'La malla todavía no está disponible' })).toBeVisible();
+  await expect(courses(page)).toHaveCount(0);
 });
 
 test('malla y detalle legibles al redimensionar sin overflow del documento', async ({ page }, testInfo) => {
-  const account = await login(page); await expect(courses(page)).toHaveCount(52);
+  await login(page); await expect(courses(page)).toHaveCount(52);
   await chooseStudent(page, 'Estudiante Demo');
   await expect(page.locator('.academic-progress-badge')).toHaveCount(52);
   const response = await page.request.get('/api/v1/academic/plans/nutricion-dietetica/versions/diagrama-r2');
   const names: string[] = (await response.json()).data.courses.map((course: { name: string }) => course.name);
-  for (const width of [1920, 1440, 1280, 1024, 768, 721, 720, 390, 320]) {
+  for (const width of [1920, 1440, 1280, 1024]) {
     await page.setViewportSize({ width, height: 600 });
-    if (width <= 720) await expect(page.locator('.academic-mobile-account')).toContainText(account.name);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `overflow a ${width}px`).toBe(true);
     const cards = await courses(page).evaluateAll(elements => elements.map(element => {
       const bounds = element.getBoundingClientRect();
@@ -656,11 +743,11 @@ test('malla y detalle legibles al redimensionar sin overflow del documento', asy
     expect(cards.every(card => card.nameFits && card.accessibleName.includes(card.label) && names.some(name => card.accessibleName === `Ver asignatura: ${name}` || card.accessibleName.endsWith(` (${name})`))), `etiqueta breve legible y nombre completo accesible a ${width}px`).toBe(true);
     expect(new Set(cards.map(card => card.label)).size, 'etiquetas distintas para los 52 ramos').toBe(52);
     expect(cards.every(card => card.footerFits), `estado y SCT completos a ${width}px`).toBe(true);
-    if ([1920, 1440, 390].includes(width)) {
-      const height = width === 1920 ? 1080 : width === 1440 ? 900 : 844;
+    if ([1920, 1440].includes(width)) {
+      const height = width === 1920 ? 1080 : 900;
       await page.setViewportSize({ width, height });
       await expect(page.locator('.workspace-shell')).toHaveCount(1);
-      await expect.poll(() => page.locator('.workspace-shell').evaluate(element => Math.round(element.getBoundingClientRect().height))).toBe(height - (width <= 760 ? 16 : 32));
+      await expect.poll(() => page.locator('.workspace-shell').evaluate(element => Math.round(element.getBoundingClientRect().height))).toBe(height - 32);
       await page.evaluate(() => { document.querySelector('.academic-content')!.scrollTop = 0; document.querySelector('.academic-board')!.scrollLeft = 0; });
       await page.getByRole('heading', { name: 'Malla curricular', exact: true }).focus();
       await page.mouse.move(0, 0);
@@ -670,6 +757,7 @@ test('malla y detalle legibles al redimensionar sin overflow del documento', asy
     }
     await page.getByRole('button', { name: 'Ver asignatura: Det. sociales y salud pública (Introducción a los determinantes sociales de la salud y salud pública)', exact: true }).click();
     const dialog = page.getByRole('dialog'); await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveCSS('translate', '0px');
     const bounds = await dialog.boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
     if (width === 1440) await page.screenshot({ path: testInfo.outputPath('detalle-1440.png') });

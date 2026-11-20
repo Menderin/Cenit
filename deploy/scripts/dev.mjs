@@ -84,9 +84,9 @@ async function main() {
   // Override inherited migration credentials/production settings only in these children.
   const env = { ...process.env, APP_ENV: 'development', HOST: '127.0.0.1', PORT: '3000',
     DATABASE_URL_FILE: databaseFile, AUTH_COOKIE_SECURE: 'false',
-    AUTH_ALLOWED_ORIGINS: 'http://127.0.0.1:5173,http://127.0.0.1:3000',
+    AUTH_ALLOWED_ORIGINS: 'http://127.0.0.1:5173,http://127.0.0.1:3000,http://localhost:5173,http://localhost:3000',
     CENIT_API_PROXY: 'http://127.0.0.1:3000' };
-  for (const key of ['OCR_URL', 'CAPTURE_RECEIPT_KEY_FILE', 'CENIT_PURCHASE_SECOND_REVIEW_ENABLED', 'CENIT_PURCHASE_SHEETS_SYNC_ENABLED', 'CENIT_PURCHASE_SHEETS_ID', 'CENIT_PURCHASE_SHEETS_KEY_FILE']) if (local[key]) env[key] = local[key];
+  for (const key of ['AUTH_GOOGLE_ENABLED', 'AUTH_GOOGLE_CLIENT_ID', 'OCR_URL', 'CAPTURE_RECEIPT_KEY_FILE', 'CENIT_PURCHASE_SECOND_REVIEW_ENABLED', 'CENIT_PURCHASE_SHEETS_SYNC_ENABLED', 'CENIT_PURCHASE_SHEETS_ID', 'CENIT_PURCHASE_SHEETS_KEY_FILE']) if (local[key]) env[key] = local[key];
   if (env.OCR_URL) {
     try {
       const response = await fetch(`${env.OCR_URL.replace(/\/$/, '')}/health/live`, { signal: AbortSignal.timeout(3000) });
@@ -108,9 +108,13 @@ async function main() {
   if (stopping) return;
   start('Contratos', [...contracts, '--watch', '--preserveWatchOutput'], root, env);
   console.log('Iniciando API local en http://127.0.0.1:3000…');
-  start('API', ['--watch', '--watch-preserve-output', '--import', 'tsx', 'apps/api/src/server.ts'], root, env);
+  // Windows/OneDrive can emit dependency hydration events while imports are read.
+  // Explicit paths keep node_modules out while preserving API/contract reloads.
+  const watch = process.platform === 'win32'
+    ? ['--watch-path=apps/api/src', '--watch-path=packages/contracts/dist'] : ['--watch'];
+  start('API', [...watch, '--watch-preserve-output', '--import', 'tsx', 'apps/api/src/server.ts'], root, env);
   let ready = false;
-  for (let i = 0; i < 100 && !stopping; i++) {
+  for (let i = 0; i < 300 && !stopping; i++) {
     try {
       const response = await fetch('http://127.0.0.1:3000/health/live', { signal: AbortSignal.timeout(500) });
       if (response.ok && (await response.json()).status === 'live') { ready = true; break; }

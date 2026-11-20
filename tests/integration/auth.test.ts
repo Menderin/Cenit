@@ -240,7 +240,8 @@ describe('login real, permisos y sesión', () => {
       }
       // Reuse the actual old cookie: an anonymous request would not prove invalidation.
       const routes: ['GET' | 'POST' | 'PUT' | 'DELETE', string, unknown?][] = [
-        ['GET', '/api/v1/auth/session'], ['GET', '/api/v1/academic/plans'],
+        ['GET', '/api/v1/auth/session'], ['GET', '/api/v1/auth/profile'],
+        ['GET', '/api/v1/academic/plans'],
         ['GET', '/api/v1/purchases'], ['GET', '/api/v1/purchases/summary'],
         ['GET', `/api/v1/purchases/${saved.id}`],
         ['POST', '/api/v1/purchases', { ...input, operationId: randomUUID() }],

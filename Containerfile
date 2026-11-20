@@ -26,6 +26,8 @@ LABEL org.opencontainers.image.source="https://github.com/Menderin/Cenit" \
 WORKDIR /app
 COPY --from=production-dependencies --chown=1000:1000 /app/ /app/
 COPY --from=build --chown=1000:1000 /app/apps/api/dist/ apps/api/dist/
+COPY --from=build --chown=1000:1000 /app/apps/api/assets/service-commission-template.pdf apps/api/assets/service-commission-template.pdf
+COPY --from=build --chown=1000:1000 /app/apps/api/assets/leave-request-template.pdf apps/api/assets/leave-request-template.pdf
 COPY --from=build --chown=1000:1000 /app/apps/web/dist/ apps/web/dist/
 COPY --from=build --chown=1000:1000 /app/packages/contracts/dist/ packages/contracts/dist/
 COPY --from=build --chown=1000:1000 /app/db/migrations/ db/migrations/

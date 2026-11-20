@@ -31,6 +31,14 @@
     "./purchases/examples": {
       "types": "./dist/purchases/examples.d.ts",
       "import": "./dist/purchases/examples.js"
+    },
+    "./personnel": {
+      "types": "./dist/personnel/index.d.ts",
+      "import": "./dist/personnel/index.js"
+    },
+    "./assets": {
+      "types": "./dist/assets/index.d.ts",
+      "import": "./dist/assets/index.js"
     }
   },
   "scripts": {

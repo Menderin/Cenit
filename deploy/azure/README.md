@@ -7,6 +7,8 @@ La demostración se entrega en Azure **Chile Central** mediante GitHub Actions, 
 | `main` | Producción de la demostración | `https://cenit.dpdns.org` |
 | `develop` | Staging | `https://develop.cenit.dpdns.org` |
 
+Staging también puede accederse por `https://cenit-famed.chilecentral.cloudapp.azure.com`, nombre DNS de la IPv4 estática de Azure. El nombre de Azure debe estar asociado a `cenit-ip` antes de entregar el cambio; Caddy solicita y renueva su certificado. La disponibilidad desde la red UCN depende de sus políticas y de la confianza en su inspección HTTPS, y debe verificarse desde esa red.
+
 Una sola B2als v2, Linux/amd64, 2 vCPU y 4 GiB; SSD estándar de 64 GiB e IPv4 fija. Ambos entornos tienen contenedores, redes, volúmenes PostgreSQL, contraseñas y claves de procedencia independientes. Cada uno incluye su propia versión OCR. Se usa Docker Compose en esta VM dedicada para reutilizar el inicializador y los secretos del Compose ya ensayado; la instalación Podman de la VM compartida y el entorno local se conservan durante la transición. Caddy del host termina HTTPS y renueva certificados. Sólo 80/443 tienen entrada pública; API, PostgreSQL y OCR no publican puertos externos. Administración mediante el agente Azure.
 
 ## Costos consultados
@@ -25,7 +27,7 @@ Los límites suman 3,25 GiB para los seis contenedores; los procesos normalmente
 
 ## Infraestructura reproducible
 
-`main.bicep` contiene red, NSG, IPv4, VM, identidad y federación. `cloud-init.yaml` prepara Docker Compose y Caddy desde paquetes Ubuntu. El script no instala runners de PR en la VM ni hace builds allí.
+`main.bicep` contiene red, NSG, IPv4 y su nombre DNS, VM, identidad y federación. `cloud-init.yaml` prepara Docker Compose y Caddy desde paquetes Ubuntu. En cada entrega de staging se valida e instala el `Caddyfile` versionado y se recarga Caddy; ante un fallo del script se intenta recuperar el archivo anterior. El script no instala runners de PR en la VM ni hace builds allí.
 
 Con Azure CLI autenticado en la cuenta y suscripción del proyecto, comprobar el destino antes de aprovisionar:
 
@@ -58,11 +60,11 @@ El workflow comprueba readiness por HTTPS al terminar. Sin DNS/certificado váli
 
 ```mermaid
 flowchart TD
-    Rama["Rama de tarea"] --> PR["PR y revisión independiente"]
+    Rama["Rama de tarea"] --> PR["PR hacia develop y revisión independiente"]
     PR --> CI["ci.yml: tipos, lint, pruebas y build"]
     CI --> Gate{"CI required correcto"}
     Gate -->|No| Bloqueo["Corregir; no integrar ni desplegar"]
-    Gate -->|Sí| Merge["Líder integra en develop o main"]
+    Gate -->|Sí| Merge["Líder integra en develop"]
     Merge --> Release["release.yml: CI del SHA integrado"]
     Release --> Imagenes["Construir y verificar API/web y OCR"]
     Imagenes --> Registro["GHCR: dos imágenes por digest"]
@@ -74,8 +76,13 @@ flowchart TD
     Activar --> Estado["Registrar current.json"]
     Estado --> HTTPS["Comprobar readiness por HTTPS público"]
     HTTPS --> Recorridos["Verificar recorridos y aceptación del incremento"]
+    Recorridos --> Promocion["PR de promoción develop → main"]
+    Promocion --> Origen["Main source branch y CI required"]
+    Origen --> Release
     Operador["Operador: carga de catálogo por separado"] -.-> Lock
 ```
+
+Las ramas de tarea se integran únicamente en `develop`, que despliega staging. Producción demo recibe sólo el PR de promoción desde `develop` del mismo repositorio; ese PR debe pasar `Main source branch` ([main-source.yml](../../.github/workflows/main-source.yml)) y `CI required` antes de integrarse, y su push a `main` repite el flujo con destino producción. Ver [CONTRIBUTING](../../CONTRIBUTING.md#ramas-y-commits).
 
 `ci.yml` se ejecuta para PR hacia `develop`/`main`, pushes de las ramas configuradas y llamadas reutilizables. `CI required` reúne los resultados aplicables de Prerequisites, Infrastructure y Application; Academic foundation es una variante histórica condicionada por el verificador. Un job omitido sólo es válido si el gate lo permite; no equivale a una prueba ejecutada. La aplicación completa se comprueba con tipos, lint, unitarias, integración PostgreSQL, build, navegador compilado y verificación de imagen. La publicación añade el ensayo OCR real sin red con muestras ficticias.
 
@@ -90,7 +97,7 @@ No copiar `.env` local a Azure. `deploy.sh` genera en cada directorio privado la
 | Configuración | Staging | Producción demo |
 | --- | --- | --- |
 | `CENIT_ENV` | `staging` | `production` |
-| `CENIT_ORIGIN` / `AUTH_ALLOWED_ORIGINS` | `https://develop.cenit.dpdns.org` | `https://cenit.dpdns.org` |
+| `CENIT_ORIGIN` / `AUTH_ALLOWED_ORIGINS` | `https://develop.cenit.dpdns.org,https://cenit-famed.chilecentral.cloudapp.azure.com` | `https://cenit.dpdns.org` |
 | `CENIT_HTTP_PORT` en loopback | `8082` | `8081` |
 | Directorio privado | `/opt/cenit/staging` | `/opt/cenit/production` |
 | `CENIT_APP_IMAGE`, `CENIT_OCR_IMAGE` | Digests verificados de la entrega de `develop` | Digests verificados de la entrega de `main` |
@@ -106,6 +113,25 @@ No copiar `.env` local a Azure. `deploy.sh` genera en cada directorio privado la
 | `.local/secrets/capture-receipt-key` | API para firmar procedencia; OCR no recibe este secreto ni acceso a la BD |
 
 Los archivos privados no se incluyen en Git, imágenes ni artefactos públicos. El runtime no recibe las claves ficticias de login para arrancar. Antes de usar una cuenta en un entorno nuevo, su preparación/transferencia debe comprobarse de forma explícita; el deploy no acredita que exista.
+
+### Habilitar Google en un entorno
+
+Cada entorno admite un archivo opcional `/opt/cenit/<entorno>/.local/google.env`, leído únicamente por `app`. Compose debe admitir `env_file.required` (Docker Compose 2.24 o posterior). Si el archivo falta, el proveedor permanece deshabilitado y el acceso local sigue disponible. El archivo pertenece al entorno de la VM y se conserva entre entregas; `deploy.sh` regenera `.env` sin sobrescribirlo.
+
+El operador crea o edita ese archivo con permisos `0600`, dentro del directorio privado del entorno, con estos valores de ejemplo. El ID se sustituye por el ID público del cliente web del proyecto.
+
+```dotenv
+AUTH_GOOGLE_ENABLED=true
+AUTH_GOOGLE_CLIENT_ID=123456789-example.apps.googleusercontent.com
+```
+
+Registrar el origen HTTPS exacto del entorno en Google Auth Platform y añadir las cuentas de prueba si la aplicación sigue en modo de pruebas. El cliente usa Google Identity Services con callback en ventana emergente; las URLs de redirección se dejan vacías. Sólo se configura el ID público del cliente. La autorización exacta de correos y la primera vinculación desde una sesión local se preparan por separado mediante el [procedimiento Google](../LOCAL.md#acceso-google-opcional). Cada base conserva sus propias autorizaciones y vínculos.
+
+Aplicar la configuración mediante la siguiente entrega habitual de Actions al entorno. Comprobar `GET /api/v1/auth/google` después de la entrega. Debe devolver `enabled: true` y el ID esperado. Un `404` indica que el destino todavía no publica ese endpoint; `enabled: false` requiere revisar configuración y formato del ID. Un readiness correcto acredita salud del runtime, mientras que el recorrido Google se comprueba con una cuenta autorizada.
+
+Para aceptar el recorrido, entrar con contraseña local, abrir **Mi perfil**, vincular la cuenta Google, cerrar sesión e ingresar con Google. Verificar cuenta, rol, permisos y foto en perfil y menú lateral; cerrar sesión y comprobar que el API vuelve a rechazar consultas protegidas. Registrar fecha, entorno, SHA entregado, casos y resultados, sin JWT, cookies ni credenciales. Las pruebas automáticas con identidades ficticias complementan este recorrido. La aprobación de otro integrante se registra en el PR o Jira.
+
+Para deshabilitar Google en una entrega posterior, establecer `AUTH_GOOGLE_ENABLED=false` en el archivo del entorno y realizar la entrega habitual. Retirar el permiso de una cuenta concreta requiere además el comando explícito `revoke`, que invalida sus sesiones Google según el contrato documentado.
 
 ## Publicar el catálogo académico (operación explícita)
 
