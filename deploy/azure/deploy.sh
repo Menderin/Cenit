@@ -13,10 +13,15 @@ dc() { docker compose --env-file .env -f compose.yaml "$@"; }
 registry=$(mktemp -d /run/cenit-registry.XXXXXX)
 activated=false
 configured=false
+caddy_configured=false
 recover() {
   result=$?
   trap - EXIT
   rm -rf -- "$registry"
+  if (( result != 0 )) && $caddy_configured; then
+    cp "$BUNDLE_ROOT/previous.Caddyfile" /etc/caddy/Caddyfile
+    systemctl reload caddy || echo 'Caddy recovery requires inspection.' >&2
+  fi
   if (( result != 0 )) && $configured; then
     if [[ -f previous.env && -f previous.compose.yaml ]]; then
       cp previous.env .env
@@ -99,6 +104,13 @@ activated=true
 dc up -d --pull never --wait --wait-timeout 180 app
 curl --fail --silent "http://127.0.0.1:$CENIT_HTTP_PORT/health/ready" | python3 -c 'import json,sys; assert json.load(sys.stdin)=={"status":"ready"}'
 curl --fail --silent "http://127.0.0.1:$CENIT_HTTP_PORT/login" -o /dev/null
+if [[ $CENIT_ENV == staging ]]; then
+  caddy validate --config "$BUNDLE_ROOT/Caddyfile"
+  cp /etc/caddy/Caddyfile "$BUNDLE_ROOT/previous.Caddyfile"
+  caddy_configured=true
+  install -m 644 "$BUNDLE_ROOT/Caddyfile" /etc/caddy/Caddyfile
+  systemctl reload caddy
+fi
 python3 - <<'PY'
 import json,os
 from pathlib import Path

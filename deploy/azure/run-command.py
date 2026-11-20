@@ -32,11 +32,12 @@ def deployment(environment):
         values[name] = image
     production = branch == 'main'
     values.update(ENV='production' if production else 'staging',
-                  ORIGIN='https://cenit.dpdns.org' if production else 'https://develop.cenit.dpdns.org',
+                  ORIGIN='https://cenit.dpdns.org' if production else 'https://develop.cenit.dpdns.org,https://cenit-famed.chilecentral.cloudapp.azure.com',
                   HTTP_PORT='8081' if production else '8082')
     stream = io.BytesIO()
     with tarfile.open(fileobj=stream, mode='w:gz') as bundle:
         for source, destination in [('deploy/azure/compose.yaml','compose.yaml'),
+                                    ('deploy/azure/Caddyfile','Caddyfile'),
                                     ('deploy/azure/deploy.sh','deploy.sh'),
                                     ('deploy/local/init-db.sh','init-db.sh'),
                                     ('deploy/scripts/setup-local.py','setup-local.py')]:

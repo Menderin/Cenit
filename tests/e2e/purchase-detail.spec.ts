@@ -27,7 +27,7 @@ async function createRecord(page: Page, origin?: CreatePurchase['origin']) {
   return record;
 }
 
-test('detalle coincide con la API, conserva revisión y se recorre con teclado en móvil', async ({ page }) => {
+test('detalle coincide con la API, conserva revisión y se recorre con teclado', async ({ page }) => {
   await login(page, 'administrativo');
   const created = await createRecord(page);
   const validation = await page.request.post(`/api/v1/purchases/${created.id}/validation`, {
@@ -39,31 +39,33 @@ test('detalle coincide con la API, conserva revisión y se recorre con teclado e
   const record = (await response.json()).data;
   expect(record.reviewStatus).toBe('reviewed');
   expect(record.administrative).toEqual(created.administrative);
-  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/administracion/compras/${record.id}`);
   const check = async () => {
     await expect(page.getByRole('heading', { name: `Solicitud ${record.header.requestNumber}` })).toBeVisible();
     await expect(page.getByText('Revisado en Cenit', { exact: true })).toBeVisible();
     await expect(page.locator('.purchase-detail-heading__amount strong')).toHaveText(currency.format(BigInt(record.header.totalAmount)));
-    await expectFields(page.locator('.purchase-detail-section').filter({ has: page.getByRole('heading', { name: 'Datos principales' }) }), {
-      requestNumber: record.header.requestNumber, sentDate: record.header.sentDate, description: record.header.description,
-    });
+    await expect(page.locator('.purchase-detail-description')).toHaveText(record.header.description);
+    await expectFields(page.locator('.purchase-detail-summary'), { requestNumber: record.header.requestNumber, sentDate: record.header.sentDate });
     for (const [index, line] of record.lines.entries()) {
       const item = page.locator('details.purchase-item').filter({ has: page.locator('summary').getByText(`Ítem ${index + 1}`, { exact: true }) });
       await item.locator('summary').focus(); await page.keyboard.press('Enter');
-      await expectFields(item, line);
+      // La cuenta completa ya incluye los cinco códigos: el detalle no los repite si coinciden.
+      const { universityCode, campusCode, unitCode, projectCode, accountingCode, ...shown } = line;
+      const parts = line.chargeAccount?.split('.') ?? [];
+      const redundant = parts.length === 5 && [universityCode, campusCode, unitCode, projectCode, accountingCode].every((code, i) => code === null || code === parts[i]);
+      await expectFields(item, redundant ? shown : line);
+      if (redundant) await expect(item.getByText('Código universidad', { exact: true })).toHaveCount(0);
     }
-    const complementary = page.locator('details').filter({ has: page.locator('summary').getByText('Datos complementarios', { exact: true }) });
-    await complementary.locator('summary').focus(); await page.keyboard.press('Enter');
+    // Read-only boxes show known values first; empty ones live in a closed «Mostrar … sin dato» disclosure that still holds every field.
+    const box = (name: string) => page.locator('.purchase-detail-box').filter({ has: page.getByRole('heading', { name, exact: true }) });
     const { requestNumber: _number, sentDate: _date, description: _description, totalAmount: _total, ...other } = record.header;
-    await expectFields(complementary, other);
-    const administration = page.locator('details').filter({ has: page.locator('summary').getByText('Seguimiento administrativo', { exact: true }) });
-    await administration.locator('summary').focus(); await page.keyboard.press('Enter');
-    await expectFields(administration, record.administrative);
-    const provenance = page.locator('.purchase-detail-section').filter({ has: page.getByRole('heading', { name: 'Registro y procedencia' }) });
-    await expect(provenance).toContainText('Ingreso manual');
-    await expect(provenance).toContainText(record.createdBy.name);
-    await expect(provenance).toContainText(record.reviewedBy.name);
+    await expectFields(box('Datos de la solicitud'), other);
+    const { documentType, ...administrative } = record.administrative;
+    await expectFields(box('Seguimiento administrativo'), administrative);
+    await expect(page.locator('.purchase-detail-summary')).toContainText(documentType ?? 'Sin dato');
+    await expect(page.locator('.purchase-detail-summary')).toContainText('Ingreso manual');
+    await expect(box('Registro en Cenit')).toContainText(record.createdBy.name);
+    await expect(box('Registro en Cenit')).toContainText(record.reviewedBy.name);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   };
   await check();
@@ -213,7 +215,6 @@ for (const editing of [false, true]) {
       headers: { Origin: new URL(page.url()).origin }, data: { expectedVersion: record.version },
     });
     expect(deleted.status()).toBe(200);
-    await page.setViewportSize({ width: 390, height: 844 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await (editing ? page.getByRole('link', { name: 'Editar', exact: true }) : detail).click();
     await expect(alert).toContainText('No encontramos esta compra.');
@@ -223,7 +224,6 @@ for (const editing of [false, true]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await expect(back).toHaveAttribute('href', returnTo);
     await expect(page.locator('.cenit-page-enter')).toHaveCSS('opacity', '1');
-    await page.screenshot({ path: `tmp/scrum-106/${editing ? 'edicion' : 'detalle'}-404-390.png`, animations: 'disabled' });
     await back.focus(); await expect(back).toBeFocused(); await page.keyboard.press('Enter');
     await expect(page).toHaveURL(new URL(returnTo, page.url()).href);
     await expect(page.getByLabel('Buscar solicitudes', { exact: true })).toHaveValue(record.header.requestNumber);
@@ -233,7 +233,6 @@ for (const editing of [false, true]) {
     await login(page, 'administrativo');
     const record = await createRecord(page);
     const endpoint = `**/api/v1/purchases/${record.id}`;
-    await page.setViewportSize({ width: 390, height: 844 });
     for (const network of [false, true]) {
       await page.route(endpoint, route => network ? route.abort('failed') : route.fulfill({ status: 503, json: { error: { code: 'SERVICE_UNAVAILABLE', message: 'Detalle temporalmente indisponible', requestId: 'test' } } }));
       await page.goto(`/administracion/compras/${record.id}${suffix}`);

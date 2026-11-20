@@ -5,10 +5,12 @@ import { WarningCircleIcon } from '@phosphor-icons/react/dist/csr/WarningCircle'
 import { useExitPresence } from '../lib/use-exit-presence.js';
 
 export function ContextualConfirm({ open, origin, title, description, confirmLabel, cancelLabel = 'Seguir editando', busy = false,
-  busyLabel = 'Confirmando…', caution = false, destructive = false, onConfirm, onCancel, fallbackFocus, children }: {
+  busyLabel = 'Confirmando…', caution = false, destructive = false, wide = false, onConfirm, onCancel, fallbackFocus, children }: {
   open: boolean; origin: HTMLElement | null; title: string; description: string; confirmLabel?: string; cancelLabel?: string;
   busy?: boolean; busyLabel?: string; caution?: boolean; destructive?: boolean; onConfirm?: () => void; onCancel: () => void;
   fallbackFocus?: RefObject<HTMLElement | null>; children?: ReactNode;
+  /** Room for a short summary or a choice of options, still anchored to the button that opened it. */
+  wide?: boolean;
 }) {
   const { mounted, closing } = useExitPresence(open);
   const location = useLocation(), path = location.pathname + location.search;
@@ -36,7 +38,7 @@ export function ContextualConfirm({ open, origin, title, description, confirmLab
     </Popover.Portal>
     <Popover.Portal>
       <Popover.Content role="alertdialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId}
-        side="top" sideOffset={10} collisionPadding={16} sticky="always" className={`cenit-confirm${closing ? ' cenit-closing' : ''}`}
+        side="top" sideOffset={10} collisionPadding={16} sticky="always" className={`cenit-confirm${wide ? ' cenit-confirm--wide' : ''}${closing ? ' cenit-closing' : ''}`}
         onOpenAutoFocus={event => { event.preventDefault(); cancel.current?.focus({ preventScroll: true }); }}
         onCloseAutoFocus={event => {
           event.preventDefault();

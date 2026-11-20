@@ -39,11 +39,12 @@ Antes del merge deben pasar `CI required`, las comprobaciones aplicables y al me
 
 | Área | Referencia de revisión |
 | --- | --- |
-| Frontend e interfaz | Gael |
-| Backend, contratos, datos e infraestructura | Víctor |
-| Pruebas, criterios, evidencias y documentación | Kevin |
+| Frontend, interfaz y pruebas funcionales | Gael |
+| Backend, contratos, datos, infraestructura, pruebas técnicas e integración | Víctor |
 
-El autor elige otro integrante con capacidad para revisar su propio trabajo. Confirmar disponibilidad antes de asignar esfuerzo a Andrés o Ignacio. Víctor coordina integración y promoción a `main`; sus cambios también necesitan revisión independiente. La ausencia de un revisor no autoriza a eludir los controles.
+Kevin e Ignacio desarrollan funcionalidades. Cada autor documenta y prueba su propio cambio; Gael consolida la documentación de usuario y las pruebas funcionales, y Víctor revisa lo técnico. Andrés ya no participa en el proyecto.
+
+El autor elige otro integrante para revisar su trabajo: Gael revisa el funcionamiento y Víctor la parte técnica, y nadie aprueba su propio cambio. Víctor coordina integración y promoción a `main`; sus cambios también necesitan revisión independiente. La ausencia de un revisor no autoriza a eludir los controles.
 
 El líder crea los PR. Los agentes preparan cambios, commits y evidencia local; sólo publican, crean PR o integran cuando reciben una instrucción explícita. No cambian estados/asignaciones de Jira ni envían mensajes a compañeros sin esa autorización.
 

@@ -1,0 +1,786 @@
+{
+  "date": "2026-11-17",
+  "tasks": [
+    "SCRUM-47",
+    "SCRUM-133",
+    "SCRUM-134"
+  ],
+  "baseCommit": "c59ed31b598918a82cfcb882002d6ac4f3a0dca5",
+  "workingTreeChanges": true,
+  "imageId": "2edd782b44021d1d4ddc7acac72c00314acb88410823a6eac6e5233deebcd233",
+  "models": {
+    "modelStartupSeconds": 0.763,
+    "processPeakMemoryBytes": 75583488,
+    "cpuMax": "100000 100000",
+    "memoryMax": "1073741824",
+    "weights": {
+      "ch_PP-OCRv5_det_mobile.onnx": "4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae",
+      "latin_PP-OCRv5_rec_mobile.onnx": "b20bd37c168a570f583afbc8cd7925603890efbcdc000a59e22c269d160b5f5a"
+    }
+  },
+  "runtimeVersions": {
+    "rapidocr": "3.10.0",
+    "onnxruntime": "1.28.0",
+    "pillow": "12.3.0",
+    "opencv-python-headless": "5.0.0.93"
+  },
+  "labels": {
+    "sha256": "ab1ddbc68520a703feec2e30e3e161194214bbf71f54200a67707ab231fd78c1",
+    "review": "Assistant visual transcription; independent review pending. Original labels retained privately after correcting eight project zeros. Both baseline and candidate rescored against the same corrected labels.",
+    "excluded": "Truncated attachment references, administrative values not visible and derived account components.",
+    "comparison": "Whitespace normalized; accents, signs and digits remain significant. No expected values are passed to the extractor."
+  },
+  "real": {
+    "baseline": {
+      "sourceHashes": {
+        "extractor.py": "9ccbf5bad8b994be71afd65d71f632f88a1677d07ce7efdc23a7ff4d073b5d0d",
+        "server.py": "1ae77282561d3530efd2d28f91689a640ac7abddfa029071696f38006d61b971"
+      },
+      "counts": {
+        "exact": 43,
+        "missing": 50,
+        "wrong": 0
+      },
+      "byField": {
+        "requestNumber": {
+          "exact": 5
+        },
+        "oracleId": {
+          "exact": 5
+        },
+        "sender": {
+          "exact": 5
+        },
+        "recipient": {
+          "exact": 5
+        },
+        "sentDate": {
+          "exact": 4,
+          "missing": 1
+        },
+        "sentTime": {
+          "exact": 4,
+          "missing": 1
+        },
+        "description": {
+          "exact": 5,
+          "missing": 6
+        },
+        "totalAmount": {
+          "exact": 5
+        },
+        "taxAmount": {
+          "exact": 5
+        },
+        "provider": {
+          "missing": 6
+        },
+        "costCenter": {
+          "missing": 6
+        },
+        "lineUnit": {
+          "missing": 6
+        },
+        "quantity": {
+          "missing": 6
+        },
+        "price": {
+          "missing": 6
+        },
+        "amount": {
+          "missing": 6
+        },
+        "chargeAccount": {
+          "missing": 6
+        }
+      },
+      "medianSeconds": 8.281,
+      "maxSeconds": 9.169,
+      "environment": {
+        "python": "3.11.2",
+        "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.36",
+        "cpuMax": "100000 100000",
+        "memoryMax": "1073741824",
+        "memoryMeasurement": "Cgroup cumulative high-water mark including evaluation client"
+      },
+      "samples": [
+        {
+          "case": "sample-01",
+          "httpStatus": 200,
+          "seconds": 8.47,
+          "imageSha256": "c97e3b84a1fe5958d4f32aa3ba4b8710b7b010085c175ec4ccec23b30f603998",
+          "memoryPeakBytes": "726278144",
+          "rowsExpected": 1,
+          "rowsActual": 0,
+          "counts": {
+            "exact": 9,
+            "missing": 8,
+            "wrong": 0
+          },
+          "responseSha256": "b7688d4d47aa8f5688c96419566ac3616fa95774059db43647c797cd1f140c35",
+          "reviewRequired": true
+        },
+        {
+          "case": "sample-02",
+          "httpStatus": 200,
+          "seconds": 9.169,
+          "imageSha256": "915ddeed3581abdbeb2b999f5b1362fe312ebc41da33cd7f78b881ef82829fb9",
+          "memoryPeakBytes": "726278144",
+          "rowsExpected": 2,
+          "rowsActual": 0,
+          "counts": {
+            "exact": 9,
+            "missing": 16,
+            "wrong": 0
+          },
+          "responseSha256": "b5ba99ad111375b984a66a00a5f6b3c205b0708016b5566d155e308f6685a5f5",
+          "reviewRequired": true
+        },
+        {
+          "case": "sample-03",
+          "httpStatus": 200,
+          "seconds": 8.281,
+          "imageSha256": "8fe99db156260f4636b468445bbed9d8728dbc22a11ee2997ed0dc3d9fbbdacc",
+          "memoryPeakBytes": "726278144",
+          "rowsExpected": 1,
+          "rowsActual": 0,
+          "counts": {
+            "exact": 7,
+            "missing": 10,
+            "wrong": 0
+          },
+          "responseSha256": "24bc2454cf9ef3a63de5c4bc1bdf3e047ef2f7cef7bed36c6aab89af70f94b4d",
+          "reviewRequired": true
+        },
+        {
+          "case": "sample-04",
+          "httpStatus": 200,
+          "seconds": 8.266,
+          "imageSha256": "ac603a694d2f26c6428b42e9831bb1f64d402091404d25f7c4d4827d06e85603",
+          "memoryPeakBytes": "726278144",
+          "rowsExpected": 1,
+          "rowsActual": 0,
+          "counts": {
+            "exact": 9,
+            "missing": 8,
+            "wrong": 0
+          },
+          "responseSha256": "2119661676484028bc67d4cea28e5954b1aabfc341eeedff7d537d9ed71bd1b8",
+          "reviewRequired": true
+        },
+        {
+          "case": "sample-05",
+          "httpStatus": 200,
+          "seconds": 7.967,
+          "imageSha256": "4ef09a0105a36d63c2d6454d64547c4c33e10529a497e301174c0ab9d34ff0b5",
+          "memoryPeakBytes": "765243392",
+          "rowsExpected": 1,
+          "rowsActual": 0,
+          "counts": {
+            "exact": 9,
+            "missing": 8,
+            "wrong": 0
+          },
+          "responseSha256": "dbf3a2ad35fbf3cac7e90732e532aa397d650d15f458f58d4f968834db14f8fe",
+          "reviewRequired": true
+        }
+      ],
+      "startupToLiveSeconds": 2.465
+    },
+    "candidate": {
+      "sourceHashes": {
+        "extractor.py": "f59065dddba4e68301063f8b92d09c2456b4efa6fd7c092abde855970430dcaa",
+        "server.py": "1ae77282561d3530efd2d28f91689a640ac7abddfa029071696f38006d61b971"
+      },
+      "counts": {
+        "exact": 86,
+        "wrong": 7,
+        "missing": 0
+      },
+      "byField": {
+        "requestNumber": {
+          "exact": 5
+        },
+        "oracleId": {
+          "exact": 5
+        },
+        "sender": {
+          "exact": 5
+        },
+        "recipient": {
+          "exact": 5
+        },
+        "sentDate": {
+          "exact": 5
+        },
+        "sentTime": {
+          "exact": 5
+        },
+        "description": {
+          "exact": 9,
+          "wrong": 2
+        },
+        "totalAmount": {
+          "exact": 5
+        },
+        "taxAmount": {
+          "exact": 5
+        },
+        "provider": {
+          "exact": 6
+        },
+        "costCenter": {
+          "wrong": 5,
+          "exact": 1
+        },
+        "lineUnit": {
+          "exact": 6
+        },
+        "quantity": {
+          "exact": 6
+        },
+        "price": {
+          "exact": 6
+        },
+        "amount": {
+          "exact": 6
+        },
+        "chargeAccount": {
+          "exact": 6
+        }
+      },
+      "medianSeconds": 14.302,
+      "maxSeconds": 19.74,
+      "environment": {
+        "python": "3.11.2",
+        "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.36",
+        "cpuMax": "100000 100000",
+        "memoryMax": 1073741824,
+        "memoryMeasurement": "Cgroup cumulative high-water mark including evaluation client"
+      },
+      "samples": [
+        {
+          "case": "sample-01",
+          "httpStatus": 200,
+          "seconds": 14.261,
+          "imageSha256": "c97e3b84a1fe5958d4f32aa3ba4b8710b7b010085c175ec4ccec23b30f603998",
+          "memoryPeakBytes": 984141824,
+          "rowsExpected": 1,
+          "rowsActual": 1,
+          "counts": {
+            "exact": 15,
+            "wrong": 2,
+            "missing": 0
+          },
+          "responseSha256": "1e3d2796571b9c70f3a33862831727d6caa364d97c3443874c2e725d102e787e",
+          "reviewRequired": true
+        },
+        {
+          "case": "sample-02",
+          "httpStatus": 200,
+          "seconds": 19.74,
+          "imageSha256": "915ddeed3581abdbeb2b999f5b1362fe312ebc41da33cd7f78b881ef82829fb9",
+          "memoryPeakBytes": 984141824,
+          "rowsExpected": 2,
+          "rowsActual": 2,
+          "counts": {
+            "exact": 22,
+            "wrong": 3,
+            "missing": 0
+          },
+          "responseSha256": "ff387f048b7502f3906b632d34bb11fd1dcb77a53f3c1751ec4992973ee5c10f",
+          "reviewRequired": true
+        },
+        {
+          "case": "sample-03",
+          "httpStatus": 200,
+          "seconds": 14.302,
+          "imageSha256": "8fe99db156260f4636b468445bbed9d8728dbc22a11ee2997ed0dc3d9fbbdacc",
+          "memoryPeakBytes": 984141824,
+          "rowsExpected": 1,
+          "rowsActual": 1,
+          "counts": {
+            "exact": 16,
+            "wrong": 1,
+            "missing": 0
+          },
+          "responseSha256": "86609aea79723a6f3643aa12db76fb724454b4a1ca84e8491e7eee40d983000d",
+          "reviewRequired": true
+        },
+        {
+          "case": "sample-04",
+          "httpStatus": 200,
+          "seconds": 13.346,
+          "imageSha256": "ac603a694d2f26c6428b42e9831bb1f64d402091404d25f7c4d4827d06e85603",
+          "memoryPeakBytes": 984141824,
+          "rowsExpected": 1,
+          "rowsActual": 1,
+          "counts": {
+            "exact": 17,
+            "wrong": 0,
+            "missing": 0
+          },
+          "responseSha256": "303f15e5f4e9cf9603525b59300481383a6c556b9eff6b5a491579934c9415d9",
+          "reviewRequired": true
+        },
+        {
+          "case": "sample-05",
+          "httpStatus": 200,
+          "seconds": 14.877,
+          "imageSha256": "4ef09a0105a36d63c2d6454d64547c4c33e10529a497e301174c0ab9d34ff0b5",
+          "memoryPeakBytes": 984141824,
+          "rowsExpected": 1,
+          "rowsActual": 1,
+          "counts": {
+            "exact": 16,
+            "wrong": 1,
+            "missing": 0
+          },
+          "responseSha256": "e298e36cc46bfdbf31f09806d0946fb9c52258e68acb3ac1ee9f71b21a96e4d3",
+          "reviewRequired": true
+        }
+      ],
+      "startupToLiveSeconds": 1.335
+    }
+  },
+  "synthetic": {
+    "baseline": {
+      "sourceHashes": {
+        "extractor.py": "9ccbf5bad8b994be71afd65d71f632f88a1677d07ce7efdc23a7ff4d073b5d0d",
+        "server.py": "1ae77282561d3530efd2d28f91689a640ac7abddfa029071696f38006d61b971"
+      },
+      "counts": {
+        "exact": 118,
+        "wrong": 11,
+        "missing": 35
+      },
+      "byField": {
+        "requestNumber": {
+          "exact": 8
+        },
+        "oracleId": {
+          "exact": 8
+        },
+        "sender": {
+          "exact": 8
+        },
+        "recipient": {
+          "exact": 8
+        },
+        "sentDate": {
+          "exact": 8
+        },
+        "sentTime": {
+          "exact": 8
+        },
+        "description": {
+          "exact": 11,
+          "wrong": 4,
+          "missing": 5
+        },
+        "totalAmount": {
+          "exact": 8
+        },
+        "taxAmount": {
+          "exact": 8
+        },
+        "attachmentReference": {
+          "exact": 8
+        },
+        "provider": {
+          "exact": 7,
+          "missing": 5
+        },
+        "costCenter": {
+          "wrong": 7,
+          "missing": 5
+        },
+        "lineUnit": {
+          "exact": 7,
+          "missing": 5
+        },
+        "quantity": {
+          "exact": 7,
+          "missing": 5
+        },
+        "price": {
+          "exact": 7,
+          "missing": 5
+        },
+        "amount": {
+          "exact": 7,
+          "missing": 5
+        }
+      },
+      "medianSeconds": 13.1055,
+      "maxSeconds": 26.501,
+      "environment": {
+        "python": "3.11.2",
+        "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.36",
+        "cpuMax": "100000 100000",
+        "memoryMax": "1073741824",
+        "memoryMeasurement": "Cgroup cumulative high-water mark including evaluation client"
+      },
+      "samples": [
+        {
+          "case": "01-completa",
+          "httpStatus": 200,
+          "seconds": 15.444,
+          "imageSha256": "cf46ae42f0096e08392e3f2577e5d07feb6239d9cdff49ff0cd20dc9b4850dc6",
+          "memoryPeakBytes": "989147136",
+          "rowsExpected": 1,
+          "rowsActual": 1,
+          "counts": {
+            "exact": 15,
+            "wrong": 2,
+            "missing": 0
+          },
+          "responseSha256": "74285d6c4ea438a7cba15229715eba6b1f487655c61b282305035ca3e0582f8b",
+          "reviewRequired": true
+        },
+        {
+          "case": "02-dos-items",
+          "httpStatus": 200,
+          "seconds": 22.008,
+          "imageSha256": "b1323c4a931c5d73b653b536bcefc7b4e17ad6fc6a28ae84ef3dbadf060b9883",
+          "memoryPeakBytes": "1073741824",
+          "rowsExpected": 2,
+          "rowsActual": 2,
+          "counts": {
+            "exact": 21,
+            "wrong": 3,
+            "missing": 0
+          },
+          "responseSha256": "e8245eaef6e2d088abb4634a60b2230917fb616c3e258e06f2e10126ada82431",
+          "reviewRequired": true
+        },
+        {
+          "case": "03-tres-items",
+          "httpStatus": 200,
+          "seconds": 26.501,
+          "imageSha256": "25c44b91bf9da94538716bff4f495f80564bb37426891e789a2b25b8349611cc",
+          "memoryPeakBytes": "1073741824",
+          "rowsExpected": 3,
+          "rowsActual": 3,
+          "counts": {
+            "exact": 27,
+            "wrong": 4,
+            "missing": 0
+          },
+          "responseSha256": "d15061ad7847fa6e0e750d88b029c44b9924d53ad646ce0fe024d60ebc37468f",
+          "reviewRequired": true
+        },
+        {
+          "case": "04-jpeg",
+          "httpStatus": 200,
+          "seconds": 6.732,
+          "imageSha256": "92b0c0bec2839ad7caf7bac19e797844a0077e918a7ba264ad1f3f14728747c2",
+          "memoryPeakBytes": "1073741824",
+          "rowsExpected": 1,
+          "rowsActual": 0,
+          "counts": {
+            "exact": 10,
+            "missing": 7,
+            "wrong": 0
+          },
+          "responseSha256": "196afd07702639ca6ee31f0a69244fb9b34a7cda5b05c046079922a93f37b058",
+          "reviewRequired": true
+        },
+        {
+          "case": "05-reducida",
+          "httpStatus": 200,
+          "seconds": 9.561,
+          "imageSha256": "8ec8f8c7094c3c97edc2227c06fd75d3fedd452a2f8ed661063692d57956d8a2",
+          "memoryPeakBytes": "1073741824",
+          "rowsExpected": 1,
+          "rowsActual": 0,
+          "counts": {
+            "exact": 10,
+            "missing": 7,
+            "wrong": 0
+          },
+          "responseSha256": "a4ce21a8b63a1a55c7f075fe1dfcae641d69fa62ee0c339567cf385151a463ff",
+          "reviewRequired": true
+        },
+        {
+          "case": "06-ampliada",
+          "httpStatus": 200,
+          "seconds": 10.767,
+          "imageSha256": "aef2aaafd3f1dedcc2cd123c208b8f9e5d5f4a8de9735eb1fe09c707d43c57e3",
+          "memoryPeakBytes": "1073741824",
+          "rowsExpected": 2,
+          "rowsActual": 0,
+          "counts": {
+            "exact": 10,
+            "missing": 14,
+            "wrong": 0
+          },
+          "responseSha256": "f82a83a1e5e0a719f93173bbd39182bf796f48630185b4a1a8d90ef29d4cb9ab",
+          "reviewRequired": true
+        },
+        {
+          "case": "07-grises",
+          "httpStatus": 200,
+          "seconds": 9.857,
+          "imageSha256": "ebb260856bc9e719ede2afaf2d2c040f819a459a3c55f2033fd85c7f3535fb73",
+          "memoryPeakBytes": "1073741824",
+          "rowsExpected": 1,
+          "rowsActual": 0,
+          "counts": {
+            "exact": 10,
+            "missing": 7,
+            "wrong": 0
+          },
+          "responseSha256": "c6f86dd60e890729338b3d92c5dea1a2faeb4bce5e7e7f272a2fbf663964a97f",
+          "reviewRequired": true
+        },
+        {
+          "case": "08-cabecera-recortada",
+          "httpStatus": 200,
+          "seconds": 15.799,
+          "imageSha256": "59c57fb9f8b72144ecf89fff8579d940c22bb4f4df2b6d6f8b45139faf00b645",
+          "memoryPeakBytes": "1073741824",
+          "rowsExpected": 1,
+          "rowsActual": 1,
+          "counts": {
+            "exact": 15,
+            "wrong": 2,
+            "missing": 0
+          },
+          "responseSha256": "f4bbc8f3dc8998bd3e1a5cfd0b950461328a6e9e4b648111c78fc1112a2dd93e",
+          "reviewRequired": true
+        }
+      ]
+    },
+    "candidate": {
+      "sourceHashes": {
+        "extractor.py": "f59065dddba4e68301063f8b92d09c2456b4efa6fd7c092abde855970430dcaa",
+        "server.py": "1ae77282561d3530efd2d28f91689a640ac7abddfa029071696f38006d61b971"
+      },
+      "counts": {
+        "exact": 118,
+        "wrong": 11,
+        "missing": 35
+      },
+      "byField": {
+        "requestNumber": {
+          "exact": 8
+        },
+        "oracleId": {
+          "exact": 8
+        },
+        "sender": {
+          "exact": 8
+        },
+        "recipient": {
+          "exact": 8
+        },
+        "sentDate": {
+          "exact": 8
+        },
+        "sentTime": {
+          "exact": 8
+        },
+        "description": {
+          "exact": 11,
+          "wrong": 4,
+          "missing": 5
+        },
+        "totalAmount": {
+          "exact": 8
+        },
+        "taxAmount": {
+          "exact": 8
+        },
+        "attachmentReference": {
+          "exact": 8
+        },
+        "provider": {
+          "exact": 7,
+          "missing": 5
+        },
+        "costCenter": {
+          "wrong": 7,
+          "missing": 5
+        },
+        "lineUnit": {
+          "exact": 7,
+          "missing": 5
+        },
+        "quantity": {
+          "exact": 7,
+          "missing": 5
+        },
+        "price": {
+          "exact": 7,
+          "missing": 5
+        },
+        "amount": {
+          "exact": 7,
+          "missing": 5
+        }
+      },
+      "medianSeconds": 12.9465,
+      "maxSeconds": 31.879,
+      "environment": {
+        "python": "3.11.2",
+        "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.36",
+        "cpuMax": "100000 100000",
+        "memoryMax": 1073741824,
+        "memoryMeasurement": "Cgroup cumulative high-water mark including evaluation client"
+      },
+      "samples": [
+        {
+          "case": "01-completa",
+          "httpStatus": 200,
+          "seconds": 15.342,
+          "imageSha256": "cf46ae42f0096e08392e3f2577e5d07feb6239d9cdff49ff0cd20dc9b4850dc6",
+          "memoryPeakBytes": 744648704,
+          "rowsExpected": 1,
+          "rowsActual": 1,
+          "counts": {
+            "exact": 15,
+            "wrong": 2,
+            "missing": 0
+          },
+          "responseSha256": "33639a85792a9fd0a65b2ea84ef9905993b53129695c9b3645a19608d536b834",
+          "reviewRequired": true
+        },
+        {
+          "case": "02-dos-items",
+          "httpStatus": 200,
+          "seconds": 20.897,
+          "imageSha256": "b1323c4a931c5d73b653b536bcefc7b4e17ad6fc6a28ae84ef3dbadf060b9883",
+          "memoryPeakBytes": 984141824,
+          "rowsExpected": 2,
+          "rowsActual": 2,
+          "counts": {
+            "exact": 21,
+            "wrong": 3,
+            "missing": 0
+          },
+          "responseSha256": "74027eafd6f74e63cbd52c5143d82b28f55fee45a47caf7fb76c5c85fc413241",
+          "reviewRequired": true
+        },
+        {
+          "case": "03-tres-items",
+          "httpStatus": 200,
+          "seconds": 31.879,
+          "imageSha256": "25c44b91bf9da94538716bff4f495f80564bb37426891e789a2b25b8349611cc",
+          "memoryPeakBytes": 984141824,
+          "rowsExpected": 3,
+          "rowsActual": 3,
+          "counts": {
+            "exact": 27,
+            "wrong": 4,
+            "missing": 0
+          },
+          "responseSha256": "f5ea5a65f66385e63c52fd02d6acf8a83f5ad89895934dd139f3279bd59015e4",
+          "reviewRequired": true
+        },
+        {
+          "case": "04-jpeg",
+          "httpStatus": 200,
+          "seconds": 6.748,
+          "imageSha256": "92b0c0bec2839ad7caf7bac19e797844a0077e918a7ba264ad1f3f14728747c2",
+          "memoryPeakBytes": 984141824,
+          "rowsExpected": 1,
+          "rowsActual": 0,
+          "counts": {
+            "exact": 10,
+            "missing": 7,
+            "wrong": 0
+          },
+          "responseSha256": "09ac18e43d2c89d94881643812b3a5e0a3723bfc064a4fad32f065ef9564fbe0",
+          "reviewRequired": true
+        },
+        {
+          "case": "05-reducida",
+          "httpStatus": 200,
+          "seconds": 9.419,
+          "imageSha256": "8ec8f8c7094c3c97edc2227c06fd75d3fedd452a2f8ed661063692d57956d8a2",
+          "memoryPeakBytes": 984141824,
+          "rowsExpected": 1,
+          "rowsActual": 0,
+          "counts": {
+            "exact": 10,
+            "missing": 7,
+            "wrong": 0
+          },
+          "responseSha256": "afae2984b4a5d2896442c94bddd7ccc5a4e62511bf3972083440a01cba6be2b2",
+          "reviewRequired": true
+        },
+        {
+          "case": "06-ampliada",
+          "httpStatus": 200,
+          "seconds": 11.044,
+          "imageSha256": "aef2aaafd3f1dedcc2cd123c208b8f9e5d5f4a8de9735eb1fe09c707d43c57e3",
+          "memoryPeakBytes": 984141824,
+          "rowsExpected": 2,
+          "rowsActual": 0,
+          "counts": {
+            "exact": 10,
+            "missing": 14,
+            "wrong": 0
+          },
+          "responseSha256": "9b6fab0d23fe75fa9951b7d0912281bf730f9561aa8871165d2c113db6e96e95",
+          "reviewRequired": true
+        },
+        {
+          "case": "07-grises",
+          "httpStatus": 200,
+          "seconds": 10.151,
+          "imageSha256": "ebb260856bc9e719ede2afaf2d2c040f819a459a3c55f2033fd85c7f3535fb73",
+          "memoryPeakBytes": 984141824,
+          "rowsExpected": 1,
+          "rowsActual": 0,
+          "counts": {
+            "exact": 10,
+            "missing": 7,
+            "wrong": 0
+          },
+          "responseSha256": "7ea10f84e70178de77afaf4e78455d88f287cc01ca7b8b41d6c7de00091a2207",
+          "reviewRequired": true
+        },
+        {
+          "case": "08-cabecera-recortada",
+          "httpStatus": 200,
+          "seconds": 14.849,
+          "imageSha256": "59c57fb9f8b72144ecf89fff8579d940c22bb4f4df2b6d6f8b45139faf00b645",
+          "memoryPeakBytes": 984141824,
+          "rowsExpected": 1,
+          "rowsActual": 1,
+          "counts": {
+            "exact": 15,
+            "wrong": 2,
+            "missing": 0
+          },
+          "responseSha256": "0216e0178afac51e84b507e5b3ace44a86f126f50f2d9038a58e6aa39b0e693f",
+          "reviewRequired": true
+        }
+      ]
+    }
+  },
+  "validation": {
+    "ocrPythonTests": 30,
+    "applicationUnitTests": 177,
+    "publicContractResponses": 5,
+    "schemaErrors": 0,
+    "typecheck": "passed",
+    "lint": "passed",
+    "build": "passed",
+    "robustnessAttribution": "Server tests adapted from ihelo d19e41e (SCRUM-134); cancellation asserts worker termination and slot release, timeout uses a controlled clock, cleanup exercises invalid upload.",
+    "notRun": "New browser/PostgreSQL application integration or Azure OCR verification.",
+    "scope": "One run per image and variant. No percentiles. Five real images now used for development; independent acceptance and agreed accuracy thresholds remain pending.",
+    "manifestRejectionChecks": 3
+  },
+  "finalCgroup": {
+    "memory.peak": 984141824,
+    "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+    "cpu.max": "100000 100000",
+    "memory.max": 1073741824
+  },
+  "evaluatedEvaluatorSha256": "33f10ecf36261f91bbf2351b831a9a23ca7fc78130c45299507166d86d56a7f4",
+  "currentEvaluatorSha256": "699911f3effec660c703d29de0a1739f535706435b6dd1844b075d955521cacf",
+  "evaluatorSourceNote": "Only the module documentation string changed after inference to describe private-manifest mode accurately; measured evaluator hash retained separately."
+}

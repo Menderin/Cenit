@@ -25,7 +25,8 @@ class AzureDeliveryTests(unittest.TestCase):
         self.assertIn('CENIT_ENV=production', production)
         self.assertIn('CENIT_ORIGIN=https://cenit.dpdns.org', production)
         self.assertIn('CENIT_ENV=staging', staging)
-        self.assertIn('CENIT_ORIGIN=https://develop.cenit.dpdns.org', staging)
+        self.assertIn('CENIT_ORIGIN=https://develop.cenit.dpdns.org,https://cenit-famed.chilecentral.cloudapp.azure.com', staging)
+        self.assertNotIn('cenit-famed.chilecentral.cloudapp.azure.com', production)
         self.assertNotIn('GH_TOKEN', production)
 
     def test_untrusted_identity_or_mutable_image_is_rejected(self):
@@ -35,6 +36,21 @@ class AzureDeliveryTests(unittest.TestCase):
                           ('CENIT_OCR_IMAGE','ghcr.io/other/ocr@sha256:'+'c'*64)]:
             with self.subTest(key=key), self.assertRaises(ValueError):
                 delivery.deployment({**self.environment, key:value})
+
+    def test_caddy_bootstrap_matches_deployed_configuration(self):
+        cloud_init = (ROOT/'deploy/azure/cloud-init.yaml').read_text()
+        inline = cloud_init.split('    content: |\n', 1)[1].split('runcmd:\n', 1)[0]
+        self.assertEqual(''.join(line[6:] for line in inline.splitlines(keepends=True)),
+                         (ROOT/'deploy/azure/Caddyfile').read_text())
+
+    def test_google_configuration_is_optional_and_environment_local(self):
+        compose = (ROOT/'deploy/azure/compose.yaml').read_text()
+        app = compose.split('  app:\n', 1)[1].split('\nvolumes:', 1)[0]
+        self.assertIn('path: ./.local/google.env\n        required: false', app)
+        self.assertNotIn('AUTH_GOOGLE_ENABLED:', app)
+        self.assertNotIn('AUTH_GOOGLE_CLIENT_ID:', app)
+        deploy = (ROOT/'deploy/azure/deploy.sh').read_text()
+        self.assertNotIn('> .local/google.env', deploy)
 
 
 if __name__ == '__main__':

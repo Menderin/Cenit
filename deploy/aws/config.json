@@ -1,0 +1,27 @@
+{
+  "region": "us-east-2",
+  "instanceName": "cenit-aws",
+  "nodeTag": {
+    "key": "Cenit",
+    "value": "aws-node"
+  },
+  "ghcrTokenParameter": "/cenit/aws/ghcr-pull-token",
+  "environments": {
+    "production": {
+      "branch": "main",
+      "httpPort": 8081,
+      "hosts": [
+        "cenit.gaelo.tech"
+      ]
+    },
+    "staging": {
+      "branch": "develop",
+      "httpPort": 8082,
+      "hosts": [
+        "develop.cenit.gaelo.tech"
+      ]
+    }
+  },
+  "instanceType": "t3.medium",
+  "diskGb": 30
+}

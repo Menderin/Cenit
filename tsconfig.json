@@ -30,6 +30,12 @@
       ],
       "@cenit/contracts/purchases/examples": [
         "./packages/contracts/src/purchases/examples.ts"
+      ],
+      "@cenit/contracts/personnel": [
+        "./packages/contracts/src/personnel/index.ts"
+      ],
+      "@cenit/contracts/assets": [
+        "./packages/contracts/src/assets/index.ts"
       ]
     }
   },

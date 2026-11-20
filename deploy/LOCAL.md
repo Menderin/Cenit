@@ -12,6 +12,8 @@ Iniciar o reutilizar PostgreSQL local con `docker compose up -d db`, y luego eje
 
 Abrir [http://127.0.0.1:5173/login](http://127.0.0.1:5173/login) y usar las cuentas ficticias guardadas localmente. `Ctrl+C` cierra API y web; PostgreSQL queda iniciado y conserva su volumen. La demo compilada de `8081`, si está activa, es independiente.
 
+En Windows, el reinicio automático del API observa `apps/api/src` y los contratos compilados; excluye las dependencias para evitar reinicios por eventos de sincronización de OneDrive. Tras instalar o cambiar dependencias, detener y volver a ejecutar `npm run dev`.
+
 La copia automática a Google Sheets es opcional y viene apagada. Para revisar ese flujo hacen falta una planilla dedicada de pruebas, su ID y la credencial privada de la cuenta de servicio; seguir [Conectar una planilla de pruebas](#conectar-una-planilla-de-pruebas). Crear un registro ficticio desde Cenit y esperar el estado «Sincronizado»; los cambios de Sheets no se importan a Cenit.
 
 ## Herramientas y configuración
@@ -54,8 +56,9 @@ PostgreSQL local se publica sólo en loopback, por defecto `55432`; HTTP compila
 | `HOST`, `PORT` | API: `127.0.0.1` y `3000` en el host; `0.0.0.0` y `3000` dentro del contenedor |
 | `DATABASE_URL_FILE` | Archivo con conexión privada PostgreSQL. Host: `.local/secrets/app-local-url`; contenedor: `/run/secrets/app-url`. El migrador utiliza su archivo independiente |
 | `DATABASE_URL` | Alternativa directa para herramientas/QA; `DATABASE_URL_FILE` tiene prioridad. No escribir la URL real en ejemplos, historial de comandos o Git |
-| `AUTH_ALLOWED_ORIGINS` | Lista separada por comas, sin rutas ni comodines. Supervisor: `http://127.0.0.1:5173,http://127.0.0.1:3000`; un `npm start` HTTP directo puede usar sólo `http://127.0.0.1:3000` |
+| `AUTH_ALLOWED_ORIGINS` | Lista separada por comas, sin rutas ni comodines. El supervisor admite `127.0.0.1` y `localhost` con HTTP en `5173` y `3000`; un `npm start` directo requiere configurar el origen exacto elegido |
 | `AUTH_COOKIE_SECURE` | `true` por defecto y en HTTPS Azure. `false` sólo para HTTP explícito de demo/desarrollo/test; requiere `APP_ENV` compatible |
+| `AUTH_GOOGLE_ENABLED`, `AUTH_GOOGLE_CLIENT_ID` | Google opcional; requiere `true` y un ID web terminado en `.apps.googleusercontent.com`. Ausencia/configuración inválida lo deshabilita y conserva el login local. El ID es público y no se usa un client secret para validar ID tokens |
 | `OCR_URL` | Base HTTP privada del procesador: `http://127.0.0.1:8090` desde el host o `http://ocr:8090` dentro de la red Compose |
 | `CAPTURE_RECEIPT_KEY_FILE` | Archivo privado de al menos 32 bytes para HMAC de procedencia. Sin él o sin procesador configurado, extraer devuelve 503; login/compras siguen siendo independientes |
 | `CENIT_API_PROXY` | Destino de `/api` en Vite; el supervisor fija `http://127.0.0.1:3000` |
@@ -73,6 +76,29 @@ No regenerar una clave de procedencia o contraseña para resolver indisponibilid
 | Azure producción demo | `https://cenit.dpdns.org` | Caddy hacia loopback `8081`; red/BD/secretos propios |
 
 Los puertos coincidentes pertenecen a máquinas o interfaces diferentes. La VM anterior compartida usa Cenit en `8081`; su `8080` corresponde a Jenkins y no debe modificarse.
+
+## Acceso Google opcional
+
+El acceso con Google y su vinculación están disponibles para cuentas Cenit existentes y autorizadas explícitamente cuando `GET /api/v1/auth/google` confirma que el proveedor está habilitado. Con Google apagado, el login muestra el botón deshabilitado y permite entrar con correo y contraseña. Los [contratos y el recorrido](../Docs/ARQUITECTURA.md#acceso-opcional-con-google) describen la verificación del servidor.
+
+1. Aplicar las migraciones con el procedimiento habitual y rol migrador, separado del runtime. No se crean autorizaciones ni identidades automáticamente.
+2. Crear un cliente OAuth de tipo **Aplicación web** en Google Auth Platform y completar su pantalla de consentimiento. Registrar los orígenes JavaScript exactos usados para probar, por ejemplo `http://localhost:5173` y `http://localhost` en desarrollo, o el origen HTTPS de staging. Configurar el mismo origen en `AUTH_ALLOWED_ORIGINS`, además de `AUTH_GOOGLE_ENABLED=true` y `AUTH_GOOGLE_CLIENT_ID` en el entorno del API. Reiniciar el API. El supervisor local y Compose transmiten estas dos variables. Azure requiere configuración explícita de su operador. El API necesita salida HTTPS a los certificados de Google y reloj correcto. Seguir la [configuración oficial](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid), incluyendo usuarios de prueba cuando corresponda al estado del cliente. El recorrido usa callback en ventana emergente.
+3. Preparar un archivo JSON privado bajo `.local/secrets`, con un array de `{ "accountId": "<UUID de cuenta existente>", "googleEmail": "<correo Google exacto autorizado>" }`. No versionar el archivo ni usar listas de dominios. El correo Google puede ser distinto del correo local; no concede acceso sin vinculación.
+4. Configurar `DATABASE_URL_FILE` con la conexión privada de operación que permita actualizar autorizaciones y sesiones. Ejecutar explícitamente desde el repositorio:
+
+```sh
+npm run auth:google-authorizations -- authorize .local/secrets/google-authorizations.json
+```
+
+En la imagen compilada, el equivalente es `node operations/db/seeds/google-authorizations.js authorize /run/secrets/google-authorizations.json`, montando archivos privados de conexión y autorizaciones en sólo lectura en un contenedor de operación. El archivo debe ser regular, sin enlaces simbólicos, y de hasta 256 KiB. Los controles de archivo y acción recuperan el aporte de Ignacio en `15a1e36` (SCRUM-124), adaptado al contrato de correo Google exacto. Un lote inválido revierte completo. Repetir el mismo lote es idempotente; una autorización distinta requiere revisión explícita.
+
+Para retirar el permiso, ejecutar el mismo comando con `revoke` en lugar de `authorize`. Invalida sesiones Google existentes, conserva el sub asociado y mantiene cuentas, roles, contraseñas y sesiones locales. No elimina la asociación para reasignarla a otra persona.
+
+El recorrido HTTP para el frontend comienza con `GET /api/v1/auth/google`. Para vincular, entrar primero con contraseña local, solicitar `POST /api/v1/auth/google/challenge` con `{"purpose":"link"}`, inicializar GIS con `clientId` y el `nonce` recibido y enviar `{"credential":"<ID token del callback>"}` a `POST /api/v1/auth/google/link`. Para acceder después, repetir con propósito `login` y `POST /api/v1/auth/google/login`. Las escrituras usan JSON, cookies y Origin autorizado. Tras un error se solicita otro desafío. El alta inicial de autorización nunca sustituye la vinculación desde la sesión local.
+
+Para comprobarlo en pantalla, entrar primero con contraseña y abrir **Mi perfil** en la navegación lateral. Su sección **Acceso con Google** prepara el botón oficial y abre la selección de cuenta con un clic. Confirmar la vinculación en Cenit, cerrar sesión y pulsar **Iniciar sesión con Google** en el login para entrar con esa identidad. Repetir consulta y logout con cada rol autorizado. La preparación puede cancelarse mientras carga, y los errores permiten usar **Reintentar Google** para obtener un desafío nuevo. La foto Google se actualiza al vincular o ingresar, usando la migración `0011_google_profile_picture`. Si falta o falla su carga, el perfil muestra la inicial.
+
+Consultar `GET /api/v1/auth/session` comprueba la sesión emitida. Un error `GOOGLE_DISABLED` permite usar el login local; `GOOGLE_UNAVAILABLE` permite reintentar con un desafío nuevo. No pegar credenciales, JWT ni cookies en tickets o logs. Las pruebas automatizadas verifican tokens firmados con claves ficticias, PostgreSQL descartable y estados de interfaz con dobles del proveedor. La comprobación con un cliente Google real debe registrarse por separado. Si se añade CSP en el proxy, permitir las rutas GIS indicadas en la documentación oficial. Revisar también COOP para permitir la ventana emergente.
 
 ## Preparar PostgreSQL y las cuentas
 
@@ -115,11 +141,13 @@ La preparación conserva cuentas compatibles y no rota sus claves; una discrepan
 
 Para disponer de la malla y tres historiales ficticios:
 
+El [recorrido de revisión académica](../Docs/PRUEBAS-Y-ACEPTACION.md#preparar-la-revisión-académica--scrum-112) indica qué comprobar y registrar después de esta preparación.
+
 ```sh
 APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run academic:prepare-demo
 ```
 
-El catálogo predeterminado es `diagrama-r2`, basado en la imagen y el cotejo del equipo, sin año oficial confirmado. `npm run catalog:check` verifica sus fuentes antes de cargarlo. Si ya hay historiales adscritos a `2027-r1`, la preparación rechaza trasladarlos: para consultar la nueva versión, usar la carga explícita `APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run catalog:load` y el selector existente. Esta operación no altera historiales; no ejecutar sobre una base ajena a la demo local. El PDF retirado sólo es referencia histórica del catálogo anterior.
+El catálogo de trabajo es `diagrama-r2`, basado en la imagen y el cotejo del equipo, sin año oficial confirmado. `npm run catalog:check` verifica sus fuentes antes de cargarlo. Si ya hay historiales adscritos a `2027-r1`, la preparación rechaza trasladarlos: para consultar la malla vigente, usar la carga explícita `APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run catalog:load`. Esta operación no altera historiales; los de otra versión no se muestran sobre la malla. No ejecutar sobre una base ajena a la demo local. El PDF retirado sólo es referencia histórica del catálogo anterior.
 
 El comando publica el catálogo de trabajo, conserva las tres cuentas originales y crea sólo dos estudiantes adicionales únicos. Repetirlo conserva identidades e intentos. Si una demo antigua tiene los RUT ficticios anteriores, la opción explícita `--normalize-ruts` corrige únicamente los valores anteriores esperados; no es una operación pública de edición de perfiles.
 
@@ -130,6 +158,8 @@ APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run purchas
 ```
 
 Prepara 74 compras ficticias editables, distribuidas por los meses de 2024 y 2025 y de enero a octubre de 2026. Toman las categorías de compra de la planilla de referencia; folios y montos son inventados, y los nombres, RUT, estados de pago y códigos institucionales no validados quedan fuera o vacíos. La carga crea registros de ingreso manual, no ejemplos de contrato, por eso se pueden corregir desde el detalle. Sus fechas de incorporación se distribuyen de forma repetible en los últimos 30 días para que el gráfico de actividad del Inicio muestre movimiento.
+
+Los bienes ficticios (inventario, entregas, préstamos y responsables inventados) se preparan con `APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run assets:prepare-demo`, después de aplicar las migraciones. Si ya están cargados, no modifica nada.
 
 Si las compras ficticias ya están cargadas, se pueden distribuir únicamente sus fechas de incorporación con `APP_ENV=demo DATABASE_URL_FILE=.local/secrets/migrator-local-url npm run purchases:prepare-demo -- --spread-activity-only`. La opción sólo actualiza `created_at` de las operaciones reservadas a esta semilla en `cenit_demo` local; no crea ni reemplaza compras ni modifica su contenido.
 
