@@ -25,7 +25,7 @@ test('Personal abre con Compras pendiente y conserva la geometría de las tarjet
   try {
     await login(page, 'administrativo');
     await page.getByRole('link', { name: 'Personal', exact: true }).click();
-    const cards = page.locator('.personnel-documents .personnel-template');
+    const cards = page.locator('.personnel-documents .cenit-form-template');
     await expect(cards).toHaveCount(2);
     await expect(cards.first()).toHaveAttribute('data-state', 'loading');
     await expect(cards.last()).toHaveAttribute('data-state', 'loading');

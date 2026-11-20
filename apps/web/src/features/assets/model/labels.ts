@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import type { AssetKind, AssetStatus, LoanStatus } from '@cenit/contracts/assets';
+import { assetKindLabels as label, type AssetKind, type AssetStatus, type LoanStatus } from '@cenit/contracts/assets';
 import { DesktopIcon } from '@phosphor-icons/react/dist/csr/Desktop';
 import { ProjectorScreenIcon } from '@phosphor-icons/react/dist/csr/ProjectorScreen';
 import { ArmchairIcon } from '@phosphor-icons/react/dist/csr/Armchair';
@@ -11,13 +11,13 @@ import { PackageIcon } from '@phosphor-icons/react/dist/csr/Package';
 type Icon = ComponentType<{ size?: number; weight?: 'regular' | 'fill'; 'aria-hidden'?: 'true' }>;
 // Tipos de bien de los formularios recibidos; «requiere» resume la Nota 2 de la Sección Registro.
 export const kinds: Record<AssetKind, { label: string; short: string; icon: Icon; requires: string }> = {
-  equipo_computacional: { label: 'Equipo computacional', short: 'Computacional', icon: DesktopIcon, requires: 'Marca, modelo y N° de serie. Indica si es un equipo armado.' },
-  equipo: { label: 'Equipo', short: 'Equipo', icon: ProjectorScreenIcon, requires: 'Marca, modelo y N° de serie. Indica si es parte de un sistema.' },
-  mueble: { label: 'Mueble', short: 'Mueble', icon: ArmchairIcon, requires: 'Tipo, material y medidas. Indica si va adosado al piso o a la pared.' },
-  maquinaria: { label: 'Maquinaria', short: 'Maquinaria', icon: GearSixIcon, requires: 'Marca, modelo y N° de serie. Indica si es parte de un sistema.' },
-  construccion: { label: 'Construcción', short: 'Construcción', icon: BuildingsIcon, requires: 'Medidas en metros cuadrados y materiales.' },
-  accesorio: { label: 'Accesorio', short: 'Accesorio', icon: PlugIcon, requires: 'Marca y N° de serie cuando existan.' },
-  otro: { label: 'Otro', short: 'Otro', icon: PackageIcon, requires: 'Describe el bien con el mayor detalle posible.' },
+  equipo_computacional: { label: label.equipo_computacional, short: 'Computacional', icon: DesktopIcon, requires: 'Marca, modelo y N° de serie. Indica si es un equipo armado.' },
+  equipo: { label: label.equipo, short: 'Equipo', icon: ProjectorScreenIcon, requires: 'Marca, modelo y N° de serie. Indica si es parte de un sistema.' },
+  mueble: { label: label.mueble, short: 'Mueble', icon: ArmchairIcon, requires: 'Tipo, material y medidas. Indica si va adosado al piso o a la pared.' },
+  maquinaria: { label: label.maquinaria, short: 'Maquinaria', icon: GearSixIcon, requires: 'Marca, modelo y N° de serie. Indica si es parte de un sistema.' },
+  construccion: { label: label.construccion, short: 'Construcción', icon: BuildingsIcon, requires: 'Medidas en metros cuadrados y materiales.' },
+  accesorio: { label: label.accesorio, short: 'Accesorio', icon: PlugIcon, requires: 'Marca y N° de serie cuando existan.' },
+  otro: { label: label.otro, short: 'Otro', icon: PackageIcon, requires: 'Describe el bien con el mayor detalle posible.' },
 };
 export const kindOrder = Object.keys(kinds) as AssetKind[];
 export const statuses: Record<AssetStatus, { label: string; tone: string; help: string }> = {

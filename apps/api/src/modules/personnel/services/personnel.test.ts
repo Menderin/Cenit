@@ -5,8 +5,6 @@ import { buildAcademicApp } from '../../../app.js';
 import type { AcademicReadRepository } from '../../academic/services/academic.js';
 import type { AuthService } from '../../auth/services/auth.js';
 import type { ServiceCommission } from '@cenit/contracts/personnel';
-import { commissionCells as serverCells } from './commission-layout.js';
-import { commissionCells as previewCells } from '../../../../../web/src/features/personnel/model/commission-layout.js';
 
 const origin = 'http://localhost:5173';
 const input: ServiceCommission = {
@@ -34,9 +32,6 @@ describe('PDF provisional de comisión', () => {
   beforeAll(async () => { await app.ready(); });
   afterAll(async () => { await app.close(); });
 
-  it('mantiene la geometría de las casillas igual a la vista previa', () => {
-    expect(serverCells).toEqual(previewCells);
-  });
   it('exige sesión administrativa y un Origin permitido', async () => {
     expect((await app.inject({ method: 'POST', url: '/api/v1/personnel/service-commissions/pdf', headers: { origin }, payload: input })).statusCode).toBe(401);
     expect((await request(input, 'docente')).statusCode).toBe(403);

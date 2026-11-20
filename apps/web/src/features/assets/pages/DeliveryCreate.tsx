@@ -3,12 +3,13 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { PlusIcon } from '@phosphor-icons/react/dist/csr/Plus';
-import { maxDocumentItems, type AssetKind, type AssetListItem, type DeliveryItemInput, type Person } from '@cenit/contracts/assets';
+import { assetDeliveryEntries, assetDeliveryForm, maxDeliveryItems, type AssetKind, type AssetListItem, type DeliveryItemInput, type Person } from '@cenit/contracts/assets';
 import { createDelivery, getAsset, listAssets, listPeople } from '../api/assets.js';
 import { kindOrder, kinds, today } from '../model/labels.js';
 import { BackLink, DateBlock, TextField, focusFirstError, missingMessage, nullable, useAssetSummary } from '../components/AssetsUi.js';
 import { AssetPicker, PersonPicker } from '../components/Pickers.js';
-import { ItemsTable, SheetPreview, type DocItem } from '../components/Documents.js';
+import { FormPreview, ItemsTable, overflowMessage, type DocItem } from '../components/Documents.js';
+import template from '../components/delivery-template.png';
 import { Select } from '../../../shared/components/Select.js';
 import { StatusNotice } from '../../../shared/components/StatusNotice.js';
 import { HttpError } from '../../../shared/lib/http.js';
@@ -30,7 +31,7 @@ export function DeliveryCreate() {
   const [fresh, setFresh] = useState<Line['fresh'] | null>(null);
   const [reason, setReason] = useState(''), [date, setDate] = useState(today()), [destination, setDestination] = useState('');
   const [giver, setGiver] = useState(account?.name ?? ''), [giverPosition, setGiverPosition] = useState(''), [giverUnit, setGiverUnit] = useState('Facultad de Medicina'), [notes, setNotes] = useState('');
-  const [errors, setErrors] = useState<Record<string, string>>({}), [failure, setFailure] = useState(''), [busy, setBusy] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({}), [failure, setFailure] = useState(''), [busy, setBusy] = useState(false), [overflow, setOverflow] = useState<string[]>([]);
   const operation = useRef(crypto.randomUUID()), loaded = useRef(false);
   const locations = useAssetSummary().data?.locations ?? [];
   const preset = params.get('bien'), from = params.get('desde');
@@ -40,12 +41,12 @@ export function DeliveryCreate() {
   useEffect(() => {
     if (loaded.current) return;
     if (presetAsset.data && !presetAsset.data.loan) { loaded.current = true; setLines([{ key: presetAsset.data.id, asset: presetAsset.data }]); }
-    if (fromAssets.data) { loaded.current = true; setLines(fromAssets.data.data.filter(asset => !asset.loan).slice(0, maxDocumentItems).map(asset => ({ key: asset.id, asset }))); }
+    if (fromAssets.data) { loaded.current = true; setLines(fromAssets.data.data.filter(asset => !asset.loan).slice(0, maxDeliveryItems).map(asset => ({ key: asset.id, asset }))); }
   }, [presetAsset.data, fromAssets.data]);
   const previous = from ? fromPerson.data?.find(person => person.id === from) : undefined;
   const onLoanCount = fromAssets.data?.data.filter(asset => asset.loan).length ?? 0;
-  const pending = Math.max(0, (fromAssets.data?.data.filter(asset => !asset.loan).length ?? 0) - maxDocumentItems);
-  const full = lines.length >= maxDocumentItems;
+  const pending = Math.max(0, (fromAssets.data?.data.filter(asset => !asset.loan).length ?? 0) - maxDeliveryItems);
+  const full = lines.length >= maxDeliveryItems;
   const dirty = !!receiver || !!reason || (!preset && !from && lines.length > 0) || !!fresh;
   useGuardChanges(dirty && !busy, busy, useCallback(() => {}, []));
   const items = lines.map(toItem);
@@ -64,6 +65,8 @@ export function DeliveryCreate() {
     if (!giver.trim()) next.giver = 'Escribe quién entrega.';
     setErrors(next); setFailure('');
     if (Object.keys(next).length) { setFailure(missingMessage(Object.keys(next).length)); focusFirstError(); return; }
+    // El acta firmada no se puede corregir después: sólo se guarda si todo cabe en el formato.
+    if (overflow.length) { setFailure(overflowMessage(overflow)); return; }
     setBusy(true);
     try {
       const delivery = await createDelivery({
@@ -82,7 +85,7 @@ export function DeliveryCreate() {
   return <section className="assets-page assets-page--doc">
     <BackLink to={preset ? `/administracion/bienes/${preset}` : '/administracion/bienes/entregas'}>{preset ? 'Volver a la ficha del bien' : 'Volver a Entregas'}</BackLink>
     <header className="assets-heading"><div><h1>Nueva entrega</h1><p>Deja constancia de los bienes que entregas. Al guardar, quien recibe queda como responsable y descargas el acta para firmar.</p></div></header>
-    {previous && <div style={{ marginBottom: 18 }}><StatusNotice kind="warning" title={`Bienes de ${previous.name}`} message={`${previous.active ? '' : 'Ya no pertenece a la institución. '}${lines.length ? 'Cargamos los bienes que tiene a cargo y que no están prestados. Elige a quién se entregan.' : 'No hay bienes para entregar ahora.'}${pending ? ` Un acta admite hasta ${maxDocumentItems} bienes: cargamos los primeros ${maxDocumentItems}; al guardar, repite «Entregar sus bienes» con los ${pending} restantes.` : ''}${onLoanCount ? ` ${onLoanCount === 1 ? 'Un bien suyo está en préstamo' : `${onLoanCount} bienes suyos están en préstamo`}: registra la devolución para poder entregarlo${onLoanCount === 1 ? '' : 's'}.` : ''}`} /></div>}
+    {previous && <div style={{ marginBottom: 18 }}><StatusNotice kind="warning" title={`Bienes de ${previous.name}`} message={`${previous.active ? '' : 'Ya no pertenece a la institución. '}${lines.length ? 'Cargamos los bienes que tiene a cargo y que no están prestados. Elige a quién se entregan.' : 'No hay bienes para entregar ahora.'}${pending ? ` El acta tiene ${maxDeliveryItems} filas para bienes: cargamos los primeros ${maxDeliveryItems}; al guardar, repite «Entregar sus bienes» con los ${pending} restantes.` : ''}${onLoanCount ? ` ${onLoanCount === 1 ? 'Un bien suyo está en préstamo' : `${onLoanCount} bienes suyos están en préstamo`}: registra la devolución para poder entregarlo${onLoanCount === 1 ? '' : 's'}.` : ''}`} /></div>}
     {presetAsset.data?.loan && <div style={{ marginBottom: 18 }}><StatusNotice kind="warning" title="Este bien está en préstamo" message="Registra su devolución antes de entregarlo a otra persona." /></div>}
     <div className="assets-form-layout">
       <form className="assets-form" noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
@@ -94,7 +97,7 @@ export function DeliveryCreate() {
             onPick={asset => { setLines([...lines, { key: asset.id, asset }]); setErrors({ ...errors, items: '' }); }} />
           <div style={{ marginTop: 12 }}><ItemsTable items={items} onRemove={key => setLines(lines.filter(line => line.key !== key))}
             empty={<p className="assets-sub" style={{ margin: 0 }}>Todavía no agregas bienes. Búscalos arriba por código, serie o descripción.</p>} /></div>
-          {full && <p className="assets-sub" style={{ margin: '8px 0 0' }}>Un acta admite hasta {maxDocumentItems} bienes para que quepa en una hoja. Guarda esta entrega y registra otra con el resto.</p>}
+          {full && <p className="assets-sub" style={{ margin: '8px 0 0' }}>El acta tiene {maxDeliveryItems} filas para bienes. Guarda esta entrega y registra otra con el resto.</p>}
           {fresh ? <div className="assets-newperson" role="group" aria-label="Bien que no está en el inventario">
             <p>Bien que no está en el inventario</p>
             <div className="assets-grid assets-grid--3">
@@ -131,10 +134,9 @@ export function DeliveryCreate() {
         </div>
       </form>
       <aside className="assets-aside">
-        <p>Así se verá el acta (vista aproximada)</p>
-        <SheetPreview type="delivery" date={date} person={receiver} items={items}
-          rows={[['Motivo', reason || null], ['Fecha de entrega', /^\d{4}-\d{2}-\d{2}$/.test(date) ? date.split('-').reverse().join('/') : null], ['Entrega', [giver, giverPosition, giverUnit].filter(Boolean).join(', ') || null]]}
-          signs={['Recibe conforme', 'Entrega conforme']} />
+        <FormPreview caption="Así queda el acta, en el formato oficial. El número se asigna al guardar." overflow={overflow} onOverflow={setOverflow}
+          label="Vista previa del acta de entrega" template={template} alt="Acta de entrega de equipos e insumos de la Facultad de Medicina, con los datos del formulario."
+          layout={assetDeliveryForm} entries={assetDeliveryEntries({ number: null, deliveredOn: date, receiver, reason, items, giverName: giver, giverPosition, giverUnit, notes })} />
         {items.length > 0 && <p>{items.length} {items.length === 1 ? 'bien' : 'bienes'}: {items.map(item => item.description).join(', ')}. {lines.some(line => line.asset?.custodian) ? 'Cambiarán de responsable al guardar.' : ''}</p>}
       </aside>
     </div>

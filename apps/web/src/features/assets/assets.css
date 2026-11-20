@@ -3,6 +3,8 @@
 .assets-heading { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 18px; }
 .assets-heading p { margin: 0; max-width: 75ch; color: var(--color-ink-muted); }
 .assets-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+/* Los botones que van juntos (encabezados, pie de formulario, ficha) comparten el alto del principal; en tablas e íconos se conservan compactos. */
+.assets-page .cenit-button:not(.cenit-button--icon):not(.assets-table *) { min-height: 44px; }
 .assets-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* Cifras que filtran: cada una lleva a su vista. */
@@ -177,20 +179,6 @@
 .assets-items .assets-table td { vertical-align: middle; }
 .assets-items .cenit-input { min-height: 36px; padding: 6px 10px; font-size: 13px; }
 .assets-add-row { margin-top: 8px; }
-
-/* Vista previa del documento, con la tipografía del papel. */
-.assets-sheet { padding: 22px 22px 26px; border: 1px solid var(--color-line); border-radius: 4px; background: #fff; box-shadow: var(--shadow-popover); color: #202024; font: 11px/1.45 "Helvetica Neue", Helvetica, Arial, sans-serif; }
-.assets-sheet__top { display: flex; justify-content: space-between; gap: 12px; font-size: 10px; }
-.assets-sheet__top b { display: block; font-size: 11px; }
-.assets-sheet h3 { margin: 16px 0 2px !important; font-size: 12.5px !important; font-weight: 700 !important; text-align: center; }
-.assets-sheet__sub { margin: 0 0 12px; font-size: 9.5px; text-align: center; }
-.assets-sheet table { width: 100%; margin-bottom: 10px; border-collapse: collapse; font-size: 10px; }
-.assets-sheet :is(th, td) { padding: 3px 5px; border: 1px solid #3a3a40; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
-.assets-sheet th { width: 34%; background: #f4f4f6; font-weight: 700; }
-.assets-sheet thead th { width: auto; }
-.assets-sheet .assets-blank { color: #9a9aa2; }
-.assets-signs { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 34px; font-size: 9.5px; text-align: center; }
-.assets-signs span { padding-top: 4px; border-top: 1px solid #3a3a40; }
 
 .assets-doc-meta { display: flex; flex-wrap: wrap; gap: 18px 28px; margin: 0; padding: 0; color: var(--color-ink-muted); font-size: 12px; }
 .assets-doc-meta dt { color: var(--color-ink-subtle); }

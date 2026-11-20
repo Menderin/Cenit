@@ -3,11 +3,13 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { InfoIcon } from '@phosphor-icons/react/dist/csr/Info';
-import type { AssetData, AssetDetail, AssetKind, Person } from '@cenit/contracts/assets';
+import { assetAltaEntries, assetAltaForm, type AssetData, type AssetDetail, type AssetKind, type Person } from '@cenit/contracts/assets';
 import { createAsset, getAsset, updateAsset } from '../api/assets.js';
 import { kindOrder, kinds, today, usesSerial } from '../model/labels.js';
 import { BackLink, DateBlock, LoadState, TextField, focusFirstError, missingMessage, nullable, useAssetSummary } from '../components/AssetsUi.js';
 import { PersonPicker } from '../components/Pickers.js';
+import { FormPreview } from '../components/Documents.js';
+import template from '../components/alta-template.png';
 import { StatusNotice } from '../../../shared/components/StatusNotice.js';
 import { HttpError } from '../../../shared/lib/http.js';
 import { useGuardChanges, usePurchaseGuard } from '../../purchases/model/guard.js';
@@ -46,9 +48,7 @@ function Form({ asset }: { asset?: AssetDetail }) {
   const purchases = useQuery({ queryKey: ['assets', 'purchase-lookup', purchaseText], queryFn: ({ signal }) => listPurchases('all', 1, signal, { q: purchaseText }, { sort: 'sentDateDesc', pageSize: 5 }), enabled: purchaseText.length >= 3 });
   const purchase = purchases.data?.data.find(record => record.requestNumber.toLocaleLowerCase('es') === purchaseText.toLocaleLowerCase('es'));
   const kind = kinds[draft.kind];
-  const preview = [...(draft.kind === 'mueble' ? [['Tipo', draft.furnitureType], ['Material', draft.material], ['Medidas', draft.dimensions]]
-    : draft.kind === 'construccion' ? [['Medidas', draft.area], ['Materiales', draft.material]] : [['Marca', draft.brand], ['Modelo', draft.model], ['N° de serie', draft.serialNumber]])
-    .filter(([, value]) => value!.trim()).map(([label, value]) => `${label}: ${value}`), draft.notes.trim()].filter(Boolean).join('\n');
+  const [overflow, setOverflow] = useState<string[]>([]);
 
   function validate() {
     const next: typeof errors = {};
@@ -155,20 +155,9 @@ function Form({ asset }: { asset?: AssetDetail }) {
           <p><strong>{kind.label}:</strong> {kind.requires}</p>
           <p>Estos datos se piden al proveedor en la factura. Con ellos se prepara el formulario de alta, que puedes descargar desde la ficha del bien.</p>
         </div>
-        <p>Así se verá el formulario de alta (vista aproximada)</p>
-        <div className="assets-sheet" aria-hidden="true">
-          <div className="assets-sheet__top"><span><b>Dirección de Administración y Finanzas</b>Departamento de Contabilidad y Finanzas</span><span>Sección Registro<br />Fecha {/^\d{4}-\d{2}-\d{2}$/.test(draft.registeredOn) ? draft.registeredOn.split('-').reverse().join('/') : '__/__/____'}</span></div>
-          <h3>INFORMACIÓN REQUERIDA (ALTA DE BIENES INVENTARIABLES)</h3>
-          <p className="assets-sheet__sub">Inversiones: muebles, equipos, maquinarias, construcciones, etc.</p>
-          <table><tbody>
-            <tr><th>Cantidad</th><td>{draft.quantity || <span className="assets-blank">—</span>}</td></tr>
-            <tr><th>Descripción</th><td>{draft.description || <span className="assets-blank">—</span>}</td></tr>
-            <tr><th>Ubicación</th><td>{(asset?.location ?? draft.location) || <span className="assets-blank">—</span>}</td></tr>
-            <tr><th>Responsable</th><td>{(asset?.custodian?.name ?? custodian?.name) || <span className="assets-blank">—</span>}</td></tr>
-          </tbody></table>
-          <table><tbody><tr><th>Más datos</th><td style={{ whiteSpace: 'pre-line' }}>{preview || <span className="assets-blank">—</span>}</td></tr></tbody></table>
-          <div className="assets-signs" style={{ gridTemplateColumns: '1fr' }}><span style={{ margin: '0 25%' }}>Responsable</span></div>
-        </div>
+        <FormPreview caption="Así queda el formulario de alta, en el formato de la Sección Registro." overflow={overflow} onOverflow={setOverflow}
+          label="Vista previa del formulario de alta" template={template} alt="Formulario de alta de bienes inventariables de la Sección Registro, con los datos del bien."
+          layout={assetAltaForm} entries={assetAltaEntries({ ...draft, code: asset?.code, location: asset?.location ?? draft.location, custodian: asset?.custodian ?? custodian })} />
       </aside>
     </div>
   </section>;

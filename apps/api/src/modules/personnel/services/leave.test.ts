@@ -5,8 +5,6 @@ import { buildAcademicApp } from '../../../app.js';
 import type { AcademicReadRepository } from '../../academic/services/academic.js';
 import type { AuthService } from '../../auth/services/auth.js';
 import type { LeaveRequest } from '@cenit/contracts/personnel';
-import { leaveCells as serverCells } from './leave-layout.js';
-import { leaveCells as previewCells } from '../../../../../web/src/features/personnel/model/leave-layout.js';
 
 const origin = 'http://localhost:5173';
 const input: LeaveRequest = {
@@ -30,9 +28,6 @@ describe('PDF provisional de la solicitud de permiso', () => {
   beforeAll(async () => { await app.ready(); });
   afterAll(async () => { await app.close(); });
 
-  it('mantiene la geometría de las casillas igual a la vista previa', () => {
-    expect(serverCells).toEqual(previewCells);
-  });
   it('exige sesión administrativa y un Origin permitido', async () => {
     expect((await app.inject({ method: 'POST', url, headers: { origin }, payload: input })).statusCode).toBe(401);
     expect((await request(input, 'docente')).statusCode).toBe(403);
