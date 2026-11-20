@@ -70,6 +70,12 @@ test('logout invalida cookie, atrás no restaura cuenta y permite otra identidad
   const cookie = (await context.cookies()).find(c => c.name === 'cenit_session')!;
   await page.getByRole('button', { name: 'Cerrar sesión' }).click();
   await expect(page).toHaveURL(/\/login$/);
+  const notice = page.getByRole('region', { name: /^Avisos/ }).getByRole('listitem').filter({ hasText: 'Saliste de Cenit' });
+  await expect(notice).toBeVisible();
+  await expect(notice).toHaveAttribute('data-x-position', 'right');
+  await expect(notice).toHaveAttribute('data-y-position', 'bottom');
+  await expect(notice).toHaveCSS('background-color', 'rgb(237, 245, 239)');
+  await expect(page.locator('.cenit-access__feedback')).toBeEmpty();
   const response = await context.request.get('/api/v1/auth/session', { headers: { Cookie: `${cookie.name}=${cookie.value}` } });
   expect(response.status()).toBe(401);
   await page.goBack(); await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
@@ -106,7 +112,7 @@ test('el aviso permite cerrar la sesión antes del vencimiento', async ({ page }
   await page.clock.fastForward(6901000);
   await page.getByRole('button', { name: 'Cerrar sesión ahora', exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Sesión cerrada.');
+  await expect(page.getByRole('region', { name: /^Avisos/ }).getByText('Saliste de Cenit', { exact: true })).toBeVisible();
   expect((await page.request.get('/api/v1/auth/session')).status()).toBe(401);
 });
 test('401 al revalidar oculta cuenta y avisa', async ({ page }) => {
@@ -121,6 +127,7 @@ test('fallo de logout oculta contenido y permite reintentar sin falso éxito', a
   await page.route('**/api/v1/auth/logout', route => route.abort());
   await page.getByRole('button', { name: 'Cerrar sesión' }).click();
   await expect(page.getByRole('alert')).toHaveText('No se pudo confirmar el cierre de sesión.');
+  await expect(page.getByText('Saliste de Cenit', { exact: true })).toHaveCount(0);
   await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
   await page.unroute('**/api/v1/auth/logout');
   await page.getByRole('button', { name: 'Reintentar' }).click();
