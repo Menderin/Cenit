@@ -178,6 +178,28 @@ Para revisar el mockup, comparar las capturas `prerrequisito-<estado>-<ancho>.pn
 
 ## Revisión de documentación y operación
 
+### Protección del despliegue — SCRUM-128
+
+La [guía Azure](../deploy/azure/README.md#verificar-seguridad-del-entorno) y la [guía AWS](../deploy/aws/README.md#verificación-de-seguridad) describen cómo cotejar HTTPS, cookies, Origin, puertos, cifrado y custodia. Registrar destino, fecha, SHA/digests, casos, resultados y revisión. La comprobación de código usa [autenticación](../apps/api/src/modules/auth/routes/index.ts), [Compose compartido](../deploy/azure/compose.yaml) y los adaptadores de entrega de cada destino.
+
+La evidencia histórica del 07/11/2026 registró TLS 1.3 válido en los dominios dpdns, health 200, sesión anónima 401/no-store, Origin ajeno 403 y logout anónimo 204 con cookie de borrado Secure/HttpOnly/Lax. El alias Azure falló durante TLS en aquella comprobación. Ese resultado queda vinculado a su fecha y destino.
+
+El 19/11/2026 se consultaron Actions y las variables de repositorio. `CENIT_DEPLOY_TARGET=aws`; la entrega de staging de `2320436` terminó correctamente en [Cenit Release](https://github.com/Menderin/Cenit/actions/runs/44641314131), con Azure omitido. `CENIT_AWS_PUBLIC_VERIFY` no estaba definida en el repositorio y el paso de HTTPS público quedó omitido. La entrega de `main` en `c6f9189` también terminó por AWS en [esta ejecución](https://github.com/Menderin/Cenit/actions/runs/44212709281). Una nueva entrega de `406e16d` seguía en curso durante la consulta; el SHA servido requiere cotejo con `current.json`.
+
+Las solicitudes públicas de esta revisión usaron HTTPS con certificado validado, sin cookies ni credenciales de usuarios, a los dominios de `deploy/aws/config.json`.
+
+| Comprobación | Staging `develop.cenit.gaelo.tech` | Producción `cenit.gaelo.tech` |
+| --- | --- | --- |
+| `/health/live` y `/health/ready` | 200 | 200 |
+| `/api/v1/auth/session` sin sesión | 401, `no-store` | 401, `no-store` |
+| Logout con Origin ajeno | 403 | 403 |
+| Logout anónimo con el Origin del dominio consultado | 204; cookie de borrado Secure/HttpOnly/SameSite=Lax | 403; pendiente de corregir o justificar contra los orígenes instalados |
+| Disponibilidad Google | Habilitado | Deshabilitado |
+
+El `main` consultado aún configura `cenit.dpdns.org` en `deploy/aws/config.json`; `develop` configura `cenit.gaelo.tech`. Esa diferencia es compatible con el 403 observado y requiere cotejar la configuración instalada de producción antes de promover o cambiar el entorno. La revisión documental no ejecutó una entrega ni modificó sus orígenes.
+
+Queda por aportar evidencia del operador sobre el SHA/digests instalado, red efectiva, cifrado de discos/caché/temporales o EBS según destino, permisos IAM/OIDC, custodios y separación de credenciales runtime/migrador. El recorrido autorizado y la cookie de login también requieren una cuenta ficticia del entorno. La copia cifrada externa y la restauración corresponden a SCRUM-130/131. Estas dependencias y la revisión independiente siguen pendientes aunque Jira muestre SCRUM-128 finalizada.
+
 ### Esquema administrativo — SCRUM-86
 
 El [diccionario y único diagrama administrativo](ARQUITECTURA.md#esquema-administrativo) se cotejan con `db/schema/auth.ts`, `db/schema/purchases.ts`, el journal de migraciones y los contratos de autenticación/compras. Revisar las seis tablas, PK/FK y asociaciones lógicas sin FK; separar restricciones SQL de validaciones del API y comportamientos del repositorio. Comprobar montos exactos, procedencia y nulos, alta atómica, idempotencia, edición/versiones y entrega durable a Sheets. Los casos ejecutables existentes están en [contratos de persistencia](../packages/contracts/src/purchases/records.test.ts), [contratos de extracción](../packages/contracts/src/purchases/extraction.test.ts), [API/PostgreSQL](../tests/integration/purchases.test.ts) y [consistencia y persistencia](../tests/integration/purchases-consistency.test.ts).

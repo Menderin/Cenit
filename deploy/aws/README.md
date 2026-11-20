@@ -35,3 +35,13 @@ El usuario de entrega sólo puede: `ssm:SendCommand` sobre el documento `AWS-Run
 ## Verificación en el nodo
 
 Con ambos entornos activos, medir memoria (`free -m`, `docker stats --no-stream`) y repetir la medición del OCR con la imagen vigente antes de dar la capacidad por buena. El nodo crea 2 GB de swap como margen.
+
+## Verificación de seguridad
+
+Registrar fecha, destino AWS, entorno, SHA e imágenes de `current.json` y la ejecución de Actions. Revisar si el paso `Verify public HTTPS` se ejecutó; su omisión requiere comprobar HTTPS por separado en los dominios de `config.json`, con validación del certificado. Comprobar salud, acceso con cuenta ficticia autorizada, cookie `Secure`/`HttpOnly`/`SameSite=Lax`, cierre y rechazo de Origin ajeno.
+
+El [diagnóstico acotado del host](../azure/README.md#diagnóstico-acotado-en-la-vm) también sirve en este nodo mediante Systems Manager, porque ambos destinos usan la misma estructura `/opt/cenit/<entorno>` y Compose. Comprueba SHA/digests, puertos, redes, permisos de archivos y separación de credenciales de aplicación/migrador sin imprimir contraseñas. Los comandos `az` corresponden al destino Azure.
+
+El operador debe aportar además la configuración efectiva de EC2/EBS y sus grupos de seguridad. Contrastar discos adjuntos, cifrado EBS y referencia de clave KMS, IMDSv2, entrada de 80/443 y ausencia de exposición pública de PostgreSQL/OCR. El disco cifrado declarado en `provision.sh` requiere cotejo con el volumen instalado. Los dumps de `backups/*.dump`, la configuración de un bucket privado y un despliegue correcto tienen comprobaciones de cifrado de archivo, copia externa y restauración pendientes en SCRUM-130/131.
+
+La [custodia de secretos compartidos](../azure/README.md#custodia-y-cambios-de-secretos) cubre PostgreSQL, procedencia, Google y Sheets. Para AWS, el operador custodia también los secretos de repositorio `CENIT_AWS_ACCESS_KEY_ID`/`CENIT_AWS_SECRET_ACCESS_KEY` y revisa la política efectiva de su usuario IAM. El token efímero de GHCR se guarda en el parámetro `SecureString` configurado, leído por el nodo. Rotar las llaves IAM exige actualizar GitHub, comprobar la siguiente entrega y revocar las anteriores. Registrar responsables y referencias de almacenamiento por canal privado, junto con cualquier comprobación pendiente.
