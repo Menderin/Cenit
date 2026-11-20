@@ -57,7 +57,7 @@ export function Login({ checking }: { checking: boolean }) {
     </header>
     <div className="cenit-access__feedback">
       {error ? <p className="cenit-access__error" role="alert">{error}</p>
-        : auth.message && <StatusNotice kind="warning" title="Vuelve a iniciar sesión" message={auth.message} />}
+        : auth.message && auth.notice !== 'expired' && <StatusNotice kind="warning" title="Vuelve a iniciar sesión" message={auth.message} />}
     </div>
     <form className="cenit-access__form" noValidate onSubmit={submit} aria-busy={locked} inert={googleBusy}>
       <div className="cenit-access__field">

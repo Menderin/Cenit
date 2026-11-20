@@ -89,7 +89,12 @@ test('expiración del reloj del navegador oculta cuenta y pide login', async ({ 
   const account = await login(page);
   await page.clock.fastForward(7201000);
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
+  await expect(page.getByRole('region', { name: /^Avisos/ }).getByText('Tu sesión expiró', { exact: true })).toBeVisible();
+  const expired = page.getByRole('region', { name: /^Avisos/ }).getByRole('listitem').filter({ hasText: 'Tu sesión expiró' });
+  await expect(expired).toHaveAttribute('data-x-position', 'right');
+  await expect(expired).toHaveAttribute('data-y-position', 'bottom');
+  await expect(expired).toHaveCSS('background-color', 'rgb(251, 247, 238)');
+  await expect(page.locator('.cenit-access__feedback')).toBeEmpty();
   await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
 });
 test('avisa cinco minutos antes, actualiza el tiempo y vence sin renovación', async ({ page }) => {
@@ -104,7 +109,7 @@ test('avisa cinco minutos antes, actualiza el tiempo y vence sin renovación', a
   await expect(warning.getByRole('status')).toHaveText('Tu sesión vencerá en 1 minuto. Guarda tu trabajo antes de volver a iniciar sesión.');
   await page.clock.fastForward(60000);
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
+  await expect(page.getByRole('region', { name: /^Avisos/ }).getByText('Tu sesión expiró', { exact: true })).toBeVisible();
 });
 test('el aviso permite cerrar la sesión antes del vencimiento', async ({ page }) => {
   await page.clock.install();
@@ -119,7 +124,7 @@ test('401 al revalidar oculta cuenta y avisa', async ({ page }) => {
   const account = await login(page);
   await page.route('**/api/v1/auth/session', route => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: { code: 'AUTHENTICATION_REQUIRED', message: 'Debes iniciar sesión.', requestId: 'test' } }) }));
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
+  await expect(page.getByRole('region', { name: /^Avisos/ }).getByText('Tu sesión expiró', { exact: true })).toBeVisible();
   await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
 });
 test('fallo de logout oculta contenido y permite reintentar sin falso éxito', async ({ page }) => {

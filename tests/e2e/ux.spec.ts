@@ -121,7 +121,7 @@ test('el borrador oculto vence y no se entrega a otra cuenta', async ({ page }) 
   await loseSessionCheck(page);
   await page.clock.fastForward(7201000);
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.locator('.cenit-notice')).toContainText('Vuelve a iniciar sesión');
+  await expect(page.getByRole('region', { name: /^Avisos/ }).getByText('Tu sesión expiró', { exact: true })).toBeVisible();
   await page.clock.setSystemTime(new Date()); await page.unroute('**/api/v1/auth/session');
   await page.goto('/administracion/compras/nueva'); await expect(number(page)).toHaveValue('');
   await number(page).fill('OTRA-IDENTIDAD'); await loseSessionCheck(page);

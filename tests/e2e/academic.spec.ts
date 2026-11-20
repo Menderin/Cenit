@@ -398,7 +398,7 @@ test('servicio caído permite reintentar; 401 limpia catálogo y detalle', async
   await page.route('**/api/v1/academic/plans', route => route.fulfill({ status: 401, json: { error: { code: 'AUTHENTICATION_REQUIRED', message: 'Debes iniciar sesión.', requestId: 'test' } } }));
   await page.reload();
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
+  await expect(page.getByRole('region', { name: /^Avisos/ }).getByText('Tu sesión expiró', { exact: true })).toBeVisible();
   await expect(courses(page)).toHaveCount(0); await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
