@@ -20,7 +20,6 @@
 .cenit-empty--page .cenit-empty__icon { width: 64px; height: 64px; margin-bottom: 20px; }
 .cenit-empty--bordered { padding: 40px 20px; border: 1px dashed var(--color-line-dashed); border-radius: var(--radius-lg); }
 .cenit-empty--compact { padding: 24px 8px; }
-@media (max-width: 760px) { .cenit-empty--page { min-height: 360px; padding-inline: 0; } }
 /* Campo único: texto, número, área y select nativo. */
 .cenit-input { display: block; width: 100%; min-height: 42px; padding: 8px 12px; border: 1px solid var(--color-line-input); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-ink); font: inherit; font-size: 14px; line-height: 1.4; transition: border-color 150ms ease-out, box-shadow 150ms ease-out; }
 textarea.cenit-input { resize: vertical; }
@@ -60,12 +59,10 @@ textarea.cenit-input { resize: vertical; }
 .cenit-toast-title { font-size: 13px; font-weight: 550; }
 .cenit-toast-description { color: var(--color-ink-muted); font-size: 12px; }
 .cenit-toast-close { color: var(--color-ink-muted) !important; background: var(--color-surface) !important; min-height: 20px; }
-.cenit-page-enter { animation: cenit-enter-opacity 150ms ease-out both; }
 .academic-detail { transition: opacity 300ms ease-out; }
 .academic-detail--closing { opacity: 0; transition-duration: 150ms; }
 .cenit-closing { opacity: 0; pointer-events: none; transition-duration: 150ms; }
 @starting-style { .cenit-popover, .academic-detail[open] { opacity: 0; } }
-@keyframes cenit-enter-opacity { from { opacity: 0; } }
 @media (hover: hover) {
   .cenit-button:hover:not(:disabled), .cenit-date-field .cenit-date-trigger:hover:not(:disabled) { background: var(--color-surface-hover); }
   .cenit-button.cenit-button--primary:hover:not(:disabled) { border-color: var(--color-primary-hover); background: var(--color-primary-hover); }
@@ -73,12 +70,6 @@ textarea.cenit-input { resize: vertical; }
   .cenit-input:hover:not(:disabled):not(:focus-visible) { border-color: var(--color-ink-placeholder); }
   .cenit-calendar .rdp-day_button:hover:not(:disabled) { background: var(--color-surface-muted); }
   .cenit-calendar .rdp-selected .rdp-day_button:hover:not(:disabled) { background: var(--color-primary-hover); }
-}
-@media (max-width: 760px) {
-  .cenit-button--icon { min-width: 44px; width: 44px; height: 44px; }
-  .cenit-input { font-size: 16px; }
-  .cenit-date-field .cenit-date-trigger { min-height: 44px; width: 44px; top: 0; right: 0; }
-  .cenit-date-field .cenit-date-input:not(.cenit-date-input--segmented) > input { min-height: 44px; padding-right: 48px !important; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .cenit-popover { transition-property: opacity, translate, filter; }
@@ -119,7 +110,6 @@ textarea.cenit-input { resize: vertical; }
   @starting-style { .cenit-confirm { translate: 0 12px; filter: blur(4px); } }
 }
 
-@media (max-width: 380px) { .cenit-calendar { padding: 3px; } }
 
 .cenit-date-input { position: relative; min-width: 0; width: 100%; }
 .cenit-date-input > input, .cenit-date-mask { font-variant-numeric: tabular-nums; }
@@ -172,4 +162,22 @@ textarea.cenit-input { resize: vertical; }
 .cenit-date-input, .cenit-date-input > input, .cenit-date-mask { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; font-variant-numeric: tabular-nums; }
 .cenit-calendar .rdp-caption_label { display: inline-block; font-size: 14px; font-weight: 550; }
 .cenit-calendar .rdp-caption_label::first-letter { text-transform: uppercase; }
-@media (max-width: 760px) { .purchase-input .cenit-date-input, .purchase-input .cenit-date-input > input, .cenit-date-mask { font-size: 16px; } }
+.cenit-confirm--wide { width: min(380px, calc(100vw - 32px)); }
+.cenit-confirm-summary { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; margin: 16px 0 0; padding: 12px 14px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface-subtle); font-variant-numeric: tabular-nums; }
+.cenit-confirm-summary > div { display: contents; }
+.cenit-confirm-summary dt { color: var(--color-ink-muted); }
+.cenit-confirm-summary dd { margin: 0; color: var(--color-ink); font-weight: 600; overflow-wrap: anywhere; }
+.cenit-export-options { display: grid; gap: 8px; margin: 16px 0 0; padding: 0; border: 0; }
+.cenit-export-options legend { margin-bottom: 8px; padding: 0; color: var(--color-ink); font-size: 13px; font-weight: 600; }
+.cenit-export-options label { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--color-line); border-radius: var(--radius-md); cursor: pointer; transition: border-color 150ms ease-out, background-color 150ms ease-out; }
+.cenit-export-options label:has(:checked) { border-color: var(--color-focus); background: var(--color-info-soft); }
+.cenit-export-options input { margin: 3px 0 0; accent-color: var(--color-focus); }
+.cenit-export-options :is(strong, small), .cenit-export-scope :is(strong, small) { display: block; }
+.cenit-export-options strong, .cenit-export-scope strong { color: var(--color-ink); font-weight: 600; }
+.cenit-export-options small, .cenit-export-scope small { color: var(--color-ink-muted); font-size: 12px; overflow-wrap: anywhere; }
+.cenit-export-scope { margin-top: 14px !important; padding: 10px 12px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface-subtle); }
+.cenit-loading-label { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.cenit-skeleton { display: block; max-width: 100%; height: .8rem; border-radius: var(--radius-sm); background: var(--color-surface-muted); }
+.cenit-table-skeleton > div { display: grid; grid-template-columns: var(--skeleton-columns); align-items: center; gap: 12px; min-height: var(--skeleton-row, 46px); padding: 0 14px; }
+.cenit-table-skeleton > div:first-child { min-height: 42px; background: var(--color-surface-header); }
+.cenit-table-skeleton > div + div { border-top: 1px solid var(--color-line-soft); }

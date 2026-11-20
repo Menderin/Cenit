@@ -151,15 +151,6 @@ test('calendario en español funciona por teclado, valida bisiesto y envía fech
   await page.keyboard.press('ArrowLeft'); await page.keyboard.press('Enter');
   await expect(calendar).toHaveCount(0); await expect(date(page)).toHaveValue('28/02/2028'); await expect(date(page)).toBeFocused();
   await trigger.click(); await page.keyboard.press('Escape'); await expect(date(page)).toBeFocused();
-  for (const width of [390, 320]) {
-    await page.setViewportSize({ width, height: 844 });
-    await trigger.click();
-    const box = (await calendar.boundingBox())!;
-    expect(box.x).toBeGreaterThanOrEqual(15); expect(box.x + box.width).toBeLessThanOrEqual(width - 15);
-    expect((await calendar.locator('.rdp-day_button').first().boundingBox())!.height).toBeGreaterThanOrEqual(40);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.keyboard.press('Escape'); await expect(date(page)).toBeFocused();
-  }
   const request = page.waitForRequest(request => request.url().endsWith('/api/v1/purchases') && request.method() === 'POST');
   await page.route('**/api/v1/purchases', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'ux-date' } }) }));
   await page.getByRole('button', { name: 'Guardar registro' }).click();

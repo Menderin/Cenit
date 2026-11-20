@@ -9,6 +9,7 @@ Cenit es un monolito modular para la Facultad de Medicina de la UCN. El proyecto
 - Antes de modificar una funcionalidad, leer su sección de Arquitectura y sus contratos/código. Para operaciones, consultar [entorno local](deploy/LOCAL.md), [Azure](deploy/azure/README.md) o [servidor anterior](deploy/README.md), según el destino.
 - Identificar resultado observable, archivos afectados y comprobaciones necesarias antes de editar. Explicar y consultar contradicciones que afecten alcance, permisos o reglas de negocio; continuar el trabajo independiente.
 - Usar los mismos prefijos del equipo (`feat/`, `fix/`, `test/`, `docs/`). No crear tickets, PR, merges, mensajes a compañeros o cambios de Jira sin autorización explícita.
+- En los commits y PR autorizados, usar la identidad Git/GitHub configurada por la persona responsable. No añadir a Codex ni a otros asistentes como autores, coautores o contribuidores, incluidos los trailers `Co-authored-by` y las menciones de crédito en el PR.
 
 ## Límites del producto
 
@@ -18,6 +19,7 @@ Cenit es un monolito modular para la Facultad de Medicina de la UCN. El proyecto
 - Mantener login local, un rol por cuenta y sesión fija de dos horas. No implementar políticas de jornada, permisos por objeto, retención o tratamiento de datos por iniciativa del agente.
 - Académico conserva `pending` mientras no haya reglas validadas. No deducir AND/OR ni `none` de flechas; no añadir simulación.
 - La demo y QA usan datos ficticios. La investigación o el acceso técnico no acreditan permiso para usar fuentes reales.
+- Cenit se usa **sólo en escritorio** (desde 1280 px de ancho). No diseñar, implementar, probar ni documentar nada para móvil, tabletas o pantallas táctiles: sin breakpoints de ≤760 px, cajón de navegación, tarjetas móviles, reflujo a zoom 200 %, capturas a 390/320 px ni pruebas en dispositivo físico. Si aparece código o instrucciones para móvil, se eliminan; sólo se reabre por decisión explícita del equipo. Se conservan los ajustes para ventanas de escritorio reducidas (desde 1000 px).
 
 ## Contratos que deben conservarse
 

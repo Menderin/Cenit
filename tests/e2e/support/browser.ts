@@ -3,6 +3,13 @@ import { readFileSync } from 'node:fs';
 import type { DemoCredentials } from '../../../db/seeds/auth-demo.js';
 
 export const credential = (role: string) => (JSON.parse(readFileSync('tmp/e2e-auth/credentials.json', 'utf8')) as DemoCredentials).find(c => c.role === role)!;
+
+const santiagoDate = new Intl.DateTimeFormat('en', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' });
+export function santiagoToday() {
+  const parts = Object.fromEntries(santiagoDate.formatToParts(new Date()).map(({ type, value }) => [type, value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 export async function login(page: Page, role = 'docente') {
   const account = credential(role);
   await page.goto('/login');

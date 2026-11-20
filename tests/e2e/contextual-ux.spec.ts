@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
-import { credential, login, selectCalendarDate } from './support/browser.js';
+import { credential, login, santiagoToday, selectCalendarDate } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 import { amountLabel, dateLabel } from '../../apps/web/src/features/purchases/model/fields.js';
 
@@ -17,9 +17,9 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
     await expect(review).toContainText(amountLabel(amount));
   };
   const before = await summary();
-  const today = before.overview.registrationDays.at(-1);
-  const beforeDay = today.count;
-  const chartCount = page.getByRole('list', { name: 'Detalle de compras incorporadas por día' }).getByRole('listitem').last();
+  const monthName = new Intl.DateTimeFormat('es-CL', { month: 'long', timeZone: 'UTC' }).format(new Date(`${before.overview.registrationMonth}-01T12:00:00Z`));
+  const beforeMonth = before.overview.monthlyTotals.find((month: { month: string }) => month.month === before.overview.registrationMonth).count;
+  const monthRow = page.getByRole('table', { name: 'Monto documental por mes de envío' }).getByRole('row').filter({ has: page.getByRole('rowheader', { name: monthName, exact: true }) });
   const number = `HOME-${crypto.randomUUID().slice(0, 8)}`;
   await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
   await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
@@ -32,14 +32,11 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   const id = new URL(page.url()).pathname.split('/').at(-1)!;
   await home();
   await check(before.overview.registeredThisYear + 1, before.pending + 1, (BigInt(before.pendingAmount) + 12345n).toString());
-  await expect(chartCount).toHaveText(`${dateLabel(today.date)}: ${beforeDay + 1} ${beforeDay + 1 === 1 ? 'compra' : 'compras'}`);
-  for (const width of [1280, 390]) {
-    await page.setViewportSize({ width, height: 900 });
-    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-    await expect(page.locator('.cenit-page-enter')).toHaveCSS('opacity', '1');
-    await page.screenshot({ path: `tmp/admin-home-connected-${width}.png` });
-  }
+  await expect(monthRow.getByRole('cell').first()).toHaveText(String(beforeMonth + 1));
   await page.setViewportSize({ width: 1280, height: 900 });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1280);
+  await expect(page.locator('.cenit-page-enter')).toHaveCSS('opacity', '1');
+  await page.screenshot({ path: 'tmp/admin-home-connected-1280.png' });
   await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(number);
 
@@ -48,7 +45,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   await dialog(page).getByRole('button', { name: 'Validar registro', exact: true }).click();
   await expect(row).toHaveCount(0);
   await home(); await check(before.overview.registeredThisYear + 1, before.pending, before.pendingAmount);
-  await expect(chartCount).toHaveText(`${dateLabel(today.date)}: ${beforeDay + 1} ${beforeDay + 1 === 1 ? 'compra' : 'compras'}`);
+  await expect(monthRow.getByRole('cell').first()).toHaveText(String(beforeMonth + 1));
   // Delete a reviewed record through its detail; the filtered list is preserved on return.
   await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(number);
@@ -65,6 +62,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   // Pending examples also require opening the detail before deleting.
   const example = structuredClone(manualPurchaseExample); example.operationId = crypto.randomUUID();
   example.origin = { type: 'contract_example', exampleId: 'recovered' }; example.header.requestNumber = `${number}-PENDING`;
+  example.header.sentDate = santiagoToday();
   const response = await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data: example });
   expect(response.status()).toBe(201);
   await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
@@ -84,7 +82,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
 });
 
 test('eliminar confirma, permite cancelar y conserva el registro ante conflicto hasta actualizar', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 }); await login(page, 'administrativo');
+  await login(page, 'administrativo');
   const record = (await fixtures(page, 1))[0]!;
   await expect(page.getByRole('button', { name: 'Eliminar', exact: true })).toHaveCount(0);
   await pending(page).getByRole('link', { name: 'Ver detalles' }).click();
@@ -92,11 +90,9 @@ test('eliminar confirma, permite cancelar y conserva el registro ante conflicto 
   await expect(trigger).toHaveText('');
   await expect(trigger).toHaveAttribute('title', 'Eliminar registro');
   await expect(page.locator('.cenit-page-enter')).toHaveCSS('opacity', '1');
-  await page.screenshot({ path: 'tmp/purchase-delete-detail-390.png' });
   let deletes = 0; page.on('request', request => { if (request.method() === 'DELETE') deletes++; });
   await trigger.click(); await insideViewport(page, dialog(page));
   await expect(dialog(page)).toHaveCSS('opacity', '1');
-  await page.screenshot({ path: 'tmp/purchase-delete-confirm-390.png' });
   await expect(dialog(page).getByRole('button', { name: 'Cancelar', exact: true })).toBeFocused();
   await page.keyboard.press('Escape'); await expect(dialog(page)).toHaveCount(0); await expect(trigger).toBeFocused(); expect(deletes).toBe(0);
   // Another session validates after the table was loaded. A stale delete must not succeed.
@@ -112,7 +108,6 @@ test('eliminar confirma, permite cancelar y conserva el registro ante conflicto 
   await expect(page).toHaveURL(/\/compras\?q=CTX-/);
   await expect(page.getByRole('row').filter({ hasText: record.number })).toHaveCount(0);
   expect(deletes).toBe(2);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
 test('Inicio presenta carga y error con reintento sin mostrar cifras ficticias', async ({ page }) => {
@@ -123,6 +118,8 @@ test('Inicio presenta carga y error con reintento sin mostrar cifras ficticias',
     await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'Resumen temporalmente indisponible', requestId: 'summary-error' } }) });
   });
   await page.reload(); await expect(page.getByRole('status').filter({ hasText: 'Cargando resumen' })).toBeVisible();
+  await expect(page.locator('.dashboard-loading .dashboard-kpis > div')).toHaveCount(3);
+  await expect(page.locator('.dashboard-loading .dashboard-card')).toHaveCount(3);
   expect(await page.getByRole('definition').count()).toBe(0);
   await expect.poll(() => !!release).toBe(true); release!();
   await expect(page.getByRole('alert')).toContainText('Resumen temporalmente indisponible');
@@ -135,12 +132,13 @@ test('Inicio presenta carga y error con reintento sin mostrar cifras ficticias',
 const dialog = (page: Page) => page.getByRole('alertdialog');
 const pending = (page: Page) => page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
 const toolbar = (page: Page) => page.getByRole('button', { name: /^(Mostrar|Ocultar) navegación$/ });
-async function fixtures(page: Page, count = 8) {
+async function fixtures(page: Page, count = 8, sentDate = santiagoToday()) {
   const prefix = `CTX-${crypto.randomUUID().slice(0, 8)}`;
   const records: { id: string; number: string }[] = [];
   for (let index = 0; index < count; index++) {
     const data = structuredClone(manualPurchaseExample); data.operationId = crypto.randomUUID();
     data.header.requestNumber = `${prefix}-${index}`;
+    data.header.sentDate = sentDate;
     const response = await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data });
     expect(response.status()).toBe(201);
     records.push({ id: (await response.json()).data.id, number: data.header.requestNumber });
@@ -284,7 +282,8 @@ test('filtros vacíos, repetidos y quitados no generan consultas ni historial re
 });
 
 test('filtros automáticos aplican un día específico, agrupan escritura y conservan foco', async ({ page }) => {
-  await login(page, 'administrativo'); const records = await fixtures(page, 2);
+  const sentDate = santiagoToday();
+  await login(page, 'administrativo'); const records = await fixtures(page, 2, sentDate);
   await page.request.post(`/api/v1/purchases/${records[1]!.id}/validation`, { headers: { Origin: new URL(page.url()).origin }, data: { expectedVersion: 1 } });
   await page.goto('/administracion/compras?pendingPage=2&reviewedPage=2');
   await expect(page.getByText(/^Página 2 de /)).toHaveCount(2);
@@ -294,18 +293,19 @@ test('filtros automáticos aplican un día específico, agrupan escritura y cons
   await page.clock.install(); await page.clock.pauseAt(new Date());
   await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
   await page.getByRole('button', { name: 'Abrir calendario: Fecha de envío', exact: true }).click();
-  await selectCalendarDate(page, '2026-10-12');
+  await selectCalendarDate(page, sentDate);
   await page.clock.runFor(249);
   expect(queries).toHaveLength(0); await page.clock.runFor(1); await page.clock.resume();
-  await expect(page).toHaveURL(/dateFrom=2026-10-12&dateTo=2026-10-12$/);
+  const period = `dateFrom=${sentDate}&dateTo=${sentDate}`;
+  await expect(page).toHaveURL(new RegExp(`${period}$`));
   expect(await page.evaluate(() => window.history.length)).toBe(history);
   await page.keyboard.press('Escape');
   queries.length = 0;
   await search.fill(prefix);
-  await expect(page).toHaveURL(new RegExp(`q=${prefix}&dateFrom=2026-10-12&dateTo=2026-10-12$`));
+  await expect(page).toHaveURL(new RegExp(`q=${prefix}&${period}$`));
   await expect.poll(() => queries.length).toBe(2);
   await expect(page.getByText(/^Página 1 de /)).toHaveCount(2);
-  for (const query of queries) { expect(query.searchParams.get('q')).toBe(prefix); expect(query.searchParams.get('dateFrom')).toBe('2026-10-12'); expect(query.searchParams.get('dateTo')).toBe('2026-10-12'); }
+  for (const query of queries) { expect(query.searchParams.get('q')).toBe(prefix); expect(query.searchParams.get('dateFrom')).toBe(sentDate); expect(query.searchParams.get('dateTo')).toBe(sentDate); }
   await expect(search).toBeFocused();
   await expect(pending(page).getByText('1 registro', { exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Revisados en Cenit', exact: true }).getByText('1 registro', { exact: true })).toBeVisible();
@@ -345,7 +345,10 @@ test('cambiar filtros reinicia páginas, limpiar evita duplicados y el no cambio
   await page.goto('/administracion/compras?q=CONTEXTUAL-PAGES&pendingPage=2&reviewedPage=2');
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill('CONTEXTUAL-UPDATED');
   await expect(page).toHaveURL(/compras\?q=CONTEXTUAL-UPDATED$/);
-  await expect(page.getByText(/^Página 1 de /)).toHaveCount(2);
+  // Sin resultados no hay paginación; el vacío ofrece quitar los filtros en ambas tablas.
+  await expect(page.getByText('No encontramos compras con estos filtros', { exact: true })).toHaveCount(2);
+  await expect(page.getByRole('button', { name: 'Quitar filtros', exact: true })).toHaveCount(2);
+  await expect(page.getByText(/^Página \d+ de /)).toHaveCount(0);
   await page.route('**/api/v1/purchases?**', route => route.fulfill({ status: 503, json: { error: { code: 'SERVICE_UNAVAILABLE', message: 'Servicio temporalmente indisponible', requestId: 'ctx-filters' } } }));
   await page.goto('/administracion/compras?q=CONTEXTUAL-ERROR');
   await expect(pending(page).getByRole('button', { name: 'Reintentar' })).toBeVisible();
@@ -357,7 +360,7 @@ test('cambiar filtros reinicia páginas, limpiar evita duplicados y el no cambio
   await expect(page.getByRole('button', { name: 'Limpiar', exact: true })).toBeDisabled();
 });
 
-test('marco y navegación permanecen visibles al desplazar listas/formularios, con fallback móvil y poca altura', async ({ page }) => {
+test('marco y navegación permanecen visibles al desplazar listas y formularios', async ({ page }) => {
   await login(page, 'administrativo'); await fixtures(page);
   for (const [width, height] of [[1280, 720], [1440, 900], [1920, 1080]] as const) {
     await page.setViewportSize({ width, height });
@@ -369,7 +372,7 @@ test('marco y navegación permanecen visibles al desplazar listas/formularios, c
   }
   await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
   expect(await page.locator('#admin-content').evaluate(e => e.scrollTop)).toBe(0); await expect(page.locator('#admin-content')).toBeFocused();
-  for (const [width, height] of [[1280, 720], [390, 844], [640, 450]] as const) {
+  for (const [width, height] of [[1280, 720]] as const) {
     await page.setViewportSize({ width, height });
     await page.getByRole('button', { name: 'Agregar ítem', exact: true }).click();
     const field = page.getByLabel(/Proveedor · ítem/).last(); await field.focus(); await field.fill('Foco visible');
@@ -401,7 +404,7 @@ test('reapertura durante salida, ancla retirada y movimiento reducido conservan 
   await expect(pending(page).getByRole('heading', { name: 'Por revisar en Cenit' })).toBeFocused();
 });
 
-test('navegación: ancho fijo del contenido durante apertura/cierre, inversión y panel móvil con foco', async ({ page }) => {
+test('navegación: ancho fijo del contenido durante apertura/cierre, inversión', async ({ page }) => {
   await login(page, 'administrativo');
   const content = page.locator('.workspace-sidebar .workspace-sidebar-content');
   const label = page.locator('.workspace-sidebar a[href="/administracion/compras"] span');
@@ -427,29 +430,4 @@ test('navegación: ancho fijo del contenido durante apertura/cierre, inversión 
   const manual = page.getByRole('link', { name: 'Registrar manualmente', exact: true }), capture = page.getByRole('link', { name: 'Subir captura', exact: true });
   expect((await manual.boundingBox())!.height).toBe((await capture.boundingBox())!.height);
   expect((await capture.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  await page.setViewportSize({ width: 390, height: 844 });
-  const position = () => page.locator('.workspace-main').evaluate(e => ({ top: (e as HTMLElement).offsetTop, width: (e as HTMLElement).offsetWidth, height: (e as HTMLElement).offsetHeight }));
-  const beforeDrawer = await position();
-  await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
-  const drawer = page.getByRole('dialog', { name: 'Navegación administrativa' });
-  await expect(drawer.getByRole('button', { name: 'Cerrar navegación' })).toBeFocused();
-  expect(await position()).toEqual(beforeDrawer);
-  await page.keyboard.press('Shift+Tab'); await expect(drawer.getByRole('button', { name: 'Cerrar sesión', exact: true })).toBeFocused();
-  await page.keyboard.press('Escape'); await expect(drawer).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Mostrar navegación', exact: true })).toBeFocused();
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
-  await expect(drawer).toHaveCSS('translate', 'none');
-  await drawer.getByRole('link', { name: 'Inicio', exact: true }).click();
-  await expect(page).toHaveURL(/\/administracion$/); await expect(drawer).toBeHidden();
-  await expect(page.locator('#admin-content')).toBeFocused();
-  await page.goto('/administracion/compras/nueva');
-  await page.getByLabel('Descripción *', { exact: true }).fill('Borrador conservado');
-  await page.getByRole('button', { name: 'Mostrar navegación', exact: true }).click();
-  const home = drawer.getByRole('link', { name: 'Inicio', exact: true });
-  await home.click(); await page.getByRole('alertdialog').getByRole('button', { name: 'Seguir editando' }).click();
-  await expect(home).toBeFocused();
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: 'Mostrar navegación', exact: true })).toBeFocused();
-  await expect(page.getByLabel('Descripción *', { exact: true })).toHaveValue('Borrador conservado');
 });

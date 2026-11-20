@@ -1,4 +1,5 @@
 import { Type, type Static } from '@sinclair/typebox';
+export * from './google.js';
 
 export const AccountRoleSchema = Type.Union([Type.Literal('docente'), Type.Literal('estudiante'), Type.Literal('administrativo')]);
 export type AccountRole = Static<typeof AccountRoleSchema>;
@@ -19,3 +20,13 @@ export const LogoutRequestSchema = Type.Object({}, { additionalProperties: false
 export type LoginRequest = Static<typeof LoginRequestSchema>;
 export type Account = Static<typeof AccountSchema>;
 export type SessionResponse = Static<typeof SessionResponseSchema>;
+export const GooglePictureUrlSchema = Type.String({ maxLength: 2048, pattern: '^https://([a-z0-9-]+\\.)*googleusercontent\\.com/[^\\s]*$' });
+export const ProfileResponseSchema = Type.Object({ data: Type.Object({
+  account: AccountSchema,
+  google: Type.Object({
+    enabled: Type.Boolean(), linked: Type.Boolean(),
+    email: Type.Union([AccountEmailSchema, Type.Null()]),
+    pictureUrl: Type.Union([GooglePictureUrlSchema, Type.Null()]),
+  }, { additionalProperties: false }),
+}, { additionalProperties: false }) }, { additionalProperties: false });
+export type ProfileResponse = Static<typeof ProfileResponseSchema>;

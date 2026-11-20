@@ -2,7 +2,7 @@
 
 Cenit es una plataforma web para organizar información administrativa y facilitar la consulta académica de Nutrición y Dietética en la Facultad de Medicina de la Universidad Católica del Norte, sede Coquimbo.
 
-El Project Charter contempla Compras, Personal, Bienes y consulta académica. La primera entrega se concentra en Compras y académico; Personal y Bienes requieren definición y validación de sus requisitos antes de implementarlos.
+El Project Charter contempla Compras, Personal, Bienes y consulta académica. La primera entrega se concentra en Compras y académico; Personal y Bienes se ofrecen como propuestas que requieren validación de sus requisitos con la Facultad.
 
 ## Qué se puede consultar
 

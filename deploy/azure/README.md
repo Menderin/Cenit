@@ -60,11 +60,11 @@ El workflow comprueba readiness por HTTPS al terminar. Sin DNS/certificado váli
 
 ```mermaid
 flowchart TD
-    Rama["Rama de tarea"] --> PR["PR y revisión independiente"]
+    Rama["Rama de tarea"] --> PR["PR hacia develop y revisión independiente"]
     PR --> CI["ci.yml: tipos, lint, pruebas y build"]
     CI --> Gate{"CI required correcto"}
     Gate -->|No| Bloqueo["Corregir; no integrar ni desplegar"]
-    Gate -->|Sí| Merge["Líder integra en develop o main"]
+    Gate -->|Sí| Merge["Líder integra en develop"]
     Merge --> Release["release.yml: CI del SHA integrado"]
     Release --> Imagenes["Construir y verificar API/web y OCR"]
     Imagenes --> Registro["GHCR: dos imágenes por digest"]
@@ -76,8 +76,13 @@ flowchart TD
     Activar --> Estado["Registrar current.json"]
     Estado --> HTTPS["Comprobar readiness por HTTPS público"]
     HTTPS --> Recorridos["Verificar recorridos y aceptación del incremento"]
+    Recorridos --> Promocion["PR de promoción develop → main"]
+    Promocion --> Origen["Main source branch y CI required"]
+    Origen --> Release
     Operador["Operador: carga de catálogo por separado"] -.-> Lock
 ```
+
+Las ramas de tarea se integran únicamente en `develop`, que despliega staging. Producción demo recibe sólo el PR de promoción desde `develop` del mismo repositorio; ese PR debe pasar `Main source branch` ([main-source.yml](../../.github/workflows/main-source.yml)) y `CI required` antes de integrarse, y su push a `main` repite el flujo con destino producción. Ver [CONTRIBUTING](../../CONTRIBUTING.md#ramas-y-commits).
 
 `ci.yml` se ejecuta para PR hacia `develop`/`main`, pushes de las ramas configuradas y llamadas reutilizables. `CI required` reúne los resultados aplicables de Prerequisites, Infrastructure y Application; Academic foundation es una variante histórica condicionada por el verificador. Un job omitido sólo es válido si el gate lo permite; no equivale a una prueba ejecutada. La aplicación completa se comprueba con tipos, lint, unitarias, integración PostgreSQL, build, navegador compilado y verificación de imagen. La publicación añade el ensayo OCR real sin red con muestras ficticias.
 
@@ -111,7 +116,9 @@ Los archivos privados no se incluyen en Git, imágenes ni artefactos públicos. 
 
 ## Verificar seguridad del entorno
 
-El operador consulta la configuración efectiva y registra entorno, fecha y SHA instalado de `current.json`. Los bloques siguientes muestran metadatos seleccionados de Azure y de la VM. Compartir únicamente la salida acotada; evitar dumps completos de `.env`, `docker inspect` o logs privados.
+Primero comprobar `CENIT_DEPLOY_TARGET` en las variables del repositorio y el job de entrega ejecutado en Actions. Con `aws`, seguir la [guía AWS](../aws/README.md#verificación-de-seguridad); las consultas Azure de esta sección corresponden al entorno Azure que se quiera auditar. Una entrega a otro destino requiere su propia evidencia de red, cifrado y accesos.
+
+El operador registra destino, entorno, fecha y SHA/digests instalados de `current.json`. Los bloques siguientes muestran metadatos seleccionados de Azure y de la VM. Compartir únicamente la salida acotada; evitar dumps completos de `.env`, `docker inspect` o logs privados.
 
 Comprobar HTTPS con validación normal del certificado en cada dirección configurada, salud, rechazo de Origin ajeno y cookie `Secure`, `HttpOnly` y `SameSite=Lax` con una cuenta ficticia autorizada. Revisar por separado la cookie de inicio y su borrado al cerrar sesión. Ante un fallo TLS, contrastar DNS, certificado y configuración instalada de Caddy conservando la validación del certificado.
 
@@ -120,14 +127,18 @@ Comprobar HTTPS con validación normal del certificado en cada dirección config
 En **Azure Cloud Shell, Bash**, con la sesión del operador y el destino de `config.json`, ejecutar:
 
 ```bash
+set -euo pipefail
 CENIT_SUBSCRIPTION=cf3ca67f-590d-41ab-9ca9-e22406de4baa
 az vm show --subscription "$CENIT_SUBSCRIPTION" -g cenit-azure -n cenit \
-  --query '{name:name,size:hardwareProfile.vmSize,encryptionAtHost:securityProfile.encryptionAtHost,osDisk:storageProfile.osDisk,dataDisks:storageProfile.dataDisks}' -o json
+  --query '{name:name,size:hardwareProfile.vmSize,encryptionAtHost:securityProfile.encryptionAtHost,osDisk:storageProfile.osDisk,dataDisks:storageProfile.dataDisks,nics:networkProfile.networkInterfaces[].id}' -o json
 CENIT_DISK_ID=$(az vm show --subscription "$CENIT_SUBSCRIPTION" -g cenit-azure -n cenit --query storageProfile.osDisk.managedDisk.id -o tsv)
 az disk show --ids "$CENIT_DISK_ID" \
   --query '{name:name,encryption:encryption,securityProfile:securityProfile}' -o json
-az network nic list-effective-nsg --subscription "$CENIT_SUBSCRIPTION" \
-  -g cenit-azure -n cenit-nic -o json
+CENIT_NIC_IDS=$(az vm show --subscription "$CENIT_SUBSCRIPTION" -g cenit-azure -n cenit --query 'networkProfile.networkInterfaces[].id' -o tsv)
+while IFS= read -r CENIT_NIC_ID; do
+  [[ -n "$CENIT_NIC_ID" ]]
+  az network nic list-effective-nsg --ids "$CENIT_NIC_ID" -o json
+done <<< "$CENIT_NIC_IDS"
 az network public-ip show --subscription "$CENIT_SUBSCRIPTION" \
   -g cenit-azure -n cenit-ip --query '{fqdn:dnsSettings.fqdn,state:provisioningState}' -o json
 ```
@@ -138,7 +149,7 @@ El cifrado del disco administrado, su tipo de clave, la caché y los discos temp
 
 ### Diagnóstico acotado en la VM
 
-En **VM → Run command → RunShellScript**, ejecutar este bloque. Consulta ambos entornos y sólo imprime los campos seleccionados. Requiere que las entregas y Docker Compose ya existan.
+En **VM → Run command → RunShellScript**, ejecutar este bloque. Consulta ambos entornos y sólo imprime los campos seleccionados. Requiere que las entregas y Docker Compose ya existan. El mismo bloque puede ejecutarse mediante Systems Manager en el nodo AWS, que conserva `/opt/cenit/<entorno>` y el Compose compartido. Sus resultados describen el host consultado.
 
 ```bash
 python3 <<'CENIT_SECURITY'
@@ -153,7 +164,7 @@ for environment in ('staging', 'production'):
     root = Path('/opt/cenit') / environment
     report = {'environment': environment}
     try:
-        if any(path.is_symlink() for path in (root, root / '.local', root / '.local/secrets')):
+        if any(path.is_symlink() for path in (*root.parents, root, root / '.local', root / '.local/secrets')):
             raise ValueError('Directorio privado enlazado')
         current = json.loads((root / 'current.json').read_text())
         report['release'] = {key: current.get(key) for key in ('commit', 'image', 'ocrImage')}
@@ -171,11 +182,13 @@ for environment in ('staging', 'production'):
                 data['auth'] = {key: env.get(key) for key in ('AUTH_COOKIE_SECURE', 'AUTH_ALLOWED_ORIGINS')}
                 data['sheetsEnabled'] = env.get('CENIT_PURCHASE_SHEETS_SYNC_ENABLED', 'false')
                 data['sheetsKeyFileConfigured'] = bool(env.get('CENIT_PURCHASE_SHEETS_KEY_FILE'))
+                data['googleEnabled'] = env.get('AUTH_GOOGLE_ENABLED') == 'true'
+                data['googleClientConfigured'] = bool(env.get('AUTH_GOOGLE_CLIENT_ID'))
             report['services'][service] = data
         report['permissions'] = {}
-        for relative in ('.', '.local', '.local/secrets', 'backups', '.local/secrets/app-url', '.local/secrets/migrator-url', '.local/secrets/capture-receipt-key'):
+        for relative in ('.', '.local', '.local/secrets', 'backups', '.local/google.env', '.local/secrets/app-url', '.local/secrets/migrator-url', '.local/secrets/capture-receipt-key'):
             path = root / relative
-            if path.exists():
+            if path.exists() or path.is_symlink():
                 info = path.lstat()
                 report['permissions'][relative] = {'mode': oct(stat.S_IMODE(info.st_mode)), 'uid': info.st_uid, 'gid': info.st_gid, 'symlink': path.is_symlink()}
         paths = [root / '.local/secrets' / name for name in ('app-url', 'migrator-url')]
@@ -200,11 +213,30 @@ Esperado en la instalación descrita: aplicación publicada sólo en `127.0.0.1:
 | PostgreSQL | `.local/secrets/postgres-password`, `app-password`, `migrator-password`, `app-url`, `migrator-url`, separados por entorno; API y migrador reciben archivos distintos | Operador con acceso privado de root. Rotar exige coordinar contraseña del rol y archivos/URLs, y verificar el servicio; editar sólo el archivo no cambia PostgreSQL |
 | Procedencia de captura | `.local/secrets/capture-receipt-key`, montada sólo en API | Operador y responsable backend. Cambiarla invalida comprobantes firmados con la clave anterior; acordar el momento y comprobar extracción/revisión |
 | Google Sheets | `CENIT_PURCHASE_SHEETS_KEY_FILE`, cuando la integración está habilitada; el Compose Azure versionado no declara esa credencial | Comprobar si hay un montaje privado adicional y quién puede leerlo. Rotar la clave en Google y actualizar el archivo requiere verificar una planilla ficticia autorizada |
-| Acceso Google | Adaptador de acceso pendiente; consultar el alcance vigente de autenticación en Arquitectura | Documentar ubicación, acceso y eventual credencial cuando se incorpore el proveedor |
-| Publicación y Azure | Token GHCR efímero y OIDC; la identidad federada puede ejecutar sobre la VM | Revisar accesos efectivos a la VM y sujetos federados. Las ramas permanentes comparten esa capacidad operativa sobre el host |
+| Acceso Google | `.local/google.env` privado por entorno con `AUTH_GOOGLE_ENABLED` e ID público `AUTH_GOOGLE_CLIENT_ID`; autorizaciones exactas y vínculos en PostgreSQL | Operador custodia el archivo `0600` y el acceso al proyecto Google. El ID público identifica al cliente web; este flujo usa ID tokens verificados sin secreto de cliente OAuth. Preparar o revocar cuentas mediante [el comando existente](../LOCAL.md#acceso-google-opcional); los ID tokens y cookies del navegador se mantienen privados |
+| Publicación y Azure | Token GHCR efímero y OIDC; la identidad federada puede ejecutar sobre la VM | Revisar accesos efectivos a la VM y sujetos federados. Las ramas permanentes comparten esa capacidad operativa sobre el host. AWS usa las credenciales y Parameter Store descritos en [su guía](../aws/README.md#verificación-de-seguridad) |
 | Respaldos | `backups/*.dump` privado por entorno; `deploy.sh` ejecuta `pg_dump -Fc` y verifica su índice | El código revisado no aplica cifrado de archivo ni define una clave de respaldo. El cifrado de archivo, la copia privada fuera de la VM y la restauración comprobada requieren su procedimiento operativo |
 
 Registrar el resultado de las consultas y los accesos autorizados en la evidencia de revisión del entorno. Mantener explícitos los valores que no se pudieron comprobar. Contrastar el resultado con esta guía antes de decidir cambios de red, cifrado o credenciales.
+
+## Habilitar Google en un entorno
+
+Cada entorno admite un archivo opcional `/opt/cenit/<entorno>/.local/google.env`, leído únicamente por `app`. Compose debe admitir `env_file.required` (Docker Compose 2.24 o posterior). Si el archivo falta, el proveedor permanece deshabilitado y el acceso local sigue disponible. El archivo pertenece al entorno de la VM y se conserva entre entregas; `deploy.sh` regenera `.env` sin sobrescribirlo.
+
+El operador crea o edita ese archivo con permisos `0600`, dentro del directorio privado del entorno, con estos valores de ejemplo. El ID se sustituye por el ID público del cliente web del proyecto.
+
+```dotenv
+AUTH_GOOGLE_ENABLED=true
+AUTH_GOOGLE_CLIENT_ID=123456789-example.apps.googleusercontent.com
+```
+
+Registrar el origen HTTPS exacto del entorno en Google Auth Platform y añadir las cuentas de prueba si la aplicación sigue en modo de pruebas. El cliente usa Google Identity Services con callback en ventana emergente; las URLs de redirección se dejan vacías. Sólo se configura el ID público del cliente. La autorización exacta de correos y la primera vinculación desde una sesión local se preparan por separado mediante el [procedimiento Google](../LOCAL.md#acceso-google-opcional). Cada base conserva sus propias autorizaciones y vínculos.
+
+Aplicar la configuración mediante la siguiente entrega habitual de Actions al entorno. Comprobar `GET /api/v1/auth/google` después de la entrega. Debe devolver `enabled: true` y el ID esperado. Un `404` indica que el destino todavía no publica ese endpoint; `enabled: false` requiere revisar configuración y formato del ID. Un readiness correcto acredita salud del runtime, mientras que el recorrido Google se comprueba con una cuenta autorizada.
+
+Para aceptar el recorrido, entrar con contraseña local, abrir **Mi perfil**, vincular la cuenta Google, cerrar sesión e ingresar con Google. Verificar cuenta, rol, permisos y foto en perfil y menú lateral; cerrar sesión y comprobar que el API vuelve a rechazar consultas protegidas. Registrar fecha, entorno, SHA entregado, casos y resultados, sin JWT, cookies ni credenciales. Las pruebas automáticas con identidades ficticias complementan este recorrido. La aprobación de otro integrante se registra en el PR o Jira.
+
+Para deshabilitar Google en una entrega posterior, establecer `AUTH_GOOGLE_ENABLED=false` en el archivo del entorno y realizar la entrega habitual. Retirar el permiso de una cuenta concreta requiere además el comando explícito `revoke`, que invalida sus sesiones Google según el contrato documentado.
 
 ## Publicar el catálogo académico (operación explícita)
 

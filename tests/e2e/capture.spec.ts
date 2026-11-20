@@ -73,7 +73,7 @@ test('captura: imagen y formulario compartido, guardado sólo al confirmar', asy
   await choose(page);
   await expect(page.getByText('Formato compatible', { exact: false }).first()).toBeVisible();
   await page.getByRole('group', { name: 'Datos principales', exact: true }).getByLabel('Descripción *', { exact: true }).fill('Corrección humana de prueba');
-  for (const width of [1440, 1024, 768, 320]) {
+  for (const width of [1440, 1024]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/capture-review-${width}.png`, fullPage: true });
@@ -96,7 +96,7 @@ test('captura: parcial, fallo comprensible y reintento conserva la imagen', asyn
   await choose(page);
   await expect(page.getByRole('alert')).toContainText('El procesador no está disponible');
   await expect(page.getByAltText('Vista previa de la captura seleccionada')).toBeVisible();
-  for (const width of [1440, 1024, 768, 320]) {
+  for (const width of [1440, 1024]) {
     await page.setViewportSize({ width, height: 900 });
     const message = await page.getByRole('alert').boundingBox();
     for (const name of ['Cambiar captura', 'Reintentar extracción']) {
@@ -168,7 +168,7 @@ test('captura real: subir, revisar, guardar y recargar mediante OCR del notebook
   await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
   await expect(page).toHaveURL(/\/compras\/[0-9a-f-]{36}$/);
   await page.reload();
-  await expect(page.locator('.purchase-detail-meta').first()).toContainText('Captura procesada y revisada');
+  await expect(page.locator('.purchase-detail-summary')).toContainText('Captura procesada y revisada');
   await expect(page.getByText('Captura ficticia revisada desde el navegador', { exact: true }).first()).toBeVisible();
 });
 

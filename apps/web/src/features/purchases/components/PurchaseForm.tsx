@@ -14,6 +14,12 @@ import { CandidateField } from './CandidateField.js';
 
 const required = new Set(['requestNumber', 'sentDate', 'description', 'totalAmount']);
 type PurchaseSubmission = { mode: 'create'; input: CreatePurchase } | { mode: 'edit'; id: string; input: UpdatePurchase };
+const accountKeys = ['universityCode', 'campusCode', 'unitCode', 'projectCode', 'accountingCode'] as const;
+// Una cuenta completa «01.02.123456.12345678.654321» separa sus cinco componentes; sólo rellena los códigos que siguen vacíos.
+function accountParts(account: string | null, line: Record<string, string | null>) {
+  const parts = account?.trim().match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)\.(\d+)$/)?.slice(1);
+  return parts ? Object.fromEntries(accountKeys.flatMap((key, i) => line[key]?.trim() ? [] : [[key, parts[i]!]])) : {};
+}
 export function PurchaseForm({ draft, onChange, lineKeys, onLineKeysChange, operationId, origin, returnTo, original, activePath, onFieldFocus, disabled = false, onSavingChange, onSaved, edit }: {
   draft: ExtractionReviewDraft; onChange: (draft: ExtractionReviewDraft) => void; lineKeys: string[]; onLineKeysChange: (keys: string[]) => void;
   operationId?: string; origin: PurchaseOrigin | null; returnTo: string; original?: ExtractionResponse;
@@ -43,7 +49,7 @@ export function PurchaseForm({ draft, onChange, lineKeys, onLineKeysChange, oper
     fields?.[0]?.focus();
   }, [problems]);
   function changeField(group: 'header' | 'administrative' | 'lines', key: string, value: string | null, index = 0) {
-    onChange(group === 'lines' ? { ...draft, lines: draft.lines.map((line, i) => i === index ? { ...line, [key]: value } : line) } : { ...draft, [group]: { ...draft[group], [key]: value } });
+    onChange(group === 'lines' ? { ...draft, lines: draft.lines.map((line, i) => i === index ? { ...line, [key]: value, ...(key === 'chargeAccount' ? accountParts(value, line) : {}) } : line) } : { ...draft, [group]: { ...draft[group], [key]: value } });
     setProblems([]); mutation.reset();
   }
   function field(group: 'header' | 'administrative' | 'lines', key: string, value: string | null, index = 0) {

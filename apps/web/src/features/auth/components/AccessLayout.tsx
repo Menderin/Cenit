@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import topography from '../../../assets/coquimbo-topografia.webp';
-import ucnLogo from '../../../assets/ucn-escudo-negro.png';
+import famedLogo from '../../../assets/logo-famed.webp';
+import eicLogo from '../../../assets/logo-eic.webp';
 import '../access.css';
 
 export function AccessLayout({ children }: { children: ReactNode }) {
@@ -15,8 +16,9 @@ export function AccessLayout({ children }: { children: ReactNode }) {
         <div className="cenit-access__content cenit-page-enter">
           <p className="cenit-access__brand">Cenit</p>
           {children}
-          <footer className="cenit-access__institution" aria-label="Institución">
-            <img src={ucnLogo} alt="Universidad Católica del Norte" width={64} height={64} />
+          <footer className="cenit-access__institution" aria-label="Instituciones">
+            <img src={famedLogo} alt="Facultad de Medicina de la Universidad Católica del Norte" width={64} height={64} />
+            <img src={eicLogo} alt="Escuela de Ingeniería UCN Coquimbo" width={131} height={56} />
           </footer>
         </div>
       </section>

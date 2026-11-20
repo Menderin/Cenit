@@ -1,6 +1,6 @@
 # Mantener la instalación anterior durante la transición
 
-El destino de entrega actual es [Azure](azure/README.md). Esta guía conserva los procedimientos de la VM compartida mientras se verifica transferencia y recuperación. Su ejecutor consulta releases; no es el mecanismo utilizado por el workflow Azure.
+El destino de entrega actual es [Azure](azure/README.md); [AWS](aws/README.md) está preparado detrás de la variable `CENIT_DEPLOY_TARGET`. Esta guía conserva los procedimientos de la VM compartida mientras se verifica transferencia y recuperación. Su ejecutor consulta releases; no es el mecanismo utilizado por el workflow Azure.
 
 | Instalación | Entrada y operación |
 | --- | --- |

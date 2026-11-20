@@ -1,0 +1,138 @@
+import { useState, type ReactNode } from 'react';
+import { Link, useLocation, useSearchParams } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import { PlusIcon } from '@phosphor-icons/react/dist/csr/Plus';
+import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/csr/DownloadSimple';
+import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft';
+import type { AssetStatus, LoanStatus } from '@cenit/contracts/assets';
+import { downloadPdf, getAssetSummary } from '../api/assets.js';
+import { initials, loanStatuses, statuses } from '../model/labels.js';
+import { DateField } from '../../../shared/components/DateField.js';
+import { LoadingLabel, Skeleton, TableSkeleton } from '../../../shared/components/Skeleton.js';
+import { HttpError } from '../../../shared/lib/http.js';
+
+export const summaryKey = ['assets', 'summary'] as const;
+export function useAssetSummary() {
+  return useQuery({ queryKey: summaryKey, queryFn: ({ signal }) => getAssetSummary(signal), refetchOnMount: 'always' });
+}
+
+// Encabezado común de las cuatro vistas: acciones, cifras que filtran y pestañas.
+export function AssetsHeader({ actions }: { actions?: ReactNode }) {
+  const summaryQuery = useAssetSummary(), summary = summaryQuery.data, location = useLocation(), [params] = useSearchParams();
+  const path = location.pathname, status = params.get('estado');
+  const tiles = [
+    { to: '/administracion/bienes', label: 'Bienes registrados', value: summary?.total, detail: 'Todos los tipos', current: path === '/administracion/bienes' && !status && !params.get('responsable') },
+    { to: '/administracion/bienes/prestamos', label: 'En préstamo', value: summary?.onLoan, current: path === '/administracion/bienes/prestamos',
+      detail: summary && (summary.overdue ? `${summary.overdue} con devolución vencida` : 'Sin devoluciones vencidas'), tone: summary?.overdue ? 'late' : '' },
+    { to: '/administracion/bienes?estado=revisar', label: 'Por revisar', value: summary?.review, current: status === 'revisar',
+      detail: 'Su responsable ya no pertenece', tone: summary?.review ? 'warn' : '' },
+    { to: '/administracion/bienes?estado=sin_responsable', label: 'Sin responsable', value: summary?.unassigned, detail: 'Registrados, sin entregar', current: status === 'sin_responsable' },
+  ];
+  const tabs = [
+    { to: '/administracion/bienes', label: 'Inventario', count: summary?.total },
+    { to: '/administracion/bienes/entregas', label: 'Entregas', count: summary?.deliveries },
+    { to: '/administracion/bienes/prestamos', label: 'Préstamos', count: summary?.loans, tone: summary?.overdue ? 'late' : '' },
+    { to: '/administracion/bienes/responsables', label: 'Responsables', count: summary?.people, tone: summary?.peopleReview ? 'warn' : '' },
+  ];
+  return <>
+    <header className="assets-heading">
+      <div><h1>Bienes</h1><p>Inventario, entregas y préstamos. Cada movimiento queda en la ficha del bien.</p></div>
+      <div className="assets-actions" key={path}>{actions ?? <>
+        <Link className="cenit-button" to="/administracion/bienes/prestamos/nuevo">Nuevo préstamo</Link>
+        <Link className="cenit-button" to="/administracion/bienes/entregas/nueva">Nueva entrega</Link>
+        <Link className="cenit-button cenit-button--primary" to="/administracion/bienes/nuevo"><PlusIcon size={16} aria-hidden="true" />Registrar bien</Link>
+      </>}</div>
+    </header>
+    <ProposalNotice />
+    {summaryQuery.isPending && <LoadingLabel>Cargando el resumen de bienes…</LoadingLabel>}
+    <ul className="assets-tiles" aria-label="Resumen de bienes">
+      {tiles.map(tile => <li key={tile.label}><Link className="assets-tile" to={tile.to} aria-current={tile.current ? 'true' : undefined}>
+        <span>{tile.label}</span><strong>{summaryQuery.isPending ? <Skeleton width="2.5rem" height="1.15em" /> : tile.value ?? '—'}</strong>
+        <small className={tile.tone ? `assets-${tile.tone}` : undefined}>{tile.detail ?? (summaryQuery.isPending ? <Skeleton width="8rem" height="1em" /> : 'Estado sin consultar')}</small>
+      </Link></li>)}
+    </ul>
+    <nav className="assets-tabs" aria-label="Secciones de Bienes">
+      {tabs.map(tab => <Link key={tab.to} to={tab.to} aria-current={path === tab.to ? 'page' : undefined}>
+        {tab.label}{tab.count !== undefined ? <span className={`assets-count${tab.tone ? ` assets-count--${tab.tone}` : ''}`}>{tab.count}</span> : summaryQuery.isPending && <Skeleton className="assets-count" width="1.6rem" height="1.55em" />}
+      </Link>)}
+    </nav>
+  </>;
+}
+
+/** Aviso fijo: Bienes es una propuesta general, no un registro institucional validado. */
+export function ProposalNotice() {
+  return <p className="assets-proposal"><strong>Propuesta pendiente de validación con la Facultad.</strong> Los datos de esta demostración son ficticios y no reemplazan el registro de la Sección Registro.</p>;
+}
+
+export function StatusChip({ status }: { status: AssetStatus }) {
+  return <span className={`assets-chip assets-chip--${statuses[status].tone}`} title={statuses[status].help}>{statuses[status].label}</span>;
+}
+export function LoanChip({ status }: { status: LoanStatus }) {
+  return <span className={`assets-chip assets-chip--${loanStatuses[status].tone}`}>{loanStatuses[status].label}</span>;
+}
+export function Avatar({ name, inactive = false }: { name: string; inactive?: boolean }) {
+  return <span className={`assets-avatar${inactive ? ' assets-avatar--inactive' : ''}`} aria-hidden="true">{initials(name)}</span>;
+}
+export function BackLink({ to = '/administracion/bienes', children = 'Volver a Bienes' }: { to?: string; children?: ReactNode }) {
+  return <Link className="assets-back" to={to}><ArrowLeftIcon size={14} aria-hidden="true" />{children}</Link>;
+}
+export function LoadState({ query, label, columns }: { query: { isPending: boolean; isError: boolean; error: Error | null; refetch: () => unknown }; label: string; columns?: number[] }) {
+  if (query.isPending) return <>
+    <LoadingLabel>{`Cargando ${label}…`}</LoadingLabel>
+    {columns ? <TableSkeleton className="assets-table-wrap assets-table-loading" columns={columns} /> : <div className="assets-loading" aria-hidden="true">
+      <Skeleton width="15rem" height="34px" /><Skeleton width="23rem" />
+      <div className="assets-layout">{[0, 1].map(index => <div className="assets-card assets-loading__card" key={index}>
+        <Skeleton width="9rem" height="22px" /><Skeleton /><Skeleton width="75%" /><Skeleton width="55%" />
+      </div>)}</div>
+    </div>}
+  </>;
+  if (query.isError) return <div className="assets-state" role="alert"><p>{query.error?.message}</p><button type="button" className="cenit-button" onClick={() => { void query.refetch(); }}>Reintentar</button></div>;
+  return null;
+}
+
+/** Botón que pide el PDF al servidor y lo descarga; informa el error junto al botón. */
+export function PdfButton({ path, fileName, children, primary = false }: { path: string; fileName: string; children: ReactNode; primary?: boolean }) {
+  const [busy, setBusy] = useState(false), [error, setError] = useState('');
+  async function run() {
+    setBusy(true); setError('');
+    try { await downloadPdf(path, fileName); } catch (cause) { setError(cause instanceof HttpError ? cause.message : 'No pudimos preparar el documento.'); } finally { setBusy(false); }
+  }
+  return <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+    <button type="button" className={`cenit-button${primary ? ' cenit-button--primary' : ''}`} onClick={() => { void run(); }} disabled={busy} aria-busy={busy}>
+      <DownloadSimpleIcon size={16} aria-hidden="true" />{busy ? 'Preparando…' : children}
+    </button>
+    {error && <span className="assets-error" role="alert">{error}</span>}
+  </span>;
+}
+
+// Campo de texto simple con etiqueta, ayuda y error.
+export function TextField({ id, label, value, onChange, optional, hint, error, textarea, list, placeholder, inputMode, wide }: {
+  id: string; label: string; value: string; onChange: (value: string) => void; optional?: boolean; hint?: string; error?: string;
+  textarea?: boolean; list?: string; placeholder?: string; inputMode?: 'numeric'; wide?: boolean;
+}) {
+  const props = { id, value, className: 'cenit-input', placeholder, 'aria-invalid': !!error || undefined, 'aria-describedby': error ? `${id}-error` : hint ? `${id}-hint` : undefined };
+  return <div className={`assets-field${wide ? ' assets-wide' : ''}`}>
+    <label htmlFor={id}>{label}{optional && <small> (opcional)</small>}</label>
+    {textarea ? <textarea {...props} rows={3} onChange={event => onChange(event.target.value)} />
+      : <input {...props} list={list} inputMode={inputMode} autoComplete="off" onChange={event => onChange(event.target.value)} />}
+    {error ? <p className="assets-error" id={`${id}-error`}>{error}</p> : hint && <p id={`${id}-hint`}>{hint}</p>}
+  </div>;
+}
+export const nullable = (value: string) => value.trim() ? value.trim() : null;
+
+/** Fecha con etiqueta, ayuda y error; muestra también el aviso del campo cuando el día o el mes no existen. */
+export function DateBlock({ id, label, value, onChange, optional, hint, error }: { id: string; label: string; value: string; onChange: (value: string) => void; optional?: boolean; hint?: string; error?: string }) {
+  const [warning, setWarning] = useState('');
+  const shown = error || warning;
+  return <div className="assets-field">
+    <label htmlFor={id}>{label}{optional && <small> (opcional)</small>}</label>
+    <DateField id={id} label={label} value={value} onValueChange={onChange} onValidationError={setWarning} aria-invalid={!!shown || undefined} aria-describedby={shown ? `${id}-error` : hint ? `${id}-hint` : undefined} />
+    {shown ? <p className="assets-error" id={`${id}-error`}>{shown}</p> : hint && <p id={`${id}-hint`}>{hint}</p>}
+  </div>;
+}
+
+/** Tras mostrar los errores de un formulario, lleva el foco al primer campo marcado. */
+export function focusFirstError() {
+  window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.assets-form [aria-invalid="true"]')?.focus());
+}
+export const missingMessage = (count: number) => count === 1 ? 'Falta 1 dato. Revisa el mensaje bajo el campo marcado.' : `Faltan ${count} datos. Revisa los mensajes bajo cada campo.`;

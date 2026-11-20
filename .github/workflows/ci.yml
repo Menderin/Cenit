@@ -50,7 +50,7 @@ jobs:
             bash -n "$script"
           done < <(find deploy -name '*.sh' -print0)
       - name: Compile Python utilities
-        run: python3 -m compileall -q deploy/scripts deploy/azure
+        run: python3 -m compileall -q deploy/scripts deploy/azure deploy/aws
       - name: Test application CI gate
         run: python3 -m unittest discover -s tests/infrastructure -v
       - name: Validate local Compose configuration
