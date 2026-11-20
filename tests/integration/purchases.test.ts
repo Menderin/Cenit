@@ -631,20 +631,21 @@ describe('registro histórico y sincronización durable de Sheets', () => {
   });
 
   it('conserva cola y filas tras fallos/reinicio, no duplica y sincroniza altas, revisión y bajas', async () => {
-    const pool = pools[0]!, target = 'fake_sheet_integration', actor = (await pool.query("SELECT id FROM cenit.accounts WHERE role='administrativo' LIMIT 1")).rows[0].id;
+    const pool = pools[1]!, purchases = new PurchaseRepository(pool), target = 'fake_sheet_integration';
+    const actor = (await pool.query("SELECT id FROM cenit.accounts WHERE role='administrativo' LIMIT 1")).rows[0].id;
     // Older fixtures are outside this remote-double scenario.
     await pool.query(`INSERT INTO cenit.purchase_sheets_delivery(spreadsheet_id,purchase_id,synced_generation)
       SELECT $1,purchase_id,generation FROM cenit.purchase_sheets_outbox`, [target]);
     const input = body(); input.header.requestNumber = '000099'; input.header.totalAmount = '9'.repeat(255);
-    const saved = await repository.create(input, actor);
-    await repository.create(input, actor);
+    const saved = await purchases.create(input, actor);
+    await purchases.create(input, actor);
     expect((await pool.query('SELECT generation FROM cenit.purchase_sheets_outbox WHERE purchase_id=$1', [saved.record.id])).rows[0].generation).toBe(1);
     const queuedBefore = (await pool.query('SELECT count(*)::int AS n FROM cenit.purchase_sheets_outbox')).rows[0].n;
     const invalid = body(); invalid.lines[0]!.amount = '-1';
-    await expect(repository.create(invalid, actor)).rejects.toThrow();
+    await expect(purchases.create(invalid, actor)).rejects.toThrow();
     expect((await pool.query('SELECT count(*)::int AS n FROM cenit.purchase_sheets_outbox')).rows[0].n).toBe(queuedBefore);
     const remote = new FakeGoogleSheets(), writer = new GoogleSheetsWriter(remote.call, 'fake@example.test');
-    let sync = new PurchaseSheetsRepository(pool, repository);
+    let sync = new PurchaseSheetsRepository(pool, purchases);
     expect((await sync.status(target, saved.record.id)).data.status).toBe('pending');
     remote.unavailable = true;
     await sync.deliver(target, jobs => writer.send(jobs));
@@ -661,12 +662,12 @@ describe('registro histórico y sincronización durable de Sheets', () => {
     expect((await sync.status(target, saved.record.id)).data.status).toBe('synced');
     expect(remote.sheet('Compras').rows.size).toBe(2);
     expect(remote.sheet('Ítems').rows.size).toBe(input.lines.length + 1);
-    await repository.validate(saved.record.id, 1, actor);
+    await purchases.validate(saved.record.id, 1, actor);
     await sync.deliver(target, jobs => writer.send(jobs));
     const headers = remote.sheet('Compras').rows.get(1)!;
     expect(remote.sheet('Compras').rows.get(assignment.header_row)![headers.indexOf('Revisión local')]).toBe('reviewed');
     // A newer mutation arriving while HTTP is in progress must remain pending.
-    await repository.delete(saved.record.id, 2);
+    await purchases.delete(saved.record.id, 2);
     await sync.deliver(target, async jobs => {
       await writer.send(jobs);
       await pool.query('UPDATE cenit.purchase_sheets_outbox SET generation=generation+1 WHERE purchase_id=$1', [saved.record.id]);

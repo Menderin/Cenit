@@ -95,6 +95,7 @@ No copiar `.env` local a Azure. `deploy.sh` genera en cada directorio privado la
 | Directorio privado | `/opt/cenit/staging` | `/opt/cenit/production` |
 | `CENIT_APP_IMAGE`, `CENIT_OCR_IMAGE` | Digests verificados de la entrega de `develop` | Digests verificados de la entrega de `main` |
 | Runtime | `NODE_ENV=production`, `APP_ENV=demo`, `AUTH_COOKIE_SECURE=true`, puerto interno `3000` | Misma configuración de runtime; la base y los secretos son independientes |
+| Copia de compras a Sheets | Activada por `compose.sheets.yaml` tras integrar y desplegar `develop` | Desactivada; el overlay de Sheets ni siquiera se incluye en el paquete `main` |
 
 `APP_ENV=demo` identifica el producto de demostración; no obliga a usar HTTP ni contradice el nombre del entorno de producción. La configuración completa del runtime está en [Entorno local](../LOCAL.md#configuración-del-runtime-y-puertos), con sus diferencias por destino.
 
@@ -104,6 +105,9 @@ No copiar `.env` local a Azure. `deploy.sh` genera en cada directorio privado la
 | `.local/secrets/app-url` → `/run/secrets/app-url` | API con `cenit_app` |
 | `.local/secrets/migrator-url` → `/run/secrets/migrator-url` | Migrador y cargador de catálogo con `cenit_migrator` |
 | `.local/secrets/capture-receipt-key` | API para firmar procedencia; OCR no recibe este secreto ni acceso a la BD |
+| Staging: `.local/secrets/purchase-sheets-id` y `purchase-sheets-key.json` | ID de la planilla dedicada y clave JSON de cuenta de servicio; el overlay entrega la clave sólo a la API |
+
+Para habilitar Sheets en staging, aprovisionar ambos archivos directamente en `/opt/cenit/staging/.local/secrets/` por el canal privado de operaciones, antes de integrar la activación. `purchase-sheets-id` contiene sólo el ID (no la URL) de la hoja ficticia dedicada. La cuenta de servicio debe tener permiso de edición únicamente sobre esa hoja. El deploy valida ambos archivos sin imprimir sus contenidos; mantiene el directorio privado, limita el ID y expone la clave JSON legible por el usuario de la API sólo dentro de ese directorio protegido. Si falta o no es válida, el despliegue se detiene antes de migrar o activar. No poner credenciales ni ID en variables versionadas, YAML, logs, Actions o artefactos. La activación sólo prepara el conector: verificar después del despliegue que la cola y la hoja responden correctamente antes de declarar la prueba real terminada.
 
 Los archivos privados no se incluyen en Git, imágenes ni artefactos públicos. El runtime no recibe las claves ficticias de login para arrancar. Antes de usar una cuenta en un entorno nuevo, su preparación/transferencia debe comprobarse de forma explícita; el deploy no acredita que exista.
 

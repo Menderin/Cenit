@@ -9,7 +9,11 @@ cloud-init status --wait >/dev/null
 root="/opt/cenit/$CENIT_ENV"
 install -d -m 700 "$root" "$root/backups"
 cd "$root"
-dc() { docker compose --env-file .env -f compose.yaml "$@"; }
+dc() {
+  local compose_files=(--env-file .env -f compose.yaml)
+  if [[ $CENIT_ENV == staging ]]; then compose_files+=(-f compose.sheets.yaml); fi
+  docker compose "${compose_files[@]}" "$@"
+}
 registry=$(mktemp -d /run/cenit-registry.XXXXXX)
 activated=false
 configured=false
@@ -21,6 +25,11 @@ recover() {
     if [[ -f previous.env && -f previous.compose.yaml ]]; then
       cp previous.env .env
       cp previous.compose.yaml compose.yaml
+      if [[ -f previous.compose.sheets.yaml ]]; then
+        cp previous.compose.sheets.yaml compose.sheets.yaml
+      else
+        rm -f -- compose.sheets.yaml
+      fi
       if $activated; then
         dc up -d --pull never --wait --wait-timeout 180 app || echo 'Recovery requires inspection.' >&2
       fi
@@ -61,10 +70,12 @@ done
 if [[ -f .env && -f compose.yaml ]]; then
   cp .env previous.env
   cp compose.yaml previous.compose.yaml
+  if [[ -f compose.sheets.yaml ]]; then cp compose.sheets.yaml previous.compose.sheets.yaml; fi
 fi
 configured=true
 install -d deploy/local deploy/scripts
 install -m 644 "$BUNDLE_ROOT/compose.yaml" compose.yaml
+if [[ $CENIT_ENV == staging ]]; then install -m 644 "$BUNDLE_ROOT/compose.sheets.yaml" compose.sheets.yaml; fi
 install -m 644 "$BUNDLE_ROOT/init-db.sh" deploy/local/init-db.sh
 install -m 644 "$BUNDLE_ROOT/setup-local.py" deploy/scripts/setup-local.py
 touch .env.example
@@ -77,6 +88,27 @@ if not key.exists():
     key.write_bytes(secrets.token_bytes(32))
     key.chmod(0o644)  # Host parent is 0700; container UID must read its mounted file.
 PY
+if [[ $CENIT_ENV == staging ]]; then
+  sheets_id_file="$root/.local/secrets/purchase-sheets-id"
+  sheets_key_file="$root/.local/secrets/purchase-sheets-key.json"
+  [[ ! -L $sheets_id_file && ! -L $sheets_key_file ]] || { echo 'Staging Sheets credentials must be regular files.' >&2; exit 1; }
+  [[ -s $sheets_id_file && -s $sheets_key_file ]] || { echo 'Staging Sheets credentials are not provisioned.' >&2; exit 1; }
+  sheets_id=$(<"$sheets_id_file")
+  [[ $sheets_id =~ ^[a-zA-Z0-9_-]{10,200}$ ]] || { echo 'Staging Sheets destination is invalid.' >&2; exit 1; }
+  chmod 600 "$sheets_id_file"
+  python3 - "$sheets_key_file" <<'PY'
+import json
+import sys
+from pathlib import Path
+try:
+    credential = json.loads(Path(sys.argv[1]).read_text())
+except (OSError, UnicodeError, ValueError):
+    raise SystemExit('Staging Sheets credential is invalid.')
+if not isinstance(credential, dict) or credential.get('type') != 'service_account' or not credential.get('client_email') or not credential.get('private_key'):
+    raise SystemExit('Staging Sheets credential is invalid.')
+PY
+  chmod 644 "$sheets_key_file"
+fi
 cat > .env <<EOF
 CENIT_ENV=$CENIT_ENV
 CENIT_APP_IMAGE=$CENIT_APP_IMAGE
@@ -84,6 +116,7 @@ CENIT_OCR_IMAGE=$CENIT_OCR_IMAGE
 CENIT_ORIGIN=$CENIT_ORIGIN
 CENIT_HTTP_PORT=$CENIT_HTTP_PORT
 EOF
+if [[ $CENIT_ENV == staging ]]; then printf 'CENIT_PURCHASE_SHEETS_ID=%s\n' "$sheets_id" >> .env; fi
 dc config --quiet
 dc pull db
 dc up -d --wait --wait-timeout 180 db

@@ -1,6 +1,10 @@
 """The Azure boundary rejects PRs, foreign images and untrusted branches."""
+import base64
+import io
 import importlib.util
 from pathlib import Path
+import shlex
+import tarfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -27,6 +31,18 @@ class AzureDeliveryTests(unittest.TestCase):
         self.assertIn('CENIT_ENV=staging', staging)
         self.assertIn('CENIT_ORIGIN=https://develop.cenit.dpdns.org', staging)
         self.assertNotIn('GH_TOKEN', production)
+
+    def test_sheets_overlay_is_bundled_only_for_staging(self):
+        def bundle_names(script):
+            line = next(line for line in script.splitlines() if 'base64 -d' in line)
+            encoded = shlex.split(line)[2]
+            archive = tarfile.open(fileobj=io.BytesIO(base64.b64decode(encoded)), mode='r:gz')
+            return archive.getnames()
+
+        production = delivery.deployment(self.environment)
+        staging = delivery.deployment({**self.environment, 'GITHUB_REF_NAME':'develop'})
+        self.assertNotIn('compose.sheets.yaml', bundle_names(production))
+        self.assertIn('compose.sheets.yaml', bundle_names(staging))
 
     def test_untrusted_identity_or_mutable_image_is_rejected(self):
         for key,value in [('GITHUB_EVENT_NAME','pull_request'), ('GITHUB_REF_NAME','feat/azure-deploy'),

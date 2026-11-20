@@ -36,10 +36,13 @@ def deployment(environment):
                   HTTP_PORT='8081' if production else '8082')
     stream = io.BytesIO()
     with tarfile.open(fileobj=stream, mode='w:gz') as bundle:
-        for source, destination in [('deploy/azure/compose.yaml','compose.yaml'),
-                                    ('deploy/azure/deploy.sh','deploy.sh'),
-                                    ('deploy/local/init-db.sh','init-db.sh'),
-                                    ('deploy/scripts/setup-local.py','setup-local.py')]:
+        files = [('deploy/azure/compose.yaml','compose.yaml'),
+                 ('deploy/azure/deploy.sh','deploy.sh'),
+                 ('deploy/local/init-db.sh','init-db.sh'),
+                 ('deploy/scripts/setup-local.py','setup-local.py')]
+        if not production:
+            files.append(('deploy/azure/compose.sheets.yaml','compose.sheets.yaml'))
+        for source, destination in files:
             bundle.add(ROOT/source, arcname=destination)
     exports = '\n'.join('export CENIT_'+key+'='+shlex.quote(value) for key,value in values.items())
     return '\n'.join(['#!/bin/bash', 'set -euo pipefail', exports,

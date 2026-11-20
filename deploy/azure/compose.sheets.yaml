@@ -1,0 +1,10 @@
+services:
+  app:
+    environment:
+      CENIT_PURCHASE_SHEETS_SYNC_ENABLED: 'true'
+      CENIT_PURCHASE_SHEETS_ID: ${CENIT_PURCHASE_SHEETS_ID:?Set the dedicated staging spreadsheet ID}
+      CENIT_PURCHASE_SHEETS_KEY_FILE: /run/secrets/purchase-sheets-key
+    secrets: [app-url, capture-receipt-key, purchase-sheets-key]
+secrets:
+  purchase-sheets-key:
+    file: ./.local/secrets/purchase-sheets-key.json

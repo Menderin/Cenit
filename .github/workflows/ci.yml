@@ -68,6 +68,12 @@ jobs:
         run: |
           az bicep build --file deploy/azure/main.bicep --outfile "$RUNNER_TEMP/cenit-azure.json"
           docker compose --project-directory "$PWD" --file deploy/azure/compose.yaml config --quiet
+          install -d -m 700 .local/secrets
+          printf '{"type":"service_account","client_email":"ci@example.test","private_key":"test"}\n' > .local/secrets/purchase-sheets-key.json
+          chmod 600 .local/secrets/purchase-sheets-key.json
+          CENIT_PURCHASE_SHEETS_ID=ci_test_spreadsheet docker compose \
+            --project-directory "$PWD" --file deploy/azure/compose.yaml \
+            --file deploy/azure/compose.sheets.yaml config --quiet
           trap 'docker compose --project-directory "$PWD" --file deploy/azure/compose.yaml --project-name cenit-azure-ci down' EXIT
           docker compose --project-directory "$PWD" --file deploy/azure/compose.yaml --project-name cenit-azure-ci create ocr
       - name: Validate bootstrap Nginx

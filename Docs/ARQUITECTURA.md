@@ -14,7 +14,7 @@ Este archivo es el SDD vigente del repositorio. README es el punto de entrada; `
 | Administrativo | Compras: captura, revisión, alta manual, persistencia, búsqueda, resumen, validación local y eliminación | Precisión OCR acordada con nuevas muestras; actualización de una copia desde otra captura |
 | Académico | Consulta por rol, versiones del catálogo, detalle, reglas simples/conjuntas e historiales ficticios | Carga explícita de `diagrama-r2` en cada entorno; año, códigos y aceptación institucional pendientes |
 | Personal y Bienes | Navegación y páginas de construcción | Requisitos y módulos funcionales pendientes; no se presentan como entregados |
-| Entrega | CI, imágenes por digest, despliegue Azure, migrador separado y recuperación de configuración ante fallos de activación | Catálogo/cuentas se preparan por separado; restauración completa de datos y retiro del servidor anterior requieren ensayo y aprobación |
+| Entrega | CI, imágenes por digest, despliegue Azure, migrador separado y recuperación de configuración ante fallos de activación | Sheets preparado para habilitarse sólo en staging, pendiente de despliegue y verificación real; catálogo/cuentas se preparan por separado; restauración completa de datos y retiro del servidor anterior requieren ensayo y aprobación |
 
 La [matriz de aceptación](PRUEBAS-Y-ACEPTACION.md) identifica pruebas y evidencia histórica. El estado operativo se obtiene de Actions, `current.json`, health y recorridos autenticados, siguiendo la [guía Azure](../deploy/azure/README.md#diagnóstico-y-recuperación).
 
