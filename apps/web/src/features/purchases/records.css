@@ -225,3 +225,7 @@
 .purchase-form-summary__checks li[data-done="true"] svg { color: var(--color-success-icon); }
 .purchase-form-summary__note { color: var(--admin-muted); font-size: 12px; }
 @media (max-width: 1100px) { .purchase-form-layout { grid-template-columns: minmax(0, 1fr); } .purchase-form-summary { position: static; order: -1; } }
+
+/* Acciones del estado vacío del listado */
+.purchase-records .cenit-empty__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
+.purchase-records .cenit-empty__actions:empty { display: none; }

@@ -258,6 +258,22 @@ test('descarte usa origen explícito, atrás usa cabecera visible y cerrar no de
   await expect(page).toHaveURL(/\/administracion$/); await expect(page.locator('#admin-content')).toBeFocused();
 });
 
+test('una búsqueda sin resultados en el año elegido ofrece buscar en todos los años y conserva el foco', async ({ page }) => {
+  await login(page, 'administrativo');
+  const year = Number(santiagoToday().slice(0, 4)), number = `ANIOS-${crypto.randomUUID().slice(0, 8)}`;
+  const record = structuredClone(manualPurchaseExample); record.operationId = crypto.randomUUID();
+  record.header.requestNumber = number; record.header.sentDate = `${year - 1}-03-10`;
+  expect((await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data: record })).status()).toBe(201);
+  await page.goto(`/administracion/compras?q=${number}`);
+  await expect(pending(page).getByText(`Sólo se buscó en ${year}. Prueba en todos los años o con otro número o código.`, { exact: true })).toBeVisible();
+  await pending(page).getByRole('button', { name: 'Buscar en todos los años', exact: true }).click();
+  await expect(page).toHaveURL(/allYears=1/);
+  await expect(pending(page).getByRole('row').filter({ hasText: number })).toHaveCount(1);
+  await expect(pending(page).getByRole('heading', { name: 'Por revisar en Cenit', exact: true })).toBeFocused();
+  await page.reload();
+  await expect(pending(page).getByRole('row').filter({ hasText: number })).toHaveCount(1);
+});
+
 test('filtros vacíos, repetidos y quitados no generan consultas ni historial redundantes', async ({ page }) => {
   await login(page, 'administrativo'); await fixtures(page, 1); await page.goto('/administracion'); await page.goto('/administracion/compras');
   await expect(pending(page).getByRole('table')).toBeVisible();
