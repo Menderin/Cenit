@@ -99,11 +99,11 @@ export function AssetDetail() {
           </div>}
           {asset.custodian && !asset.custodian.active && <div className="assets-alert assets-alert--review">
             <strong>Responsable sin vigencia</strong>
-            <p>{asset.custodian.name} ya no pertenece a la institución{asset.custodian.inactiveSince ? ` desde el ${displayDate(asset.custodian.inactiveSince)}` : ''}. Entrega el bien a otra persona para actualizar su responsable.</p>
+            <p>{asset.custodian.name} ya no pertenece a la institución{asset.custodian.inactiveSince ? ` desde el ${displayDate(asset.custodian.inactiveSince)}` : ''}. {loan ? 'Registra primero la devolución del préstamo y luego entrégalo a otra persona para actualizar su responsable.' : 'Entrega el bien a otra persona para actualizar su responsable.'}</p>
             {!loan && <Link className="cenit-button" to={`/administracion/bienes/entregas/nueva?desde=${asset.custodian.id}`}>Entregar sus bienes</Link>}
           </div>}
         </section>
-        <div className="assets-hint"><InfoIcon size={18} aria-hidden="true" /><span>Para cambiar el responsable usa «Entregar». Para cambiar el lugar usa «Cambiar ubicación». Todo queda anotado en el historial del bien.</span></div>
+        <div className="assets-hint"><InfoIcon size={18} aria-hidden="true" /><span>Para cambiar el responsable usa «Entregar a una persona»{loan ? ', después de registrar la devolución' : ''}. Para cambiar el lugar usa «Cambiar ubicación». Todo queda anotado en el historial del bien.</span></div>
       </aside>
     </div>
   </section>;

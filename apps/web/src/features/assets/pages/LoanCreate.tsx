@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { maxDocumentItems, type AssetListItem, type Person } from '@cenit/contracts/assets';
 import { createLoan, getAsset } from '../api/assets.js';
 import { today } from '../model/labels.js';
-import { BackLink, DateBlock, ProposalNotice, TextField, focusFirstError, missingMessage, nullable, useAssetSummary } from '../components/AssetsUi.js';
+import { BackLink, DateBlock, TextField, focusFirstError, missingMessage, nullable, useAssetSummary } from '../components/AssetsUi.js';
 import { AssetPicker, PersonPicker } from '../components/Pickers.js';
 import { ItemsTable, SheetPreview } from '../components/Documents.js';
 import { StatusNotice } from '../../../shared/components/StatusNotice.js';
@@ -55,7 +55,6 @@ export function LoanCreate() {
   return <section className="assets-page assets-page--doc">
     <BackLink to={preset ? `/administracion/bienes/${preset}` : '/administracion/bienes/prestamos'}>{preset ? 'Volver a la ficha del bien' : 'Volver a Préstamos'}</BackLink>
     <header className="assets-heading"><div><h1>Nuevo préstamo</h1><p>Presta un bien por un tiempo. El responsable no cambia; cuando vuelva, registra la devolución.</p></div></header>
-    <ProposalNotice />
     {presetAsset.data?.loan && <div style={{ marginBottom: 18 }}><StatusNotice kind="warning" title="Este bien ya está prestado" message={`Está prestado a ${presetAsset.data.loan.borrowerName}. Registra su devolución antes de prestarlo otra vez.`} /></div>}
     <div className="assets-form-layout">
       <form className="assets-form" noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>

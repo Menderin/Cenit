@@ -6,7 +6,7 @@ import { InfoIcon } from '@phosphor-icons/react/dist/csr/Info';
 import type { AssetData, AssetDetail, AssetKind, Person } from '@cenit/contracts/assets';
 import { createAsset, getAsset, updateAsset } from '../api/assets.js';
 import { kindOrder, kinds, today, usesSerial } from '../model/labels.js';
-import { BackLink, DateBlock, LoadState, ProposalNotice, TextField, focusFirstError, missingMessage, nullable, useAssetSummary } from '../components/AssetsUi.js';
+import { BackLink, DateBlock, LoadState, TextField, focusFirstError, missingMessage, nullable, useAssetSummary } from '../components/AssetsUi.js';
 import { PersonPicker } from '../components/Pickers.js';
 import { StatusNotice } from '../../../shared/components/StatusNotice.js';
 import { HttpError } from '../../../shared/lib/http.js';
@@ -88,8 +88,7 @@ function Form({ asset }: { asset?: AssetDetail }) {
   return <section className="assets-page assets-page--doc">
     <BackLink to={asset ? `/administracion/bienes/${asset.id}` : '/administracion/bienes'}>{asset ? `Volver a la ficha de ${asset.code}` : 'Volver a Bienes'}</BackLink>
     <header className="assets-heading"><div><h1>{asset ? 'Editar datos del bien' : 'Registrar bien'}</h1>
-      <p>{asset ? 'Corrige los datos del bien. Para cambiar responsable o ubicación usa «Entregar» o «Cambiar» en la ficha.' : 'Completa los datos que pide la Sección Registro. Lo que no sepas, déjalo en blanco.'}</p></div></header>
-    <ProposalNotice />
+      <p>{asset ? 'Corrige los datos del bien. Para cambiar responsable o ubicación usa «Entregar a una persona» o «Cambiar ubicación» en la ficha.' : 'Completa los datos que pide la Sección Registro. Lo que no sepas, déjalo en blanco.'}</p></div></header>
     <div className="assets-form-layout">
       <form className="assets-form" noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
         <fieldset>

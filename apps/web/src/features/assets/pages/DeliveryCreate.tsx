@@ -6,7 +6,7 @@ import { PlusIcon } from '@phosphor-icons/react/dist/csr/Plus';
 import { maxDocumentItems, type AssetKind, type AssetListItem, type DeliveryItemInput, type Person } from '@cenit/contracts/assets';
 import { createDelivery, getAsset, listAssets, listPeople } from '../api/assets.js';
 import { kindOrder, kinds, today } from '../model/labels.js';
-import { BackLink, DateBlock, ProposalNotice, TextField, focusFirstError, missingMessage, nullable, useAssetSummary } from '../components/AssetsUi.js';
+import { BackLink, DateBlock, TextField, focusFirstError, missingMessage, nullable, useAssetSummary } from '../components/AssetsUi.js';
 import { AssetPicker, PersonPicker } from '../components/Pickers.js';
 import { ItemsTable, SheetPreview, type DocItem } from '../components/Documents.js';
 import { Select } from '../../../shared/components/Select.js';
@@ -82,7 +82,6 @@ export function DeliveryCreate() {
   return <section className="assets-page assets-page--doc">
     <BackLink to={preset ? `/administracion/bienes/${preset}` : '/administracion/bienes/entregas'}>{preset ? 'Volver a la ficha del bien' : 'Volver a Entregas'}</BackLink>
     <header className="assets-heading"><div><h1>Nueva entrega</h1><p>Deja constancia de los bienes que entregas. Al guardar, quien recibe queda como responsable y descargas el acta para firmar.</p></div></header>
-    <ProposalNotice />
     {previous && <div style={{ marginBottom: 18 }}><StatusNotice kind="warning" title={`Bienes de ${previous.name}`} message={`${previous.active ? '' : 'Ya no pertenece a la institución. '}${lines.length ? 'Cargamos los bienes que tiene a cargo y que no están prestados. Elige a quién se entregan.' : 'No hay bienes para entregar ahora.'}${pending ? ` Un acta admite hasta ${maxDocumentItems} bienes: cargamos los primeros ${maxDocumentItems}; al guardar, repite «Entregar sus bienes» con los ${pending} restantes.` : ''}${onLoanCount ? ` ${onLoanCount === 1 ? 'Un bien suyo está en préstamo' : `${onLoanCount} bienes suyos están en préstamo`}: registra la devolución para poder entregarlo${onLoanCount === 1 ? '' : 's'}.` : ''}`} /></div>}
     {presetAsset.data?.loan && <div style={{ marginBottom: 18 }}><StatusNotice kind="warning" title="Este bien está en préstamo" message="Registra su devolución antes de entregarlo a otra persona." /></div>}
     <div className="assets-form-layout">
