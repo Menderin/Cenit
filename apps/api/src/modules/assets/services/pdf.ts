@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
-import type { AssetDetail, Delivery, DocumentItem, Loan } from '@cenit/contracts/assets';
+import type { AssetDetail, AssetKind, Delivery, DocumentItem, Loan } from '@cenit/contracts/assets';
 import { ApiError } from '../../../infrastructure/errors.js';
 
 // Documentos de Bienes en una hoja carta. Siguen la estructura de los formularios recibidos
@@ -113,6 +113,9 @@ class Sheet {
 }
 
 const santiagoToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date());
+const kindLabels: Record<AssetKind, string> = { equipo_computacional: 'Equipo computacional', equipo: 'Equipo', mueble: 'Mueble', maquinaria: 'Maquinaria', construccion: 'Construcción', accesorio: 'Accesorio', otro: 'Otro' };
+/** Tipo de los bienes prestados para la fila «DATOS»; el formulario pide indicarlo, no repetir la lista de tipos. */
+export const kindText = (items: Pick<DocumentItem, 'kind'>[]) => [...new Set(items.map(item => kindLabels[item.kind]))].join(', ');
 const itemDetail = (item: Pick<DocumentItem, 'kind' | 'brand' | 'model' | 'serialNumber' | 'material' | 'dimensions'>) => {
   if (item.kind === 'mueble') return [item.material && `Material: ${item.material}`, item.dimensions && `Medidas: ${item.dimensions}`].filter(Boolean).join(' · ');
   return [item.brand, item.model, item.serialNumber && `N° serie ${item.serialNumber}`].filter(Boolean).join(' · ');
@@ -177,7 +180,7 @@ export async function loanPdf(loan: Loan) {
   s.title('PRÉSTAMO TRANSITORIO DE BIENES'); s.y -= 10;
   const quantity = loan.items.reduce((sum, item) => sum + item.quantity, 0);
   s.labelled([
-    ['DATOS', 'Equipo, Accesorio, Mueble, Maquinaria, Construcción, Etc.'], ['CANTIDAD', String(quantity)],
+    ['DATOS', kindText(loan.items)], ['CANTIDAD', String(quantity)],
     ['DESCRIPCIÓN', loan.items.map(item => [item.description, item.serialNumber && `SN: ${item.serialNumber}`].filter(Boolean).join(' ')).join('\n')],
     ['UBICACIÓN', loan.location ?? ''], ['NOMBRE', loan.borrower.name], ['RUT', loan.borrower.rut ?? ''],
     ['DEVOLUCIÓN', loan.dueOn ? `Esperada el ${dateText(loan.dueOn)}` : 'Sin fecha definida'], ['FIRMA Y FECHA', '\n'],
