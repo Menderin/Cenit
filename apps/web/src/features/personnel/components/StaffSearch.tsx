@@ -6,7 +6,7 @@ import { searchStaff, type Staff } from '../model/staff.js';
 export function StaffSearch({ id, label = 'Nombre completo', value, error, onChange, onPick }: {
   id: string; label?: string; value: string; error?: string; onChange: (value: string) => void; onPick: (person: Staff) => void;
 }) {
-  const listId = useId(), errorId = useId();
+  const listId = useId(), errorId = useId(), hintId = useId();
   const [open, setOpen] = useState(false), [active, setActive] = useState(0);
   const picked = useRef('');
   const results = open && value !== picked.current ? searchStaff(value) : [];
@@ -20,7 +20,7 @@ export function StaffSearch({ id, label = 'Nombre completo', value, error, onCha
       <input id={id} className="cenit-input personnel-search__input" type="search" name="cenit-staff-search" value={value} autoComplete="off" spellCheck={false} data-1p-ignore data-lpignore="true" placeholder="Busca por nombre, RUT o cargo"
         role="combobox" aria-expanded={shown} aria-controls={listId} aria-autocomplete="list"
         aria-activedescendant={shown ? `${listId}-${active}` : undefined}
-        aria-invalid={!!error} aria-describedby={error ? errorId : undefined}
+        aria-invalid={!!error} aria-describedby={error ? `${hintId} ${errorId}` : hintId}
         onChange={event => { onChange(event.target.value); setOpen(true); setActive(0); }}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
@@ -38,6 +38,7 @@ export function StaffSearch({ id, label = 'Nombre completo', value, error, onCha
         </li>)}
       </ul>}
     </div>
+    <p className="personnel-field__hint" id={hintId}>Las sugerencias son funcionarios de ejemplo; también puedes escribir el nombre.</p>
     {error && <p className="personnel-error" id={errorId}>{error}</p>}
   </div>;
 }
