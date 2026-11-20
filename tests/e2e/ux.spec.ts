@@ -61,8 +61,7 @@ test('atrás y logout conservan el borrador si se cancela el descarte', async ({
   expect(logoutRequests).toBe(0);
   await logout.click(); await dialog.getByRole('button', { name: 'Descartar y salir' }).click();
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.locator('.cenit-notice')).toContainText('Saliste de Cenit');
-  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Sesión cerrada.');
+  await expect(page.getByRole('region', { name: /^Avisos/ }).getByText('Saliste de Cenit', { exact: true })).toBeVisible();
 });
 
 test('revisión confirma restablecer y cambiar ejemplo, Escape recupera control y correcciones', async ({ page }) => {

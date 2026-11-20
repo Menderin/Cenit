@@ -9,7 +9,7 @@ export function Notifications() {
   const { status, notice } = useAuth();
   useEffect(() => {
     if (status !== 'authenticated') toast.dismiss(); else toast.dismiss('session-notice');
-    if (notice === 'signed-out') toast.success('Sesión cerrada', { id: 'session-notice', description: 'Puedes volver a iniciar sesión cuando lo necesites.' });
+    if (notice === 'signed-out') toast.success('Saliste de Cenit', { id: 'session-notice', className: 'cenit-toast--signed-out' });
     if (notice === 'expired') toast.warning('Tu sesión terminó', { id: 'session-notice', description: 'Vuelve a iniciar sesión para continuar.' });
   }, [status, notice]);
   return <Toaster position="bottom-right" theme="light" duration={5000} visibleToasts={3} closeButton offset={20} containerAriaLabel="Avisos"
