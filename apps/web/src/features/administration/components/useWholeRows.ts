@@ -15,7 +15,7 @@ const revalidate = () => {
  * dejar un hueco. Si la página desplaza, la lista no tiene límite de alto y no cambia nada; si sobra alto, la lista puede
  * estirarse para llenarlo (el tope es `max-height`, no `height`). `box` es el espacio disponible; `list`, lo que
  * desplaza; las filas llevan `data-row`. Una lista sin controles propios se vuelve enfocable cuando desplaza, para
- * recorrerla con teclado.
+ * recorrerla con teclado. La caja recibe `--fit-natural`, el alto de la lista completa.
  */
 export function useWholeRows<Box extends HTMLElement, List extends HTMLElement>(rows: number, focusable = false) {
   const box = useRef<Box>(null), list = useRef<List>(null);
@@ -28,6 +28,9 @@ export function useWholeRows<Box extends HTMLElement, List extends HTMLElement>(
     const update = () => {
       scroller.style.maxHeight = '';
       scroller.style.removeProperty('--fit-extra');
+      // Alto natural de la lista, sin recortes: la columna lateral reserva este alto para repartir su espacio por partes
+      // iguales sin que el recorte de una lista cambie el reparto (home.css, `--fit-natural`).
+      space.style.setProperty('--fit-natural', `${scroller.scrollHeight}px`);
       let available = height();
       const limited = scroller.scrollHeight > available + 1;
       if (limited) {

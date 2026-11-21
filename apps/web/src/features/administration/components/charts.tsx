@@ -2,7 +2,8 @@ import type { CSSProperties } from 'react';
 import { amountLabel } from '../../purchases/model/fields.js';
 import { useWholeRows } from './useWholeRows.js';
 
-// Inicio compara montos con longitud sobre una base común: se lee de un vistazo con más precisión que ángulos o áreas.
+// Rankings de Inicio: montos comparados con longitud sobre una base común. El reparto por cuenta del Inicio general usa
+// bloques proporcionales (AccountsMap), que se leen de un vistazo como partes de un todo.
 
 /** Proporción exacta entre montos guardados como cadenas; sólo se redondea al mostrar. */
 export function share(part: string | bigint, total: string | bigint) {
@@ -25,15 +26,4 @@ export function BarList({ items, label }: { items: BarItem[]; label: string }) {
     <span className="home-bars__track" aria-hidden="true"><i className={item.muted ? 'is-muted' : undefined} style={{ width: `${item.length > 0 ? Math.max(item.length * 100, 2) : 0}%` }} /></span>
     <span className="home-bars__value"><b>{amountLabel(item.amount)}</b><small>{item.detail}</small></span>
   </li>)}</ul></div></div>;
-}
-
-/** Doce barras pequeñas del año de un proyecto: cuándo gasta. El monto exacto está en la misma fila. */
-export function MonthBars({ values, current }: { values: string[]; current?: number }) {
-  const max = values.reduce((top, value) => Math.max(top, Number(value)), 0);
-  const slot = 100 / values.length;
-  return <svg className="home-monthbars" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">{values.map((value, index) => {
-    const height = max ? Math.max(Number(value) ? 2.5 : 1, Number(value) / max * 28) : 1;
-    return <rect key={index} x={index * slot + slot * .14} y={28 - height} width={slot * .72} height={height} rx="1"
-      className={index === current ? 'is-current' : Number(value) ? undefined : 'is-empty'} />;
-  })}</svg>;
 }

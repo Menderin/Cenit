@@ -49,6 +49,7 @@ test('Inicio coincide con compras y se actualiza al volver después de guardar y
 
 test('Inicio muestra error y permite reintentar hasta un resumen vacío', async ({ page }) => {
   let unavailable = true;
+  await page.route('**/api/v1/assets/loans*', route => route.fulfill({ json: { data: [], pagination: { page: 1, pageSize: 5, total: 0 } } }));
   await page.route('**/api/v1/purchases/summary', route => route.fulfill({
     status: unavailable ? 503 : 200, contentType: 'application/json',
     body: JSON.stringify(unavailable ? { error: { code: 'SERVICE_UNAVAILABLE', message: 'Resumen temporalmente no disponible.', requestId: crypto.randomUUID() } }
@@ -65,7 +66,12 @@ test('Inicio muestra error y permite reintentar hasta un resumen vacío', async 
   await expect(page.locator('.home-figures > div')).toHaveCount(2);
   await expect(page.locator('.home-figure__detail').filter({ hasText: /^0 compras$/ })).toHaveCount(2);
   await expect(page.locator('.home-figure__value').filter({ hasText: /^\$0$/ })).toHaveCount(1);
+  // Without overdue loans, Bienes says so next to its title and turns to the next returns (none here).
   await expect(page.getByRole('heading', { name: 'Bienes', exact: true })).toBeVisible();
+  await expect(page.getByText('Sin vencidos', { exact: true })).toBeVisible();
+  await expect(page.getByText('No hay bienes prestados en este momento.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Últimas compras', exact: true })).toBeVisible();
+  await expect(page.getByText('Aún no hay compras registradas.', { exact: true })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Módulos de Cenit' })).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link')).toHaveCount(4);
   await expect(page.locator('.home-figures')).not.toContainText(/ejemplos/);
@@ -101,17 +107,16 @@ test('los gráficos muestran detalles al interactuar y conservan sus cifras acce
   const table = page.getByRole('table', { name: 'Monto documental por mes de envío' });
   await expect(table.getByRole('row')).toHaveCount(4);
   await expect(table.getByRole('row').nth(2)).toContainText(amountLabel('450000'));
-  // Projects are a ranked table whose rows open the project summary; accounting codes rank in the side column.
-  const projects = page.getByRole('table').filter({ has: page.getByRole('columnheader', { name: 'Proyecto', exact: true }) });
-  await expect(projects.getByRole('button', { name: 'Ver el resumen del proyecto 20702029 Programa de especialidades', exact: true })).toBeVisible();
-  // The bar is the project's share of the year, written next to it; the amount stands alone.
-  await expect(projects.getByRole('columnheader', { name: 'Parte del año', exact: true })).toBeVisible();
-  await expect(projects.getByRole('row').filter({ hasText: 'Sin código de proyecto' }).locator('.home-table__bar')).toHaveText('31%');
-  const accounts = page.getByRole('region', { name: 'Gasto por cuenta contable', exact: true }).getByRole('listitem');
+  // The general Inicio no longer repeats a table per project (the picker opens each one): the year is split by account
+  // into blocks whose area is their share, each one describing its account, amount and share for screen readers too.
+  await expect(page.getByRole('columnheader', { name: 'Proyecto', exact: true })).toHaveCount(0);
+  const accounts = page.getByRole('list', { name: 'Gasto por cuenta contable', exact: true }).getByRole('listitem');
   await expect(accounts).toHaveCount(2);
   await expect(accounts.first()).toContainText('Remuneraciones Profesores Hora');
   await expect(accounts.first()).toContainText(amountLabel('450000'));
   await expect(accounts.first()).toContainText('69%');
+  const area = (index: number) => accounts.nth(index).evaluate(element => { const rect = element.getBoundingClientRect(); return rect.width * rect.height; });
+  expect((await area(0)) / (await area(1))).toBeCloseTo(450000 / 200000, 1);
 });
 
 test('Inicio cabe en la ventana sin desplazar la página de 1280×720 a 2560×1440, en dos columnas', async ({ page }) => {
@@ -138,7 +143,7 @@ test('Inicio cabe en la ventana sin desplazar la página de 1280×720 a 2560×14
   for (const [width, height] of [[1280, 720], [1366, 768], [1440, 900], [1920, 1080], [2560, 1440]] as const) {
     await page.setViewportSize({ width, height });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    // The whole summary fits: only a list that has more rows than fit (projects, loans, accounts) scrolls inside itself.
+    // The whole summary fits: only a list that has more rows than fit (loans, recent purchases) scrolls inside itself.
     await expect.poll(() => page.locator('.admin-content').evaluate(element => element.scrollHeight - element.clientHeight)).toBeLessThanOrEqual(1);
     // No list opens with a row cut in half, none leaves a blank gap under its last row, and none moves sideways.
     await expect.poll(() => page.evaluate(() => [...document.querySelectorAll<HTMLElement>('.home-fit__scroll')].every(list => {
@@ -147,9 +152,11 @@ test('Inicio cabe en la ventana sin desplazar la página de 1280×720 a 2560×14
       const overflowing = list.scrollHeight > list.clientHeight + 1;
       return !cut && list.scrollWidth <= list.clientWidth && (!overflowing || box.bottom - list.getBoundingClientRect().bottom <= 1);
     }))).toBe(true);
-    const months = await page.locator('.home-chart__months').boundingBox(), projectsHeading = await page.locator('.home-projects .home-heading').boundingBox();
-    expect(months!.y + months!.height).toBeLessThanOrEqual(projectsHeading!.y);
-    // The main column (spending and projects) and the side column (Bienes and accounts) sit side by side.
+    const months = await page.locator('.home-chart__months').boundingBox(), mapHeading = await page.locator('.home-map .home-heading').boundingBox();
+    expect(months!.y + months!.height).toBeLessThanOrEqual(mapHeading!.y);
+    // Every account block shows only what fits in it: nothing spills out of its tile at any window size.
+    await expect.poll(() => page.evaluate(() => [...document.querySelectorAll<HTMLElement>('.home-map__tile')].every(tile => tile.scrollHeight <= tile.clientHeight + 1 && tile.scrollWidth <= tile.clientWidth + 1))).toBe(true);
+    // The main column (spending and accounts) and the side column (Bienes and recent purchases) sit side by side.
     const main = await page.locator('.home-main').boundingBox(), rail = await page.locator('.home-rail').boundingBox();
     expect(rail!.x).toBeGreaterThan(main!.x + main!.width);
     expect(rail!.width).toBeGreaterThanOrEqual(340);

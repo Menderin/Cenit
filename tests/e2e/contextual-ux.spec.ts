@@ -37,7 +37,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1280);
   await expect(page.locator('.cenit-page-enter')).toHaveCSS('opacity', '1');
   await page.screenshot({ path: 'tmp/admin-home-connected-1280.png' });
-  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByRole('link', { name: 'Ir a Compras', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(number);
 
   const row = pending(page).getByRole('row').filter({ hasText: number });
@@ -47,7 +47,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   await home(); await check(before.overview.registeredThisYear + 1, before.pending, before.pendingAmount);
   await expect(monthRow.getByRole('cell').first()).toHaveText(String(beforeMonth + 1));
   // Delete a reviewed record through its detail; the filtered list is preserved on return.
-  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByRole('link', { name: 'Ir a Compras', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(number);
 
   const reviewedDetail = page.getByRole('region', { name: 'Revisados en Cenit', exact: true }).getByRole('row').filter({ hasText: number }).getByRole('link', { name: `Ver detalles de ${number}`, exact: true });
@@ -65,7 +65,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   example.header.sentDate = santiagoToday();
   const response = await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data: example });
   expect(response.status()).toBe(201);
-  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByRole('link', { name: 'Ir a Compras', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(example.header.requestNumber);
 
   const exampleRow = pending(page).getByRole('row').filter({ hasText: example.header.requestNumber });

@@ -1,7 +1,6 @@
 import { Link, useSearchParams } from 'react-router';
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight';
-import { FilesIcon } from '@phosphor-icons/react/dist/csr/Files';
 import { UploadSimpleIcon } from '@phosphor-icons/react/dist/csr/UploadSimple';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { getPurchaseProject, getPurchaseSummary, listPurchaseProjects } from '../../purchases/api/purchases.js';
@@ -21,9 +20,9 @@ function DashboardSkeleton() {
       <div className="home-main">
         <div className="home-spend"><div className="home-figures"><div className="home-figure home-figure--main"><Skeleton width="8rem" height="20px" /><Skeleton width="16rem" height="44px" /></div><div className="home-figure"><Skeleton width="10rem" height="20px" /><Skeleton width="12rem" height="32px" /></div></div>
           <div className="home-loading__bars">{[30, 52, 40, 65, 49, 76, 61, 53, 68, 49, 36, 57].map((height, index) => <Skeleton key={index} height={`${height}%`} />)}</div></div>
-        <div className="home-projects"><Skeleton width="12rem" height="24px" /><div className="home-loading-lines">{[92, 70, 54, 38].map(width => <Skeleton key={width} width={`${width}%`} height="18px" />)}</div></div>
+        <div className="home-map"><Skeleton width="12rem" height="24px" /><div className="home-map__plot home-loading__map"><Skeleton width="100%" height="100%" /></div></div>
       </div>
-      <div className="home-rail">{[0, 1].map(index => <div key={index} className="home-rail__section"><Skeleton width="8rem" height="22px" /><div className="home-loading-lines">{[84, 66, 72].map(width => <Skeleton key={width} width={`${width}%`} height="16px" />)}</div></div>)}</div>
+      <div className="home-rail"><div className="home-rail__card">{[0, 1].map(index => <div key={index} className="home-rail__section"><Skeleton width="8rem" height="22px" /><div className="home-loading-lines">{[84, 66, 72].map(width => <Skeleton key={width} width={`${width}%`} height="16px" />)}</div></div>)}</div></div>
     </div>
   </div>;
 }
@@ -63,8 +62,7 @@ export function Home() {
         {!!projectData?.units.length && <ul className="admin-home-chips" aria-label="Unidades del proyecto">
           {projectData.units.map(unit => { const name = unit.name ?? 'Unidad sin nombre en el catálogo';
             return <li key={unit.code ?? 'none'} title={`${unit.code ?? 'Sin código'} ${name}`}><b>{unit.code ?? 'Sin código'}</b><span>{name}</span></li>; })}</ul>}
-      </> : <div className="admin-home-titlebar"><h1>Inicio</h1>
-        <Link className="home-chip" to="/administracion/compras"><FilesIcon size={16} aria-hidden="true" />Ver registros<ArrowRightIcon size={14} aria-hidden="true" /></Link></div>}</div>
+      </> : <div className="admin-home-titlebar"><h1>Inicio</h1></div>}</div>
       <div className="admin-home-actions">
         <div className="admin-home-year"><Select className="cenit-button admin-home-select" label="Año" value={year} onValueChange={value => navigate({ year: value })}
           options={years.map(value => ({ value: String(value).padStart(4, '0'), label: String(value) }))} /></div>
@@ -77,7 +75,7 @@ export function Home() {
       {active.isError ? <div className="purchase-state" role="alert"><p>{active.error.message}</p><button className="cenit-button" onClick={() => { void active.refetch(); }}>Reintentar</button>
         {project && <button className="cenit-button" onClick={() => navigate({ project: '' })}>Ver todos los proyectos</button>}</div>
         : project ? projectData && <ProjectOverview key={project} data={projectData} currentMonth={currentMonth} onYear={value => navigate({ year: value })} onClear={() => navigate({ project: '' })} />
-        : summary.data && <GeneralOverview data={summary.data.data} onProject={selectProject} />}
+        : summary.data && <GeneralOverview data={summary.data.data} />}
     </div>}
   </section>;
 }

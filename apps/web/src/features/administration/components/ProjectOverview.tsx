@@ -54,14 +54,14 @@ export function ProjectOverview({ data, currentMonth, onYear, onClear }: { data:
         <PurchaseRows data={data} />
       </section>
     </div>
-    <aside className="home-rail" aria-label="Cuentas y proveedores del proyecto">
+    <aside className="home-rail" aria-label="Cuentas y proveedores del proyecto"><div className="home-rail__card">
       <AccountsSection accounts={data.accounts} total={data.amount} label="Gasto del proyecto por cuenta contable" />
-      <section className="home-rail__section home-rail__section--fill" aria-labelledby="providers-title">
+      <section className="home-rail__section" aria-labelledby="providers-title">
         <div className="home-heading"><h2 id="providers-title">Proveedores</h2><span>{data.providerCount}</span></div>
         <BarList label="Proveedores con más gasto" items={data.providers.map((provider, position) => ({ key: `${position}-${provider.name ?? ''}`, label: provider.name ?? 'Sin proveedor informado', amount: provider.amount,
           length: relativeLength(provider.amount, providers), detail: `${percent(share(provider.amount, data.amount))} · ${purchasesLabel(provider.count)}` }))} />
       </section>
-    </aside>
+    </div></aside>
   </div>;
 }
 

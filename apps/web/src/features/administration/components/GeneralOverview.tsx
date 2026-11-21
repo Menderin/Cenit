@@ -1,15 +1,15 @@
-import type { MouseEvent } from 'react';
 import { Link } from 'react-router';
 import { ArrowDownIcon } from '@phosphor-icons/react/dist/csr/ArrowDown';
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight';
 import { ArrowUpIcon } from '@phosphor-icons/react/dist/csr/ArrowUp';
-import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
 import type { PurchaseBreakdown, PurchaseSummaryResponse } from '@cenit/contracts/purchases';
 import { PurchaseCapabilitiesProvider, usePurchaseCapabilities } from '../../purchases/model/capabilities.js';
 import { SheetsSyncStatus } from '../../purchases/components/SheetsSyncStatus.js';
-import { amountLabel } from '../../purchases/model/fields.js';
+import { amountLabel, dateLabel } from '../../purchases/model/fields.js';
 import { MonthlyChart } from './MonthlyChart.js';
+import { AccountsMap } from './AccountsMap.js';
 import { AssetsSection } from './AssetsOverview.js';
-import { BarList, MonthBars, largestOf, percent, relativeLength, share } from './charts.js';
+import { BarList, largestOf, percent, relativeLength, share } from './charts.js';
 import { useWholeRows } from './useWholeRows.js';
 
 type Summary = PurchaseSummaryResponse['data'];
@@ -28,11 +28,11 @@ function Integrations({ data }: { data: Summary }) {
 }
 
 /** Ranking por cuenta contable en la columna lateral: las seis mayores y el resto agrupado. */
-export function AccountsSection({ accounts, total, label, fill = false }: { accounts: PurchaseBreakdown[]; total: string; label: string; fill?: boolean }) {
+export function AccountsSection({ accounts, total, label }: { accounts: PurchaseBreakdown[]; total: string; label: string }) {
   const shown = accounts.slice(0, 6), rest = BigInt(total) - shown.reduce((sum, account) => sum + BigInt(account.amount), 0n);
   const rows = [...shown, ...(rest > 0n ? [{ code: null, name: 'Otras cuentas', count: accounts.slice(6).reduce((sum, account) => sum + account.count, 0), amount: rest.toString() }] : [])];
   const largest = largestOf(rows);
-  return <section className={`home-rail__section${fill ? ' home-rail__section--fill' : ''}`} aria-labelledby="accounts-title">
+  return <section className="home-rail__section" aria-labelledby="accounts-title">
     <div className="home-heading"><h2 id="accounts-title">Por cuenta contable</h2></div>
     {rows.length && BigInt(total) > 0n ? <BarList label={label} items={rows.map(row => ({ key: row.code ?? row.name ?? 'none', code: row.code, label: row.name ?? (row.code ? 'Sin nombre en el catálogo' : 'Sin cuenta contable'),
       amount: row.amount, length: relativeLength(row.amount, largest), muted: !row.code, detail: percent(share(row.amount, total)) }))} />
@@ -66,50 +66,36 @@ function YearSpending({ overview, year, current }: { overview: Overview; year: s
   </section>;
 }
 
-/** La pregunta del cliente: cuánto gasta cada proyecto, qué parte del gasto del año es (la barra, con su porcentaje) y en
- *  qué meses. Cada fila abre su resumen. */
-function ProjectTable({ overview, year, current, onProject }: { overview: Overview; year: string; current: boolean; onProject: (code: string) => void }) {
-  const projects = overview.projects ?? [], lineTotal = overview.lineTotal ?? '0';
-  const [box, list] = useWholeRows<HTMLDivElement, HTMLDivElement>(projects.length);
-  const index = current ? Number(overview.registrationMonth.slice(5, 7)) - 1 : undefined;
-  const open = (event: MouseEvent<HTMLTableRowElement>, code: string | null) => {
-    if (!code || (event.target as HTMLElement).closest('button, a') || window.getSelection()?.toString()) return;
-    onProject(code);
-  };
-  return <section className="home-projects" aria-labelledby="projects-title">
-    <div className="home-heading"><h2 id="projects-title">Gasto por proyecto</h2><span>{overview.projectCount ?? 0} {overview.projectCount === 1 ? 'proyecto' : 'proyectos'} en {year}</span></div>
-    {projects.length ? <div ref={box} className="home-fit"><div ref={list} className="home-fit__scroll home-fit__scroll--table"><table className="home-table">
-      <thead><tr><th scope="col">Proyecto</th><th scope="col">Parte del año</th><th scope="col" className="home-table__num">Monto</th><th scope="col">Gasto por mes</th><th scope="col"><span className="purchase-sr-only">Abrir</span></th></tr></thead>
-      <tbody>{projects.map(project => {
-        const name = project.name ?? (project.code ? 'Sin nombre en el catálogo' : 'Sin código de proyecto'), part = share(project.amount, lineTotal);
-        return <tr key={project.code ?? 'none'} data-row className={project.code ? 'is-link' : 'is-muted'} onClick={event => open(event, project.code)}>
-          <th scope="row">{project.code
-            ? <button type="button" onClick={() => onProject(project.code!)} aria-label={`Ver el resumen del proyecto ${project.code} ${name}`} title={name}><strong>{name}</strong><small>{project.code} · {purchasesLabel(project.count)}</small></button>
-            : <span title={name}><strong>{name}</strong><small>{purchasesLabel(project.count)}</small></span>}</th>
-          <td className="home-table__bar"><span><span aria-hidden="true"><i style={{ width: `${Math.max(part * 100, BigInt(project.amount) > 0n ? 1.5 : 0)}%` }} /></span><b>{percent(part)}</b></span></td>
-          <td className="home-table__num"><b>{amountLabel(project.amount)}</b></td>
-          <td className="home-table__months">{project.months && <MonthBars values={project.months} current={index} />}</td>
-          <td className="home-table__go" aria-hidden="true">{project.code && <CaretRightIcon size={18} />}</td>
-        </tr>;
-      })}</tbody>
-    </table></div></div> : <p className="home-muted">Aún no hay compras con proyecto en {year}.</p>}
+/** Las últimas compras registradas en Cenit (por fecha de alta), cada una abre su detalle; el encabezado lleva a Compras.
+ *  Llena el resto de la columna lateral (toda, si no hay préstamos vencidos) y muestra sólo filas completas. */
+function RecentPurchases({ records }: { records: Overview['recentRecords'] }) {
+  const [box, list] = useWholeRows<HTMLDivElement, HTMLDivElement>(records.length);
+  return <section className="home-rail__section" aria-labelledby="recent-title">
+    <div className="home-heading"><h2 id="recent-title">Últimas compras</h2><Link to="/administracion/compras">Ir a Compras<ArrowRightIcon size={16} aria-hidden="true" /></Link></div>
+    {records.length ? <div ref={box} className="home-fit"><div ref={list} className="home-fit__scroll"><ul className="home-recent">{records.map(record => <li key={record.id} data-row>
+      <Link to={`/administracion/compras/${record.id}`} title={record.description}>
+        <strong>{record.description}</strong><b>{amountLabel(record.totalAmount)}</b>
+        <small>{dateLabel(record.sentDate)} · {record.requestNumber}{record.projectCode && ` · Proyecto ${record.projectCode}`}</small>
+      </Link>
+    </li>)}</ul></div></div> : <p className="home-muted">Aún no hay compras registradas.</p>}
   </section>;
 }
 
-/** Vista general: en la columna principal el gasto del año y por proyecto; al costado, Bienes y las cuentas contables. */
-export function GeneralOverview({ data, onProject }: { data: Summary; onProject: (code: string) => void }) {
+/** Vista general: en la columna principal el gasto del año y en qué se gasta; al costado, Bienes y las últimas compras.
+ *  El detalle de cada proyecto se abre desde el selector de proyectos del encabezado. */
+export function GeneralOverview({ data }: { data: Summary }) {
   const overview = data.overview;
   if (!overview) return <PurchaseCapabilitiesProvider fallback={null}><Integrations data={data} /></PurchaseCapabilitiesProvider>;
   const year = overview.year ?? overview.registrationMonth.slice(0, 4), current = year === overview.registrationMonth.slice(0, 4);
   return <div className="home-layout">
     <div className="home-main">
       <YearSpending overview={overview} year={year} current={current} />
-      <ProjectTable overview={overview} year={year} current={current} onProject={onProject} />
+      <AccountsMap accounts={overview.accounts ?? []} total={overview.lineTotal ?? '0'} year={year} />
     </div>
-    <aside className="home-rail" aria-label="Bienes y cuentas contables">
+    <aside className="home-rail" aria-label="Bienes y últimas compras"><div className="home-rail__card">
       <AssetsSection />
-      <AccountsSection accounts={overview.accounts ?? []} total={overview.lineTotal ?? '0'} label="Gasto por cuenta contable" fill />
+      <RecentPurchases records={overview.recentRecords} />
       <PurchaseCapabilitiesProvider fallback={null}><div className="home-rail__section home-rail__status"><Integrations data={data} /></div></PurchaseCapabilitiesProvider>
-    </aside>
+    </div></aside>
   </div>;
 }

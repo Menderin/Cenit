@@ -1,5 +1,5 @@
-/* Inicio: una columna principal plana sobre el panel (el gasto y los proyectos) y una columna lateral en la segunda
-   capa neutra (Bienes y cuentas). Sin tarjetas dentro del panel: los grupos se separan por espacio y líneas finas.
+/* Inicio: una columna principal plana sobre el panel (el gasto y en qué se gasta) y una columna lateral en la segunda
+   capa neutra (Bienes y últimas compras; en un proyecto, cuentas y proveedores). Sin tarjetas dentro del panel: los grupos se separan por espacio y líneas finas.
    Datos a 14 px o más: lo usa a diario una persona de unos sesenta años. */
 .admin-content:has(.admin-home) { padding: 24px 32px 40px; }
 .admin-home { --home-gap: 32px; min-width: 0; color: var(--color-ink); }
@@ -17,8 +17,6 @@
 .home-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 10px 4px 9px; border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-control); color: var(--color-ink-secondary); font-size: 14px; line-height: 20px; text-decoration: none; white-space: nowrap; transition: background-color 150ms ease-out, scale 150ms ease-out; }
 .home-chip > svg:first-child { color: var(--color-icon); }
 .home-chip > svg:last-child { color: var(--color-ink-subtle); transition: translate 150ms ease-out; }
-.home-chip--warning { background: var(--color-warning-soft); box-shadow: 0 0 0 1px var(--color-warning-line); color: var(--color-warning); }
-.home-chip.home-chip--warning > svg { color: var(--color-warning-icon); }
 .home-chip:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .home-chip:active { scale: .97; }
 .home-chip--back { flex: none; min-height: 36px; padding-inline: 10px 12px; }
@@ -78,10 +76,12 @@
 .home-heading > span, .home-heading > a { color: var(--admin-muted); font-size: 14px; font-variant-numeric: tabular-nums; }
 .home-heading > a { display: inline-flex; align-items: center; gap: 4px; color: var(--color-ink-secondary); }
 
-/* Distribución: la principal crece; la lateral mantiene un ancho legible. */
+/* Distribución: la principal crece; la lateral mantiene un ancho legible. El detalle de un proyecto se abre desde el
+   selector del encabezado, por eso el Inicio general no repite una tabla de proyectos. */
 .home-layout { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(340px, 1fr); align-items: start; gap: var(--home-gap); }
 .home-main { display: flex; flex-direction: column; gap: 40px; min-width: 0; }
-.home-rail { display: flex; flex-direction: column; min-width: 0; padding: 4px 24px; border: 1px solid var(--color-line-soft); border-radius: var(--radius-lg); background: var(--color-surface-header); }
+.home-rail { min-width: 0; }
+.home-rail__card { display: flex; flex-direction: column; min-width: 0; padding: 4px 24px; border: 1px solid var(--color-line-soft); border-radius: var(--radius-lg); background: var(--color-surface-header); }
 .home-rail__section { padding: 22px 0; }
 .home-rail__section + .home-rail__section { border-top: 1px solid var(--color-line); }
 .home-rail__status:empty { display: none; }
@@ -93,7 +93,7 @@
 .home-figure dt { color: var(--color-ink-label); font-size: 15px; line-height: 20px; }
 .home-figure dd { margin: 0; }
 .home-figure__value { overflow: hidden; font-size: 30px; line-height: 1.15; font-weight: 600; letter-spacing: -.7px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
-.home-figure--main .home-figure__value { font-size: clamp(40px, 3.1vw, 60px); letter-spacing: -1.4px; }
+.home-figure--main .home-figure__value { font-size: clamp(36px, 2.6vw, 50px); letter-spacing: -1.2px; }
 .home-figure__detail { color: var(--admin-muted); font-size: 15px; line-height: 21px; }
 .home-figure--month { grid-template-columns: auto 1fr; column-gap: 12px; }
 .home-figure--month > :is(dt, .home-figure__value) { grid-column: 1 / -1; }
@@ -119,34 +119,22 @@
 .home-chart__months .is-current { color: var(--color-ink); font-weight: 600; }
 .home-chart__months .is-future { color: var(--color-ink-placeholder); }
 
-/* Tabla de proyectos: nombre, barra en escala común, monto y su parte del año, y los doce meses. */
+/* Tablas de Inicio (compras de un proyecto): columnas fijas, cifras tabulares y toda la fila abre su detalle. */
 .home-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }
-.home-table thead th { position: relative; padding: 0 12px 10px; border-bottom: 1px solid var(--color-line); color: var(--color-ink-label); font-size: 14px; font-weight: 500; text-align: left; }
+/* Encabezados en una línea: la tabla se detiene en cada fila (scroll-padding de 44 px) y un encabezado de dos líneas
+   dejaría la primera fila visible medio tapada. */
+.home-table thead th { position: relative; overflow: hidden; padding: 0 12px 10px; border-bottom: 1px solid var(--color-line); color: var(--color-ink-label); font-size: 14px; font-weight: 500; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .home-table thead .purchase-sr-only { top: 0; left: 0; }
 .home-table :is(tbody th, td) { padding: 12px; border-bottom: 1px solid var(--color-line-soft); vertical-align: middle; text-align: left; }
 .home-table :is(th, td):first-child { padding-left: 0; }
 .home-table :is(th, td):last-child { padding-right: 0; }
 .home-table tbody th { font-weight: 400; }
-.home-table th > :is(button, span) { display: grid; gap: 2px; width: 100%; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; }
-.home-table th > button { cursor: pointer; }
-.home-table th > button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 4px; border-radius: var(--radius-xs); }
 .home-table strong { display: block; overflow: hidden; font-size: 15px; font-weight: 500; line-height: 21px; text-overflow: ellipsis; white-space: nowrap; }
 .home-table small { display: block; overflow: hidden; color: var(--admin-muted); font-size: 14px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
-.home-table thead th:nth-child(2) { width: 26%; } .home-table thead th:nth-child(3) { width: 150px; } .home-table thead th:nth-child(4) { width: clamp(124px, 9vw, 200px); } .home-table thead th:nth-child(5) { width: 28px; }
 .home-table .home-table__num { text-align: right; }
 .home-table__num b { display: block; font-size: 15px; font-weight: 600; line-height: 21px; white-space: nowrap; }
-.home-table__bar > span { display: grid; grid-template-columns: minmax(0, 1fr) 4ch; align-items: center; gap: 10px; }
-.home-table__bar > span > span { display: block; height: 10px; overflow: hidden; border-radius: 5px; background: var(--color-surface-muted); }
-.home-table__bar i { display: block; height: 100%; border-radius: 5px; background: var(--color-chart-bar); transition: background-color 150ms ease-out; }
-.home-table__bar b { color: var(--color-ink-secondary); font-size: 14px; font-weight: 500; text-align: right; white-space: nowrap; }
-.home-table tr.is-muted .home-table__bar i { background: var(--color-line-strong); }
 .home-table .home-table__go { padding-left: 4px; color: var(--color-icon); text-align: right; }
 .home-table tr.is-link { cursor: pointer; transition: background-color 150ms ease-out; }
-.home-monthbars { display: block; width: 100%; height: 30px; }
-.home-monthbars rect { fill: color-mix(in srgb, var(--color-chart-bar) 85%, var(--color-surface)); }
-.home-monthbars rect.is-current { fill: var(--color-focus); }
-.home-monthbars rect.is-empty { fill: var(--color-surface-muted); }
-/* Compras de un proyecto. */
 .home-table--purchases thead th:nth-child(1) { width: 136px; } .home-table--purchases thead th:nth-child(2) { width: auto; }
 .home-table--purchases thead th:nth-child(3) { width: 24%; } .home-table--purchases thead th:nth-child(4) { width: 124px; } .home-table--purchases thead th:nth-child(5) { width: 28px; }
 .home-table--purchases tbody th a { display: block; color: inherit; text-decoration: none; }
@@ -165,16 +153,72 @@
 .home-bars__value small { color: var(--admin-muted); font-size: 14px; line-height: 19px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* Bienes: lo vencido, uno por fila, con cuánto lleva atrasado. */
-.home-assets__headline { margin: 0 0 6px; color: var(--color-danger); font-size: 24px; line-height: 30px; font-weight: 600; letter-spacing: -.4px; }
-.home-assets__list { margin: 0; padding: 0; list-style: none; }
-.home-assets__list li + li { border-top: 1px solid var(--color-line); }
-.home-assets__list a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; margin: 0 -10px; padding: 8px 10px; border-radius: var(--radius-sm); color: var(--color-ink); text-decoration: none; transition: background-color 150ms ease-out; }
-.home-assets__list span { display: grid; min-width: 0; }
-.home-assets__list strong { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 15px; font-weight: 500; line-height: 21px; overflow-wrap: anywhere; }
-.home-assets__list small { overflow: hidden; color: var(--admin-muted); font-size: 14px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
-.home-assets__list em { flex: none; padding: 3px 9px; border-radius: var(--radius-xs); background: var(--color-danger-soft); color: var(--color-danger); font-size: 14px; font-style: normal; white-space: nowrap; }
-.home-assets__clear { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--color-success); font-size: 17px; font-weight: 500; }
-.home-assets__more { display: flex; flex: none; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+:is(.home-assets__list, .home-recent) { margin: 0; padding: 0; list-style: none; }
+:is(.home-assets__list, .home-recent) li + li { border-top: 1px solid var(--color-line); }
+:is(.home-assets__list, .home-recent) a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; margin: 0 -10px; padding: 8px 10px; border-radius: var(--radius-sm); color: var(--color-ink); text-decoration: none; transition: background-color 150ms ease-out; }
+:is(.home-assets__list, .home-recent) span { display: grid; min-width: 0; }
+:is(.home-assets__list, .home-recent) strong { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 15px; font-weight: 500; line-height: 21px; overflow-wrap: anywhere; }
+:is(.home-assets__list, .home-recent) small { overflow: hidden; color: var(--admin-muted); font-size: 14px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.home-assets__list em { flex: none; padding: 3px 9px; border-radius: var(--radius-xs); background: var(--color-surface-chip); color: var(--color-ink-secondary); font-size: 14px; font-style: normal; white-space: nowrap; }
+.home-assets__list em.is-danger { background: var(--color-danger-soft); color: var(--color-danger); }
+.home-assets__list em.is-warning { background: var(--color-warning-soft); color: var(--color-warning); }
+
+/* Sin vencidos: un aviso en verde y las próximas devoluciones (en ámbar las de los próximos siete días). Bienes muestra
+   cuatro filas y desplaza el resto dentro de la lista, también cuando la página desplaza. */
+/* Estado de Bienes junto a su título: en rojo los vencidos (abre la lista completa) y en verde cuando no hay. */
+.home-heading > .home-heading__title { display: inline-flex; align-items: center; gap: 10px; min-width: 0; color: inherit; font-size: inherit; }
+.home-assets__badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: var(--radius-xs); font-size: 14px; line-height: 20px; font-weight: 600; font-variant-numeric: tabular-nums; text-decoration: none; white-space: nowrap; }
+.home-heading .home-assets__badge.is-danger { background: var(--color-danger-soft); box-shadow: inset 0 0 0 1px var(--color-danger-line); color: var(--color-danger); }
+.home-assets__badge.is-success { background: var(--color-success-soft); box-shadow: inset 0 0 0 1px var(--color-success-line); color: var(--color-success); }
+.home-assets__badge.is-success svg { color: var(--color-success-icon); }
+.home-assets__badge:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.home-assets__subtitle { display: flex; align-items: center; gap: 8px; margin: -4px 0 4px; color: var(--color-ink-label); font-size: 14px; line-height: 20px; font-weight: 500; }
+.home-assets__subtitle span { padding: 0 7px; border-radius: var(--radius-xs); background: var(--color-surface-chip); color: var(--color-ink-secondary); font-size: 13px; font-variant-numeric: tabular-nums; }
+.home-assets .home-fit__scroll { overflow: hidden auto; overscroll-behavior: contain; }
+
+/* Últimas compras registradas: descripción, número, fecha de envío y proyecto; el monto a la derecha. Filas
+   compactas: en una ventana de 1280×720 se ven unas cuatro antes de desplazar. */
+.home-recent a { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 12px; min-height: 0; padding-block: 6px; }
+.home-recent small { grid-column: 1 / -1; font-size: 13px; line-height: 18px; font-variant-numeric: tabular-nums; }
+.home-recent strong { -webkit-line-clamp: 1; }
+.home-recent b { font-size: 15px; font-weight: 600; line-height: 19px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.home-recent a:focus-visible, .home-assets__list a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+
+/* «En qué se gasta»: bloques proporcionales al gasto de cada cuenta. Cada celda deja 3 px de aire a cada lado (6 px entre
+   bloques) y la caja lo compensa en el borde. Los tonos bajan de la cuenta mayor a la menor; «Otras cuentas» y lo que no
+   tiene cuenta quedan en gris. Cada bloque es un contenedor: muestra tanto detalle como le cabe. */
+.home-map { display: flex; flex-direction: column; min-width: 0; }
+.home-map__plot { position: relative; height: clamp(240px, 30vh, 380px); margin: -3px; }
+.home-map__tiles { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; }
+.home-map__cell { position: absolute; box-sizing: border-box; padding: 3px; container-type: size; }
+.home-map__tile { display: flex; flex-direction: column; gap: 2px; box-sizing: border-box; height: 100%; padding: clamp(10px, 1vw, 16px); overflow: hidden; border-radius: var(--radius-md);
+  background: var(--tile, var(--color-chart-bar)); color: var(--color-ink); transition: filter 150ms ease-out; }
+.home-map__tile.tone-0 { --tile: var(--color-focus); color: var(--color-on-primary); }
+.home-map__tile.tone-1 { --tile: var(--color-chart-bar); }
+.home-map__tile.tone-2 { --tile: color-mix(in srgb, var(--color-chart-bar) 74%, var(--color-surface)); }
+.home-map__tile.tone-3 { --tile: color-mix(in srgb, var(--color-chart-bar) 56%, var(--color-surface)); }
+.home-map__tile.tone-4 { --tile: color-mix(in srgb, var(--color-chart-bar) 40%, var(--color-surface)); }
+.home-map__tile.tone-5 { --tile: color-mix(in srgb, var(--color-chart-bar) 27%, var(--color-surface)); }
+.home-map__tile.is-muted { --tile: var(--color-surface-chip); box-shadow: inset 0 0 0 1px var(--color-line); color: var(--color-ink-secondary); }
+.home-map__name { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 15px; font-weight: 600; line-height: 20px; overflow-wrap: break-word; hyphens: auto; }
+.home-map__code { font-size: 13px; line-height: 18px; font-variant-numeric: tabular-nums; }
+.home-map__figures { display: grid; gap: 1px; margin-top: auto; }
+/* El monto escala con el ancho de su bloque (cqi) para leerse completo: «$1.825.000» mide unas seis veces su letra. */
+.home-map__amount { overflow: hidden; font-size: clamp(14px, min(13cqi, 1.3vw), 26px); font-weight: 600; line-height: 1.2; letter-spacing: -.3px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.home-map__part { overflow: hidden; font-size: 14px; line-height: 19px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+/* Menos espacio, menos detalle: primero el código y la cantidad de compras, luego el monto; al final queda sólo el
+   porcentaje y, en un bloque mínimo, nada (el título y el texto para lectores conservan todo). */
+@container (min-height: 190px) { .home-map__name { -webkit-line-clamp: 3; } }
+@container (max-height: 132px) { .home-map__code { display: none; } }
+@container (max-width: 190px) or (max-height: 112px) { .home-map__count { display: none; } }
+@container (max-height: 112px) { .home-map__name { -webkit-line-clamp: 1; } }
+@container (max-width: 96px) or (max-height: 80px) { .home-map__amount { display: none; } }
+@container (max-width: 112px) { .home-map__tile { padding-inline: 9px; } .home-map__name { font-size: 13px; line-height: 17px; } }
+@container (max-width: 112px) and (min-height: 100px) { .home-map__name { -webkit-line-clamp: 2; } }
+@container (max-height: 60px) { .home-map__tile { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; padding-block: 0; } .home-map__name { -webkit-line-clamp: 1; } .home-map__figures { margin: 0; } }
+@container (max-width: 72px) or (max-height: 40px) { .home-map__name { display: none; } .home-map__tile { justify-content: center; align-items: center; padding: 4px; } .home-map__figures { margin: 0; } }
+@container (max-width: 34px) or (max-height: 24px) { .home-map__figures { display: none; } }
+.home-loading__map { margin: 0; }
 
 /* Integraciones opcionales (segunda revisión y Sheets), sólo cuando están habilitadas. */
 .home-rail__status .dashboard-review { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; line-height: 20px; }
@@ -192,20 +236,20 @@
 
 @media (hover: hover) {
   .home-table tr.is-link:hover { background: var(--color-surface-hover); }
-  .home-table tr.is-link:hover .home-table__bar i { background: var(--color-focus); }
   .home-table tr.is-link:hover .home-table__go { color: var(--color-ink); }
-  .home-assets__list a:hover { background: var(--color-surface); }
+  :is(.home-assets__list, .home-recent) a:hover { background: var(--color-surface); }
   .home-heading > a:hover { color: var(--color-ink); }
   .home-chip:hover { background: var(--color-surface-hover); color: var(--color-ink); }
-  .home-chip--warning:hover { background: color-mix(in srgb, var(--color-warning-line) 45%, var(--color-warning-soft)); color: var(--color-warning); }
+  .home-map__cell:hover .home-map__tile { filter: brightness(.96); }
   .home-chip:hover > svg:last-child { translate: 2px 0; }
+  .home-heading .home-assets__badge.is-danger:hover { background: color-mix(in srgb, var(--color-danger-line) 40%, var(--color-danger-soft)); }
   .home-chip.home-chip--back:hover > svg { translate: -2px 0; }
 }
 @media (min-width: 1800px) {
   .admin-home { --home-gap: 44px; }
   .home-layout { grid-template-columns: minmax(0, 2.2fr) minmax(420px, 1fr); }
   .home-main { gap: 48px; }
-  .home-rail { padding: 8px 32px; }
+  .home-rail__card { padding: 8px 32px; }
   .home-rail__section { padding: 28px 0; }
 }
 @media (max-width: 1100px) {
@@ -237,10 +281,14 @@
   .home-main { min-height: 0; gap: 24px; }
   /* El gasto toma el alto libre y nunca baja de su contenido; la tabla mide sus filas, hasta un poco más de la mitad. */
   .home-spend { flex: 1 1 0; gap: 14px; }
-  .home-figure--main .home-figure__value { font-size: clamp(34px, min(3.1vw, 5.4vh), 60px); }
+  .home-figure--main .home-figure__value { font-size: clamp(30px, min(2.6vw, 4.6vh), 50px); }
   .home-chart { display: flex; flex: 1; flex-direction: column; min-height: 0; }
   .home-chart__plot { flex: 1; height: auto; min-height: 96px; }
   .home-projects { display: flex; flex: 0 1 auto; flex-direction: column; min-height: 196px; max-height: 55%; }
+  /* La figura por cuenta toma cerca de un tercio del alto (más en ventanas altas, nunca menos de 190 px); el gráfico mensual,
+     lo demás. */
+  .home-map { flex: 0 0 auto; }
+  .home-map__plot { height: clamp(190px, 31vh, 460px); }
   /* Listas (useWholeRows): nunca muestran media fila y llenan su caja; si hay más, desplazan dentro y se detienen en cada fila. */
   .home-fit { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; }
   .home-fit__scroll { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden auto; overscroll-behavior: contain; scroll-snap-type: y proximity; }
@@ -249,22 +297,29 @@
   .home-fit__scroll [data-row] { scroll-snap-align: start; }
   .home-fit__scroll:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
   .home-table thead th { position: sticky; top: 0; z-index: 1; }
-  .home-rail { min-height: 0; overflow: hidden; }
-  /* Columna lateral: la primera sección mide su contenido; la última (cuentas o proveedores) toma todo lo que sobra y,
-     si sus barras caben, las reparte en ese alto como un gráfico en vez de dejar un hueco abajo. Si falta alto, la
-     primera cede hasta dejarle a la última su mínimo (dos filas). Ninguna lista baja de dos filas. */
-  .home-rail__section { display: flex; flex: 0 1 auto; flex-direction: column; min-height: 0; padding: 18px 0; }
-  .home-rail__section .home-fit { min-height: 112px; }
-  /* Las filas de Bienes resaltan 10 px hacia los lados al pasar el cursor: ese margen queda dentro de la lista. */
-  .home-rail .home-fit__scroll { margin-inline: -10px; padding-inline: 10px; }
+  /* Columna lateral: ocupa el alto de la fila y su tarjeta mide lo que trae, sin pasar de ese alto (con poco contenido
+     termina donde termina la última sección, sin huecos ni filas separadas). Dentro de la tarjeta, las secciones
+     (Bienes y compras; cuentas y proveedores) crecen por partes iguales hasta su contenido: si no cabe todo, el alto
+     queda repartido por mitades y cada lista muestra las filas completas que caben y desplaza el resto. Ambas grillas
+     necesitan un alto definido para repartir: por eso la tarjeta va dentro de la columna estirada. */
+  .home-rail { display: grid; grid-template-rows: minmax(0, max-content); align-content: start; min-height: 0; }
+  .home-rail__card { display: grid; grid-auto-rows: minmax(0, max-content); align-content: start; min-height: 0; overflow: hidden; }
+  .home-rail__section { display: flex; flex-direction: column; min-height: 0; padding: 18px 0; }
+  /* En la columna lateral cada caja pide el alto natural de su lista (`--fit-natural`) y la lista se dibuja encima, sin
+     sumar al cálculo: así el recorte por filas completas no cambia cuánto alto recibe cada sección. Las filas resaltan
+     10 px hacia los lados al pasar el cursor: ese margen queda dentro de la lista. */
+  .home-rail .home-fit { position: relative; flex: 1 1 auto; height: var(--fit-natural, auto); }
+  .home-rail .home-fit__scroll { position: absolute; top: 0; right: -10px; left: -10px; max-height: 100%; padding-inline: 10px; }
   /* La lista sobresale 10 px a cada lado: la caja no recorta de lado para que su barra de desplazamiento se vea. */
   .home-rail .home-fit { overflow: visible clip; }
-  .home-rail__section--fill { flex: 1 1 0; min-height: 200px; }
-  /* Las filas se separan para llenar el alto, hasta 160 px por fila: más separadas ya no se leen como un grupo. */
-  .home-rail__section--fill .home-bars { flex-grow: 1; align-content: space-evenly; max-height: calc(var(--rows, 99) * 160px); }
-  .home-assets__list a { min-height: 50px; padding-block: 6px; }
+  /* Filas compactas en la columna lateral: caben cuatro préstamos y unas cuatro compras en 1280×720. */
+  .home-assets__list a { min-height: 0; padding-block: 4px; }
+  .home-recent a { padding-block: 4px; }
+  :is(.home-assets__list, .home-recent) strong { line-height: 20px; }
+  .home-assets__list small { font-size: 13px; line-height: 18px; }
+  .home-assets__list em { padding-block: 2px; font-size: 13px; }
   /* Una línea por bien: las filas miden lo mismo y caben más préstamos; el nombre completo queda en el título. */
-  .home-assets__list strong { -webkit-line-clamp: 1; }
+  :is(.home-assets__list, .home-recent) strong { -webkit-line-clamp: 1; }
   .home-bars { gap: 12px; }
   /* --fit-extra: alto que useWholeRows reparte entre las filas visibles para que la lista llene su caja. */
   .home-table :is(tbody th, td) { padding-block: calc(10px + var(--fit-extra, 0px) / 2); }
@@ -277,5 +332,8 @@
   .admin-home-heading { margin-bottom: 16px; }
   .home-main { gap: 18px; }
   .home-heading { margin-bottom: 10px; }
-  .home-rail__section { padding-block: 14px; }
+  .home-rail__section { padding-block: 10px; }
+  .home-rail .home-heading { margin-bottom: 8px; }
+    .home-recent strong { line-height: 19px; }
+  .home-recent small { line-height: 17px; }
 }

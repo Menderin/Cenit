@@ -45,7 +45,7 @@ for (const role of ['administrativo', 'docente', 'estudiante']) {
       await page.goto(detail); await expect(page).toHaveURL(/\/academico$/);
     }
     if (role !== 'administrativo') await expect(page.getByRole('region', { name: 'Asignaturas por semestre' })).toBeVisible();
-    else await expect(page.getByRole('link', { name: 'Ver registros', exact: true })).toBeVisible();
+    else await expect(page.getByRole('link', { name: 'Ir a Compras', exact: true })).toBeVisible();
     await page.goto('/prototipo.html'); await expect(page).toHaveURL(new RegExp(`${path}$`));
     await page.goto('/compras'); await expect(page).toHaveURL(new RegExp(`${path}$`));
     await page.goto('/login'); await expect(page).toHaveURL(new RegExp(`${path}$`));
