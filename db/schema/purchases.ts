@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, date, index, integer, numeric, primaryKey, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { boolean, check, date, index, integer, numeric, primaryKey, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 import { cenit } from './academic.js';
 import { accounts } from './auth.js';
 
@@ -32,7 +32,7 @@ export const purchaseRequestLines = cenit.table('purchase_request_lines', {
   providerSearch: text('provider_search').generatedAlwaysAs(sql`cenit.normalize_purchase_search(provider)`),
   price: numeric('price', { precision: 255, scale: 0 }), amount: numeric('amount', { precision: 255, scale: 0 }), chargeAccount: text('charge_account'),
   universityCode: text('university_code'), campusCode: text('campus_code'), unitCode: text('unit_code'), projectCode: text('project_code'), accountingCode: text('accounting_code'),
-}, t => [unique('purchase_line_position').on(t.requestId, t.position), check('purchase_line_range', sql`${t.position} BETWEEN 1 AND 100`),
+}, t => [unique('purchase_line_position').on(t.requestId, t.position), index('purchase_line_project').on(t.projectCode, t.requestId), check('purchase_line_range', sql`${t.position} BETWEEN 1 AND 100`),
   check('purchase_line_amounts', sql`(${t.price} IS NULL OR ${t.price} >= 0) AND (${t.amount} IS NULL OR ${t.amount} >= 0)`),
   check('purchase_line_finite_amounts', sql`(${t.price} IS NULL OR ${t.price} <> 'NaN'::numeric) AND (${t.amount} IS NULL OR ${t.amount} <> 'NaN'::numeric)`),
   check('purchase_line_description', sql`${t.description} IS NULL OR (length(${t.description}) BETWEEN 1 AND 1000 AND ${t.description} ~ '[^[:space:]]')`),
@@ -53,3 +53,23 @@ export const purchaseSheetsDelivery = cenit.table('purchase_sheets_delivery', {
 }, t => [primaryKey({ columns: [t.spreadsheetId, t.purchaseId] }), unique('purchase_sheets_header_row').on(t.spreadsheetId, t.headerRow),
   check('purchase_sheets_delivery_values', sql`${t.syncedGeneration} >= 0 AND ${t.attempts} >= 0 AND (${t.headerRow} IS NULL OR ${t.headerRow} >= 2)`),
 ]);
+
+// Catálogos oficiales de Finanzas UCN (plan de unidades, plan de cuentas de unidades operacionales y proyectos de FAMED).
+// Sólo dan nombre a los códigos guardados en cada ítem: las compras conservan el código tal como venía, esté o no en el catálogo.
+export const purchaseCatalogUnits = cenit.table('purchase_catalog_units', {
+  code: text('code').primaryKey(), name: text('name').notNull(), classification: text('classification').notNull(),
+}, t => [check('purchase_catalog_unit_code', sql`${t.code} ~ '^[0-9]{6}$'`), check('purchase_catalog_unit_class', sql`${t.classification} IN ('ADM', 'OP', 'mixta')`),
+  check('purchase_catalog_unit_name', sql`length(${t.name}) BETWEEN 1 AND 255`)]);
+
+// «vigente» corresponde al plan desde diciembre de 2024; «anterior» conserva los códigos reemplazados y a cuál pasaron.
+export const purchaseCatalogAccounts = cenit.table('purchase_catalog_accounts', {
+  code: text('code').primaryKey(), name: text('name').notNull(), isGroup: boolean('is_group').notNull(), groupCode: text('group_code'),
+  plan: text('plan').notNull(), replacedBy: text('replaced_by'),
+}, t => [check('purchase_catalog_account_code', sql`${t.code} ~ '^[0-9]{6}$' AND (${t.groupCode} IS NULL OR ${t.groupCode} ~ '^[0-9]{6}$')`),
+  check('purchase_catalog_account_name', sql`length(${t.name}) BETWEEN 1 AND 255`),
+  check('purchase_catalog_account_plan', sql`(${t.plan} = 'vigente' AND ${t.replacedBy} IS NULL) OR (${t.plan} = 'anterior' AND ${t.replacedBy} ~ '^[0-9]{6}$')`)]);
+
+export const purchaseCatalogProjects = cenit.table('purchase_catalog_projects', {
+  unitCode: text('unit_code').notNull().references(() => purchaseCatalogUnits.code), code: text('code').notNull(), name: text('name').notNull(),
+}, t => [primaryKey({ columns: [t.unitCode, t.code] }), index('purchase_catalog_project_code').on(t.code),
+  check('purchase_catalog_project_code_format', sql`${t.code} ~ '^[0-9]{8}$'`), check('purchase_catalog_project_name', sql`length(${t.name}) BETWEEN 1 AND 255`)]);

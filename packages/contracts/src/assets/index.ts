@@ -93,6 +93,8 @@ export const AssetParamsSchema = object({ id: uuid });
 
 export const AssetSummarySchema = object({ data: object({
   total: Type.Integer({ minimum: 0 }), onLoan: Type.Integer({ minimum: 0 }), overdue: Type.Integer({ minimum: 0 }),
+  // Préstamos abiertos que vencen hoy o en los próximos siete días (Inicio los muestra como aviso).
+  dueSoon: Type.Optional(Type.Integer({ minimum: 0 })),
   review: Type.Integer({ minimum: 0 }), unassigned: Type.Integer({ minimum: 0 }),
   deliveries: Type.Integer({ minimum: 0 }), loans: Type.Integer({ minimum: 0 }), people: Type.Integer({ minimum: 0 }), peopleReview: Type.Integer({ minimum: 0 }),
   locations: Type.Array(Type.String(), { maxItems: 200 }),

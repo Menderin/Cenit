@@ -418,12 +418,15 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await expect(page.getByText('Prototipo con datos ficticios', { exact: true })).toHaveCount(0);
   const indicators = page.getByRole('definition');
   const summary = (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
-  await expect(indicators.nth(0)).toHaveText(String(summary.overview.registeredThisYear));
-  await expect(indicators.nth(2)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.overview.documentTotalThisYear)));
-  await expect(indicators.nth(4)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.overview.documentTotalThisMonth)));
-  // The monthly chart is drawn with bars and repeated as a table for assistive technology.
-  await expect(page.getByRole('table', { name: 'Monto documental por mes de envío' })).toHaveCount(1);
-  await expect(page.locator('.dashboard-monthly__column')).toHaveCount(12);
+  const clp = (value: string) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(value));
+  await expect(indicators.nth(0)).toHaveText(clp(summary.overview.documentTotalThisYear));
+  await expect(indicators.nth(1)).toHaveText(new RegExp(`^${summary.overview.registeredThisYear} ${summary.overview.registeredThisYear === 1 ? 'compra' : 'compras'}( · \\d+ proyectos?)?$`));
+  await expect(indicators.nth(2)).toHaveText(clp(summary.overview.documentTotalThisMonth));
+  // The monthly chart is drawn with bars and repeated as a table for assistive technology; a year without purchases says so instead.
+  if (summary.overview.monthlyTotals.some((month: { amount: string }) => BigInt(month.amount) > 0n)) {
+    await expect(page.getByRole('table', { name: 'Monto documental por mes de envío' })).toHaveCount(1);
+    await expect(page.locator('.home-chart__column')).toHaveCount(12);
+  } else await expect(page.getByText(/^Aún no hay compras con fecha de envío en \d{4}\.$/)).toBeVisible();
   await expect(page.getByRole('button', { name: /aprobar/i })).toHaveCount(0);
   for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });

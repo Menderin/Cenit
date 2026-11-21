@@ -1,6 +1,7 @@
 import { Type, type Static } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
 import { CaptureOriginSchema, CaptureMetadataSchema, ExtractionReviewDraftSchema, headerFields, validateReviewDraft, validCalendarDate, type ContractProblem } from './extraction.js';
+import { PurchaseBreakdownSchema, PurchaseCodeSchema, PurchaseYearSchema } from './insights.js';
 
 const object = <T extends Parameters<typeof Type.Object>[0]>(fields: T) => Type.Object(fields, { additionalProperties: false });
 const uuid = Type.String({ pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' });
@@ -39,9 +40,18 @@ export const PurchaseSummaryResponseSchema = object({ data: object({
     documentTotalThisYear: Type.Optional(Type.String({ pattern: '^(0|[1-9][0-9]*)$' })),
     monthlyTotals: Type.Optional(Type.Array(object({ month: Type.String({ pattern: '^\\d{4}-(0[1-9]|1[0-2])$' }), count: Type.Integer({ minimum: 0 }), amount: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }) }), { maxItems: 12 })),
     documentTypes: Type.Optional(Type.Array(object({ documentType: Type.Union([Type.String({ minLength: 1, maxLength: 255 }), Type.Null()]), count: Type.Integer({ minimum: 0 }), amount: Type.String({ pattern: '^(0|[1-9][0-9]*)$' }) }), { maxItems: 6 })),
+    // Año al que corresponden las cifras anuales (por defecto, el actual) y gasto de ese año por proyecto y por cuenta,
+    // sumando el importe de los ítems. `registrationMonth` y las cifras del mes siguen siendo las del mes en curso.
+    year: Type.Optional(PurchaseYearSchema),
+    availableYears: Type.Optional(Type.Array(Type.Integer({ minimum: 1, maximum: 9999 }), { uniqueItems: true, maxItems: 10000 })),
+    lineTotal: Type.Optional(Type.String({ pattern: '^(0|[1-9][0-9]*)$' })),
+    projectCount: Type.Optional(Type.Integer({ minimum: 0 })),
+    projects: Type.Optional(Type.Array(PurchaseBreakdownSchema, { maxItems: 40 })),
+    accounts: Type.Optional(Type.Array(PurchaseBreakdownSchema, { maxItems: 8 })),
     recentRecords: Type.Array(object({ id: uuid, requestNumber: headerFields.requestNumber, description: headerFields.description,
       sentDate: headerFields.sentDate, totalAmount: headerFields.totalAmount, createdAt: stamp,
       source: Type.Union([Type.Literal('manual'), Type.Literal('image_capture'), Type.Literal('contract_example')]),
+      projectCode: Type.Optional(Type.Union([PurchaseCodeSchema, Type.Null()])),
     }), { maxItems: 8 }),
   })),
 }) });

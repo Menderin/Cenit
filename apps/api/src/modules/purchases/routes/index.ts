@@ -5,7 +5,7 @@ import type { Authenticate } from '../../auth/services/principal.js';
 import { ApiError } from '../../../infrastructure/errors.js';
 import type { PurchaseService } from '../services/purchases.js';
 import multipart from '@fastify/multipart';
-import { EXTRACTION_LIMITS, ExtractionResponseSchema } from '@cenit/contracts/purchases';
+import { EXTRACTION_LIMITS, ExtractionResponseSchema, PurchaseProjectParamsSchema, PurchaseProjectSummaryResponseSchema, PurchaseProjectsResponseSchema, PurchaseYearQuerySchema, type PurchaseYearQuery } from '@cenit/contracts/purchases';
 import type { PurchaseSheetsRepository } from '../repositories/sheets.js';
 import { ExtractionService } from '../services/extractions.js';
 
@@ -32,7 +32,13 @@ export async function purchaseRoutes(app: FastifyInstance, options: { service: P
     if (request.query.purchaseId) await options.service.get(request.query.purchaseId);
     return options.sheets.repository.status(options.sheets.spreadsheetId, request.query.purchaseId);
   });
-  app.get('/summary', { onRequest: access, schema: { response: { 200: PurchaseSummaryResponseSchema, ...errors } } }, () => options.service.summary());
+  app.get<{ Querystring: PurchaseYearQuery }>('/summary', { onRequest: access, schema: { querystring: PurchaseYearQuerySchema, response: { 200: PurchaseSummaryResponseSchema, ...errors } } },
+    request => options.service.summary(request.query.year));
+  app.get<{ Querystring: PurchaseYearQuery }>('/projects', { onRequest: access, schema: { querystring: PurchaseYearQuerySchema, response: { 200: PurchaseProjectsResponseSchema, ...errors } } },
+    request => options.service.projects(request.query.year));
+  app.get<{ Params: { code: string }; Querystring: PurchaseYearQuery }>('/projects/:code', { onRequest: access,
+    schema: { params: PurchaseProjectParamsSchema, querystring: PurchaseYearQuerySchema, response: { 200: PurchaseProjectSummaryResponseSchema, ...errors } },
+  }, request => options.service.project(request.params.code, request.query.year));
   app.delete<{ Params: { id: string }; Body: { expectedVersion: number } }>('/:id', { onRequest: write,
     schema: { params: PurchaseParamsSchema, body: PurchaseDeletionSchema, response: { 200: PurchaseDeletionResponseSchema, ...errors } },
   }, request => options.service.delete(request.params.id, request.body.expectedVersion));

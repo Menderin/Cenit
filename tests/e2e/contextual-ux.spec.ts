@@ -11,7 +11,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   };
   const summary = async () => (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
   const check = async (yearRequests: number, pendingCount: number, amount: string) => {
-    await expect(page.locator('.dashboard-kpis dd').first()).toHaveText(String(yearRequests));
+    await expect(page.locator('.home-figure--main .home-figure__detail')).toHaveText(new RegExp(`^${yearRequests} ${yearRequests === 1 ? 'compra' : 'compras'}( · \\d+ proyectos?)?$`));
     const review = page.getByRole('region', { name: 'Segunda revisión' });
     await expect(review).toContainText(String(pendingCount));
     await expect(review).toContainText(amountLabel(amount));
@@ -21,7 +21,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   const beforeMonth = before.overview.monthlyTotals.find((month: { month: string }) => month.month === before.overview.registrationMonth).count;
   const monthRow = page.getByRole('table', { name: 'Monto documental por mes de envío' }).getByRole('row').filter({ has: page.getByRole('rowheader', { name: monthName, exact: true }) });
   const number = `HOME-${crypto.randomUUID().slice(0, 8)}`;
-  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link', { name: 'Registro de compras', exact: true }).click();
   await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
   await page.getByLabel('Nº Documento / solicitud *', { exact: true }).fill(number);
   await page.getByLabel('Fecha de envío *', { exact: true }).fill(dateLabel(before.overview.registrationMonth + '-15'));
@@ -118,15 +118,16 @@ test('Inicio presenta carga y error con reintento sin mostrar cifras ficticias',
     await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'Resumen temporalmente indisponible', requestId: 'summary-error' } }) });
   });
   await page.reload(); await expect(page.getByRole('status').filter({ hasText: 'Cargando resumen' })).toBeVisible();
-  await expect(page.locator('.dashboard-loading .dashboard-kpis > div')).toHaveCount(3);
-  await expect(page.locator('.dashboard-loading .dashboard-card')).toHaveCount(3);
+  await expect(page.locator('.home-loading .home-figure')).toHaveCount(2);
+  await expect(page.locator('.home-loading .home-rail__section')).toHaveCount(2);
   expect(await page.getByRole('definition').count()).toBe(0);
   await expect.poll(() => !!release).toBe(true); release!();
   await expect(page.getByRole('alert')).toContainText('Resumen temporalmente indisponible');
   await expect(page.getByRole('definition')).toHaveCount(0);
   await page.unroute('**/api/v1/purchases/summary');
   await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
-  await expect(page.getByRole('definition')).toHaveCount(6);
+  // Value and detail for the year and the month (the trend appears only with a previous month).
+  await expect.poll(() => page.getByRole('definition').count()).toBeGreaterThanOrEqual(4);
 });
 
 const dialog = (page: Page) => page.getByRole('alertdialog');

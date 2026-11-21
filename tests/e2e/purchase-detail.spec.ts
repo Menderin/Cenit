@@ -112,7 +112,9 @@ test('edición: reemplaza ítems y refresca detalle, listado e Inicio sólo tras
   await expect(row).toContainText('Descripción corregida desde pantalla');
   await expect(row).toContainText(currency.format(9007199254740993n));
   await page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link', { name: 'Inicio', exact: true }).click();
-  await expect(page.locator('.dashboard-recent')).toContainText('Descripción corregida desde pantalla');
+  // Inicio no longer lists recent records; it shows the refreshed yearly total from the server.
+  const refreshed = (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
+  await expect(page.locator('.home-figure--main .home-figure__value')).toHaveText(currency.format(BigInt(refreshed.overview.documentTotalThisYear)));
   await page.reload();
   const persisted = (await (await page.request.get(`/api/v1/purchases/${record.id}`)).json()).data;
   expect(persisted).toEqual(corrected);
