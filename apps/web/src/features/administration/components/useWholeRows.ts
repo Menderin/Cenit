@@ -30,7 +30,10 @@ export function useWholeRows<Box extends HTMLElement, List extends HTMLElement>(
       scroller.style.removeProperty('--fit-extra');
       // Alto natural de la lista, sin recortes: la columna lateral reserva este alto para repartir su espacio por partes
       // iguales sin que el recorte de una lista cambie el reparto (home.css, `--fit-natural`).
+      // En la columna lateral la lista se estira hasta el fondo de su caja: se mide sin estirar.
+      scroller.style.bottom = 'auto';
       space.style.setProperty('--fit-natural', `${scroller.scrollHeight}px`);
+      scroller.style.bottom = '';
       let available = height();
       const limited = scroller.scrollHeight > available + 1;
       if (limited) {

@@ -297,19 +297,20 @@
   .home-fit__scroll [data-row] { scroll-snap-align: start; }
   .home-fit__scroll:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
   .home-table thead th { position: sticky; top: 0; z-index: 1; }
-  /* Columna lateral: ocupa el alto de la fila y su tarjeta mide lo que trae, sin pasar de ese alto (con poco contenido
-     termina donde termina la última sección, sin huecos ni filas separadas). Dentro de la tarjeta, las secciones
-     (Bienes y compras; cuentas y proveedores) crecen por partes iguales hasta su contenido: si no cabe todo, el alto
-     queda repartido por mitades y cada lista muestra las filas completas que caben y desplaza el resto. Ambas grillas
-     necesitan un alto definido para repartir: por eso la tarjeta va dentro de la columna estirada. */
-  .home-rail { display: grid; grid-template-rows: minmax(0, max-content); align-content: start; min-height: 0; }
-  .home-rail__card { display: grid; grid-auto-rows: minmax(0, max-content); align-content: start; min-height: 0; overflow: hidden; }
+  /* Columna lateral: la tarjeta ocupa siempre todo el alto de la fila. Sus secciones (Bienes y compras; cuentas y
+     proveedores) crecen por partes iguales: si no cabe todo, el alto queda repartido por mitades y cada lista muestra las
+     filas completas que caben y desplaza el resto; si sobra, cada sección recibe la misma parte del sobrante y sus barras
+     se separan un poco (hasta 96 px por fila), de modo que la tarjeta llega al fondo sin huecos dispares. Las
+     integraciones opcionales (tercera fila) miden su contenido. */
+  .home-rail { display: grid; grid-template-rows: minmax(0, 1fr); min-height: 0; }
+  .home-rail__card { display: grid; grid-template-rows: minmax(0, auto) minmax(0, auto); grid-auto-rows: max-content; align-content: stretch; min-height: 0; overflow: hidden; }
   .home-rail__section { display: flex; flex-direction: column; min-height: 0; padding: 18px 0; }
   /* En la columna lateral cada caja pide el alto natural de su lista (`--fit-natural`) y la lista se dibuja encima, sin
      sumar al cálculo: así el recorte por filas completas no cambia cuánto alto recibe cada sección. Las filas resaltan
      10 px hacia los lados al pasar el cursor: ese margen queda dentro de la lista. */
   .home-rail .home-fit { position: relative; flex: 1 1 auto; height: var(--fit-natural, auto); }
-  .home-rail .home-fit__scroll { position: absolute; top: 0; right: -10px; left: -10px; max-height: 100%; padding-inline: 10px; }
+  .home-rail .home-fit__scroll { position: absolute; top: 0; right: -10px; bottom: 0; left: -10px; max-height: 100%; padding-inline: 10px; }
+  .home-rail .home-fit__scroll > .home-bars { flex-grow: 1; align-content: space-evenly; max-height: calc(var(--rows, 99) * 96px); }
   /* La lista sobresale 10 px a cada lado: la caja no recorta de lado para que su barra de desplazamiento se vea. */
   .home-rail .home-fit { overflow: visible clip; }
   /* Filas compactas en la columna lateral: caben cuatro préstamos y unas cuatro compras en 1280×720. */
