@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: 'closing', session: null, message: '' });
     try {
       await signOut();
-      if (epoch.current === generation) setState({ status: 'guest', session: null, message: 'Sesión cerrada.', notice: 'signed-out' });
+      if (epoch.current === generation) setState({ status: 'guest', session: null, message: '', notice: 'signed-out' });
     } catch {
       if (epoch.current === generation) setState({ status: 'logout-error', session: null, message: 'No se pudo confirmar el cierre de sesión.' });
     }

@@ -11,6 +11,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { finished } from 'node:stream/promises';
 
+// PostgreSQL has no year zero; the contract already limits the year to four digits.
+function parseYear(year?: string) {
+  if (year === undefined) return null;
+  const value = Number(year);
+  if (value < 1) throw new ApiError(400, 'VALIDATION_ERROR', 'El año debe ser mayor que cero.');
+  return value;
+}
+
 export class PurchaseService {
   constructor(private readonly repository: PurchaseRepository, private readonly receipts?: CaptureReceipts, private readonly capabilities: PurchaseCapabilities = defaultPurchaseCapabilities) {}
   create(input: CreatePurchase, accountId: string) {
@@ -62,6 +70,12 @@ export class PurchaseService {
     if (!this.capabilities.secondReviewEnabled) throw new ApiError(409, 'FEATURE_DISABLED', 'La segunda revisión no está habilitada en Cenit.');
     return { data: await this.repository.validate(id, version, accountId) };
   }
-  summary() { return this.repository.summary(); }
+  summary(year?: string) { return this.repository.summary(parseYear(year)); }
+  async projects(year?: string) { return { data: await this.repository.projects(parseYear(year)) }; }
+  async project(code: string, year?: string) {
+    const data = await this.repository.project(code, parseYear(year));
+    if (!data) throw new ApiError(404, 'NOT_FOUND', 'El proyecto no está en el catálogo ni en las compras registradas.');
+    return { data };
+  }
   delete(id: string, version: number) { return this.repository.delete(id, version); }
 }

@@ -1,0 +1,17 @@
+/* Formulario oficial: hoja carta con la copia exacta del documento y los valores en sus casillas.
+   Las medidas dependen del ancho del papel (cqw), así la vista previa conserva la geometría del PDF a cualquier tamaño. */
+.cenit-form { position: relative; box-sizing: border-box; width: 100%; container-type: inline-size; background: #fff; color: #000; box-shadow: 0 1px 3px #0000001f, 0 10px 30px #00000014; }
+.cenit-form * { box-sizing: border-box; }
+.cenit-form__sheet { position: absolute; }
+.cenit-form-template { position: relative; display: block; width: 100%; }
+.cenit-form-template > img { display: block; width: 100%; height: 100%; }
+.cenit-form-template:not([data-state="ready"]) > img, .cenit-form__sheet:has(.cenit-form-template:not([data-state="ready"])) .cenit-form__value { visibility: hidden; }
+.cenit-form-template__placeholder { position: absolute; inset: 0; display: grid; align-content: start; justify-items: center; gap: 12px; padding: 8% 10%; overflow: hidden; color: var(--color-ink-muted); font: 13px/1.5 var(--font-sans); }
+.cenit-form-template__fields { display: grid; gap: 10px; width: 100%; margin-top: 18px; }
+.cenit-form-template__fields > .cenit-skeleton { height: clamp(20px, 3vw, 32px); }
+.cenit-form__value { position: absolute; display: flex; align-items: center; padding: 0 var(--form-inset); overflow: hidden; text-align: center; }
+.cenit-form__value[data-valign="top"] { align-items: flex-start; padding-top: var(--form-inset); }
+.cenit-form__value[data-align="left"] { text-align: left; }
+.cenit-form__value > span { display: block; width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--form-size); line-height: 1.1; }
+.cenit-form__value[data-overflow="true"] { overflow: visible; outline: 2px solid var(--color-danger); outline-offset: -1px; }
+.cenit-form__draft { position: absolute; left: 0; right: 0; transform: translateY(50%); font: calc(100cqw * 6 / 612) / 1 "Times New Roman", Times, serif; text-align: center; color: #000; }

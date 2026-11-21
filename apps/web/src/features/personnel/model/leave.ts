@@ -92,8 +92,5 @@ export function leaveFileName(draft: LeaveDraft) {
 }
 
 /** Fecha separada en día, mes y año, como en las casillas de la hoja. */
-export function leaveDateParts(value: string, shortYear = false): [string, string, string] {
-  if (!calendarDate(value)) return ['', '', ''];
-  const [year, month, day] = value.split('-');
-  return [String(Number(day)), String(Number(month)), shortYear ? year!.slice(-2) : year!];
-}
+// Día, mes y año como los escribe el documento (contrato compartido con el PDF).
+export { formDateParts as leaveDateParts } from '@cenit/contracts';

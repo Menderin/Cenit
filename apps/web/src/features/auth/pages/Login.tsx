@@ -57,7 +57,7 @@ export function Login({ checking }: { checking: boolean }) {
     </header>
     <div className="cenit-access__feedback">
       {error ? <p className="cenit-access__error" role="alert">{error}</p>
-        : auth.message && <StatusNotice kind={auth.notice === 'signed-out' ? 'success' : 'warning'} title={auth.notice === 'signed-out' ? 'Saliste de Cenit' : 'Vuelve a iniciar sesión'} message={auth.message} />}
+        : auth.message && auth.notice !== 'expired' && <StatusNotice kind="warning" title="Vuelve a iniciar sesión" message={auth.message} />}
     </div>
     <form className="cenit-access__form" noValidate onSubmit={submit} aria-busy={locked} inert={googleBusy}>
       <div className="cenit-access__field">
@@ -85,7 +85,7 @@ export function Login({ checking }: { checking: boolean }) {
         : <GoogleLoginLayout busy={google.isFetching} controls={
           <button type="button" className="cenit-button google-access__unavailable" disabled aria-describedby={googleUnavailable ? 'google-unavailable' : undefined}>Iniciar sesión con Google</button>
         }>
-          {googleUnavailable && <p id="google-unavailable" role="status">Google no está disponible en este momento.</p>}
+          {googleUnavailable && <p id="google-unavailable" role="status">{google.data?.enabled === false ? 'El acceso con Google no está habilitado.' : 'Google no está disponible en este momento.'}</p>}
         </GoogleLoginLayout>}
     </div>
   </>;

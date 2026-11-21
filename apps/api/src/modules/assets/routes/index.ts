@@ -9,7 +9,8 @@ import {
 import type { Authenticate } from '../../auth/services/principal.js';
 import { ApiError } from '../../../infrastructure/errors.js';
 import type { AssetRepository } from '../repositories/assets.js';
-import { altaPdf, deliveryPdf, loanPdf, unprintableChar } from '../services/pdf.js';
+import { altaPdf, deliveryPdf, loanPdf } from '../services/pdf.js';
+import { unprintableChar } from '../../../infrastructure/forms.js';
 
 // Bienes: sesión administrativa para leer; además Origin permitido para escribir y descargar documentos.
 export async function assetRoutes(app: FastifyInstance, options: { repository: AssetRepository; authenticate: Authenticate; allowedOrigins: string[] }) {

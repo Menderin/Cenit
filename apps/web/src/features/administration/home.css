@@ -1,118 +1,340 @@
-.admin-content:has(.admin-home) { padding: 24px 28px; }
-.admin-home { min-width: 0; }
-.admin-home-heading { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; }
-.admin-home-heading h1 { margin-bottom: 2px; }
-.admin-home-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.admin-home-actions > .cenit-button { min-height: 44px; padding: 12px 14px; }
-.dashboard-section-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-.dashboard-section-heading > span, .dashboard-section-heading a { color: var(--admin-muted); font-size: 12px; }
-.dashboard-section-heading a { display: inline-flex; align-items: center; gap: 4px; }
+/* Inicio: una columna principal plana sobre el panel (el gasto y en qué se gasta) y una columna lateral en la segunda
+   capa neutra (Bienes y últimas compras; en un proyecto, cuentas y proveedores). Sin tarjetas dentro del panel: los grupos se separan por espacio y líneas finas.
+   Datos a 14 px o más: lo usa a diario una persona de unos sesenta años. */
+.admin-content:has(.admin-home) { padding: 24px 32px 40px; }
+.admin-home { --home-gap: 32px; min-width: 0; color: var(--color-ink); }
+
+/* Encabezado: título (o el proyecto elegido) y, a la derecha, año, proyecto y acciones. */
+.admin-home-heading { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 14px 24px; margin-bottom: 28px; }
+.admin-home-title { flex: 1 1 280px; min-width: 0; }
+.admin-home-titlebar { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.admin-home-titlebar h1 { min-width: 0; }
+.admin-home-title h1 { margin: 0; }
+/* En el Inicio general el título y los selectores comparten la misma línea. */
+.admin-home:not(.admin-home--project) .admin-home-heading { align-items: center; }
+.admin-home--project .admin-home-title h1 { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: clamp(24px, 1.8vw, 30px); line-height: 1.25; }
+/* Acciones secundarias de Inicio: un botón compacto con ícono y flecha, nunca texto suelto subrayado. */
+.home-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 10px 4px 9px; border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-control); color: var(--color-ink-secondary); font-size: 14px; line-height: 20px; text-decoration: none; white-space: nowrap; transition: background-color 150ms ease-out, scale 150ms ease-out; }
+.home-chip > svg:first-child { color: var(--color-icon); }
+.home-chip > svg:last-child { color: var(--color-ink-subtle); transition: translate 150ms ease-out; }
+.home-chip:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.home-chip:active { scale: .97; }
+.home-chip--back { flex: none; min-height: 36px; padding-inline: 10px 12px; }
+.home-chip.home-chip--back > svg { color: var(--color-icon); }
+/* Unidades del proyecto en una sola línea: si no caben, se acortan los nombres (el código siempre se ve; el nombre
+   completo queda en el título) para que el encabezado no crezca y le quite alto al resumen. */
+.admin-home-chips { display: flex; gap: 8px; min-width: 0; margin: 10px 0 0; padding: 0; list-style: none; }
+.admin-home-chips li { display: inline-flex; flex: 0 1 auto; align-items: center; gap: 6px; min-width: 0; padding: 4px 10px; border-radius: var(--radius-sm); background: var(--color-surface-chip); color: var(--color-ink-secondary); font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.admin-home-chips b { flex: none; font-weight: 600; }
+.admin-home-chips span { min-width: 3ch; overflow: hidden; text-overflow: ellipsis; }
+.admin-home-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.admin-home-actions > .cenit-button, .admin-home-actions .cenit-button--icon { min-height: 44px; }
+.admin-home-actions > .cenit-button--primary { padding: 12px 16px; }
+.admin-home-select { justify-content: space-between; gap: 8px; min-width: 100px; min-height: 44px; padding: 10px 12px 10px 14px; font-size: 15px; }
+
+.home-project-filter { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.home-project-trigger { justify-content: flex-start; gap: 8px; width: clamp(240px, 22vw, 400px); min-height: 44px; padding: 10px 12px; font-size: 15px; }
+.home-project-trigger > svg:first-child { color: var(--color-icon); }
+.admin-home--project .home-project-trigger { box-shadow: 0 0 0 1px var(--color-focus); }
+.admin-home--project .home-project-trigger > svg:first-child { color: var(--color-info-icon); }
+.home-project-trigger > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.home-project-trigger small { margin-right: 6px; color: var(--color-info-icon); font-size: 14px; font-variant-numeric: tabular-nums; }
+.home-project-trigger > svg:last-child { flex: none; color: var(--color-ink-subtle); }
+.cenit-popover.home-project-menu { display: flex; flex-direction: column; gap: 8px; width: min(480px, calc(100vw - 32px)); max-height: min(540px, var(--radix-popover-content-available-height)); padding: 10px; overflow: hidden; }
+.home-project-search { position: relative; display: block; }
+.home-project-search > svg { position: absolute; top: 50%; left: 12px; color: var(--color-icon); transform: translateY(-50%); pointer-events: none; }
+.home-project-search input { width: 100%; min-height: 44px; padding-left: 36px; font-size: 15px; }
+.home-project-options { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.home-project-options [role="option"] { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; min-height: 48px; padding: 8px 10px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-ink); font: inherit; text-align: left; cursor: pointer; }
+.home-project-options [role="option"][aria-selected="true"] { background: var(--color-surface-chip); }
+.home-project-options [role="option"]:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.home-project-option__name { display: grid; min-width: 0; font-size: 14px; line-height: 19px; }
+.home-project-option__name > span { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.home-project-option__name small, .home-project-option__value small { color: var(--color-ink-subtle); font-size: 13px; font-variant-numeric: tabular-nums; }
+.home-project-option__value { display: grid; flex: none; justify-items: end; font-size: 14px; line-height: 19px; }
+.home-project-option__value b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.home-project-group { margin: 10px 10px 4px; color: var(--color-ink-subtle); font-size: 13px; }
+.home-project-note { margin: 12px 10px; color: var(--admin-muted); font-size: 14px; }
+/* El menú de proyectos baja desde su botón como el de año (no sube desde abajo como los demás popovers). */
+.cenit-popover.home-project-menu { --home-menu-y: -4px; transition-duration: 150ms; transition-timing-function: ease-out; }
+.cenit-popover.home-project-menu[data-side="top"] { --home-menu-y: 4px; }
+@media (prefers-reduced-motion: no-preference) {
+  .cenit-popover.home-project-menu { transition-property: opacity, translate; }
+  .cenit-popover.home-project-menu.cenit-closing { translate: 0 var(--home-menu-y); filter: none; }
+  @starting-style { .cenit-popover.home-project-menu { opacity: 0; translate: 0 var(--home-menu-y); filter: none; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cenit-popover.home-project-menu { transition-property: opacity; }
+  @starting-style { .cenit-popover.home-project-menu { opacity: 0; } }
+}
+
 .dashboard-purchases { min-width: 0; }
-.dashboard-muted { margin: 0; color: var(--admin-muted); font-size: 13px; }
-.dashboard-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 16px; }
-.dashboard-kpis > div { min-width: 0; padding: 16px 18px; border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--admin-shadow); }
-.dashboard-kpis dt { color: var(--color-ink-label); font-size: 13px; line-height: 1.5; }
-.dashboard-kpis dd { margin: 8px 0 4px; font-size: clamp(24px, 2.2vw, 32px); line-height: 1.15; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.9px; overflow-wrap: anywhere; }
-.dashboard-kpis .dashboard-kpi-detail { margin: 0; color: var(--admin-muted); font-size: 12px; font-weight: 400; letter-spacing: 0; line-height: 1.5; }
-.dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr); gap: 16px; }
-.dashboard-card { min-width: 0; padding: 18px 20px; border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--admin-shadow); }
-.dashboard-recent { grid-column: 1 / -1; }
+.home-muted { margin: 0; color: var(--admin-muted); font-size: 15px; }
+.home-num { font-variant-numeric: tabular-nums; }
+.home-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 16px; }
+.home-heading h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: -.2px; }
+.home-heading > span, .home-heading > a { color: var(--admin-muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.home-heading > a { display: inline-flex; align-items: center; gap: 4px; color: var(--color-ink-secondary); }
 
-.dashboard-monthly__bars { position: relative; display: flex; align-items: stretch; gap: 10px; height: 230px; padding-top: 4px; border-bottom: 1px solid var(--admin-line); }
-.dashboard-monthly__column { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
-.dashboard-monthly__bar { width: 100%; max-width: 44px; border-radius: 5px 5px 0 0; background: color-mix(in srgb, var(--color-chart-bar) 55%, var(--color-surface)); transition: background-color 150ms ease-out; }
-.dashboard-monthly__bar--current { background: var(--color-chart-bar); }
-.dashboard-monthly__bar--peak { background: var(--color-focus); }
-.dashboard-monthly__value { max-width: 100%; overflow: hidden; text-overflow: ellipsis; color: var(--admin-muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.dashboard-monthly__column:has(.dashboard-monthly__bar--peak) .dashboard-monthly__value { color: var(--color-on-selection); font-weight: 600; }
-.dashboard-monthly__month { position: relative; top: 24px; margin-top: -18px; color: var(--admin-muted); font-size: 12px; text-transform: capitalize; }
-.dashboard-monthly__month--current { color: var(--color-ink); font-weight: 600; }
-.dashboard-monthly__column--future .dashboard-monthly__month { color: var(--color-ink-placeholder); }
-.dashboard-monthly { padding-bottom: 26px; }
-.dashboard-chart-tooltip { position: absolute; z-index: 1; top: 4px; left: 50%; display: none; width: max-content; max-width: 100%; padding: 8px 12px; border: 1px solid var(--color-line-soft); border-radius: var(--radius-sm); background: var(--color-surface); box-shadow: var(--admin-shadow); color: var(--color-ink); text-align: left; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; transform: translateX(-50%); pointer-events: none; }
-.dashboard-chart-tooltip strong, .dashboard-chart-tooltip span { display: block; }
-.dashboard-chart-tooltip strong { text-transform: capitalize; }
-.dashboard-monthly__column:focus .dashboard-chart-tooltip { display: block; }
-.dashboard-monthly__column:focus-visible, .dashboard-legend button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-.dashboard-monthly__column:focus .dashboard-monthly__bar { background: var(--color-focus); }
+/* Distribución: la principal crece; la lateral mantiene un ancho legible. El detalle de un proyecto se abre desde el
+   selector del encabezado, por eso el Inicio general no repite una tabla de proyectos. */
+.home-layout { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(340px, 1fr); align-items: start; gap: var(--home-gap); }
+.home-main { display: flex; flex-direction: column; gap: 40px; min-width: 0; }
+.home-rail { min-width: 0; }
+.home-rail__card { display: flex; flex-direction: column; min-width: 0; padding: 4px 24px; border: 1px solid var(--color-line-soft); border-radius: var(--radius-lg); background: var(--color-surface-header); }
+.home-rail__section { padding: 22px 0; }
+.home-rail__section + .home-rail__section { border-top: 1px solid var(--color-line); }
+.home-rail__status:empty { display: none; }
 
-.dashboard-types { display: flex; flex-direction: column; }
-.dashboard-types-body { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 20px; min-height: 0; }
-.dashboard-types-body > .dashboard-legend { flex: 1 1 180px; min-width: 0; }
-.dashboard-donut { position: relative; display: grid; place-items: center; flex: none; width: 128px; aspect-ratio: 1; margin: 4px 0; }
-.dashboard-donut svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-.dashboard-donut circle { cursor: pointer; }
-.dashboard-donut > div { position: absolute; display: grid; place-items: center; align-content: center; width: 68%; aspect-ratio: 1; pointer-events: none; }
-.dashboard-donut strong { font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1.1; }
-.dashboard-donut span { color: var(--admin-muted); font-size: 12px; }
-.dashboard-legend { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
-.dashboard-legend li { min-width: 0; }
-.dashboard-legend button { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; padding: 3px 4px; border: 0; border-radius: var(--radius-sm); background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
-.dashboard-legend button[aria-pressed="true"] { background: var(--color-surface-hover); }
-.dashboard-legend i { flex: none; width: 10px; height: 10px; border-radius: 3px; }
-.dashboard-legend span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dashboard-legend small { margin-left: auto; color: var(--admin-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-.dashboard-legend b { min-width: 0; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
-.dashboard-types-detail { position: absolute; z-index: 1; bottom: 0; left: 50%; width: max-content; max-width: 100%; margin: 0; padding: 8px 12px; border: 1px solid var(--color-line-soft); border-radius: var(--radius-sm); background: var(--color-surface); box-shadow: var(--admin-shadow); color: var(--color-ink); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; transform: translateX(-50%); pointer-events: none; }
-.dashboard-types-detail strong, .dashboard-types-detail span { display: block; }
+/* Gasto: las cifras y su gráfico son una sola pieza. */
+.home-spend { display: flex; flex-direction: column; gap: 24px; }
+.home-figures { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px 40px; margin: 0; }
+.home-figure { display: grid; gap: 4px; min-width: 0; }
+.home-figure dt { color: var(--color-ink-label); font-size: 15px; line-height: 20px; }
+.home-figure dd { margin: 0; }
+.home-figure__value { overflow: hidden; font-size: 30px; line-height: 1.15; font-weight: 600; letter-spacing: -.7px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.home-figure--main .home-figure__value { font-size: clamp(36px, 2.6vw, 50px); letter-spacing: -1.2px; }
+.home-figure__detail { color: var(--admin-muted); font-size: 15px; line-height: 21px; }
+.home-figure--month { grid-template-columns: auto 1fr; column-gap: 12px; }
+.home-figure--month > :is(dt, .home-figure__value) { grid-column: 1 / -1; }
+.home-figure--month .home-figure__value { font-size: 26px; letter-spacing: -.5px; }
+.home-figure__trend { display: inline-flex; align-items: center; gap: 4px; color: var(--color-ink-secondary); font-size: 14px; font-variant-numeric: tabular-nums; }
+.home-figure__share { width: clamp(140px, 13vw, 320px); height: 10px; margin: 4px 0; overflow: hidden; border-radius: 5px; background: var(--color-surface-muted); }
+.home-figure__share i { display: block; height: 100%; border-radius: 5px; background: var(--color-focus); }
+.home-spend__empty { padding: 32px 0; border-top: 1px solid var(--color-line-soft); }
 
-.dashboard-recent ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 0 24px; margin: 0; padding: 0; list-style: none; }
-.dashboard-recent li { min-width: 0; border-top: 1px solid var(--color-line-soft); }
-/* El servidor envía ocho altas; se muestran seis salvo en monitores anchos, donde caben ocho sin dejar espacio vacío. */
-.dashboard-recent li:nth-child(n + 7) { display: none; }
-@media (min-width: 1600px) {
-  .dashboard-recent ul { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .dashboard-recent li:nth-child(n + 7) { display: block; }
-}
-.dashboard-recent li a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 8px; border-radius: var(--radius-sm); line-height: 18px; text-decoration: none; transition: background-color 150ms ease-out; }
-.dashboard-recent li a > div { min-width: 0; }
-.dashboard-recent li a > div:first-child { flex: 1 1 0; }
-.dashboard-recent li strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 500; }
-.dashboard-recent li a > div > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; color: var(--admin-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-.dashboard-recent-amount { flex: 0 0 110px; max-width: 45%; text-align: right; }
-.dashboard-recent li b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.dashboard-recent li small { display: block; margin-top: 2px; font-size: 12px; color: var(--admin-muted); }
+/* Gráfico mensual: alto fijo, cada barra exactamente proporcional al mayor mes y con su cifra a la vista. */
+.home-chart { --chart-gap: clamp(8px, 1.1vw, 20px); --chart-axis: 56px; margin: 0; }
+.home-chart__plot { position: relative; height: clamp(200px, 27vh, 400px); margin-left: var(--chart-axis); border-bottom: 1px solid var(--color-line-strong); }
+.home-chart__grid { position: absolute; right: 0; left: 0; bottom: calc((100% - 24px) * var(--t)); border-top: 1px dashed var(--color-line); }
+.home-chart__grid small { position: absolute; right: 100%; margin-right: 10px; color: var(--color-ink-subtle); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; transform: translateY(-50%); }
+.home-chart__columns { position: absolute; inset: 0; display: flex; gap: var(--chart-gap); }
+.home-chart__column { display: flex; flex: 1 1 0; flex-direction: column; justify-content: flex-end; align-items: center; min-width: 0; }
+.home-chart__value { flex: none; height: 24px; color: var(--color-ink-secondary); font-size: 13px; line-height: 24px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.home-chart__bar { flex: none; width: 100%; max-width: 64px; height: calc((100% - 24px) * var(--r)); border-radius: 6px 6px 0 0; background: var(--color-chart-bar); }
+.home-chart__column.is-current .home-chart__bar { background: var(--color-focus); }
+.home-chart__column.is-current .home-chart__value { color: var(--color-ink); font-weight: 600; }
+.home-chart__months { display: flex; gap: var(--chart-gap); margin: 10px 0 0 var(--chart-axis); }
+.home-chart__months span { flex: 1 1 0; min-width: 0; color: var(--admin-muted); font-size: 14px; text-align: center; text-transform: capitalize; }
+.home-chart__months .is-current { color: var(--color-ink); font-weight: 600; }
+.home-chart__months .is-future { color: var(--color-ink-placeholder); }
 
-.dashboard-review { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0 0; margin-top: auto; border-top: 1px solid var(--admin-line); line-height: 18px; }
-.dashboard-review > strong { min-width: 0; max-width: 100%; margin-left: auto; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; font-size: 13px; }
-.dashboard-review p, .dashboard-review a { margin: 0; font-size: 12px; }
-.dashboard-loading__value { display: flex; align-items: center; margin: 8px 0 4px; height: 1.15em; font-size: clamp(24px, 2.2vw, 32px); }
-.dashboard-loading__bars { align-items: flex-end; }
-.dashboard-loading__bars > span { flex: 1; border-radius: 5px 5px 0 0; }
-.dashboard-loading__donut { border: 15px solid var(--color-surface-muted); border-radius: 50%; }
-.dashboard-loading__recent { display: grid; align-content: center; gap: 6px; height: 58px; padding-inline: 8px; }
-.dashboard-types .purchase-sync { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; margin: 16px 0 0; padding: 12px 0 0; border: 0; border-top: 1px solid var(--admin-line); border-radius: 0; background: transparent; line-height: 18px; }
-.dashboard-types .purchase-sync :is(p, a) { margin: 0; }
+/* Tablas de Inicio (compras de un proyecto): columnas fijas, cifras tabulares y toda la fila abre su detalle. */
+.home-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }
+/* Encabezados en una línea: la tabla se detiene en cada fila (scroll-padding de 44 px) y un encabezado de dos líneas
+   dejaría la primera fila visible medio tapada. */
+.home-table thead th { position: relative; overflow: hidden; padding: 0 12px 10px; border-bottom: 1px solid var(--color-line); color: var(--color-ink-label); font-size: 14px; font-weight: 500; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.home-table thead .purchase-sr-only { top: 0; left: 0; }
+.home-table :is(tbody th, td) { padding: 12px; border-bottom: 1px solid var(--color-line-soft); vertical-align: middle; text-align: left; }
+.home-table :is(th, td):first-child { padding-left: 0; }
+.home-table :is(th, td):last-child { padding-right: 0; }
+.home-table tbody th { font-weight: 400; }
+.home-table strong { display: block; overflow: hidden; font-size: 15px; font-weight: 500; line-height: 21px; text-overflow: ellipsis; white-space: nowrap; }
+.home-table small { display: block; overflow: hidden; color: var(--admin-muted); font-size: 14px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.home-table .home-table__num { text-align: right; }
+.home-table__num b { display: block; font-size: 15px; font-weight: 600; line-height: 21px; white-space: nowrap; }
+.home-table .home-table__go { padding-left: 4px; color: var(--color-icon); text-align: right; }
+.home-table tr.is-link { cursor: pointer; transition: background-color 150ms ease-out; }
+.home-table--purchases thead th:nth-child(1) { width: 136px; } .home-table--purchases thead th:nth-child(2) { width: auto; }
+.home-table--purchases thead th:nth-child(3) { width: 24%; } .home-table--purchases thead th:nth-child(4) { width: 124px; } .home-table--purchases thead th:nth-child(5) { width: 28px; }
+.home-table--purchases tbody th a { display: block; color: inherit; text-decoration: none; }
+.home-table--purchases tbody th a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 4px; border-radius: var(--radius-xs); }
+
+/* Rankings de la columna lateral: nombre, barra y monto con su parte. */
+.home-bars { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
+.home-bars li { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name value" "track value"; align-items: center; gap: 6px 16px; min-width: 0; }
+.home-bars__name { grid-area: name; display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 15px; line-height: 20px; }
+.home-bars__name small { margin-left: 6px; color: var(--color-ink-subtle); font-size: 13px; font-variant-numeric: tabular-nums; }
+.home-bars__track { grid-area: track; height: 8px; overflow: hidden; border-radius: 4px; background: var(--color-surface-muted); }
+.home-bars__track i { display: block; height: 100%; border-radius: 4px; background: var(--color-chart-bar); }
+.home-bars__track i.is-muted { background: var(--color-line-strong); }
+.home-bars__value { grid-area: value; display: grid; justify-items: end; }
+.home-bars__value b { font-size: 15px; font-weight: 600; line-height: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.home-bars__value small { color: var(--admin-muted); font-size: 14px; line-height: 19px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Bienes: lo vencido, uno por fila, con cuánto lleva atrasado. */
+:is(.home-assets__list, .home-recent) { margin: 0; padding: 0; list-style: none; }
+:is(.home-assets__list, .home-recent) li + li { border-top: 1px solid var(--color-line); }
+:is(.home-assets__list, .home-recent) a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; margin: 0 -10px; padding: 8px 10px; border-radius: var(--radius-sm); color: var(--color-ink); text-decoration: none; transition: background-color 150ms ease-out; }
+:is(.home-assets__list, .home-recent) span { display: grid; min-width: 0; }
+:is(.home-assets__list, .home-recent) strong { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 15px; font-weight: 500; line-height: 21px; overflow-wrap: anywhere; }
+:is(.home-assets__list, .home-recent) small { overflow: hidden; color: var(--admin-muted); font-size: 14px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.home-assets__list em { flex: none; padding: 3px 9px; border-radius: var(--radius-xs); background: var(--color-surface-chip); color: var(--color-ink-secondary); font-size: 14px; font-style: normal; white-space: nowrap; }
+.home-assets__list em.is-danger { background: var(--color-danger-soft); color: var(--color-danger); }
+.home-assets__list em.is-warning { background: var(--color-warning-soft); color: var(--color-warning); }
+
+/* Sin vencidos: un aviso en verde y las próximas devoluciones (en ámbar las de los próximos siete días). Bienes muestra
+   cuatro filas y desplaza el resto dentro de la lista, también cuando la página desplaza. */
+/* Estado de Bienes junto a su título: en rojo los vencidos (abre la lista completa) y en verde cuando no hay. */
+.home-heading > .home-heading__title { display: inline-flex; align-items: center; gap: 10px; min-width: 0; color: inherit; font-size: inherit; }
+.home-assets__badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: var(--radius-xs); font-size: 14px; line-height: 20px; font-weight: 600; font-variant-numeric: tabular-nums; text-decoration: none; white-space: nowrap; }
+.home-heading .home-assets__badge.is-danger { background: var(--color-danger-soft); box-shadow: inset 0 0 0 1px var(--color-danger-line); color: var(--color-danger); }
+.home-assets__badge.is-success { background: var(--color-success-soft); box-shadow: inset 0 0 0 1px var(--color-success-line); color: var(--color-success); }
+.home-assets__badge.is-success svg { color: var(--color-success-icon); }
+.home-assets__badge:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.home-assets__subtitle { display: flex; align-items: center; gap: 8px; margin: -4px 0 4px; color: var(--color-ink-label); font-size: 14px; line-height: 20px; font-weight: 500; }
+.home-assets__subtitle span { padding: 0 7px; border-radius: var(--radius-xs); background: var(--color-surface-chip); color: var(--color-ink-secondary); font-size: 13px; font-variant-numeric: tabular-nums; }
+.home-assets .home-fit__scroll { overflow: hidden auto; overscroll-behavior: contain; }
+
+/* Últimas compras registradas: descripción, número, fecha de envío y proyecto; el monto a la derecha. Filas
+   compactas: en una ventana de 1280×720 se ven unas cuatro antes de desplazar. */
+.home-recent a { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 12px; min-height: 0; padding-block: 6px; }
+.home-recent small { grid-column: 1 / -1; font-size: 13px; line-height: 18px; font-variant-numeric: tabular-nums; }
+.home-recent strong { -webkit-line-clamp: 1; }
+.home-recent b { font-size: 15px; font-weight: 600; line-height: 19px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.home-recent a:focus-visible, .home-assets__list a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+
+/* «En qué se gasta»: bloques proporcionales al gasto de cada cuenta. Cada celda deja 3 px de aire a cada lado (6 px entre
+   bloques) y la caja lo compensa en el borde. Los tonos bajan de la cuenta mayor a la menor; «Otras cuentas» y lo que no
+   tiene cuenta quedan en gris. Cada bloque es un contenedor: muestra tanto detalle como le cabe. */
+.home-map { display: flex; flex-direction: column; min-width: 0; }
+.home-map__plot { position: relative; height: clamp(240px, 30vh, 380px); margin: -3px; }
+.home-map__tiles { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; }
+.home-map__cell { position: absolute; box-sizing: border-box; padding: 3px; container-type: size; }
+.home-map__tile { display: flex; flex-direction: column; gap: 2px; box-sizing: border-box; height: 100%; padding: clamp(10px, 1vw, 16px); overflow: hidden; border-radius: var(--radius-md);
+  background: var(--tile, var(--color-chart-bar)); color: var(--color-ink); transition: filter 150ms ease-out; }
+.home-map__tile.tone-0 { --tile: var(--color-focus); color: var(--color-on-primary); }
+.home-map__tile.tone-1 { --tile: var(--color-chart-bar); }
+.home-map__tile.tone-2 { --tile: color-mix(in srgb, var(--color-chart-bar) 74%, var(--color-surface)); }
+.home-map__tile.tone-3 { --tile: color-mix(in srgb, var(--color-chart-bar) 56%, var(--color-surface)); }
+.home-map__tile.tone-4 { --tile: color-mix(in srgb, var(--color-chart-bar) 40%, var(--color-surface)); }
+.home-map__tile.tone-5 { --tile: color-mix(in srgb, var(--color-chart-bar) 27%, var(--color-surface)); }
+.home-map__tile.is-muted { --tile: var(--color-surface-chip); box-shadow: inset 0 0 0 1px var(--color-line); color: var(--color-ink-secondary); }
+.home-map__name { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 15px; font-weight: 600; line-height: 20px; overflow-wrap: break-word; hyphens: auto; }
+.home-map__code { font-size: 13px; line-height: 18px; font-variant-numeric: tabular-nums; }
+.home-map__figures { display: grid; gap: 1px; margin-top: auto; }
+/* El monto escala con el ancho de su bloque (cqi) para leerse completo: «$1.825.000» mide unas seis veces su letra. */
+.home-map__amount { overflow: hidden; font-size: clamp(14px, min(13cqi, 1.3vw), 26px); font-weight: 600; line-height: 1.2; letter-spacing: -.3px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.home-map__part { overflow: hidden; font-size: 14px; line-height: 19px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+/* Menos espacio, menos detalle: primero el código y la cantidad de compras, luego el monto; al final queda sólo el
+   porcentaje y, en un bloque mínimo, nada (el título y el texto para lectores conservan todo). */
+@container (min-height: 190px) { .home-map__name { -webkit-line-clamp: 3; } }
+@container (max-height: 132px) { .home-map__code { display: none; } }
+@container (max-width: 190px) or (max-height: 112px) { .home-map__count { display: none; } }
+@container (max-height: 112px) { .home-map__name { -webkit-line-clamp: 1; } }
+@container (max-width: 96px) or (max-height: 80px) { .home-map__amount { display: none; } }
+@container (max-width: 112px) { .home-map__tile { padding-inline: 9px; } .home-map__name { font-size: 13px; line-height: 17px; } }
+@container (max-width: 112px) and (min-height: 100px) { .home-map__name { -webkit-line-clamp: 2; } }
+@container (max-height: 60px) { .home-map__tile { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; padding-block: 0; } .home-map__name { -webkit-line-clamp: 1; } .home-map__figures { margin: 0; } }
+@container (max-width: 72px) or (max-height: 40px) { .home-map__name { display: none; } .home-map__tile { justify-content: center; align-items: center; padding: 4px; } .home-map__figures { margin: 0; } }
+@container (max-width: 34px) or (max-height: 24px) { .home-map__figures { display: none; } }
+.home-loading__map { margin: 0; }
+
+/* Integraciones opcionales (segunda revisión y Sheets), sólo cuando están habilitadas. */
+.home-rail__status .dashboard-review { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; line-height: 20px; }
+.home-rail__status .dashboard-review > strong { margin-left: auto; font-size: 15px; font-variant-numeric: tabular-nums; }
+.home-rail__status .dashboard-review :is(p, a) { margin: 0; font-size: 14px; }
+.home-rail__status .purchase-sync { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; line-height: 20px; }
+.home-rail__status .dashboard-review + .purchase-sync { margin-top: 14px; }
+.home-rail__status .purchase-sync :is(p, a) { margin: 0; }
+
+.home-main > .cenit-notice { margin: 0; }
+.home-project-empty { margin-top: 4px; }
+.home-loading__bars { display: flex; align-items: flex-end; gap: 12px; height: clamp(200px, 27vh, 400px); margin-left: 56px; }
+.home-loading__bars > span { flex: 1; border-radius: 6px 6px 0 0; }
+.home-loading-lines { display: grid; gap: 16px; margin-top: 16px; }
+
 @media (hover: hover) {
-  .dashboard-recent li a:hover, .dashboard-legend button:hover { background: var(--color-surface-hover); }
-  .dashboard-monthly__bars:has(.dashboard-monthly__column:hover) .dashboard-monthly__column:focus:not(:hover) .dashboard-chart-tooltip { display: none; }
-  .dashboard-monthly__column:hover .dashboard-chart-tooltip { display: block; }
-  .dashboard-monthly__column:hover .dashboard-monthly__bar { background: var(--color-focus); }
+  .home-table tr.is-link:hover { background: var(--color-surface-hover); }
+  .home-table tr.is-link:hover .home-table__go { color: var(--color-ink); }
+  :is(.home-assets__list, .home-recent) a:hover { background: var(--color-surface); }
+  .home-heading > a:hover { color: var(--color-ink); }
+  .home-chip:hover { background: var(--color-surface-hover); color: var(--color-ink); }
+  .home-map__cell:hover .home-map__tile { filter: brightness(.96); }
+  .home-chip:hover > svg:last-child { translate: 2px 0; }
+  .home-heading .home-assets__badge.is-danger:hover { background: color-mix(in srgb, var(--color-danger-line) 40%, var(--color-danger-soft)); }
+  .home-chip.home-chip--back:hover > svg { translate: -2px 0; }
 }
-@media (max-width: 1100px) { .dashboard-grid { grid-template-columns: minmax(0, 1fr); } }
-/* Escritorio: Inicio cabe completo en la ventana; si falta alto, desplaza sólo la lista de últimos registros. */
-@media (min-width: 1101px) and (min-height: 600px) {
+@media (min-width: 1800px) {
+  .admin-home { --home-gap: 44px; }
+  .home-layout { grid-template-columns: minmax(0, 2.2fr) minmax(420px, 1fr); }
+  .home-main { gap: 48px; }
+  .home-rail__card { padding: 8px 32px; }
+  .home-rail__section { padding: 28px 0; }
+}
+@media (max-width: 1100px) {
+  .home-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Inicio cabe completo en la ventana de escritorio (MacBook Air incluido): la página no se desplaza ni de lado.
+   El alto se reparte solo, con flexbox: cada lista mide lo que traen sus filas y el gráfico toma el resto; si una lista
+   trae más filas de las que caben, se recorta al final de la última fila completa y desplaza sólo ella. */
+.home-fit { min-width: 0; }
+/* Barra de desplazamiento sutil y siempre visible: avisa que la lista trae más filas de las que caben. Sólo aparece
+   cuando hay algo que desplazar. `.admin-content` define `scrollbar-color`, que se hereda y anula ::-webkit-scrollbar:
+   se restablece aquí para que el navegador no la oculte (macOS la deja flotante y escondida). Firefox usa lo estándar. */
+.home-fit__scroll, .home-project-options { scrollbar-color: auto; scrollbar-width: auto; }
+.home-fit__scroll::-webkit-scrollbar, .home-project-options::-webkit-scrollbar { width: 8px; }
+.home-fit__scroll::-webkit-scrollbar-track, .home-project-options::-webkit-scrollbar-track { background: transparent; }
+.home-fit__scroll::-webkit-scrollbar-thumb, .home-project-options::-webkit-scrollbar-thumb { border-radius: 4px; background: color-mix(in srgb, var(--color-ink-subtle) 40%, transparent); }
+.home-fit__scroll::-webkit-scrollbar-thumb:hover, .home-project-options::-webkit-scrollbar-thumb:hover { background: var(--color-ink-subtle); }
+@supports not selector(::-webkit-scrollbar) {
+  .home-fit__scroll, .home-project-options { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--color-ink-subtle) 40%, transparent) transparent; }
+}
+.home-table thead th { background: var(--color-surface); }
+@media (min-width: 1101px) and (min-height: 700px) {
   .admin-content:has(.admin-home) { display: flex; flex-direction: column; padding-block: 20px; }
   .admin-content:has(.admin-home) > .cenit-page-enter { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .admin-home, .dashboard-purchases { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-  .admin-home-heading { margin-bottom: 14px; }
-  .dashboard-kpis { margin-bottom: 14px; }
-  .dashboard-kpis > div { padding: 12px 16px; }
-  .dashboard-kpis dd { margin: 4px 0 2px; font-size: clamp(22px, 3.4vh, 32px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .dashboard-loading__value { margin: 4px 0 2px; font-size: clamp(22px, 3.4vh, 32px); }
-  .dashboard-grid { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px; }
-  .dashboard-card { display: flex; flex-direction: column; min-height: 0; padding: 14px 18px; }
-  .dashboard-section-heading { margin-bottom: 8px; }
-  .dashboard-monthly { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-  .dashboard-monthly__bars { flex: 1; height: auto; min-height: 80px; }
-  .dashboard-types { overflow-y: auto; }
-  .dashboard-types-body { flex: 1; }
-  .dashboard-donut { width: clamp(84px, 14vh, 140px); margin: 0; }
-  /* position: relative keeps the visually hidden labels inside the scroll box instead of stretching the page. */
-  .dashboard-recent ul { position: relative; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: start; scrollbar-gutter: stable; }
+  .admin-home-heading { margin-bottom: 20px; }
+  .home-layout { flex: 1; min-height: 0; align-items: stretch; }
+  .home-main { min-height: 0; gap: 24px; }
+  /* El gasto toma el alto libre y nunca baja de su contenido; la tabla mide sus filas, hasta un poco más de la mitad. */
+  .home-spend { flex: 1 1 0; gap: 14px; }
+  .home-figure--main .home-figure__value { font-size: clamp(30px, min(2.6vw, 4.6vh), 50px); }
+  .home-chart { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+  .home-chart__plot { flex: 1; height: auto; min-height: 96px; }
+  .home-projects { display: flex; flex: 0 1 auto; flex-direction: column; min-height: 196px; max-height: 55%; }
+  /* La figura por cuenta toma cerca de un tercio del alto (más en ventanas altas, nunca menos de 190 px); el gráfico mensual,
+     lo demás. */
+  .home-map { flex: 0 0 auto; }
+  .home-map__plot { height: clamp(190px, 31vh, 460px); }
+  /* Listas (useWholeRows): nunca muestran media fila y llenan su caja; si hay más, desplazan dentro y se detienen en cada fila. */
+  .home-fit { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; }
+  .home-fit__scroll { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden auto; overscroll-behavior: contain; scroll-snap-type: y proximity; }
+  .home-fit__scroll > :is(ul, table) { flex: 0 0 auto; }
+  .home-fit__scroll--table { scroll-padding-top: 44px; }
+  .home-fit__scroll [data-row] { scroll-snap-align: start; }
+  .home-fit__scroll:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  .home-table thead th { position: sticky; top: 0; z-index: 1; }
+  /* Columna lateral: la tarjeta ocupa siempre todo el alto de la fila. Sus secciones (Bienes y compras; cuentas y
+     proveedores) crecen por partes iguales: si no cabe todo, el alto queda repartido por mitades y cada lista muestra las
+     filas completas que caben y desplaza el resto; si sobra, cada sección recibe la misma parte del sobrante y sus barras
+     se separan un poco (hasta 96 px por fila), de modo que la tarjeta llega al fondo sin huecos dispares. Las
+     integraciones opcionales (tercera fila) miden su contenido. */
+  .home-rail { display: grid; grid-template-rows: minmax(0, 1fr); min-height: 0; }
+  .home-rail__card { display: grid; grid-template-rows: minmax(0, auto) minmax(0, auto); grid-auto-rows: max-content; align-content: stretch; min-height: 0; overflow: hidden; }
+  .home-rail__section { display: flex; flex-direction: column; min-height: 0; padding: 18px 0; }
+  /* En la columna lateral cada caja pide el alto natural de su lista (`--fit-natural`) y la lista se dibuja encima, sin
+     sumar al cálculo: así el recorte por filas completas no cambia cuánto alto recibe cada sección. Las filas resaltan
+     10 px hacia los lados al pasar el cursor: ese margen queda dentro de la lista. */
+  .home-rail .home-fit { position: relative; flex: 1 1 auto; height: var(--fit-natural, auto); }
+  .home-rail .home-fit__scroll { position: absolute; top: 0; right: -10px; bottom: 0; left: -10px; max-height: 100%; padding-inline: 10px; }
+  .home-rail .home-fit__scroll > .home-bars { flex-grow: 1; align-content: space-evenly; max-height: calc(var(--rows, 99) * 96px); }
+  /* La lista sobresale 10 px a cada lado: la caja no recorta de lado para que su barra de desplazamiento se vea. */
+  .home-rail .home-fit { overflow: visible clip; }
+  /* Filas compactas en la columna lateral: caben cuatro préstamos y unas cuatro compras en 1280×720. */
+  .home-assets__list a { min-height: 0; padding-block: 4px; }
+  .home-recent a { padding-block: 4px; }
+  :is(.home-assets__list, .home-recent) strong { line-height: 20px; }
+  .home-assets__list small { font-size: 13px; line-height: 18px; }
+  .home-assets__list em { padding-block: 2px; font-size: 13px; }
+  /* Una línea por bien: las filas miden lo mismo y caben más préstamos; el nombre completo queda en el título. */
+  :is(.home-assets__list, .home-recent) strong { -webkit-line-clamp: 1; }
+  .home-bars { gap: 12px; }
+  /* --fit-extra: alto que useWholeRows reparte entre las filas visibles para que la lista llene su caja. */
+  .home-table :is(tbody th, td) { padding-block: calc(10px + var(--fit-extra, 0px) / 2); }
+  .home-fit__scroll li[data-row] { padding-block: calc(var(--fit-extra, 0px) / 2); }
+  .home-loading__bars { height: auto; flex: 1; min-height: 110px; }
+  .home-loading .home-spend { flex: 1 1 0; }
 }
-@media (min-width: 1101px) and (min-height: 600px) {
-  .dashboard-grid { grid-template-rows: minmax(0, 1fr) minmax(0, auto); }
-  .dashboard-recent { max-height: 35vh; }
-  .dashboard-recent ul { flex: 0 1 auto; }
+/* Ventanas bajas (MacBook Air, 1280×720): menos aire entre bloques para que las listas muestren una fila más. */
+@media (min-width: 1101px) and (min-height: 700px) and (max-height: 820px) {
+  .admin-home-heading { margin-bottom: 16px; }
+  .home-main { gap: 18px; }
+  .home-heading { margin-bottom: 10px; }
+  .home-rail__section { padding-block: 10px; }
+  .home-rail .home-heading { margin-bottom: 8px; }
+    .home-recent strong { line-height: 19px; }
+  .home-recent small { line-height: 17px; }
 }

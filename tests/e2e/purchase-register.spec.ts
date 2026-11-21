@@ -20,7 +20,7 @@ test('registro: una lista histórica sin segunda revisión, conservando ambos es
     expect(saved.status()).toBe(201);
     if (i % 2) expect((await page.request.post(`/api/v1/purchases/${(await saved.json()).data.id}/validation`, { headers: { origin }, data: { expectedVersion: 1 } })).status()).toBe(200);
   }
-  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByRole('link', { name: 'Ir a Compras', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Registro de compras', exact: true })).toBeVisible();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(prefix);
   const list = page.getByRole('region', { name: 'Compras registradas', exact: true });
@@ -66,7 +66,7 @@ test('historial: conserva año, mes y orden al recargar', async ({ page }) => {
     expect((await page.request.post('/api/v1/purchases', { headers, data: input })).status()).toBe(201);
   }
 
-  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByRole('link', { name: 'Ir a Compras', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(prefix);
   const list = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
   const rows = list.getByRole('link', { name: /^Ver detalles de PERIODO-/ });
@@ -99,7 +99,7 @@ test('registro: guardado explícito sin segunda revisión y estado de Sheets sep
   let state: 'pending' | 'error' | 'synced' = 'pending';
   await page.route('**/api/v1/purchases/sheets-sync*', route => route.fulfill({ json: { data: { status: state, pending: state === 'synced' ? 0 : 1, lastSyncedAt: state === 'synced' ? '2026-10-21T00:00:00.000Z' : null, url: 'https://docs.google.com/spreadsheets/d/fake_test_only/edit' } } }));
   await login(page, 'administrativo');
-  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByRole('link', { name: 'Ir a Compras', exact: true }).click();
   await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
   await page.getByLabel('Nº Documento / solicitud *', { exact: true }).fill('MANUAL-' + crypto.randomUUID().slice(0, 8));
   await page.getByLabel('Fecha de envío *', { exact: true }).fill('21/10/2026');

@@ -78,19 +78,17 @@ export function DeliveryDetail() {
     <BackLink to="/administracion/bienes/entregas">Volver a Entregas</BackLink>
     <header className="assets-heading"><div><h1>Entrega N° {delivery.number}</h1><p>Entregada el {displayDate(delivery.deliveredOn)}. Imprime el acta y pide las firmas; Cenit no guarda el papel firmado.</p></div>
       <div className="assets-actions"><PdfButton primary path={documentPath.delivery(delivery.id)} fileName={`entrega-${delivery.number.replace('/', '-')}`}>Descargar acta para firmar</PdfButton></div></header>
-    <div className="assets-layout">
-      <div className="assets-stack">
-        <section className="assets-card"><div className="assets-card__head"><h2>Bienes entregados</h2><span className="assets-sub">{delivery.items.length} {delivery.items.length === 1 ? 'bien' : 'bienes'}</span></div>
-          <ItemsTable items={delivery.items.map(item => ({ key: item.assetId, ...item }))} /></section>
-        <section className="assets-card"><div className="assets-card__head"><h2>Detalle</h2></div>
-          <dl className="assets-facts">
-            <div className="assets-facts__wide"><dt>Motivo</dt><dd>{delivery.reason}</dd></div>
-            <div><dt>Nueva ubicación</dt><dd className={delivery.destination ? undefined : 'assets-muted'}>{delivery.destination ?? 'Conservaron su ubicación'}</dd></div>
-            <div><dt>Entrega</dt><dd>{delivery.giverName}<span className="assets-sub">{[delivery.giverPosition, delivery.giverUnit].filter(Boolean).join(' · ')}</span></dd></div>
-            <div><dt>Registrada en Cenit</dt><dd>{displayInstantDate(delivery.createdAt)}<span className="assets-sub">por {delivery.createdBy}</span></dd></div>
-            {delivery.notes && <div className="assets-facts__wide"><dt>Observaciones</dt><dd>{delivery.notes}</dd></div>}
-          </dl></section>
-      </div>
+    <div className="assets-layout assets-layout--record">
+      <section className="assets-card assets-layout__full"><div className="assets-card__head"><h2>Bienes entregados</h2><span className="assets-sub">{delivery.items.length} {delivery.items.length === 1 ? 'bien' : 'bienes'}</span></div>
+        <ItemsTable items={delivery.items.map(item => ({ key: item.assetId, ...item }))} /></section>
+      <section className="assets-card"><div className="assets-card__head"><h2>Detalle</h2></div>
+        <dl className="assets-facts">
+          <div className="assets-facts__wide"><dt>Motivo</dt><dd>{delivery.reason}</dd></div>
+          <div><dt>Nueva ubicación</dt><dd className={delivery.destination ? undefined : 'assets-muted'}>{delivery.destination ?? 'Conservaron su ubicación'}</dd></div>
+          <div><dt>Entrega</dt><dd>{delivery.giverName}<span className="assets-sub">{[delivery.giverPosition, delivery.giverUnit].filter(Boolean).join(' · ')}</span></dd></div>
+          <div><dt>Registrada en Cenit</dt><dd>{displayInstantDate(delivery.createdAt)}<span className="assets-sub">por {delivery.createdBy}</span></dd></div>
+          {delivery.notes && <div className="assets-facts__wide"><dt>Observaciones</dt><dd>{delivery.notes}</dd></div>}
+        </dl></section>
       <aside className="assets-stack"><section className="assets-card"><div className="assets-card__head"><h2>Recibe conforme</h2></div><PersonCard person={delivery.receiver} /></section></aside>
     </div>
   </section>;

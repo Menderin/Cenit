@@ -6,7 +6,7 @@ import { mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { Value } from '@sinclair/typebox/value';
-import { PurchaseResponseSchema, PurchaseListResponseSchema, PurchaseSummaryResponseSchema, PurchaseDeletionResponseSchema, headerFields, lineFields, administrativeFields, type PurchaseRecord } from '../../packages/contracts/src/purchases/index.js';
+import { PurchaseResponseSchema, PurchaseListResponseSchema, PurchaseSummaryResponseSchema, PurchaseProjectsResponseSchema, PurchaseProjectSummaryResponseSchema, PurchaseDeletionResponseSchema, headerFields, lineFields, administrativeFields, type PurchaseRecord } from '../../packages/contracts/src/purchases/index.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 import { createTestPool, closeTestPool } from './support/postgres.js';
 import { createDemoCredentials, prepareDemoAccounts } from '../../db/seeds/auth-demo.js';
@@ -351,6 +351,45 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     expect(reviewed.days.at(-1)).toEqual({ date: '2098-01-02', count: 0 });
     expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: 2 })).statusCode).toBe(200);
     expect((await request('GET', '/api/v1/purchases/summary')).json().data).toEqual(before);
+  });
+  it('Inicio por año y por proyecto suma los ítems del proyecto y nombra los códigos desde el catálogo oficial', async () => {
+    const input = body(); input.header.sentDate = '2097-01-15'; input.header.totalAmount = '1500';
+    const line = input.lines[0]!;
+    input.lines = [
+      { ...line, provider: 'Proveedor uno ficticio', amount: '700', unitCode: '270101', projectCode: '20702029', accountingCode: '410103', costCenter: null },
+      { ...line, provider: 'Proveedor dos ficticio', amount: '300', unitCode: '270201', projectCode: '99000777', accountingCode: '420405',
+        costCenter: '270201-Depto. de Ciencias Biomedicas / 99000777-Proyecto de prueba / 420405-Comestibles y Bebidas' },
+    ];
+    const saved = (await request('POST', '/api/v1/purchases', input)).json().data;
+    const year = (await request('GET', '/api/v1/purchases/summary?year=2097')).json().data;
+    expect(Value.Check(PurchaseSummaryResponseSchema, { data: year })).toBe(true);
+    expect(year.overview).toMatchObject({ year: '2097', registeredThisYear: 1, documentTotalThisYear: '1500', lineTotal: '1000', projectCount: 2 });
+    expect(year.overview.availableYears).toContain(2097);
+    expect(year.overview.projects).toEqual([
+      { code: '20702029', name: expect.stringMatching(/^12 va Versión Programa de Formación de Especialistas/), count: 1, amount: '700', months: ['700', ...Array(11).fill('0')] },
+      { code: '99000777', name: 'Proyecto de prueba', count: 1, amount: '300', months: ['300', ...Array(11).fill('0')] },
+    ]);
+    expect(year.overview.accounts[0]).toEqual({ code: '410103', name: 'Remuneraciones Profesores Hora P. Temporal. Acádémica G.Op.', count: 1, amount: '700' });
+    const options = (await request('GET', '/api/v1/purchases/projects?year=2097')).json().data;
+    expect(Value.Check(PurchaseProjectsResponseSchema, { data: options })).toBe(true);
+    expect(options.projects.slice(0, 2).map((project: { code: string }) => project.code)).toEqual(['20702029', '99000777']);
+    expect(options.projects.find((project: { code: string }) => project.code === '99000777')).toMatchObject({ inCatalog: false, units: ['270201'], count: 1, amount: '300' });
+    expect(options.projects.find((project: { code: string }) => project.code === '40101001')).toMatchObject({ inCatalog: true, units: ['270101', '270201', '270202', '270203'], count: 0, amount: '0' });
+    const project = await request('GET', '/api/v1/purchases/projects/20702029?year=2097');
+    expect(project.statusCode).toBe(200); expect(Value.Check(PurchaseProjectSummaryResponseSchema, project.json())).toBe(true);
+    expect(project.json().data).toMatchObject({ code: '20702029', inCatalog: true, year: '2097', count: 1, amount: '700', lineCount: 1, linesWithoutAmount: 0, yearLineTotal: '1000', providerCount: 1, lastSentDate: '2097-01-15',
+      units: [{ code: '270101', name: 'Decanatura Facultad de Medicina', count: 1, amount: '700' }],
+      providers: [{ name: 'Proveedor uno ficticio', count: 1, amount: '700' }],
+      purchases: [{ id: saved.id, provider: 'Proveedor uno ficticio', accountingCode: '410103', amount: '700' }] });
+    expect(project.json().data.monthlyTotals[0]).toEqual({ month: '2097-01', count: 1, amount: '700' });
+    expect(project.json().data.availableYears).toContain(2097);
+    const empty = (await request('GET', '/api/v1/purchases/projects/20702029?year=2096')).json().data;
+    expect(empty).toMatchObject({ count: 0, amount: '0', purchases: [], units: [{ code: '270101', count: 0, amount: '0' }] });
+    expect((await request('GET', '/api/v1/purchases/projects/12345670')).statusCode).toBe(404);
+    expect((await request('GET', '/api/v1/purchases/summary?year=0000')).statusCode).toBe(400);
+    expect((await request('GET', '/api/v1/purchases/projects?year=20977')).statusCode).toBe(400);
+    expect((await request('GET', '/api/v1/purchases/projects/20702029', undefined, cookies.docente)).statusCode).toBe(403);
+    expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: 1 })).statusCode).toBe(200);
   });
   it('el resumen devuelve las ocho altas más recientes', async () => {
     const saved: { id: string; version: number }[] = [];

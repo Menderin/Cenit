@@ -29,6 +29,7 @@
 .personnel-field textarea.cenit-input { resize: vertical; line-height: 1.5; }
 .personnel-optional { color: var(--color-ink-subtle); font-weight: 400; }
 .personnel-error { margin: 0; color: var(--color-danger); font-size: 12px; line-height: 1.4; }
+.personnel-field__hint { margin: 0; color: var(--color-ink-muted); font-size: 12px; line-height: 1.4; }
 .personnel-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .personnel-choice { display: inline-flex; flex-wrap: wrap; gap: 3px; align-self: flex-start; padding: 3px; border-radius: var(--radius-md); background: var(--color-surface-chip); }
@@ -102,24 +103,8 @@
 .personnel-preview__sheet { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 28px 20px 40px; }
 .personnel-preview__sheet > div { width: max-content; margin: 0 auto; }
 
-/* Hoja carta con la plantilla del formulario; la geometría de cada documento replica la del PDF del servidor. */
-.personnel-paper { --paper-width: 181mm; box-sizing: border-box; width: 216mm; min-height: 279.4mm; padding: 5mm 5mm 15mm 15mm; background: #fff; color: #000; box-shadow: 0 1px 3px #0000001f, 0 10px 30px #00000014; }
-.personnel-paper--leave { --paper-width: 190.5mm; padding: 12.7mm 12.75mm; }
-.personnel-paper * { box-sizing: border-box; }
-.personnel-paper__canvas { position: relative; width: var(--paper-width); aspect-ratio: var(--paper-ratio); font-family: "Bookman Old Style", Bookman, Georgia, serif; }
-.personnel-paper--leave .personnel-paper__canvas { font-family: Arial, Helvetica, sans-serif; }
-.personnel-template { position: relative; display: block; }
-.personnel-template > img { display: block; width: 100%; height: auto; }
-.personnel-template:not([data-state="ready"]) > img, .personnel-paper__canvas:has(.personnel-template:not([data-state="ready"])) .personnel-paper__value { visibility: hidden; }
-.personnel-template__placeholder { position: absolute; inset: 0; display: grid; align-content: start; justify-items: center; gap: 12px; padding: 8% 10%; overflow: hidden; color: var(--color-ink-muted); font: 13px/1.5 var(--font-sans); }
-.personnel-template__fields { display: grid; gap: 10px; width: 100%; margin-top: 18px; }
-.personnel-template__fields > .cenit-skeleton { height: clamp(20px, 3vw, 32px); }
-.personnel-paper__value { position: absolute; display: flex; align-items: center; justify-content: center; padding: 0 2px; text-align: center; text-transform: uppercase; }
-.personnel-paper__value > span { display: block; width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; font-size: calc(var(--paper-width) / var(--paper-sheet-width) * 13.3333); line-height: 1.1; }
-.personnel-paper__value--keep-case { text-transform: none; }
-.personnel-paper__value--left { text-align: left; }
-.personnel-paper__value[data-overflow="true"] { outline: 2px solid var(--color-danger); }
-.personnel-paper__draft { display: block; width: var(--paper-width); margin-top: 2mm; font: 7px/1.2 Arial, sans-serif; text-align: center; color: #555; }
+/* La hoja del formulario (componente común) se muestra a tamaño carta real dentro de la vista previa con zoom. */
+.personnel-preview__sheet .cenit-form { width: 215.9mm; }
 .personnel-print-error { margin: 0 0 12px; color: var(--color-danger); font-size: 13px; }
 
 @media (max-width: 1100px) {
@@ -154,7 +139,7 @@
 .personnel-documents__stack::before, .personnel-documents__stack::after { content: ""; position: absolute; inset: 0; border-radius: 2px; background: #fff; box-shadow: 0 1px 3px #0000001f; }
 .personnel-documents__stack::before { transform: rotate(calc(var(--tilt) * -1.6)) translate(-4%, 1%); opacity: .75; }
 .personnel-documents__stack::after { transform: rotate(calc(var(--tilt) * 1.2)) translate(5%, 0); opacity: .9; }
-.personnel-documents__stack .personnel-template { z-index: 1; padding: 12px; background: #fff; border-radius: 2px; box-shadow: 0 2px 4px #0000001a, 0 18px 36px #0000002b; }
+.personnel-documents__stack .cenit-form-template { z-index: 1; padding: 12px; background: #fff; border-radius: 2px; box-shadow: 0 2px 4px #0000001a, 0 18px 36px #0000002b; }
 .personnel-documents__tag { position: absolute; z-index: 2; top: 14px; left: 14px; padding: 4px 10px; border-radius: 999px; background: var(--color-surface); color: var(--color-ink-secondary); font-size: 12px; font-weight: 500; box-shadow: var(--shadow-control); }
 .personnel-documents__body { position: relative; z-index: 3; display: flex; flex-direction: column; gap: 8px; min-height: 108px; padding: 20px 24px 22px; background: var(--color-surface); box-shadow: 0 -10px 24px -12px #00000040; }
 .personnel-documents h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 17px; }

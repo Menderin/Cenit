@@ -45,7 +45,7 @@ for (const role of ['administrativo', 'docente', 'estudiante']) {
       await page.goto(detail); await expect(page).toHaveURL(/\/academico$/);
     }
     if (role !== 'administrativo') await expect(page.getByRole('region', { name: 'Asignaturas por semestre' })).toBeVisible();
-    else await expect(page.getByRole('link', { name: 'Ver registros', exact: true })).toBeVisible();
+    else await expect(page.getByRole('link', { name: 'Ir a Compras', exact: true })).toBeVisible();
     await page.goto('/prototipo.html'); await expect(page).toHaveURL(new RegExp(`${path}$`));
     await page.goto('/compras'); await expect(page).toHaveURL(new RegExp(`${path}$`));
     await page.goto('/login'); await expect(page).toHaveURL(new RegExp(`${path}$`));
@@ -70,6 +70,12 @@ test('logout invalida cookie, atrás no restaura cuenta y permite otra identidad
   const cookie = (await context.cookies()).find(c => c.name === 'cenit_session')!;
   await page.getByRole('button', { name: 'Cerrar sesión' }).click();
   await expect(page).toHaveURL(/\/login$/);
+  const notice = page.getByRole('region', { name: /^Avisos/ }).getByRole('listitem').filter({ hasText: 'Saliste de Cenit' });
+  await expect(notice).toBeVisible();
+  await expect(notice).toHaveAttribute('data-x-position', 'right');
+  await expect(notice).toHaveAttribute('data-y-position', 'bottom');
+  await expect(notice).toHaveCSS('background-color', 'rgb(237, 245, 239)');
+  await expect(page.locator('.cenit-access__feedback')).toBeEmpty();
   const response = await context.request.get('/api/v1/auth/session', { headers: { Cookie: `${cookie.name}=${cookie.value}` } });
   expect(response.status()).toBe(401);
   await page.goBack(); await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
@@ -83,7 +89,12 @@ test('expiración del reloj del navegador oculta cuenta y pide login', async ({ 
   const account = await login(page);
   await page.clock.fastForward(7201000);
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
+  await expect(page.getByRole('region', { name: /^Avisos/ }).getByText('Tu sesión expiró', { exact: true })).toBeVisible();
+  const expired = page.getByRole('region', { name: /^Avisos/ }).getByRole('listitem').filter({ hasText: 'Tu sesión expiró' });
+  await expect(expired).toHaveAttribute('data-x-position', 'right');
+  await expect(expired).toHaveAttribute('data-y-position', 'bottom');
+  await expect(expired).toHaveCSS('background-color', 'rgb(251, 247, 238)');
+  await expect(page.locator('.cenit-access__feedback')).toBeEmpty();
   await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
 });
 test('avisa cinco minutos antes, actualiza el tiempo y vence sin renovación', async ({ page }) => {
@@ -98,7 +109,7 @@ test('avisa cinco minutos antes, actualiza el tiempo y vence sin renovación', a
   await expect(warning.getByRole('status')).toHaveText('Tu sesión vencerá en 1 minuto. Guarda tu trabajo antes de volver a iniciar sesión.');
   await page.clock.fastForward(60000);
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
+  await expect(page.getByRole('region', { name: /^Avisos/ }).getByText('Tu sesión expiró', { exact: true })).toBeVisible();
 });
 test('el aviso permite cerrar la sesión antes del vencimiento', async ({ page }) => {
   await page.clock.install();
@@ -106,14 +117,14 @@ test('el aviso permite cerrar la sesión antes del vencimiento', async ({ page }
   await page.clock.fastForward(6901000);
   await page.getByRole('button', { name: 'Cerrar sesión ahora', exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Sesión cerrada.');
+  await expect(page.getByRole('region', { name: /^Avisos/ }).getByText('Saliste de Cenit', { exact: true })).toBeVisible();
   expect((await page.request.get('/api/v1/auth/session')).status()).toBe(401);
 });
 test('401 al revalidar oculta cuenta y avisa', async ({ page }) => {
   const account = await login(page);
   await page.route('**/api/v1/auth/session', route => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: { code: 'AUTHENTICATION_REQUIRED', message: 'Debes iniciar sesión.', requestId: 'test' } }) }));
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
+  await expect(page.getByRole('region', { name: /^Avisos/ }).getByText('Tu sesión expiró', { exact: true })).toBeVisible();
   await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
 });
 test('fallo de logout oculta contenido y permite reintentar sin falso éxito', async ({ page }) => {
@@ -121,6 +132,7 @@ test('fallo de logout oculta contenido y permite reintentar sin falso éxito', a
   await page.route('**/api/v1/auth/logout', route => route.abort());
   await page.getByRole('button', { name: 'Cerrar sesión' }).click();
   await expect(page.getByRole('alert')).toHaveText('No se pudo confirmar el cierre de sesión.');
+  await expect(page.getByText('Saliste de Cenit', { exact: true })).toHaveCount(0);
   await expect(page.getByText(account.name, { exact: true })).toHaveCount(0);
   await page.unroute('**/api/v1/auth/logout');
   await page.getByRole('button', { name: 'Reintentar' }).click();
@@ -406,12 +418,15 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await expect(page.getByText('Prototipo con datos ficticios', { exact: true })).toHaveCount(0);
   const indicators = page.getByRole('definition');
   const summary = (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
-  await expect(indicators.nth(0)).toHaveText(String(summary.overview.registeredThisYear));
-  await expect(indicators.nth(2)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.overview.documentTotalThisYear)));
-  await expect(indicators.nth(4)).toHaveText(new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(summary.overview.documentTotalThisMonth)));
-  // The monthly chart is drawn with bars and repeated as a table for assistive technology.
-  await expect(page.getByRole('table', { name: 'Monto documental por mes de envío' })).toHaveCount(1);
-  await expect(page.locator('.dashboard-monthly__column')).toHaveCount(12);
+  const clp = (value: string) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(BigInt(value));
+  await expect(indicators.nth(0)).toHaveText(clp(summary.overview.documentTotalThisYear));
+  await expect(indicators.nth(1)).toHaveText(new RegExp(`^${summary.overview.registeredThisYear} ${summary.overview.registeredThisYear === 1 ? 'compra' : 'compras'}( · \\d+ proyectos?)?$`));
+  await expect(indicators.nth(2)).toHaveText(clp(summary.overview.documentTotalThisMonth));
+  // The monthly chart is drawn with bars and repeated as a table for assistive technology; a year without purchases says so instead.
+  if (summary.overview.monthlyTotals.some((month: { amount: string }) => BigInt(month.amount) > 0n)) {
+    await expect(page.getByRole('table', { name: 'Monto documental por mes de envío' })).toHaveCount(1);
+    await expect(page.locator('.home-chart__column')).toHaveCount(12);
+  } else await expect(page.getByText(/^Aún no hay compras con fecha de envío en \d{4}\.$/)).toBeVisible();
   await expect(page.getByRole('button', { name: /aprobar/i })).toHaveCount(0);
   for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });

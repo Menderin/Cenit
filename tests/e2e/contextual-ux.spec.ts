@@ -11,7 +11,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   };
   const summary = async () => (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
   const check = async (yearRequests: number, pendingCount: number, amount: string) => {
-    await expect(page.locator('.dashboard-kpis dd').first()).toHaveText(String(yearRequests));
+    await expect(page.locator('.home-figure--main .home-figure__detail')).toHaveText(new RegExp(`^${yearRequests} ${yearRequests === 1 ? 'compra' : 'compras'}( · \\d+ proyectos?)?$`));
     const review = page.getByRole('region', { name: 'Segunda revisión' });
     await expect(review).toContainText(String(pendingCount));
     await expect(review).toContainText(amountLabel(amount));
@@ -21,7 +21,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   const beforeMonth = before.overview.monthlyTotals.find((month: { month: string }) => month.month === before.overview.registrationMonth).count;
   const monthRow = page.getByRole('table', { name: 'Monto documental por mes de envío' }).getByRole('row').filter({ has: page.getByRole('rowheader', { name: monthName, exact: true }) });
   const number = `HOME-${crypto.randomUUID().slice(0, 8)}`;
-  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link', { name: 'Registro de compras', exact: true }).click();
   await page.getByRole('link', { name: 'Registrar manualmente', exact: true }).click();
   await page.getByLabel('Nº Documento / solicitud *', { exact: true }).fill(number);
   await page.getByLabel('Fecha de envío *', { exact: true }).fill(dateLabel(before.overview.registrationMonth + '-15'));
@@ -37,7 +37,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1280);
   await expect(page.locator('.cenit-page-enter')).toHaveCSS('opacity', '1');
   await page.screenshot({ path: 'tmp/admin-home-connected-1280.png' });
-  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByRole('link', { name: 'Ir a Compras', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(number);
 
   const row = pending(page).getByRole('row').filter({ hasText: number });
@@ -47,7 +47,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   await home(); await check(before.overview.registeredThisYear + 1, before.pending, before.pendingAmount);
   await expect(monthRow.getByRole('cell').first()).toHaveText(String(beforeMonth + 1));
   // Delete a reviewed record through its detail; the filtered list is preserved on return.
-  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByRole('link', { name: 'Ir a Compras', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(number);
 
   const reviewedDetail = page.getByRole('region', { name: 'Revisados en Cenit', exact: true }).getByRole('row').filter({ hasText: number }).getByRole('link', { name: `Ver detalles de ${number}`, exact: true });
@@ -65,7 +65,7 @@ test('Inicio refleja altas, validación y eliminación de pendientes y validados
   example.header.sentDate = santiagoToday();
   const response = await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data: example });
   expect(response.status()).toBe(201);
-  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByRole('link', { name: 'Ir a Compras', exact: true }).click();
   await page.getByLabel('Buscar solicitudes', { exact: true }).fill(example.header.requestNumber);
 
   const exampleRow = pending(page).getByRole('row').filter({ hasText: example.header.requestNumber });
@@ -118,15 +118,16 @@ test('Inicio presenta carga y error con reintento sin mostrar cifras ficticias',
     await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'Resumen temporalmente indisponible', requestId: 'summary-error' } }) });
   });
   await page.reload(); await expect(page.getByRole('status').filter({ hasText: 'Cargando resumen' })).toBeVisible();
-  await expect(page.locator('.dashboard-loading .dashboard-kpis > div')).toHaveCount(3);
-  await expect(page.locator('.dashboard-loading .dashboard-card')).toHaveCount(3);
+  await expect(page.locator('.home-loading .home-figure')).toHaveCount(2);
+  await expect(page.locator('.home-loading .home-rail__section')).toHaveCount(2);
   expect(await page.getByRole('definition').count()).toBe(0);
   await expect.poll(() => !!release).toBe(true); release!();
   await expect(page.getByRole('alert')).toContainText('Resumen temporalmente indisponible');
   await expect(page.getByRole('definition')).toHaveCount(0);
   await page.unroute('**/api/v1/purchases/summary');
   await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
-  await expect(page.getByRole('definition')).toHaveCount(6);
+  // Value and detail for the year and the month (the trend appears only with a previous month).
+  await expect.poll(() => page.getByRole('definition').count()).toBeGreaterThanOrEqual(4);
 });
 
 const dialog = (page: Page) => page.getByRole('alertdialog');
@@ -256,6 +257,22 @@ test('descarte usa origen explícito, atrás usa cabecera visible y cerrar no de
   await page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link', { name: 'Inicio', exact: true }).click();
   await dialog(page).getByRole('button', { name: 'Descartar y salir' }).click();
   await expect(page).toHaveURL(/\/administracion$/); await expect(page.locator('#admin-content')).toBeFocused();
+});
+
+test('una búsqueda sin resultados en el año elegido ofrece buscar en todos los años y conserva el foco', async ({ page }) => {
+  await login(page, 'administrativo');
+  const year = Number(santiagoToday().slice(0, 4)), number = `ANIOS-${crypto.randomUUID().slice(0, 8)}`;
+  const record = structuredClone(manualPurchaseExample); record.operationId = crypto.randomUUID();
+  record.header.requestNumber = number; record.header.sentDate = `${year - 1}-03-10`;
+  expect((await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data: record })).status()).toBe(201);
+  await page.goto(`/administracion/compras?q=${number}`);
+  await expect(pending(page).getByText(`Sólo se buscó en ${year}. Prueba en todos los años o con otro número o código.`, { exact: true })).toBeVisible();
+  await pending(page).getByRole('button', { name: 'Buscar en todos los años', exact: true }).click();
+  await expect(page).toHaveURL(/allYears=1/);
+  await expect(pending(page).getByRole('row').filter({ hasText: number })).toHaveCount(1);
+  await expect(pending(page).getByRole('heading', { name: 'Por revisar en Cenit', exact: true })).toBeFocused();
+  await page.reload();
+  await expect(pending(page).getByRole('row').filter({ hasText: number })).toHaveCount(1);
 });
 
 test('filtros vacíos, repetidos y quitados no generan consultas ni historial redundantes', async ({ page }) => {

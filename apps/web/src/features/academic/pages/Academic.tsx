@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { NavLink } from 'react-router';
+import { NavLink, useSearchParams } from 'react-router';
 import { BookOpenIcon } from '@phosphor-icons/react/dist/csr/BookOpen';
 import { CaretLeftIcon } from '@phosphor-icons/react/dist/csr/CaretLeft';
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
@@ -24,6 +24,9 @@ import { useSidebar } from '../../../shared/lib/use-sidebar.js';
 import { WorkspaceShell } from '../../../shared/components/WorkspaceShell.js';
 import { LoadingLabel, Skeleton } from '../../../shared/components/Skeleton.js';
 import '../academic.css';
+
+// Estado de la fuente principal del catálogo; una malla validada institucionalmente no necesita etiqueta.
+const catalogStatusLabels = { example: 'Catálogo de ejemplo', teamReviewed: 'Validación institucional pendiente', clientValidated: null } as const;
 
 function BoardSkeleton() {
   return <>
@@ -63,6 +66,16 @@ export function Academic() {
   const [boardDragging, setBoardDragging] = useState(false);
   const [detail, setDetail] = useState<AcademicCourse | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  // El docente conserva al estudiante elegido en la URL para que recargar o volver no pierda el contexto.
+  const [params, setParams] = useSearchParams();
+  const requestedStudent = account.role === 'docente' && /^[0-9a-f-]{36}$/i.test(params.get('estudiante') ?? '') ? params.get('estudiante') : null;
+  // Sólo la URL de llegada restaura una selección; después manda lo que el docente elige.
+  const [pendingStudent, setPendingStudent] = useState(() => requestedStudent);
+  const studentId = selectedStudent?.id ?? pendingStudent;
+  function selectStudent(student: Student | null) {
+    setDetail(null); setPendingStudent(null); setSelectedStudent(student);
+    setParams(previous => { const next = new URLSearchParams(previous); if (student) next.set('estudiante', student.id); else next.delete('estudiante'); return next; }, { replace: true });
+  }
   const [relationPreview, setRelationPreview] = useState<{ plan: AcademicPlan; code: string } | null>(null);
   useEffect(() => { heading.current?.focus(); }, []);
   useEffect(() => { document.title = 'Cenit · Malla curricular'; return () => { document.title = 'Cenit'; }; }, []);
@@ -79,12 +92,15 @@ export function Academic() {
   function showRelations(code: string) {
     if (plan) setRelationPreview(previous => previous?.plan === plan && previous.code === code ? previous : { plan, code });
   }
-  const hasStudent = account.role === 'estudiante' || selectedStudent !== null;
+  const hasStudent = account.role === 'estudiante' || studentId !== null;
   const progress = useQuery({
-    queryKey: ['academic', account.id, 'progress', account.role === 'estudiante' ? 'me' : selectedStudent?.id, version],
-    queryFn: ({ signal }) => getProgress(account.role === 'estudiante' ? null : selectedStudent!.id, signal),
+    queryKey: ['academic', account.id, 'progress', account.role === 'estudiante' ? 'me' : studentId, version],
+    queryFn: ({ signal }) => getProgress(account.role === 'estudiante' ? null : studentId, signal),
     enabled: Boolean(plan) && hasStudent, retry: retryAcademicRead,
   });
+  const restoredStudent = !selectedStudent && pendingStudent && progress.data?.student.id === pendingStudent ? progress.data.student : null;
+  useEffect(() => { if (restoredStudent) { setSelectedStudent(restoredStudent); setPendingStudent(null); } }, [restoredStudent]);
+  const restoringStudent = Boolean(pendingStudent) && !selectedStudent && !progress.error;
   const matchingProgress = progress.data?.plan.planId === plan?.planId && progress.data?.plan.version === plan?.version ? progress.data : undefined;
   const courseProgress = useMemo(() => new Map(matchingProgress?.courses.map(course => [course.code, course])), [matchingProgress]);
   const groups = useMemo(() => plan ? groupBySemester(plan.courses) : [], [plan]);
@@ -122,11 +138,9 @@ export function Academic() {
     </nav>}
     toolbarClassName="academic-toolbar cenit-page-enter"
     toolbarStart={<div><h1 ref={heading} tabIndex={-1}>Malla curricular</h1><p className="academic-toolbar__subtitle">{plan?.name ?? 'Nutrición y Dietética'}</p></div>}
-    toolbarEnd={<>
-      <div className="academic-toolbar__meta">
-        <span className="academic-tag">Demostración</span>
-      </div>
-    </>}>
+    toolbarEnd={plan && catalogStatusLabels[plan.source.validationStatus] && <div className="academic-toolbar__meta">
+      <span className="academic-tag">{catalogStatusLabels[plan.source.validationStatus]}</span>
+    </div>}>
         <main id="academic-content" className="academic-content" tabIndex={-1}>
           <SessionWarning expiresAt={auth.session!.expiresAt} logout={auth.logout} />
           {error && <div className="cenit-empty"><span className="cenit-empty__icon"><InfoIcon size={26} aria-hidden="true" /></span><h2>{error instanceof HttpError && error.status === 403 ? 'Acceso no autorizado' : 'No pudimos cargar la malla'}</h2><p role="alert">{error.message}</p><button className="cenit-button" type="button" onClick={() => { void (plans.error ? plans.refetch() : catalog.refetch()); }}>Reintentar</button></div>}
@@ -134,7 +148,7 @@ export function Academic() {
           {!error && (loading || plan) && <>
             <div className="academic-board-context">
             <section className="academic-progress-context" aria-label="Avance curricular">
-              {account.role === 'docente' && <StudentLookup accountId={account.id} selected={selectedStudent} onSelect={student => { setDetail(null); setSelectedStudent(student); }} />}
+              {account.role === 'docente' && !restoringStudent && <StudentLookup accountId={account.id} selected={selectedStudent} onSelect={selectStudent} />}
               {hasStudent && <>
               {progress.isPending && <ProgressSkeleton />}
               {progress.error && <div className="academic-inline-error"><p role="alert">{progress.error instanceof HttpError && progress.error.status === 404 ? 'Este estudiante aún no tiene un perfil académico preparado.' : progress.error.message}</p><button className="cenit-button" onClick={() => { void progress.refetch(); }}>Reintentar historial</button></div>}

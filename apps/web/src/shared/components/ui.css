@@ -56,6 +56,8 @@ textarea.cenit-input { resize: vertical; }
 .cenit-notice--error > svg { color: var(--color-danger-icon); }
 .cenit-session-warning { margin-bottom: 24px; }
 .cenit-toast[data-sonner-toast] { padding: 14px 16px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-toast); }
+.cenit-toast[data-sonner-toast].cenit-toast--signed-out { background: var(--color-success-soft); border-color: var(--color-success-line); color: var(--color-success-icon); }
+.cenit-toast[data-sonner-toast].cenit-toast--expired { background: var(--color-warning-soft); border-color: var(--color-warning-line); color: var(--color-warning-icon); }
 .cenit-toast-title { font-size: 13px; font-weight: 550; }
 .cenit-toast-description { color: var(--color-ink-muted); font-size: 12px; }
 .cenit-toast-close { color: var(--color-ink-muted) !important; background: var(--color-surface) !important; min-height: 20px; }
