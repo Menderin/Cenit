@@ -121,6 +121,8 @@ test('comisión: valida con teclado y descarga el PDF real', async ({ page }) =>
   await expect(page.getByText('María Ejemplo', { exact: true }).first()).toBeVisible();
 });
 
+const unprintable = /un carácter que no se puede imprimir en el documento\./;
+
 test('comisión: errores del servidor enfocan el campo y el reintento conserva datos', async ({ page }) => {
   await fillCommission(page);
   await section(page, 'Funcionario').click();
@@ -131,23 +133,23 @@ test('comisión: errores del servidor enfocan el campo y el reintento conserva d
   await page.getByRole('button', { name: 'Descargar', exact: true }).click();
   expect((await response).status()).toBe(422);
   await expect(page.getByLabel('Nombre completo', { exact: true })).toBeFocused();
-  await expect(page.getByText('Contiene caracteres que no admite el documento.')).toHaveCount(2);
+  await expect(page.getByText(unprintable)).toHaveCount(2);
   await page.getByLabel('Nombre completo', { exact: true }).fill('María Ejemplo');
   await expect(page.getByLabel('Cargo', { exact: true })).toHaveAttribute('aria-invalid', 'true');
-  await expect(page.getByText('Contiene caracteres que no admite el documento.')).toHaveCount(1);
+  await expect(page.getByText(unprintable)).toHaveCount(1);
   await section(page, 'Revisión').click();
   await page.getByRole('button', { name: 'Descargar', exact: true }).click();
   await expect(page.getByLabel('Cargo', { exact: true })).toBeFocused();
-  await expect(page.getByText('Contiene caracteres que no admite el documento.')).toHaveCount(1);
+  await expect(page.getByText(unprintable)).toHaveCount(1);
   await page.getByLabel('Cargo', { exact: true }).fill('Docente');
-  await expect(page.getByText('Contiene caracteres que no admite el documento.')).toHaveCount(0);
+  await expect(page.getByText(unprintable)).toHaveCount(0);
   await page.getByLabel('Nombre completo', { exact: true }).fill('X'.repeat(500));
   await section(page, 'Revisión').click();
   const tooLong = page.waitForResponse(resp => resp.url().endsWith('/service-commissions/pdf'));
   await page.getByRole('button', { name: 'Descargar', exact: true }).click();
   expect((await tooLong).status()).toBe(422);
   await expect(page.getByLabel('Nombre completo', { exact: true })).toBeFocused();
-  await expect(page.getByText('El texto no cabe en la plantilla; acórtalo.')).toBeVisible();
+  await expect(page.getByText('El texto no cabe en el documento; acórtalo.')).toBeVisible();
   await expect(page.getByLabel('Nombre completo', { exact: true })).toHaveValue('X'.repeat(500));
   await page.getByLabel('Nombre completo', { exact: true }).fill('María Ejemplo');
   await section(page, 'Revisión').click();
