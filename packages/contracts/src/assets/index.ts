@@ -1,4 +1,5 @@
 import { Type, type Static, type TSchema } from '@sinclair/typebox';
+import { maxDeliveryItems } from './forms.js';
 
 // Contrato provisional de Bienes: inventario, entregas, préstamos y responsables.
 // Campos, obligatoriedad y documentos siguen pendientes de validación con la Facultad.
@@ -92,14 +93,14 @@ export const AssetParamsSchema = object({ id: uuid });
 
 export const AssetSummarySchema = object({ data: object({
   total: Type.Integer({ minimum: 0 }), onLoan: Type.Integer({ minimum: 0 }), overdue: Type.Integer({ minimum: 0 }),
+  // Préstamos abiertos que vencen hoy o en los próximos siete días (Inicio los muestra como aviso).
+  dueSoon: Type.Optional(Type.Integer({ minimum: 0 })),
   review: Type.Integer({ minimum: 0 }), unassigned: Type.Integer({ minimum: 0 }),
   deliveries: Type.Integer({ minimum: 0 }), loans: Type.Integer({ minimum: 0 }), people: Type.Integer({ minimum: 0 }), peopleReview: Type.Integer({ minimum: 0 }),
   locations: Type.Array(Type.String(), { maxItems: 200 }),
 }) });
 export type AssetSummary = Static<typeof AssetSummarySchema>['data'];
 
-// Cantidad máxima de bienes por acta o préstamo: más no caben en una hoja carta.
-export const maxDocumentItems = 10;
 
 // Un ítem de entrega es un bien del inventario o un bien nuevo que se registra al guardar (p. ej., un gasto controlado).
 export const NewDeliveryAssetSchema = object({
@@ -110,7 +111,8 @@ export type DeliveryItemInput = Static<typeof DeliveryItemInputSchema>;
 export const CreateDeliverySchema = object({
   operationId: uuid, receiverId: uuid, deliveredOn: day, reason: text(500), destination: optional(),
   giverName: text(200), giverPosition: optional(), giverUnit: optional(), notes: optional(1000),
-  items: Type.Array(DeliveryItemInputSchema, { minItems: 1, maxItems: maxDocumentItems }),
+  // El acta oficial trae ocho filas para bienes.
+  items: Type.Array(DeliveryItemInputSchema, { minItems: 1, maxItems: maxDeliveryItems }),
 });
 export type CreateDelivery = Static<typeof CreateDeliverySchema>;
 const DocumentItemSchema = object({
@@ -147,7 +149,8 @@ export type LoanStatus = Static<typeof LoanStatusSchema>;
 export const CreateLoanSchema = object({
   operationId: uuid, borrowerId: uuid, loanedOn: day, dueOn: nullable(day), location: optional(),
   authorizerName: text(200), authorizerUnit: optional(), notes: optional(1000),
-  assetIds: Type.Array(uuid, { minItems: 1, maxItems: maxDocumentItems, uniqueItems: true }),
+  // El formulario oficial de préstamo describe un solo bien.
+  assetIds: Type.Array(uuid, { minItems: 1, maxItems: 1 }),
 });
 export type CreateLoan = Static<typeof CreateLoanSchema>;
 export const ReturnLoanSchema = object({ returnedOn: day, note: optional(500) });
@@ -168,3 +171,4 @@ export const LoanListItemSchema = object({
 export type LoanListItem = Static<typeof LoanListItemSchema>;
 export const LoanListResponseSchema = object({ data: Type.Array(LoanListItemSchema), pagination, counts: object({ activo: Type.Integer({ minimum: 0 }), vencido: Type.Integer({ minimum: 0 }), devuelto: Type.Integer({ minimum: 0 }) }) });
 export type LoanListResponse = Static<typeof LoanListResponseSchema>;
+export * from './forms.js';

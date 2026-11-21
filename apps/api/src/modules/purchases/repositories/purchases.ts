@@ -5,6 +5,7 @@ import { headerFields, lineFields, administrativeFields } from '@cenit/contracts
 import { ApiError } from '../../../infrastructure/errors.js';
 import { enqueuePurchaseSheets } from './sheets.js';
 import type { PurchaseExportRow, PurchaseExportBatch } from '../services/export.js';
+import { projectOptions, projectSummary, selectedYear, yearBreakdowns } from './insights.js';
 
 // Column names come exclusively from the versioned contract, never request keys.
 const column = (key: string) => key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
@@ -60,17 +61,18 @@ export class PurchaseRepository {
     } as PurchaseRecord;
   }
   async get(id: string) { return this.transaction(db => this.detail(db, id), true); }
-  async summary(): Promise<PurchaseSummaryResponse> {
+  async summary(year: number | null = null): Promise<PurchaseSummaryResponse> {
     return this.transaction(async db => {
     const { rows } = await db.query<{ date: string; requests: number; pending: number; amount: string }>(`SELECT sent_date::text AS date,
       count(*)::int AS requests, (count(*) FILTER (WHERE review_status='pending'))::int AS pending,
       coalesce(sum(total_amount) FILTER (WHERE review_status='pending'),0)::text AS amount
       FROM cenit.purchase_requests GROUP BY sent_date ORDER BY sent_date`);
+    // The yearly figures follow the requested year (default: current); the monthly ones always describe the current month.
     const metrics = (await db.query(`WITH period AS (
       SELECT date_trunc('month',now() AT TIME ZONE 'America/Santiago')::date AS month_start,
-        date_trunc('year',now() AT TIME ZONE 'America/Santiago')::date AS year_start,
-        to_char(now() AT TIME ZONE 'America/Santiago','YYYY-MM') AS registration_month
-    ) SELECT coalesce(sum(total_amount),0)::text AS amount,
+        make_date(y.year,1,1) AS year_start, y.year,
+        to_char(now() AT TIME ZONE 'America/Santiago','YYYY-MM') AS registration_month FROM ${selectedYear('$1')}
+    ) SELECT period.year AS selected_year, coalesce(sum(total_amount),0)::text AS amount,
       coalesce(sum(total_amount) FILTER (WHERE sent_date >= period.year_start AND sent_date < (period.year_start + interval '1 year')::date),0)::text AS year_amount,
       coalesce(sum(total_amount) FILTER (WHERE sent_date >= period.month_start AND sent_date < (period.month_start + interval '1 month')::date),0)::text AS month_amount,
       period.registration_month,
@@ -80,24 +82,27 @@ export class PurchaseRepository {
       (count(*) FILTER (WHERE source='image_capture'))::int AS image_capture,
       (count(*) FILTER (WHERE source='contract_example'))::int AS contract_example
       FROM period LEFT JOIN cenit.purchase_requests ON TRUE
-      GROUP BY period.month_start,period.year_start,period.registration_month`)).rows[0];
+      GROUP BY period.month_start,period.year_start,period.year,period.registration_month`, [year])).rows[0];
     const activity = await db.query<{ date: string; count: number }>(`WITH dates AS (
       SELECT generate_series((now() AT TIME ZONE 'America/Santiago')::date-29,(now() AT TIME ZONE 'America/Santiago')::date,'1 day')::date AS day
     ), counts AS (SELECT (created_at AT TIME ZONE 'America/Santiago')::date AS day,count(*)::int AS count FROM cenit.purchase_requests
       WHERE created_at >= (((now() AT TIME ZONE 'America/Santiago')::date-29)::timestamp AT TIME ZONE 'America/Santiago') GROUP BY 1)
       SELECT dates.day::text AS date,coalesce(counts.count,0)::int AS count FROM dates LEFT JOIN counts USING(day) ORDER BY dates.day`);
     const months = await db.query<{ month: string; count: number; amount: string }>(`WITH months AS (
-      SELECT generate_series(date_trunc('year',now() AT TIME ZONE 'America/Santiago')::date,date_trunc('year',now() AT TIME ZONE 'America/Santiago')::date + interval '11 month','1 month')::date AS start
+      SELECT generate_series(make_date(y.year,1,1),make_date(y.year,12,1),'1 month')::date AS start FROM ${selectedYear('$1')}
     ) SELECT to_char(months.start,'YYYY-MM') AS month,count(requests.id)::int AS count,coalesce(sum(requests.total_amount),0)::text AS amount
       FROM months LEFT JOIN cenit.purchase_requests requests ON requests.sent_date >= months.start AND requests.sent_date < (months.start + interval '1 month')::date
-      GROUP BY months.start ORDER BY months.start`);
+      GROUP BY months.start ORDER BY months.start`, [year]);
     // Types are grouped without case so «COTIZACIÓN» and «Cotización» count once; the stored spelling is shown as written.
-    const types = await db.query<{ documentType: string | null; count: number; amount: string }>(`WITH period AS (SELECT date_trunc('year',now() AT TIME ZONE 'America/Santiago')::date AS year_start)
+    const types = await db.query<{ documentType: string | null; count: number; amount: string }>(`WITH period AS (SELECT make_date(y.year,1,1) AS year_start FROM ${selectedYear('$1')})
       SELECT min(document_type) AS "documentType",count(*)::int AS count,sum(total_amount)::text AS amount
       FROM cenit.purchase_requests,period WHERE sent_date >= period.year_start AND sent_date < (period.year_start + interval '1 year')::date
-      GROUP BY upper(document_type) ORDER BY sum(total_amount) DESC,2 DESC LIMIT 6`);
-    const recent = await db.query(`SELECT id,request_number AS "requestNumber",description,sent_date::text AS "sentDate",total_amount AS "totalAmount",created_at AS "createdAt",source
-      FROM cenit.purchase_requests ORDER BY created_at DESC,id DESC LIMIT 8`);
+      GROUP BY upper(document_type) ORDER BY sum(total_amount) DESC,2 DESC LIMIT 6`, [year]);
+    const recent = await db.query(`SELECT id,request_number AS "requestNumber",description,sent_date::text AS "sentDate",total_amount AS "totalAmount",created_at AS "createdAt",source,
+      (SELECT l.project_code FROM cenit.purchase_request_lines l WHERE l.request_id=p.id AND l.project_code IS NOT NULL ORDER BY l.position LIMIT 1) AS "projectCode"
+      FROM cenit.purchase_requests p ORDER BY created_at DESC,id DESC LIMIT 8`);
+    const years = await db.query<{ year: number }>(`SELECT DISTINCT extract(year FROM sent_date)::int AS year FROM cenit.purchase_requests ORDER BY 1 DESC`);
+    const spending = await yearBreakdowns(db, year);
     return { data: {
       requests: rows.reduce((total, row) => total + row.requests, 0), pending: rows.reduce((total, row) => total + row.pending, 0),
       currency: 'CLP', pendingAmount: rows.reduce((total, row) => total + BigInt(row.amount), 0n).toString(),
@@ -105,12 +110,15 @@ export class PurchaseRepository {
       overview: { documentTotal: metrics.amount, documentTotalThisMonth: metrics.month_amount, registrationMonth: metrics.registration_month,
         registeredThisYear: metrics.year, registeredThisMonth: metrics.month,
         documentTotalThisYear: metrics.year_amount, monthlyTotals: months.rows, documentTypes: types.rows,
+        year: String(metrics.selected_year).padStart(4, '0'), availableYears: years.rows.map(row => row.year), ...spending,
         sourceCounts: { manual: metrics.manual, image_capture: metrics.image_capture, contract_example: metrics.contract_example },
         registrationDays: activity.rows, recentRecords: recent.rows.map(row => ({ ...row, createdAt: row.createdAt.toISOString() })),
       },
     } };
     }, true);
   }
+  async projects(year: number | null = null) { return this.transaction(db => projectOptions(db, year), true); }
+  async project(code: string, year: number | null = null) { return this.transaction(db => projectSummary(db, code, year), true); }
   async delete(id: string, expectedVersion: number) {
     return this.transaction(async db => {
       const result = await db.query('SELECT version FROM cenit.purchase_requests WHERE id=$1 FOR UPDATE', [id]);

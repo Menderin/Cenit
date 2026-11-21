@@ -100,14 +100,5 @@ export function fileName(draft: CommissionDraft) {
 }
 
 // Formatos impresos del XLSM: d/mmm/yy y miles con dos decimales.
-export function commissionDate(value: string) {
-  if (!calendarDate(value)) return value;
-  const [year, month, day] = value.split('-');
-  const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
-  return `${Number(day)}/${months[Number(month) - 1]}/${year!.slice(-2)}`;
-}
-export function commissionAllowance(value: string) {
-  if (!value.trim()) return '';
-  const [integer, decimals = ''] = value.trim().split(',');
-  return `${integer!.replaceAll('.', '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${decimals.padEnd(2, '0')}`;
-}
+// El formato de fecha y viático es el mismo del documento (contrato compartido con el PDF).
+export { commissionAllowance, commissionDate } from '@cenit/contracts';

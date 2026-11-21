@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { maxDocumentItems, type AssetListItem, type Person } from '@cenit/contracts/assets';
+import { assetLoanEntries, assetLoanForm, type AssetListItem, type Person } from '@cenit/contracts/assets';
 import { createLoan, getAsset } from '../api/assets.js';
 import { today } from '../model/labels.js';
-import { BackLink, DateBlock, ProposalNotice, TextField, focusFirstError, missingMessage, nullable, useAssetSummary } from '../components/AssetsUi.js';
+import { BackLink, DateBlock, TextField, focusFirstError, missingMessage, nullable, useAssetSummary } from '../components/AssetsUi.js';
 import { AssetPicker, PersonPicker } from '../components/Pickers.js';
-import { ItemsTable, SheetPreview } from '../components/Documents.js';
+import { FormPreview, ItemsTable, overflowMessage } from '../components/Documents.js';
+import template from '../components/loan-template.png';
 import { StatusNotice } from '../../../shared/components/StatusNotice.js';
 import { HttpError } from '../../../shared/lib/http.js';
 import { useGuardChanges, usePurchaseGuard } from '../../purchases/model/guard.js';
@@ -21,7 +22,7 @@ export function LoanCreate() {
   const [borrower, setBorrower] = useState<Person | null>(null), [assets, setAssets] = useState<AssetListItem[]>([]);
   const [date, setDate] = useState(today()), [due, setDue] = useState(addDays(today(), 14)), [location, setLocation] = useState('');
   const [authorizer, setAuthorizer] = useState(''), [authorizerUnit, setAuthorizerUnit] = useState('Facultad de Medicina'), [notes, setNotes] = useState('');
-  const [errors, setErrors] = useState<Record<string, string>>({}), [failure, setFailure] = useState(''), [busy, setBusy] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({}), [failure, setFailure] = useState(''), [busy, setBusy] = useState(false), [overflow, setOverflow] = useState<string[]>([]);
   const operation = useRef(crypto.randomUUID()), loaded = useRef(false), preset = params.get('bien');
   const locations = useAssetSummary().data?.locations ?? [];
   const presetAsset = useQuery({ queryKey: ['assets', 'detail', preset], queryFn: ({ signal }) => getAsset(preset!, signal), enabled: !!preset });
@@ -41,6 +42,8 @@ export function LoanCreate() {
     if (!authorizer.trim()) next.authorizer = 'Escribe quién autoriza el préstamo.';
     setErrors(next); setFailure('');
     if (Object.keys(next).length) { setFailure(missingMessage(Object.keys(next).length)); focusFirstError(); return; }
+    // El documento firmado no se puede corregir después: sólo se guarda si todo cabe en el formato.
+    if (overflow.length) { setFailure(overflowMessage(overflow)); return; }
     setBusy(true);
     try {
       const loan = await createLoan({ operationId: operation.current, borrowerId: borrower!.id, loanedOn: date, dueOn: due || null, location: nullable(location),
@@ -55,16 +58,15 @@ export function LoanCreate() {
   return <section className="assets-page assets-page--doc">
     <BackLink to={preset ? `/administracion/bienes/${preset}` : '/administracion/bienes/prestamos'}>{preset ? 'Volver a la ficha del bien' : 'Volver a Préstamos'}</BackLink>
     <header className="assets-heading"><div><h1>Nuevo préstamo</h1><p>Presta un bien por un tiempo. El responsable no cambia; cuando vuelva, registra la devolución.</p></div></header>
-    <ProposalNotice />
     {presetAsset.data?.loan && <div style={{ marginBottom: 18 }}><StatusNotice kind="warning" title="Este bien ya está prestado" message={`Está prestado a ${presetAsset.data.loan.borrowerName}. Registra su devolución antes de prestarlo otra vez.`} /></div>}
     <div className="assets-form-layout">
       <form className="assets-form" noValidate onSubmit={event => { event.preventDefault(); void submit(); }}>
         <fieldset><legend>1. ¿Qué bien se presta?</legend>
-          <AssetPicker id="loan-asset" label="Buscar en el inventario" forLoan disabled={assets.length >= maxDocumentItems} exclude={assets.map(asset => asset.id)} error={errors.assets}
+          <AssetPicker id="loan-asset" label="Buscar en el inventario" forLoan disabled={assets.length >= 1} exclude={assets.map(asset => asset.id)} error={errors.assets}
             onPick={asset => { setAssets([...assets, asset]); setErrors({ ...errors, assets: '' }); }} />
           <div style={{ marginTop: 12 }}><ItemsTable items={items} onRemove={key => setAssets(assets.filter(asset => asset.id !== key))}
             empty={<p className="assets-sub" style={{ margin: 0 }}>Busca el bien arriba. Sólo aparecen los que no están prestados.</p>} /></div>
-          {assets.length >= maxDocumentItems && <p className="assets-sub" style={{ margin: '8px 0 0' }}>Un préstamo admite hasta {maxDocumentItems} bienes para que quepa en una hoja. Guarda este y registra otro con el resto.</p>}
+          {assets.length >= 1 && <p className="assets-sub" style={{ margin: '8px 0 0' }}>El formulario de préstamo es para un bien. Si va con accesorios (cargador, mouse), anótalos en Observaciones.</p>}
         </fieldset>
         <fieldset><legend>2. ¿Quién lo recibe?</legend>
           <PersonPicker id="loan-borrower" label="Persona que recibe el préstamo" value={borrower} onChange={person => { setBorrower(person); setErrors({ ...errors, borrower: '' }); }} error={errors.borrower} />
@@ -82,7 +84,7 @@ export function LoanCreate() {
           <div className="assets-grid">
             <TextField id="loan-authorizer" label="Nombre de quien autoriza" value={authorizer} onChange={value => { setAuthorizer(value); setErrors({ ...errors, authorizer: '' }); }} error={errors.authorizer} />
             <TextField id="loan-authorizer-unit" label="Unidad" optional value={authorizerUnit} onChange={setAuthorizerUnit} />
-            <TextField id="loan-notes" label="Observaciones" optional textarea wide value={notes} onChange={setNotes} hint="Accesorios que se prestan junto al bien o su estado al salir." />
+            <TextField id="loan-notes" label="Observaciones" optional textarea wide value={notes} onChange={setNotes} hint="Accesorios que se prestan junto al bien o su estado al salir. Se escriben en «MÁS DATOS» del documento." />
           </div>
         </fieldset>
         <div className="assets-footer">
@@ -93,10 +95,9 @@ export function LoanCreate() {
         </div>
       </form>
       <aside className="assets-aside">
-        <p>Así se verá el documento (vista aproximada)</p>
-        <SheetPreview type="loan" date={date} person={borrower} items={items}
-          rows={[['Ubicación', location || null], ['Devolución', due && valid(due) ? `Esperada el ${due.split('-').reverse().join('/')}` : 'Sin fecha definida'], ['Autorizador', authorizer || null], ['Unidad', authorizerUnit || null]]}
-          signs={['Firma de quien recibe', 'Firma de quien autoriza']} />
+        <FormPreview caption="Así queda el documento, en el formato oficial. El número se asigna al guardar." overflow={overflow} onOverflow={setOverflow}
+          label="Vista previa del préstamo" template={template} alt="Préstamo transitorio de bienes de la Facultad de Medicina, con los datos del formulario."
+          layout={assetLoanForm} entries={assetLoanEntries({ number: null, loanedOn: date, dueOn: due && valid(due) ? due : null, borrower, location, items: assets, authorizerName: authorizer, authorizerUnit, notes })} />
       </aside>
     </div>
   </section>;

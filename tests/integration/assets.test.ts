@@ -143,12 +143,16 @@ describe('Bienes: validaciones con mensaje claro', () => {
     expect(response.status).toBe(422);
     expect((await response.json()).error.message).toMatch(/no se puede imprimir/);
   });
-  it('limita a diez los bienes de una entrega para que el acta quepa en una hoja', async () => {
+  it('limita a ocho los bienes de una entrega, las filas del acta oficial', async () => {
     const receiver = await newPerson('Persona límite');
     const response = await api('/deliveries', 'POST', {
       operationId: randomUUID(), receiverId: receiver.id, deliveredOn: today(), reason: 'Prueba', destination: null, giverName: 'Entrega Ficticio', giverPosition: null, giverUnit: null, notes: null,
-      items: Array.from({ length: 11 }, () => ({ assetId: randomUUID() })),
+      items: Array.from({ length: 9 }, () => ({ assetId: randomUUID() })),
     });
     expect(response.status).toBe(400);
+  });
+  it('presta un solo bien por documento, como el formulario oficial', async () => {
+    const borrower = await newPerson('Persona préstamo único');
+    expect((await api('/loans', 'POST', loanBody(borrower.id, [randomUUID(), randomUUID()]))).status).toBe(400);
   });
 });

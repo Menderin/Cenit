@@ -7,7 +7,7 @@ import '../access.css';
 export function AccessLayout({ children }: { children: ReactNode }) {
   return <main className="cenit-access">
     <div className="cenit-access__shell">
-      <span className="cenit-access__badge">En desarrollo</span>
+      <span className="cenit-access__badge">Datos ficticios</span>
       <div className="cenit-access__landscape" aria-hidden="true">
         <img className="cenit-access__topography" src={topography} alt="" draggable="false" />
       </div>

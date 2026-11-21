@@ -9,8 +9,9 @@ export function Notifications() {
   const { status, notice } = useAuth();
   useEffect(() => {
     if (status !== 'authenticated') toast.dismiss(); else toast.dismiss('session-notice');
-    if (notice === 'signed-out') toast.success('Sesión cerrada', { id: 'session-notice', description: 'Puedes volver a iniciar sesión cuando lo necesites.' });
-    if (notice === 'expired') toast.warning('Tu sesión terminó', { id: 'session-notice', description: 'Vuelve a iniciar sesión para continuar.' });
+    if (notice === 'signed-out') toast.success('Saliste de Cenit', { id: 'session-notice', className: 'cenit-toast--signed-out' });
+    // El vencimiento llega sin que la persona lo pida: el aviso amarillo queda visible hasta cerrarlo o volver a entrar.
+    if (notice === 'expired') toast.warning('Tu sesión expiró', { id: 'session-notice', description: 'Vuelve a iniciar sesión para continuar.', className: 'cenit-toast--expired', duration: Infinity });
   }, [status, notice]);
   return <Toaster position="bottom-right" theme="light" duration={5000} visibleToasts={3} closeButton offset={20} containerAriaLabel="Avisos"
     icons={{ success: <CheckCircleIcon size={20} />, warning: <WarningCircleIcon size={20} />, error: <WarningCircleIcon size={20} />, info: <InfoIcon size={20} /> }}

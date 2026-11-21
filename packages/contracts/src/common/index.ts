@@ -4,3 +4,4 @@ export const ErrorResponseSchema = Type.Object({ error: Type.Object({
   requestId: Type.String({ minLength: 1 }),
 }, { additionalProperties: false }) }, { additionalProperties: false });
 export type ErrorResponse = Static<typeof ErrorResponseSchema>;
+export * from './forms.js';

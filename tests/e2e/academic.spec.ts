@@ -193,7 +193,7 @@ test('relaciones ficticias: respuesta inmediata, cadena visual, salida, teclado 
   expect(await b.evaluate(element => getComputedStyle(element, '::after').backgroundImage)).not.toBe(directLayer.fill);
   await expect(page.getByLabel('Relaciones resaltadas')).toHaveText('OrigenDirectaIndirecta');
   await expect(page.locator('.academic-toolbar__subtitle')).toHaveText(relationPlan.name);
-  await expect(page.locator('.academic-toolbar .academic-tag')).toHaveText('Demostración');
+  await expect(page.locator('.academic-toolbar .academic-tag')).toHaveText('Catálogo de ejemplo');
   await b.hover(); await expect(b).toHaveAttribute('data-relation', 'origin');
   await expect(page.locator('[data-course-code="A"]')).not.toHaveAttribute('data-relation');
   expect(await a.evaluate(element => getComputedStyle(element, '::before').boxShadow)).toBe(highlightShadow);
@@ -230,7 +230,7 @@ for (const role of ['docente', 'estudiante']) {
     await page.route(`**/api/v1/academic/plans/*/versions/${prerequisitePlan.version}`, route => route.fulfill({ json: { data: prerequisitePlan } }));
     await login(page, role);
     await expect(page.locator('.academic-toolbar__subtitle')).toHaveText(prerequisitePlan.name);
-    await expect(page.locator('.academic-toolbar .academic-tag')).toHaveText('Demostración');
+    await expect(page.locator('.academic-toolbar .academic-tag')).toHaveText('Catálogo de ejemplo');
     for (const width of [1440]) {
       await page.setViewportSize({ width, height: 900 });
       for (const example of prerequisiteCases) {
@@ -398,7 +398,7 @@ test('servicio caído permite reintentar; 401 limpia catálogo y detalle', async
   await page.route('**/api/v1/academic/plans', route => route.fulfill({ status: 401, json: { error: { code: 'AUTHENTICATION_REQUIRED', message: 'Debes iniciar sesión.', requestId: 'test' } } }));
   await page.reload();
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.locator('.cenit-notice').getByRole('status')).toHaveText('Tu sesión ya no es válida. Vuelve a iniciar sesión.');
+  await expect(page.getByRole('region', { name: /^Avisos/ }).getByText('Tu sesión expiró', { exact: true })).toBeVisible();
   await expect(courses(page)).toHaveCount(0); await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
@@ -516,6 +516,15 @@ test('docente busca tres perfiles por RUT/nombre y cambia de historial sin mezcl
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`avance-${viewport.width}.png`) });
   }
+  // Recargar conserva al estudiante elegido (URL) con la búsqueda cerrada y el foco en el título.
+  await expect(page).toHaveURL(/estudiante=/);
+  await page.reload();
+  await expect(page.locator('.academic-students__heading')).toContainText('Estudiante Demo');
+  await expect(page.locator('#academic-students-search')).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Malla curricular', exact: true })).toBeFocused();
+  await expectLatestGrade(page, '5,2');
+  await page.getByRole('button', { name: 'Ver sólo catálogo', exact: true }).click();
+  await expect(page).not.toHaveURL(/estudiante=/);
 });
 
 test('un historial tardío no sustituye al estudiante seleccionado después', async ({ page }) => {

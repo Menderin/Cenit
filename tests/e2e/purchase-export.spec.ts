@@ -36,7 +36,7 @@ test('descarga por teclado, conserva filtros pendientes y informa fallos sin éx
   });
 
   await login(page, 'administrativo');
-  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByRole('link', { name: 'Ir a Compras', exact: true }).click();
   const button = page.getByRole('button', { name: 'Descargar Excel', exact: true });
   await expect(page.getByRole('heading', { name: 'Registro de compras', exact: true })).toBeVisible();
   const download = page.waitForEvent('download');
@@ -74,7 +74,7 @@ test('descarga por teclado, conserva filtros pendientes y informa fallos sin éx
 
 test('descarga de varias páginas exporta todas las compras', async ({ page }) => {
   await login(page, 'administrativo');
-  await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+  await page.getByRole('link', { name: 'Ir a Compras', exact: true }).click();
   const origin = new URL(page.url()).origin;
   const prefix = `EXPORT-${crypto.randomUUID().slice(0, 8)}`;
   const ids = new Set<string>();
@@ -119,7 +119,7 @@ for (const exit of ['logout', 'expiry-and-account-change'] as const) {
       finally { completed(); }
     });
     await login(page, 'administrativo');
-    await page.getByRole('link', { name: 'Ver registros', exact: true }).click();
+    await page.getByRole('link', { name: 'Ir a Compras', exact: true }).click();
     const requested = page.waitForRequest(request => request.url().includes('/export.xlsx'));
     await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click(); await expect(page.getByRole('alertdialog', { name: 'Descargar Excel' })).toHaveCount(0);
     await requested;

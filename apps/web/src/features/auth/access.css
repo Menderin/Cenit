@@ -9,7 +9,8 @@
 .cenit-access__location { position: absolute; right: 32px; bottom: 28px; z-index: 2; color: var(--color-place); font-size: 13px; font-weight: 600; line-height: 1.5; letter-spacing: .01em; padding: 7px 11px; border: 1px solid var(--color-place-line); border-radius: 6px; background: var(--color-place-soft); box-shadow: 0 1px 3px #5b3e2410; }
 .cenit-access__access { position: relative; z-index: 1; display: flex; align-items: center; min-height: calc(100svh - 34px); padding: 64px var(--access-inset); }
 .cenit-access__content { width: 100%; max-width: 336px; }
-.cenit-access__brand { font-size: 27px; font-weight: 600; line-height: 1.2; letter-spacing: -1.15px; margin: 0 0 50px; }
+.cenit-access__brand { display: flex; align-items: center; gap: 6px; font-size: 32px; font-weight: 600; line-height: 1.2; letter-spacing: -1.15px; margin: 0 0 50px; }
+.cenit-access__brand::before { content: ''; flex: 0 0 44px; height: 38px; background: url('/cenit-negro.svg') center / 100% auto no-repeat; }
 .cenit-access h1 { font-size: 23px; font-weight: 550; letter-spacing: -.65px; line-height: 1.35; margin: 0 0 9px; }
 .cenit-access__intro { color: var(--color-ink-subtle); font-size: 13px; line-height: 1.6; margin: 0; }
 .cenit-access__feedback { display: grid; align-items: center; min-height: 48px; padding-block: 4px; }

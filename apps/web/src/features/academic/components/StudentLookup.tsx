@@ -11,17 +11,23 @@ export type Student = StudentsResponse['data'][number];
 export function StudentLookup({ accountId, selected, onSelect }: { accountId: string; selected: Student | null; onSelect: (student: Student | null) => void }) {
   const [name, setName] = useState('');
   const [rut, setRut] = useState('');
-  const [expanded, setExpanded] = useState(true);
+  // Un estudiante restaurado desde la URL abre la vista ya elegida; la búsqueda queda a un clic.
+  const [expanded, setExpanded] = useState(() => !selected);
   const switchButton = useRef<HTMLButtonElement>(null);
   const nameInput = useRef<HTMLInputElement>(null);
-  const wasExpanded = useRef(true);
+  const wasExpanded = useRef(!selected);
   const rutInput = useRef<HTMLInputElement>(null);
   const rutCaret = useRef<number | null>(null);
   useLayoutEffect(() => {
     if (rutCaret.current !== null) rutInput.current?.setSelectionRange(rutCaret.current, rutCaret.current);
     rutCaret.current = null;
   }, [rut]);
-  useEffect(() => { if (selected && !expanded) switchButton.current?.focus(); }, [selected?.id, expanded]);
+  // Al restaurar la selección desde la URL el foco queda en el título de la página; después sigue a cada elección.
+  const firstFocus = useRef(true);
+  useEffect(() => {
+    if (firstFocus.current) { firstFocus.current = false; return; }
+    if (selected && !expanded) switchButton.current?.focus();
+  }, [selected?.id, expanded]);
   useEffect(() => {
     if (expanded && !wasExpanded.current) nameInput.current?.focus();
     wasExpanded.current = expanded;
@@ -79,7 +85,7 @@ export function StudentLookup({ accountId, selected, onSelect }: { accountId: st
     </>}
     {!validation && !waiting && query.error && <div className="academic-inline-error"><p role="alert">{query.error.message}</p><button className="cenit-button" onClick={() => { void query.refetch(); }}>Reintentar búsqueda</button></div>}
     {!validation && !updating && !query.error && query.data && <>
-      <p className="academic-students__count" role="status">{query.data.totalItems === 0 ? 'No hay estudiantes que coincidan con la búsqueda.' : `${query.data.totalItems} ${query.data.totalItems === 1 ? 'estudiante encontrado' : 'estudiantes encontrados'}${query.data.totalItems > search.pageSize ? ` · Mostrando ${(search.page - 1) * search.pageSize + 1}–${Math.min(search.page * search.pageSize, query.data.totalItems)}` : ''}`}</p>
+      <p className="academic-students__count" role="status">{query.data.totalItems === 0 ? 'No hay estudiantes que coincidan con la búsqueda.' : `${query.data.totalItems} ${query.data.totalItems === 1 ? 'estudiante encontrado' : 'estudiantes encontrados'}${query.data.totalItems > search.pageSize ? ` · Mostrando ${(search.page - 1) * search.pageSize + 1}–${Math.min(search.page * search.pageSize, query.data.totalItems)}` : ''}. Elige uno para ver su avance.`}</p>
       <ul className="academic-students__results">{query.data.data.map(student => <li key={student.id}><button type="button" aria-pressed={selected?.id === student.id} onClick={() => { setExpanded(false); onSelect(student); }}><UserIcon size={17} weight={selected?.id === student.id ? 'fill' : 'regular'} aria-hidden="true" /><span><strong>{student.name}</strong><small>{student.rut}</small></span></button></li>)}</ul>
       {query.data.totalItems > search.pageSize && <div className="academic-students__pagination"><button className="cenit-button" disabled={search.page === 1} onClick={() => setSearch({ ...search, page: search.page - 1 })}>Anterior</button><span>Página {search.page} de {Math.ceil(query.data.totalItems / search.pageSize)}</span><button className="cenit-button" disabled={search.page * search.pageSize >= query.data.totalItems} onClick={() => setSearch({ ...search, page: search.page + 1 })}>Siguiente</button></div>}
     </>}

@@ -36,14 +36,13 @@ export function AssetsHeader({ actions }: { actions?: ReactNode }) {
   ];
   return <>
     <header className="assets-heading">
-      <div><h1>Bienes</h1><p>Inventario, entregas y préstamos. Cada movimiento queda en la ficha del bien.</p></div>
+      <div><h1>Bienes</h1><p>Inventario, entregas y préstamos. Cada movimiento queda en la ficha del bien; no reemplaza el registro de la Sección Registro.</p></div>
       <div className="assets-actions" key={path}>{actions ?? <>
         <Link className="cenit-button" to="/administracion/bienes/prestamos/nuevo">Nuevo préstamo</Link>
         <Link className="cenit-button" to="/administracion/bienes/entregas/nueva">Nueva entrega</Link>
         <Link className="cenit-button cenit-button--primary" to="/administracion/bienes/nuevo"><PlusIcon size={16} aria-hidden="true" />Registrar bien</Link>
       </>}</div>
     </header>
-    <ProposalNotice />
     {summaryQuery.isPending && <LoadingLabel>Cargando el resumen de bienes…</LoadingLabel>}
     <ul className="assets-tiles" aria-label="Resumen de bienes">
       {tiles.map(tile => <li key={tile.label}><Link className="assets-tile" to={tile.to} aria-current={tile.current ? 'true' : undefined}>
@@ -57,11 +56,6 @@ export function AssetsHeader({ actions }: { actions?: ReactNode }) {
       </Link>)}
     </nav>
   </>;
-}
-
-/** Aviso fijo: Bienes es una propuesta general, no un registro institucional validado. */
-export function ProposalNotice() {
-  return <p className="assets-proposal"><strong>Propuesta pendiente de validación con la Facultad.</strong> Los datos de esta demostración son ficticios y no reemplazan el registro de la Sección Registro.</p>;
 }
 
 export function StatusChip({ status }: { status: AssetStatus }) {

@@ -68,10 +68,11 @@ export class AssetRepository {
         (count(*) FILTER (WHERE status = 'vencido'))::int AS overdue, (count(*) FILTER (WHERE ${reviewPredicate('s')}))::int AS review,
         (count(*) FILTER (WHERE status = 'sin_responsable'))::int AS unassigned FROM (${assetRows}) s`);
       const { rows: [other] } = await db.query(`SELECT (SELECT count(*)::int FROM cenit.asset_deliveries) AS deliveries,
-        (SELECT count(*)::int FROM cenit.asset_loans WHERE returned_on IS NULL) AS loans, (SELECT count(*)::int FROM cenit.asset_people) AS people,
+        (SELECT count(*)::int FROM cenit.asset_loans WHERE returned_on IS NULL) AS loans,
+        (SELECT count(*)::int FROM cenit.asset_loans WHERE returned_on IS NULL AND due_on BETWEEN ${today} AND ${today} + 7) AS due_soon, (SELECT count(*)::int FROM cenit.asset_people) AS people,
         (SELECT count(*)::int FROM cenit.asset_people p WHERE NOT p.active AND EXISTS (SELECT 1 FROM cenit.assets a WHERE a.custodian_id = p.id)) AS people_review`);
       const { rows: locations } = await db.query(`SELECT location FROM cenit.assets GROUP BY location ORDER BY count(*) DESC, location LIMIT 200`);
-      return { total: counts.total, onLoan: counts.on_loan, overdue: counts.overdue, review: counts.review, unassigned: counts.unassigned,
+      return { total: counts.total, onLoan: counts.on_loan, overdue: counts.overdue, dueSoon: other.due_soon, review: counts.review, unassigned: counts.unassigned,
         deliveries: other.deliveries, loans: other.loans, people: other.people, peopleReview: other.people_review, locations: locations.map(row => row.location) };
     }, true);
   }
