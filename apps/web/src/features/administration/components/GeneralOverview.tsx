@@ -53,7 +53,7 @@ function YearSpending({ overview, year, current }: { overview: Overview; year: s
       <div className="home-figure home-figure--main"><dt>Gasto en {year}</dt>
         <dd className="home-figure__value" title={overview.documentTotalThisYear ? amountLabel(overview.documentTotalThisYear) : undefined}>{overview.documentTotalThisYear ? amountLabel(overview.documentTotalThisYear) : '—'}</dd>
         <dd className="home-figure__detail">{purchasesLabel(overview.registeredThisYear)}{overview.projectCount ? ` · ${overview.projectCount} ${overview.projectCount === 1 ? 'proyecto' : 'proyectos'}` : ''}</dd></div>
-      {current ? <div className="home-figure"><dt>{capitalized(monthLabel(overview.registrationMonth))}, a la fecha</dt>
+      {current ? <div className="home-figure home-figure--month"><dt>{capitalized(monthLabel(overview.registrationMonth))}</dt>
         <dd className="home-figure__value" title={amountLabel(overview.documentTotalThisMonth)}>{amountLabel(overview.documentTotalThisMonth)}</dd>
         <dd className="home-figure__detail">{purchasesLabel(overview.registeredThisMonth)}</dd>
         {trend !== null && previous && <dd className="home-figure__trend">{trend > 0 ? <ArrowUpIcon size={15} aria-hidden="true" /> : trend < 0 ? <ArrowDownIcon size={15} aria-hidden="true" /> : null}

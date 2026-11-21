@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 
-// Las listas de Inicio comparten el alto (recortar una le deja más espacio a la otra). Después de cada recorte se revisan
-// todas en el cuadro siguiente y se vuelve a cortar la que haya quedado desfasada.
+// Las listas de Inicio comparten el alto (recortar una le deja más espacio a la otra). Después de cada ajuste se revisan
+// todas en el cuadro siguiente y se vuelve a ajustar la que haya quedado desfasada.
 const checks = new Set<() => void>();
 let pending = 0;
 const revalidate = () => {
@@ -10,10 +10,12 @@ const revalidate = () => {
 
 /**
  * Cuando Inicio se ajusta a la ventana, una lista con más filas de las que caben recorta su alto justo al final de la
- * última fila completa (nunca se ve media fila al abrir) y desplaza el resto dentro de sí. Si la página desplaza, la
- * lista no tiene límite de alto y no cambia nada; si sobra alto, la lista puede estirarse para llenarlo (el tope es
- * `max-height`, no `height`). `box` es el espacio disponible; `list`, lo que desplaza; las filas llevan `data-row`.
- * Una lista sin controles propios se vuelve enfocable cuando desplaza, para recorrerla con teclado.
+ * última fila completa (nunca se ve media fila) y desplaza el resto dentro de sí. Si sobra alto bajo esa fila, se
+ * reparte entre las filas visibles (`--fit-extra`, que las filas usan como relleno) para que la lista llene su caja sin
+ * dejar un hueco. Si la página desplaza, la lista no tiene límite de alto y no cambia nada; si sobra alto, la lista puede
+ * estirarse para llenarlo (el tope es `max-height`, no `height`). `box` es el espacio disponible; `list`, lo que
+ * desplaza; las filas llevan `data-row`. Una lista sin controles propios se vuelve enfocable cuando desplaza, para
+ * recorrerla con teclado.
  */
 export function useWholeRows<Box extends HTMLElement, List extends HTMLElement>(rows: number, focusable = false) {
   const box = useRef<Box>(null), list = useRef<List>(null);
@@ -25,20 +27,28 @@ export function useWholeRows<Box extends HTMLElement, List extends HTMLElement>(
     let seen = '';
     const update = () => {
       scroller.style.maxHeight = '';
+      scroller.style.removeProperty('--fit-extra');
       let available = height();
       const limited = scroller.scrollHeight > available + 1;
       if (limited) {
         const top = scroller.getBoundingClientRect().top - scroller.scrollTop;
         const bottoms = [...scroller.querySelectorAll<HTMLElement>('[data-row]')].map(row => row.getBoundingClientRect().bottom - top);
+        let end = 0, shown = 0, next = available;
         // Recortar la lista cambia el alto que flexbox le deja a su caja: se vuelve a cortar hasta que el corte quepa.
         for (let attempt = 0; attempt <= bottoms.length; attempt++) {
-          let end = 0;
-          for (const bottom of bottoms) if (bottom <= available + .5) end = bottom; else break;
+          end = 0; shown = 0;
+          for (const bottom of bottoms) if (bottom <= available + .5) { end = bottom; shown++; } else break;
           const limit = end || available;
           scroller.style.maxHeight = `${limit}px`;
-          const next = height();
+          next = height();
           if (next + .5 >= limit) break;
           available = next;
+        }
+        // La caja es más alta que las filas completas: el sobrante se reparte entre ellas en vez de quedar en blanco.
+        const spare = next - end;
+        if (end && shown && spare > 1) {
+          scroller.style.setProperty('--fit-extra', `${Math.floor(spare / shown * 10) / 10}px`);
+          scroller.style.maxHeight = `${next}px`;
         }
       }
       if (focusable) {

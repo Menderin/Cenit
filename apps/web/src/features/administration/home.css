@@ -10,8 +10,9 @@
 .admin-home-titlebar { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .admin-home-titlebar h1 { min-width: 0; }
 .admin-home-title h1 { margin: 0; }
+/* En el Inicio general el título y los selectores comparten la misma línea. */
+.admin-home:not(.admin-home--project) .admin-home-heading { align-items: center; }
 .admin-home--project .admin-home-title h1 { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: clamp(24px, 1.8vw, 30px); line-height: 1.25; }
-.admin-home-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 8px 0 0; color: var(--admin-muted); font-size: 14px; }
 /* Acciones secundarias de Inicio: un botón compacto con ícono y flecha, nunca texto suelto subrayado. */
 .home-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 10px 4px 9px; border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-control); color: var(--color-ink-secondary); font-size: 14px; line-height: 20px; text-decoration: none; white-space: nowrap; transition: background-color 150ms ease-out, scale 150ms ease-out; }
 .home-chip > svg:first-child { color: var(--color-icon); }
@@ -94,6 +95,9 @@
 .home-figure__value { overflow: hidden; font-size: 30px; line-height: 1.15; font-weight: 600; letter-spacing: -.7px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
 .home-figure--main .home-figure__value { font-size: clamp(40px, 3.1vw, 60px); letter-spacing: -1.4px; }
 .home-figure__detail { color: var(--admin-muted); font-size: 15px; line-height: 21px; }
+.home-figure--month { grid-template-columns: auto 1fr; column-gap: 12px; }
+.home-figure--month > :is(dt, .home-figure__value) { grid-column: 1 / -1; }
+.home-figure--month .home-figure__value { font-size: 26px; letter-spacing: -.5px; }
 .home-figure__trend { display: inline-flex; align-items: center; gap: 4px; color: var(--color-ink-secondary); font-size: 14px; font-variant-numeric: tabular-nums; }
 .home-figure__share { width: clamp(140px, 13vw, 320px); height: 10px; margin: 4px 0; overflow: hidden; border-radius: 5px; background: var(--color-surface-muted); }
 .home-figure__share i { display: block; height: 100%; border-radius: 5px; background: var(--color-focus); }
@@ -212,6 +216,17 @@
    El alto se reparte solo, con flexbox: cada lista mide lo que traen sus filas y el gráfico toma el resto; si una lista
    trae más filas de las que caben, se recorta al final de la última fila completa y desplaza sólo ella. */
 .home-fit { min-width: 0; }
+/* Barra de desplazamiento sutil y siempre visible: avisa que la lista trae más filas de las que caben. Sólo aparece
+   cuando hay algo que desplazar. `.admin-content` define `scrollbar-color`, que se hereda y anula ::-webkit-scrollbar:
+   se restablece aquí para que el navegador no la oculte (macOS la deja flotante y escondida). Firefox usa lo estándar. */
+.home-fit__scroll, .home-project-options { scrollbar-color: auto; scrollbar-width: auto; }
+.home-fit__scroll::-webkit-scrollbar, .home-project-options::-webkit-scrollbar { width: 8px; }
+.home-fit__scroll::-webkit-scrollbar-track, .home-project-options::-webkit-scrollbar-track { background: transparent; }
+.home-fit__scroll::-webkit-scrollbar-thumb, .home-project-options::-webkit-scrollbar-thumb { border-radius: 4px; background: color-mix(in srgb, var(--color-ink-subtle) 40%, transparent); }
+.home-fit__scroll::-webkit-scrollbar-thumb:hover, .home-project-options::-webkit-scrollbar-thumb:hover { background: var(--color-ink-subtle); }
+@supports not selector(::-webkit-scrollbar) {
+  .home-fit__scroll, .home-project-options { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--color-ink-subtle) 40%, transparent) transparent; }
+}
 .home-table thead th { background: var(--color-surface); }
 @media (min-width: 1101px) and (min-height: 700px) {
   .admin-content:has(.admin-home) { display: flex; flex-direction: column; padding-block: 20px; }
@@ -226,7 +241,7 @@
   .home-chart { display: flex; flex: 1; flex-direction: column; min-height: 0; }
   .home-chart__plot { flex: 1; height: auto; min-height: 96px; }
   .home-projects { display: flex; flex: 0 1 auto; flex-direction: column; min-height: 196px; max-height: 55%; }
-  /* Listas (useWholeRows): al abrir nunca muestran media fila; si hay más, desplazan dentro y se detienen en cada fila. */
+  /* Listas (useWholeRows): nunca muestran media fila y llenan su caja; si hay más, desplazan dentro y se detienen en cada fila. */
   .home-fit { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; }
   .home-fit__scroll { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden auto; overscroll-behavior: contain; scroll-snap-type: y proximity; }
   .home-fit__scroll > :is(ul, table) { flex: 0 0 auto; }
@@ -242,12 +257,18 @@
   .home-rail__section .home-fit { min-height: 112px; }
   /* Las filas de Bienes resaltan 10 px hacia los lados al pasar el cursor: ese margen queda dentro de la lista. */
   .home-rail .home-fit__scroll { margin-inline: -10px; padding-inline: 10px; }
+  /* La lista sobresale 10 px a cada lado: la caja no recorta de lado para que su barra de desplazamiento se vea. */
+  .home-rail .home-fit { overflow: visible clip; }
   .home-rail__section--fill { flex: 1 1 0; min-height: 200px; }
   /* Las filas se separan para llenar el alto, hasta 160 px por fila: más separadas ya no se leen como un grupo. */
   .home-rail__section--fill .home-bars { flex-grow: 1; align-content: space-evenly; max-height: calc(var(--rows, 99) * 160px); }
   .home-assets__list a { min-height: 50px; padding-block: 6px; }
+  /* Una línea por bien: las filas miden lo mismo y caben más préstamos; el nombre completo queda en el título. */
+  .home-assets__list strong { -webkit-line-clamp: 1; }
   .home-bars { gap: 12px; }
-  .home-table :is(tbody th, td) { padding-block: 10px; }
+  /* --fit-extra: alto que useWholeRows reparte entre las filas visibles para que la lista llene su caja. */
+  .home-table :is(tbody th, td) { padding-block: calc(10px + var(--fit-extra, 0px) / 2); }
+  .home-fit__scroll li[data-row] { padding-block: calc(var(--fit-extra, 0px) / 2); }
   .home-loading__bars { height: auto; flex: 1; min-height: 110px; }
   .home-loading .home-spend { flex: 1 1 0; }
 }

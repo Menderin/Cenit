@@ -7,7 +7,6 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { getPurchaseProject, getPurchaseSummary, listPurchaseProjects } from '../../purchases/api/purchases.js';
 import { Select } from '../../../shared/components/Select.js';
 import { Skeleton } from '../../../shared/components/Skeleton.js';
-import { displayInstantDate } from '../../../shared/lib/dates.js';
 import { GeneralOverview } from '../components/GeneralOverview.js';
 import { ProjectOverview, projectPurchasesPath } from '../components/ProjectOverview.js';
 import { ProjectPicker } from '../components/ProjectPicker.js';
@@ -55,7 +54,6 @@ export function Home() {
   // El resumen de un proyecto se ve como otra pantalla: la flecha devuelve al Inicio general con el mismo año.
   const general = new URLSearchParams(params);
   general.delete('project');
-  const latest = project ? undefined : overview?.recentRecords[0];
   const projectName = projectData?.name ?? projects.data?.data.projects.find(option => option.code === project)?.name ?? null;
   return <section className={`admin-home${project ? ' admin-home--project' : ''}`}>
     <header className="admin-home-heading">
@@ -65,8 +63,8 @@ export function Home() {
         {!!projectData?.units.length && <ul className="admin-home-chips" aria-label="Unidades del proyecto">
           {projectData.units.map(unit => { const name = unit.name ?? 'Unidad sin nombre en el catálogo';
             return <li key={unit.code ?? 'none'} title={`${unit.code ?? 'Sin código'} ${name}`}><b>{unit.code ?? 'Sin código'}</b><span>{name}</span></li>; })}</ul>}
-      </> : <><h1>Inicio</h1><div className="admin-home-meta">{latest && <span>Último registro el {displayInstantDate(latest.createdAt)}</span>}
-        <Link className="home-chip" to="/administracion/compras"><FilesIcon size={16} aria-hidden="true" />Ver registros<ArrowRightIcon size={14} aria-hidden="true" /></Link></div></>}</div>
+      </> : <div className="admin-home-titlebar"><h1>Inicio</h1>
+        <Link className="home-chip" to="/administracion/compras"><FilesIcon size={16} aria-hidden="true" />Ver registros<ArrowRightIcon size={14} aria-hidden="true" /></Link></div>}</div>
       <div className="admin-home-actions">
         <div className="admin-home-year"><Select className="cenit-button admin-home-select" label="Año" value={year} onValueChange={value => navigate({ year: value })}
           options={years.map(value => ({ value: String(value).padStart(4, '0'), label: String(value) }))} /></div>

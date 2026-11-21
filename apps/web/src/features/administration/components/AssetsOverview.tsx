@@ -26,7 +26,7 @@ export function AssetsSection() {
       : overdue ? <>
         <p className="home-assets__headline">{overdue} {overdue === 1 ? 'préstamo vencido' : 'préstamos vencidos'}</p>
         <div ref={box} className="home-fit"><div ref={list} className="home-fit__scroll"><ul className="home-assets__list">{loans.data.data.map(loan => <li key={loan.id} data-row><Link to={`/administracion/bienes/prestamos/${loan.id}`}>
-          <span><strong>{loan.items[0]?.description ?? `Préstamo ${loan.number}`}{loan.items.length > 1 && ` y ${loan.items.length - 1} más`}</strong><small>{loan.borrowerName}</small></span>
+          <span><strong title={loan.items[0]?.description}>{loan.items[0]?.description ?? `Préstamo ${loan.number}`}{loan.items.length > 1 && ` y ${loan.items.length - 1} más`}</strong><small>{loan.borrowerName}</small></span>
           {/* El titular ya dice «vencidos»: cada fila sólo dice cuánto lleva de atraso. */}
           <em>{relativeDue(loan.dueOn).replace(/^Vencido /, '')}</em>
         </Link></li>)}</ul></div></div>

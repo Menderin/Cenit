@@ -33,7 +33,7 @@ test('Inicio coincide con compras y se actualiza al volver después de guardar y
   await openRecord();
   await home();
   await expect(yearDetail).toHaveText(yearPurchases(before.overview.registeredThisYear + 1));
-  await expect(card('[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+, a la fecha')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisMonth) + BigInt(input.header.totalAmount)).toString()));
+  await expect(card('[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisMonth) + BigInt(input.header.totalAmount)).toString()));
   await expect(monthDetail).toHaveText(purchases(before.overview.registeredThisMonth + 1));
   await expect(card('Gasto en \\d{4}')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisYear) + BigInt(input.header.totalAmount)).toString()));
   await expect(page.getByRole('region', { name: 'Segunda revisión' })).toContainText(String(before.pending + 1));
@@ -43,7 +43,7 @@ test('Inicio coincide con compras y se actualiza al volver después de guardar y
   await expect(row).toHaveCount(0);
   await home();
   await expect(yearDetail).toHaveText(yearPurchases(before.overview.registeredThisYear + 1));
-  await expect(card('[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+, a la fecha')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisMonth) + BigInt(input.header.totalAmount)).toString()));
+  await expect(card('[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisMonth) + BigInt(input.header.totalAmount)).toString()));
   await expect(page.getByRole('region', { name: 'Segunda revisión' })).toContainText(amountLabel(before.pendingAmount));
 });
 
@@ -134,18 +134,18 @@ test('Inicio cabe en la ventana sin desplazar la página de 1280×720 a 2560×14
   await login(page, 'administrativo');
   await expect(page.locator('.home-figures > div').nth(0).locator('.home-figure__detail')).toHaveText('48 compras · 14 proyectos');
   await expect(page.locator('.home-figures > div').nth(1).locator('dd').first()).toHaveText(amountLabel('3520000'));
-  await expect(page.getByText('Último registro el 22/10/2026', { exact: false })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Sincronización con Google Sheets' })).toContainText('Pendiente de sincronización');
   for (const [width, height] of [[1280, 720], [1366, 768], [1440, 900], [1920, 1080], [2560, 1440]] as const) {
     await page.setViewportSize({ width, height });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     // The whole summary fits: only a list that has more rows than fit (projects, loans, accounts) scrolls inside itself.
     await expect.poll(() => page.locator('.admin-content').evaluate(element => element.scrollHeight - element.clientHeight)).toBeLessThanOrEqual(1);
-    // No list opens with a row cut in half, and none moves sideways.
-    await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('.home-fit__scroll')].every(list => {
-      const bottom = Math.min(list.getBoundingClientRect().bottom, list.parentElement!.getBoundingClientRect().bottom);
-      const cut = [...list.querySelectorAll('[data-row]')].some(row => { const box = row.getBoundingClientRect(); return box.top < bottom - 1 && box.bottom > bottom + 1; });
-      return !cut && list.scrollWidth <= list.clientWidth;
+    // No list opens with a row cut in half, none leaves a blank gap under its last row, and none moves sideways.
+    await expect.poll(() => page.evaluate(() => [...document.querySelectorAll<HTMLElement>('.home-fit__scroll')].every(list => {
+      const box = list.parentElement!.getBoundingClientRect(), bottom = Math.min(list.getBoundingClientRect().bottom, box.bottom);
+      const cut = [...list.querySelectorAll('[data-row]')].some(row => { const rect = row.getBoundingClientRect(); return rect.top < bottom - 1 && rect.bottom > bottom + 1; });
+      const overflowing = list.scrollHeight > list.clientHeight + 1;
+      return !cut && list.scrollWidth <= list.clientWidth && (!overflowing || box.bottom - list.getBoundingClientRect().bottom <= 1);
     }))).toBe(true);
     const months = await page.locator('.home-chart__months').boundingBox(), projectsHeading = await page.locator('.home-projects .home-heading').boundingBox();
     expect(months!.y + months!.height).toBeLessThanOrEqual(projectsHeading!.y);
