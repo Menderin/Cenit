@@ -191,7 +191,8 @@
 .purchase-detail-facts dd { margin: 6px 0 0; color: var(--color-ink); font-size: 15px; font-weight: 500; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .purchase-detail-items { display: grid; gap: 8px; }
 .purchase-detail-items .purchase-item { margin: 0; }
-.purchase-detail-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; margin-top: 28px; align-items: start; }
+/* Las dos cajas comparten alto: si una tiene campos sin dato plegados, no deja un hueco junto a la otra. */
+.purchase-detail-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; margin-top: 28px; align-items: stretch; }
 .purchase-detail > .purchase-detail-box { margin-top: 16px; }
 .purchase-detail-box { min-width: 0; padding: 18px 20px; border: 1px solid var(--admin-line); border-radius: var(--radius-lg); }
 .purchase-detail-box > h2 { margin-bottom: 8px; }

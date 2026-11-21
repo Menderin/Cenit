@@ -78,6 +78,12 @@
 .assets-title p { margin: 2px 0 0; color: var(--color-ink-muted); font-size: 13px; }
 .assets-kind { display: grid; place-items: center; flex: none; width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(145deg, var(--color-surface), var(--color-surface-hover)); color: var(--color-ink-secondary); box-shadow: var(--shadow-control); }
 .assets-layout { display: grid; grid-template-columns: minmax(0, 1fr) clamp(320px, 26vw, 480px); gap: 16px; align-items: start; }
+/* Fichas: ninguna columna queda corta. En entregas y préstamos la tabla de bienes ocupa todo el ancho y el detalle comparte fila, a igual altura, con quien recibe. */
+.assets-layout:is(.assets-layout--record, .assets-layout--fill) { align-items: stretch; }
+.assets-layout--record > .assets-layout__full { grid-column: 1 / -1; }
+/* Ficha del bien: ambas columnas terminan a la misma altura; la última tarjeta de la más corta (historial o situación actual) absorbe la diferencia. */
+.assets-layout--fill > .assets-stack { display: flex; flex-direction: column; gap: 16px; }
+.assets-layout--fill > .assets-stack > .assets-card:last-of-type { flex: 1; }
 /* Fichas y formularios usan todo el ancho: los campos se reparten en más columnas y el panel lateral crece con la ventana. */
 .assets-stack { display: grid; gap: 16px; min-width: 0; }
 .assets-card { min-width: 0; padding: 18px 20px; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); }

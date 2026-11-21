@@ -68,19 +68,17 @@ export function LoanDetail() {
       </div>
     </header>
     {loan.status === 'vencido' && loan.dueOn && <div className="assets-alert assets-alert--late" style={{ marginTop: 0, marginBottom: 16 }}><strong>La devolución está vencida</strong><p>Se esperaba el {displayDate(loan.dueOn)} ({relativeDue(loan.dueOn).toLocaleLowerCase('es')}). Contacta a {loan.borrower.name} o registra la devolución si ya volvió.</p></div>}
-    <div className="assets-layout">
-      <div className="assets-stack">
-        <section className="assets-card"><div className="assets-card__head"><h2>Bienes prestados</h2></div><ItemsTable items={loan.items.map(item => ({ key: item.assetId, ...item }))} /></section>
-        <section className="assets-card"><div className="assets-card__head"><h2>Detalle</h2></div>
-          <dl className="assets-facts">
-            <div><dt>Devolución esperada</dt><dd>{loan.dueOn ? displayDate(loan.dueOn) : <span className="assets-muted">Sin fecha</span>}</dd></div>
-            <div><dt>Devuelto</dt><dd>{loan.returnedOn ? displayDate(loan.returnedOn) : <span className="assets-muted">Aún no</span>}{loan.returnNote && <span className="assets-sub">{loan.returnNote}</span>}</dd></div>
-            <div><dt>¿Dónde se usa?</dt><dd className={loan.location ? undefined : 'assets-muted'}>{loan.location ?? 'Sin información'}</dd></div>
-            <div><dt>Autoriza</dt><dd>{loan.authorizerName}<span className="assets-sub">{loan.authorizerUnit}</span></dd></div>
-            <div><dt>Registrado en Cenit</dt><dd>{displayInstantDate(loan.createdAt)}<span className="assets-sub">por {loan.createdBy}</span></dd></div>
-            {loan.notes && <div className="assets-facts__wide"><dt>Observaciones</dt><dd>{loan.notes}</dd></div>}
-          </dl></section>
-      </div>
+    <div className="assets-layout assets-layout--record">
+      <section className="assets-card assets-layout__full"><div className="assets-card__head"><h2>Bienes prestados</h2></div><ItemsTable items={loan.items.map(item => ({ key: item.assetId, ...item }))} /></section>
+      <section className="assets-card"><div className="assets-card__head"><h2>Detalle</h2></div>
+        <dl className="assets-facts">
+          <div><dt>Devolución esperada</dt><dd>{loan.dueOn ? displayDate(loan.dueOn) : <span className="assets-muted">Sin fecha</span>}</dd></div>
+          <div><dt>Devuelto</dt><dd>{loan.returnedOn ? displayDate(loan.returnedOn) : <span className="assets-muted">Aún no</span>}{loan.returnNote && <span className="assets-sub">{loan.returnNote}</span>}</dd></div>
+          <div><dt>¿Dónde se usa?</dt><dd className={loan.location ? undefined : 'assets-muted'}>{loan.location ?? 'Sin información'}</dd></div>
+          <div><dt>Autoriza</dt><dd>{loan.authorizerName}<span className="assets-sub">{loan.authorizerUnit}</span></dd></div>
+          <div><dt>Registrado en Cenit</dt><dd>{displayInstantDate(loan.createdAt)}<span className="assets-sub">por {loan.createdBy}</span></dd></div>
+          {loan.notes && <div className="assets-facts__wide"><dt>Observaciones</dt><dd>{loan.notes}</dd></div>}
+        </dl></section>
       <aside className="assets-stack"><section className="assets-card"><div className="assets-card__head"><h2>Recibe el préstamo</h2></div><PersonCard person={loan.borrower} /></section></aside>
     </div>
   </section>;

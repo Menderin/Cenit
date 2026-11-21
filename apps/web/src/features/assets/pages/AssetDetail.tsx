@@ -61,7 +61,7 @@ export function AssetDetail() {
         </>}
       </div>
     </header>
-    <div className="assets-layout">
+    <div className="assets-layout assets-layout--fill">
       <div className="assets-stack">
         <section className="assets-card" aria-labelledby="asset-data">
           <div className="assets-card__head"><h2 id="asset-data">Datos del bien</h2><Link className="cenit-button cenit-button--quiet" to={`/administracion/bienes/${asset.id}/editar`}><PencilSimpleIcon size={15} aria-hidden="true" />Editar datos</Link></div>
