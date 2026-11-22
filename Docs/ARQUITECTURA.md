@@ -6,7 +6,7 @@ Este archivo es el SDD vigente del repositorio. README es el punto de entrada; `
 
 ## Estado de la implementación
 
-«Implementado» identifica comportamiento disponible en el código con pruebas enlazadas; «preparado» identifica una herramienta o configuración que requiere ejecución explícita en un destino; «pendiente» identifica definición, validación o comprobación que todavía no se acredita. Ninguno de esos estados sustituye la aceptación del cliente ni confirma qué SHA está instalado actualmente en Azure.
+«Implementado» identifica comportamiento disponible en el código con pruebas enlazadas; «preparado» identifica una herramienta o configuración que requiere ejecución explícita en un destino; «pendiente» identifica definición, validación o comprobación que todavía no se acredita. La aceptación del cliente y el SHA instalado se acreditan por separado en cada destino.
 
 | Área | Implementado | Preparado o pendiente |
 | --- | --- | --- |
@@ -15,8 +15,8 @@ Este archivo es el SDD vigente del repositorio. README es el punto de entrada; `
 | Académico | Consulta por rol, versiones del catálogo, detalle, reglas simples/conjuntas e historiales ficticios | Carga explícita de `diagrama-r2` en cada entorno; año, códigos y aceptación institucional pendientes |
 | Personal | Entrada con dos tarjetas grandes, que ocupan todo el alto disponible y muestran la parte superior de cada documento, grande e inclinado, con márgenes y hojas decorativas detrás (con efecto al pasar el cursor), para elegir. Cada documento ofrece «Cambiar de documento» y una ruta superior «Administración › Personal › documento» para volver; con datos sin completar se pide confirmar antes de salir. Comisión de servicios y Solicitud de permiso: formulario por secciones, búsqueda de funcionario ficticio, vista previa aproximada y PDF carta generado por el servidor; borrador sólo en memoria | Validaciones y formato pendientes de confirmación institucional y revisión del recorrido integrado |
 | Bienes | Propuesta general: inventario con búsqueda por palabras clave, ficha con historial, alta adaptada al tipo de bien, entregas y préstamos con PDF carta para firmar, devoluciones, cambios de ubicación y responsables (con «ya no pertenece» y entrega de todos sus bienes). Código Cenit `BN-0001`; N° de inventario opcional. Datos ficticios en la demo local | Identificador oficial, inventario maestro, firmantes, fecha de devolución, permisos y formato de los documentos pendientes de validar con la Facultad |
-| Entregas en ramas | Backend e interfaz Google integrados en `develop` mediante el PR #70 | Google requiere revisión independiente y comprobación de la entrega y configuración en Azure. Los respaldos cifrados con copia fuera de la VM y las mejoras OCR se revisan en sus ramas correspondientes |
-| Entrega | CI, imágenes por digest, despliegue Azure, migrador separado y recuperación de configuración ante fallos de activación | Catálogo/cuentas se preparan por separado; restauración completa de datos y retiro del servidor anterior requieren ensayo y aprobación |
+| Integraciones y comprobaciones | Acceso Google integrado desde el PR #70 y correcciones OCR integradas mediante el PR #72 | Google requiere configuración y recorrido autorizado en cada destino; precisión OCR con nuevas muestras, respaldo cifrado, copia externa y restauración completa conservan sus comprobaciones pendientes |
+| Entrega | CI, imágenes por digest, selector Azure/AWS, migrador separado y recuperación de configuración ante fallos de activación | Catálogo/cuentas se preparan por separado; restauración completa de datos y retiro del servidor anterior requieren ensayo y aprobación |
 
 La [matriz de aceptación](PRUEBAS-Y-ACEPTACION.md) identifica pruebas y evidencia histórica. El estado operativo se obtiene de Actions, `current.json`, health y recorridos autenticados, siguiendo la [guía Azure](../deploy/azure/README.md#diagnóstico-y-recuperación).
 
@@ -113,9 +113,9 @@ La cresta de Doña Ana identifica a Cenit en la pestaña del navegador, en la pa
 | Ubicación | Responsabilidad |
 | --- | --- |
 | `apps/web/src/app` | Rutas, proveedores, navegación y composición de la interfaz |
-| `apps/web/src/features/auth`, `purchases`, `academic` | Pantallas, consultas y presentación de cada funcionalidad |
+| `apps/web/src/features/auth`, `purchases`, `academic`, `personnel`, `assets` | Pantallas, consultas y presentación de cada funcionalidad |
 | `apps/web/src/shared` | Componentes y utilidades que realmente comparten varias funcionalidades |
-| `apps/api/src/modules/auth`, `purchases`, `academic` | Rutas, servicios y repositorios de cada módulo |
+| `apps/api/src/modules/auth`, `purchases`, `academic`, `personnel`, `assets` | Rutas, servicios y repositorios de cada módulo; Personal genera documentos a partir de la solicitud |
 | `apps/api/src/infrastructure` | Conexión a PostgreSQL, errores, configuración, salud y servicio del frontend |
 | `apps/ocr` | Procesamiento auxiliar de imágenes; no guarda compras ni consulta la base |
 | `packages/contracts` | Schemas TypeBox/JSON Schema, tipos y formatos públicos del API |
@@ -123,7 +123,7 @@ La cresta de Doña Ana identifica a Cenit en la pestaña del navegador, en la pa
 | `db/seeds` | Preparación explícita de datos ficticios y catálogo |
 | `catalogs/academic` | Catálogo versionado y referencias a sus fuentes |
 | `tests/integration`, `tests/e2e`, `tests/infrastructure`, `tests/ocr` | Pruebas de persistencia/API, navegador, operación y procesamiento |
-| `deploy` | Configuración local, Azure y herramientas de la instalación anterior |
+| `deploy` | Configuración local, Azure, AWS y herramientas de la instalación anterior |
 | `experiments` | Investigación reproducible separada de la aplicación |
 
 Las rutas adaptan HTTP; los servicios aplican las reglas; los repositorios realizan las consultas. Cada módulo controla su persistencia y evita acceder a estructuras privadas de otro módulo. El frontend comparte contratos públicos con el servidor, no tablas Drizzle ni modelos internos.
@@ -132,14 +132,20 @@ Las rutas adaptan HTTP; los servicios aplican las reglas; los repositorios reali
 
 ```mermaid
 flowchart LR
-    Usuario["Navegador"] --> HTTPS["Caddy: HTTPS en Azure"]
+    Usuario["Navegador"] --> HTTPS["Caddy: HTTPS en el destino Azure o AWS"]
     HTTPS --> Web["Fastify sirve React compilado"]
     Web --> Router["React Router y TanStack Query"]
     Router --> Auth["API: sesión y permisos"]
     Auth --> Compras["Módulo administrativo: Compras"]
     Auth --> Academico["Módulo académico: catálogo e historial"]
+    Auth --> Personal["Personal: formulario y PDF"]
+    Auth --> Bienes["Bienes: inventario y documentos"]
     Compras --> PG[("PostgreSQL: esquema cenit")]
     Academico --> PG
+    Bienes --> PG
+    Personal --> PDF["Generación PDF en servidor"]
+    Bienes --> PDF
+    PDF --> Router
     PG -.-> Worker["Worker de Sheets: opcional, flag apagada por defecto"]
     Worker -.-> Sheets["Google Sheets: planilla dedicada"]
     Compras --> OCR["OCR privado: Python y ONNX"]
@@ -525,20 +531,23 @@ El catálogo publicado es inmutable; su carga valida códigos, fuentes, referenc
 
 ### Datos, salidas y protección
 
-La siguiente tabla describe los flujos visibles y de salida comprobados. PDF y evidencias se generan mediante impresión o adjuntos de revisión; no existe una exportación PDF/PDFX implementada por Cenit.
+La siguiente tabla describe los flujos y los controles presentes en el código. Personal genera PDF desde el formulario enviado al API; Bienes genera PDF desde sus registros guardados. La impresión y las capturas realizadas por el navegador son salidas adicionales. La configuración efectiva y la aceptación de cada destino se acreditan en la matriz de pruebas.
 
 | Datos | Destino | Acceso comprobado | Protección comprobada |
 | --- | --- | --- | --- |
 | Cuentas: correo, nombre, rol, hash de contraseña y identificador de sesión | Pantalla de acceso, menú y sesiones | Login local, rol por cuenta, sesión de dos horas; la pantalla no recibe el hash ni el token de sesión | Contraseña sólo como hash scrypt; las sesiones sólo conservan su hash; credenciales no aparecen en respuestas públicas ni artefactos |
+| Perfil Google: correo vinculado y dirección de foto verificada | Perfil, menú lateral y carga de imagen desde `googleusercontent.com` | Perfil de la cuenta autenticada; dirección HTTPS admitida por el servidor | PostgreSQL conserva la dirección de la imagen; el avatar usa `referrerPolicy="no-referrer"` e inicial ante ausencia o error. El ID token y la cookie de sesión permanecen privados |
 | Compras: cabecera, ítems, procedencia, estado, RUT/BI y referencias documentales | Pantalla, Excel descargado y Sheets opcional | Sólo administrativo; el API revalida sesión y el Excel usa descarga autenticada con `Cache-Control: no-store` | PostgreSQL controla la copia principal; Excel contiene los campos seleccionados sin cifrado propio conocido; Sheets usa cuenta de servicio dedicada y no entrega su credencial al navegador |
-| Compras seleccionadas | PDF impreso desde el navegador | Conserva las restricciones de sesión y rol de la pantalla | Un PDF generado fuera de Cenit no recibe cifrado automático por cifrar el servidor o PostgreSQL |
+| Compras visibles en pantalla | Impresión o PDF creado desde el navegador | Conserva las restricciones de sesión y rol de la pantalla | La descarga XLSX se realiza mediante el API de Compras; una impresión o captura del navegador queda bajo control del dispositivo y de quien la comparte |
+| Personal: nombre, cargo, unidad, fechas, financiamiento y contenido del formulario | API de comisión o permiso → PDF descargado o impreso | Sesión administrativa y Origin exacto; validación de entrada y de textos que caben en el documento | Borrador en memoria; PDF generado en el servidor con `Cache-Control: no-store`. El formulario y el PDF se procesan sin guardar una comisión o permiso en PostgreSQL. El archivo descargado carece de cifrado propio en esta implementación |
+| Bienes: identificación del bien, responsables, ubicaciones, entregas y préstamos | PostgreSQL → pantalla y PDF de alta, entrega o préstamo | Sesión administrativa; descarga PDF y escrituras exigen Origin exacto | El PDF se genera desde el registro consultado y responde `no-store`; PostgreSQL conserva los datos del módulo. El PDF descargado carece de cifrado propio y su custodia depende del archivo y del dispositivo |
 | Académico: catálogo, relaciones, curso, avance ficticio, nombre y RUT de estudiante | Pantalla de catálogo y avance | Catálogo y avance según las rutas de docente/estudiante; el avance propio queda limitado a la cuenta y la búsqueda queda limitada a docente | Acceso por rol en API; demo/QA usa datos ficticios. El PDF o captura creado en el navegador queda bajo el control de ese dispositivo o servicio |
 | Capturas OCR, borradores y errores/evidencias | Pantalla y artefactos temporales de revisión | Sólo la cuenta que inició la sesión puede recuperar su borrador temporal | El borrador vive en memoria, ligado a cuenta y pestaña, y se descarta al abandonar, cerrar, recargar, cerrar sesión, vencer o cambiar de cuenta. No se persiste ni viaja en URL |
 | Ejecuciones y exportaciones de prueba | `tmp/`, `test-results/`, `playwright-report/` y logs técnicos | Entorno de desarrollo/QA; directorios excluidos de Git | No deben contener formularios completos, capturas privadas, claves, tokens ni respuestas completas con datos de usuarios |
 
 El cifrado del servidor, el volumen o PostgreSQL protege los datos almacenados y los respaldos según se haya configurado el destino; no cifra automáticamente un XLSX/PDF descargado ni una copia de Sheets creada por otro servicio. Compartir o descargar esos artefactos requiere controles adicionales en el archivo, el dispositivo, el almacenamiento o el proveedor. La existencia del cifrado de infraestructura no demuestra protección de esos destinos.
 
-La aplicación del cifrado adicional debe analizarse por campo. El correo, nombre, rol y clave normalizada de búsqueda pueden necesitar texto utilizable para acceso, vistas y consultas; también puede ser necesario convertir identificadores como RUT. Cifrar RUT, notas, calificaciones o datos documentales sensibles puede impedir orden, rangos y coincidencias normales. Requiere cifrado determinista para búsquedas exactas o cifrado en aplicación con índices protegidos y consultas de texto/fecha limitadas. Esta evaluación técnica no define qué campos son sensibles ni establece políticas institucionales.
+La aplicación del cifrado adicional debe analizarse por campo y con su requisito de uso validado. El correo se usa en acceso y vinculación; nombre y RUT participan en búsquedas; calificaciones y datos documentales pueden requerir orden, rangos o agregados. Cifrarlos en aplicación cambia esas consultas y exige definir custodia de claves, recuperación y los índices o consultas que se conservarían. El cifrado de archivos descargados y el de columnas de PostgreSQL requieren decisiones propias. Los candidatos se revisan con Víctor y las salidas visibles con Gael antes de acordar una solución; esta evaluación conserva pendientes la clasificación institucional y el eventual requisito de cifrado por campo.
 
 Los registros públicos responden con código, mensaje acotado, ID de solicitud y estado HTTP; el manejador no serializa el cuerpo completo ni variables de autenticación. Las entregas de Sheets guardan sólo un error acotado. OCR y capturas temporales se procesan como candidatos y se liberan sus buffers al terminar. Las evidencias se revisan antes de adjuntarlas y usan datos ficticios.
 
@@ -546,7 +555,7 @@ Los registros públicos responden con código, mensaje acotado, ID de solicitud 
 
 [Desarrollo y demostración local](../deploy/LOCAL.md) explican configuración, preparación ficticia y arranque. `npm run dev` comprueba/verifica las tres cuentas de demo con los secretos locales antes de iniciar API/Vite; no migra ni carga catálogo o historiales. Esta preparación existente es exclusiva del arranque local. Las demás preparaciones son comandos explícitos y no se ejecutan desde CD.
 
-[Azure](../deploy/azure/README.md) es el destino de entrega: `develop` despliega staging y `main` producción de la demostración, después de CI. El servidor anterior permanece como [referencia de transición](../deploy/README.md); no se retiran sus datos o servicios sin transferencia y recorridos verificados.
+`Cenit Release` selecciona [AWS](../deploy/aws/README.md) con `CENIT_DEPLOY_TARGET=aws` y [Azure](../deploy/azure/README.md) con el valor vacío o `azure`. En ambos, `develop` despliega staging y `main` producción de la demostración después de CI, usando la configuración del SHA que se entrega. Cada destino y entorno conserva sus comprobaciones de red, cifrado, secretos, cuentas y recorridos. El servidor anterior permanece como [referencia de transición](../deploy/README.md); su retiro requiere transferencia y recorridos verificados.
 
 Readiness comprueba conexión, historial de migraciones, esquema y permisos del runtime; no exige datos sembrados ni finge disponibilidad. Los backups anteriores a una entrega y la recuperación de una imagen no acreditan una restauración completa de datos. La operación no debe borrar volúmenes, hacer prune global o restaurar datos automáticamente como rollback de una aplicación.
 
@@ -554,6 +563,6 @@ Readiness comprueba conexión, historial de migraciones, esquema y permisos del 
 
 Esta guía describe el funcionamiento que necesita comprender quien desarrolla o mantiene Cenit. Los comandos operativos tienen su guía propia y los criterios se relacionan con pruebas en la matriz. El Project Charter conserva la definición del proyecto; Jira y las actas registran compromisos y aceptación. La existencia de código o una prueba correcta no se presenta como validación del cliente.
 
-El equipo confirmó Markdown del repositorio como formato de entrega documental. El SDD, README, guías y diagramas se revisan en el mismo cambio que el código correspondiente; cualquier exportación adicional requiere confirmar previamente su necesidad y formato. El procedimiento de carga de catálogo y el de recuperación pertenecen a la guía Azure, no se duplican en este documento.
+El equipo confirmó Markdown del repositorio como formato de entrega documental. El SDD, README, guías y diagramas se revisan en el mismo cambio que el código correspondiente; cualquier exportación adicional requiere confirmar previamente su necesidad y formato. Los procedimientos operativos se consultan en las guías del destino y los locales en `deploy/LOCAL.md`.
 
 Cuando cambia un comportamiento se actualiza su sección, manteniendo en Git el historial anterior. Las decisiones arquitectónicas relevantes conservan su motivo: monolito modular para el alcance actual, contratos compartidos para evitar diferencias entre consumidores, montos exactos para preservar datos documentales, OCR auxiliar para separar inferencia y persistencia, y reglas pendientes para no inventar condiciones académicas. Las notas de sesión y las listas de ajustes ya implementados pertenecen a la revisión del cambio, no a nuevos documentos permanentes.

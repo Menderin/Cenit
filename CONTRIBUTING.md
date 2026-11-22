@@ -42,7 +42,7 @@ Antes del merge deben pasar `CI required`, las comprobaciones aplicables y al me
 | Frontend, interfaz y pruebas funcionales | Gael |
 | Backend, contratos, datos, infraestructura, pruebas técnicas e integración | Víctor |
 
-Kevin e Ignacio desarrollan funcionalidades. Cada autor documenta y prueba su propio cambio; Gael consolida la documentación de usuario y las pruebas funcionales, y Víctor revisa lo técnico. Andrés ya no participa en el proyecto.
+El equipo operativo está formado por Víctor, Gael y Kevin. Kevin desarrolla funcionalidades; Gael coordina la interfaz, las pruebas funcionales y la documentación de usuario; Víctor coordina backend, pruebas técnicas e integración. Cada autor documenta y prueba su propio cambio. Andrés e Ignacio conservan la atribución de sus aportes históricos y quedan sin responsabilidades operativas o de respaldo.
 
 El autor elige otro integrante para revisar su trabajo: Gael revisa el funcionamiento y Víctor la parte técnica, y nadie aprueba su propio cambio. Víctor coordina integración y promoción a `main`; sus cambios también necesitan revisión independiente. La ausencia de un revisor no autoriza a eludir los controles.
 
@@ -64,6 +64,6 @@ La arquitectura y los contratos resumidos pertenecen a [Arquitectura](Docs/ARQUI
 
 Una tarea está terminada cuando satisface sus criterios, tiene evidencia, fue revisada e integrada. Las historias de aplicación deben funcionar en el recorrido completo sobre el build de demostración. Para una tarea documental se revisa su entregable y sus referencias, sin exigir un build ajeno a su alcance. Una prueba técnica correcta no sustituye aceptación de usuarios.
 
-La entrega habitual es automática: `develop` despliega staging y `main` producción de la demostración, después de CI y verificación de imágenes del SHA integrado. El [procedimiento Azure](deploy/azure/README.md) describe sus controles y recuperación. No sustituirlo por SSH, `git pull`, builds manuales en la VM o releases para eludir gates.
+La entrega habitual es automática: `develop` despliega staging y `main` producción de la demostración, después de CI y verificación de imágenes del SHA integrado. El workflow elige el destino mediante `CENIT_DEPLOY_TARGET`: `aws` usa [AWS](deploy/aws/README.md); vacío o `azure` usa [Azure](deploy/azure/README.md). Las guías describen los controles y la recuperación del destino. No sustituirlos por SSH, `git pull`, builds manuales en el host o releases para eludir gates.
 
 Conservar una ejecución local comprobada de la misma versión como contingencia. Antes de declarar operación completa, verificar entrega y recuperación en el destino, registrar SHA/digests y mantener los datos. No retirar el servidor anterior sin transferencia y recorridos comprobados.
