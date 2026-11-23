@@ -351,6 +351,54 @@ El docente combina nombre y prefijo de RUT con AND; la búsqueda espera 250 ms y
 
 Los historiales de demostración distinguen aprobada, reprobada, en curso y no cursada. Muestran intentos numerados, estado del último intento y última nota aprobatoria. Las notas JSON son texto con coma y un decimal significativo, omitiendo el decimal cero: `4,1`, `6`, `6,5`; SCT sigue siendo numérico. La escala 1–7 y aprobación desde 4 corresponden a los datos ficticios acordados, sin inferir una política universal de notas. No hay edición pública de historiales, porcentajes ni persistencia de simulaciones.
 
+### Fuentes para otras carreras y avance académico futuro
+
+La evaluación de [SCRUM-95](https://totofamed.atlassian.net/browse/SCRUM-95) distingue disponibilidad técnica, procedencia y autorización. Recibir un extractor o una credencial no acredita permiso para consultar, conservar o publicar datos institucionales. El alcance es evaluar las fuentes; incorporar carreras o historiales reales requiere una decisión posterior.
+
+| Carrera | Fuente y versión disponibles | Autorización y disponibilidad comprobadas | Particularidades y trabajo necesario |
+| --- | --- | --- | --- |
+| Nutrición y Dietética | Imagen y [cotejo del catálogo](COTEJO-CATALOGO-ACADEMICO.md); catálogo de trabajo `diagrama-r2`. Año oficial sin confirmar | Revisión del equipo; validación institucional pendiente. Catálogo disponible en Git. Sin extracción Argos recibida para esta carrera | 52 asignaturas, 305 SCT, 43 relaciones y 18 requisitos pendientes. Confirmar código Argos, plan/año, códigos oficiales y reglas antes de relacionar una extracción con los identificadores internos actuales |
+| Medicina | Sin malla, versión oficial ni extracción Argos identificadas en el material revisado | Disponibilidad y condiciones de uso pendientes de respuesta institucional | Confirmar carrera/sede/código, catálogo, organización de períodos, créditos, internados y reglas/equivalencias aplicables; no trasladar las reglas de Nutrición |
+| Enfermería | Sin malla, versión oficial ni extracción Argos identificadas en el material revisado | Disponibilidad y condiciones de uso pendientes de respuesta institucional | Confirmar carrera/sede/código, catálogo, períodos, créditos, prácticas y reglas/equivalencias aplicables |
+| Kinesiología | Sin malla, versión oficial ni extracción Argos identificadas en el material revisado | Disponibilidad y condiciones de uso pendientes de respuesta institucional | Confirmar carrera/sede/código, catálogo, períodos, créditos, prácticas y reglas/equivalencias aplicables |
+
+#### Qué aporta la entrega de Argos
+
+Se inspeccionó el paquete privado `FAEDUC-etl-entrega.zip`, SHA-256 `dd8f29a29f8c76486c9eeeeeaaf41bddd3d3b27023d34e3362de14f33ffadfd5`, recibido por el equipo. Su README lo identifica como adaptación del ETL de FAEDUC a Node.js nativo; no identifica una autoría personal verificable. Se conserva esa procedencia y no se incorpora su código como desarrollo de Cenit.
+
+El ZIP contiene código, visor, pruebas y configuración; no contiene un dump SQL ni extracciones guardadas de las cuatro carreras. Incluye un `.env` privado que no debe incorporarse a Git. La revisión y las pruebas se realizaron sobre una copia temporal sin ese archivo, con respuestas ficticias; no se utilizó su token ni se contactó el proxy institucional.
+
+| Fuente prevista por el extractor | Evidencia del paquete | Qué falta acreditar |
+| --- | --- | --- |
+| Catálogos, asignaturas, prerrequisitos y equivalencias | `src/argos.js` define consultas separadas, parametrizadas por carrera y catálogo; `src/etl.js` conserva los resultados en JSON y publica `malla.json` al completar la extracción | Códigos de las cuatro carreras, alcance del acceso, versiones realmente devueltas y significado oficial de los campos/reglas. Los códigos de ejemplo del README y las pruebas no identifican las carreras de Cenit |
+| Nómina, historial, inscripción y transferencias | El extractor permite consultas por carrera/período y resolución de identidad; datos personales adicionales son opcionales | Permiso específico para estos datos, campos mínimos, identidad, pertenencia a plan/período y reglas de notas, intentos, convalidaciones y equivalencias |
+| Oferta y horarios | Consulta por departamento y período; transformación independiente | No es una fuente de prerrequisitos ni acredita avance aprobado. Evaluar sólo si una necesidad posterior lo requiere |
+
+La salida conserva `fields`, `records` y `rows`; el manifiesto declara carrera, período, catálogos, fecha y versión del extractor. Esto permite estudiar una futura transformación, pero no satisface directamente el contrato de Cenit. `--dry-run` también consulta Argos y puede leer nóminas: no sustituye la autorización. El hash usado en los nombres de los archivos de historial no anonimiza las nóminas ni los demás campos de la respuesta. El visor no tiene login y publica muestras de resultados de los trabajos; no se considera un servicio de Cenit listo para desplegar con datos reales.
+
+#### Compatibilidad con Cenit
+
+| Área | Capacidad existente | Diferencia que requiere una futura implementación acordada |
+| --- | --- | --- |
+| Catálogo y API | [Contrato](../packages/contracts/src/academic/index.ts), [esquema](../db/schema/academic.ts) y rutas admiten varios `planId` y versiones publicadas con fuentes y hashes | Transformar y validar cada salida Argos antes de publicarla. Verificar que los períodos se representen como semestres 1–20 y que los créditos correspondan a SCT; no asignar equivalencias de unidades por inferencia |
+| Identificadores y requisitos | Identificador interno y `officialCode` separados; reglas `course`, `allOf`, `anyOf`, `none`, `pending` y `unsupported` | Mantener una correspondencia explícita entre código oficial y código interno por plan/versión. Las filas de prerrequisitos/equivalencias de Argos no determinan por sí solas AND/OR, ausencia de requisitos o convalidación. Conservar `pending` hasta validar el significado |
+| Pantalla | [Academic.tsx](../apps/web/src/features/academic/pages/Academic.tsx) elige explícitamente `nutricion-dietetica` / `diagrama-r2`, sin selector de versión | Definir cómo elegir la carrera y el plan vigente antes de ampliar la interfaz; cargar otra carrera en la base no hace que aparezca en pantalla |
+| Búsqueda e historial docente | El [repositorio](../apps/api/src/modules/academic/repositories/academic.ts) filtra búsquedas e historiales por `nutricion-dietetica`; la búsqueda pública no recibe carrera | Acordar selección de carrera, adscripción y alcance de consulta antes de generalizar filtros. La autorización por rol actual no acredita permiso institucional para consultar estudiantes reales |
+| Avance e identidad | [Esquema de avance](../db/schema/academic-progress.ts): estudiante vinculado a cuenta local, una adscripción por estudiante e intentos por asignatura/versión. La respuesta pública declara `origin: demo` | Acordar el vínculo institucional con la cuenta, pertenencia y cambios de plan, múltiples adscripciones si corresponden y procedencia real. No reutilizar el contrato ficticio ni importar filas por coincidencia de nombre o RUT sin validación |
+| Estados y notas | Aprobación, reprobación, curso actual e intentos con escala 1–7 y un decimal para la demo | Confirmar estados, escala, precisión, aprobación, retiros, repeticiones y transferencias con la fuente. La ausencia de una fila en una extracción parcial no acredita «no cursada» |
+
+No existe un importador Argos en Cenit. Esta evaluación no añade endpoints, migraciones, sincronización, nuevas carreras ni datos reales.
+
+#### Respuestas y dependencias
+
+- [SCRUM-71](https://totofamed.atlassian.net/browse/SCRUM-71) registra un correo de Kevin a Registro Curricular del 30/10/2026 sobre fuentes, versiones, reglas, progreso y condiciones de acceso. El comentario sigue indicando respuesta institucional pendiente; no acredita la confirmación de las 18 reglas pendientes ni una autorización para Argos.
+- Al 22/11/2026, el responsable de SCRUM-95 confirma que aún no ha realizado la consulta adicional sobre códigos de las cuatro carreras, dominios Google y alcance autorizado de Argos. No se dispone de una respuesta que complete estos datos; la recepción del ZIP no resuelve esa dependencia.
+- Dominios Google: no hay respuesta institucional acreditada en las incidencias revisadas. Confirmar con la contraparte los dominios de estudiantes y personal, su proveedor de identidad y las condiciones para vincular cuentas. Un dominio observado en una cuenta no valida a toda la institución. El MVP mantiene correos exactos autorizados, un rol por cuenta y sesión fija de dos horas.
+- Historiales reales: falta identificar responsable de la fuente y permiso de consulta/uso, campos necesarios, plan y período, reglas académicas y correspondencia de identidad. Mientras eso no esté acordado, la evaluación continúa con contratos y datos ficticios.
+- [SCRUM-113](https://totofamed.atlassian.net/browse/SCRUM-113) mantiene pendiente localizar y revisar el entregable de Ignacio sobre descripciones. El paquete Argos no acredita esa propuesta ni autoriza añadir descripciones al contrato: fuente, disponibilidad y tratamiento de ausencias requieren su propia revisión.
+
+Para cerrar la evaluación, el equipo debe revisar esta comparación y registrar las respuestas institucionales disponibles o sus dependencias explícitas. No se presenta una gestión pendiente como una consulta respondida ni la revisión del equipo como validación institucional.
+
 ## Persistencia y contratos
 
 ### Esquema administrativo
