@@ -9,7 +9,11 @@ cloud-init status --wait >/dev/null
 root="/opt/cenit/$CENIT_ENV"
 install -d -m 700 "$root" "$root/backups"
 cd "$root"
-dc() { docker compose --env-file .env -f compose.yaml "$@"; }
+dc() {
+  local compose_files=(--env-file .env -f compose.yaml)
+  if [[ $CENIT_ENV == staging && -f compose.sheets.yaml ]]; then compose_files+=(-f compose.sheets.yaml); fi
+  docker compose "${compose_files[@]}" "$@"
+}
 registry=$(mktemp -d /run/cenit-registry.XXXXXX)
 activated=false
 configured=false
@@ -26,6 +30,11 @@ recover() {
     if [[ -f previous.env && -f previous.compose.yaml ]]; then
       cp previous.env .env
       cp previous.compose.yaml compose.yaml
+      if [[ -f previous.compose.sheets.yaml ]]; then
+        cp previous.compose.sheets.yaml compose.sheets.yaml
+      else
+        rm -f -- compose.sheets.yaml
+      fi
       if $activated; then
         dc up -d --pull never --wait --wait-timeout 180 app || echo 'Recovery requires inspection.' >&2
       fi
@@ -66,6 +75,11 @@ done
 if [[ -f .env && -f compose.yaml ]]; then
   cp .env previous.env
   cp compose.yaml previous.compose.yaml
+  if [[ -f compose.sheets.yaml ]]; then
+    cp compose.sheets.yaml previous.compose.sheets.yaml
+  else
+    rm -f -- previous.compose.sheets.yaml
+  fi
 fi
 configured=true
 install -d deploy/local deploy/scripts
