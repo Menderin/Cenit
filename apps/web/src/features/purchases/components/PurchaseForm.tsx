@@ -61,7 +61,7 @@ export function PurchaseForm({ draft, onChange, lineKeys, onLineKeysChange, oper
     return <CandidateField key={key} id={`${original ? 'review' : 'manual'}-${group}-${index}-${key}`} field={key}
       label={`${purchaseLabels[key]}${group === 'lines' ? ` · ítem ${index + 1}` : ''}`} value={value}
       required={group === 'header' && required.has(key)} disabled={disabled || mutation.isPending} long={key === 'description'}
-      candidate={candidate} error={problems.find(problem => problem.path === path)?.message}
+      candidate={candidate} providers={(group === 'lines' ? [draft.lines[index]?.provider] : draft.lines.map(line => line.provider)).filter((provider): provider is string => !!provider)} error={problems.find(problem => problem.path === path)?.message}
       issue={original?.data.issues.find(issue => issue.path === sourcePath)?.message}
       sourcePath={candidate ? sourcePath : undefined} active={!!candidate && activePath === sourcePath}
       onFocus={() => onFieldFocus?.(candidate ? sourcePath : '')}

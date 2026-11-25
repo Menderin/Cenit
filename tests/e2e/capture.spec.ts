@@ -258,3 +258,42 @@ test('captura: paneles completos, imagen ajustada y fija al recorrer el formular
     expect(await page.locator('.admin-content').evaluate(el => el.scrollTop)).toBe(0);
   }
 });
+
+
+test('captura: proponer formato es opcional, conserva original y permite editar antes de guardar', async ({ page }) => {
+  await open(page);
+  const response = result();
+  const raw = 'SERVICIOS BOL/31, SEPTIEMBRE, ANA PÉREZ_00000000';
+  response.data.header.description = { status: 'recovered', value: raw, rawText: raw };
+  response.data.lines[0]!.provider = { status: 'recovered', value: 'ANA PÉREZ', rawText: 'ANA PÉREZ' };
+  let saves = 0;
+  await page.route('**/api/v1/purchases/extractions', route => route.fulfill({ json: response }));
+  await page.route(/\/api\/v1\/purchases$/, route => {
+    if (route.request().method() === 'POST') saves++;
+    return route.continue();
+  });
+  await choose(page);
+  const field = page.locator('#review-header-0-description');
+  const trigger = field.locator('..').getByRole('button', { name: /Normalizar mayúsculas/ });
+  await expect(field).toHaveValue(raw);
+  await trigger.click();
+  await expect(field).toHaveValue(raw);
+  for (const width of [1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(page.getByRole('button', { name: 'Aplicar normalización', exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  await page.getByRole('button', { name: 'Conservar texto actual', exact: true }).click();
+  await expect(field).toBeFocused();
+  await expect(field).toHaveValue(raw);
+  await trigger.click();
+  await page.getByRole('button', { name: 'Aplicar normalización', exact: true }).click();
+  await expect(field).toHaveValue('Servicios BOL/31, septiembre, ANA PÉREZ_00000000');
+  await expect(field).toBeFocused();
+  await field.locator('..').getByText('Ver original', { exact: false }).click();
+  await expect(field.locator('..').locator('dd').first()).toHaveText(raw);
+  await field.fill('Corrección manual posterior');
+  await expect(field).toHaveValue('Corrección manual posterior');
+  expect(saves).toBe(0);
+  await expect(page.getByRole('button', { name: 'Guardar registro', exact: true })).toBeEnabled();
+});

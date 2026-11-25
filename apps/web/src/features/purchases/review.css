@@ -36,3 +36,11 @@
 .purchase-editor .purchase-review__origin { align-items: flex-start; flex-wrap: wrap; gap: 6px 10px; margin-top: 7px; }
 .purchase-editor .purchase-review__original { margin-left: auto; }
 .purchase-editor .purchase-review__original summary { font-size: 12px; }
+
+.purchase-format { margin-top: 6px; }
+.purchase-format__trigger { padding: 2px 0; border: 0; background: transparent; color: var(--color-ink-secondary); font: inherit; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.purchase-format__trigger:disabled { opacity: .5; cursor: default; }
+.purchase-format__preview { margin-top: 8px; padding: 12px; border: 1px solid var(--admin-line); border-radius: 8px; background: var(--color-surface-subtle); }
+.purchase-format__preview p { margin: 0; font-size: 12px; color: var(--admin-muted); }
+.purchase-format__preview .purchase-format__text { margin: 8px 0 12px; color: var(--color-ink-secondary); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.purchase-format__actions { display: flex; flex-wrap: wrap; gap: 8px; }
