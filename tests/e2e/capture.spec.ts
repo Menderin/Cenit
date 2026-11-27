@@ -262,9 +262,9 @@ test('captura real: subir, revisar, guardar y abrir la ficha mediante el OCR loc
 });
 test('capturas: normalizar el DETALLE es opcional y conserva el texto original', async ({ page }) => {
   await open(page);
-  const raw = 'SERVICIOS BOL/31, SEPTIEMBRE, PROVEEDOR FICTICIO_00000000';
-  const normalized = 'Servicios BOL/31, septiembre, PROVEEDOR FICTICIO_00000000';
-  const response = result('CAP-040', raw, 'PROVEEDOR FICTICIO');
+  const raw = 'SERVICIOS BOL/31, SEPTIEMBRE, LUCÍA MUÑOZ_123456785';
+  const normalized = 'Servicios BOL/31, septiembre, Lucía Muñoz_123456785';
+  const response = result('CAP-040', raw, 'LUCÍA ELENA MUÑOZ CID');
   const saves: CreatePurchase[] = [];
   await page.route('**/api/v1/purchases/extractions', route => route.fulfill({ json: response }));
   await acceptSaves(page, saves);

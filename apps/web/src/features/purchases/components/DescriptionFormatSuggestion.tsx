@@ -11,7 +11,7 @@ export function DescriptionFormatSuggestion({ id, value, providers, disabled, on
   return <div className="purchase-format">
     <button className="purchase-format__trigger" type="button" disabled={disabled} aria-expanded={open} aria-controls={`${id}-format`} onClick={() => setOpen(!open)}>Normalizar mayúsculas<span className="purchase-sr-only"> de la descripción</span></button>
     <div id={`${id}-format`} className="purchase-format__preview" hidden={!open}>
-      <p><strong>Propuesta</strong> · Revisa los nombres propios. Se conservan coincidencias con el proveedor, siglas conocidas y códigos.</p>
+      <p><strong>Propuesta</strong> · Revisa los nombres propios. Se ajustan las iniciales cuando el nombre coincide con el proveedor junto a un RUT válido.</p>
       <p className="purchase-format__text">{proposal}</p>
       <div className="purchase-format__actions">
         <button type="button" className="cenit-button" disabled={disabled} onClick={() => { onApply(proposal); close(); }}>Aplicar normalización</button>
