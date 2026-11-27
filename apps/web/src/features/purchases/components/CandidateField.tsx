@@ -3,12 +3,13 @@ import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight';
 import { useRef } from 'react';
 import { DateField } from '../../../shared/components/DateField.js';
 import { amountFields, groupThousands, normalizeAmountInput } from '../model/fields.js';
+import { DescriptionFormatSuggestion } from './DescriptionFormatSuggestion.js';
 const statusLabels = { recovered: 'Recuperado', missing: 'Sin dato', invalid: 'Formato inválido', ambiguous: 'Por aclarar' };
-export function CandidateField({ id, label, candidate, value, onChange, error, issue, long = false, field, required = false, disabled = false, sourcePath, active = false, onFocus, locationAvailable }: {
+export function CandidateField({ id, label, candidate, value, onChange, error, issue, long = false, field, required = false, disabled = false, sourcePath, active = false, onFocus, locationAvailable, providers = [] }: {
   id: string; label: string; candidate?: ExtractionCandidate; value: string | null;
   onChange: (value: string | null) => void; error?: string; issue?: string; long?: boolean;
   field?: string; required?: boolean; disabled?: boolean; sourcePath?: string; active?: boolean;
-  onFocus?: () => void; locationAvailable?: boolean;
+  onFocus?: () => void; locationAvailable?: boolean; providers?: string[];
 }) {
   const changed = !!candidate && value !== candidate.value;
   const kind = field ?? id.split('-').at(-1);
@@ -30,6 +31,7 @@ export function CandidateField({ id, label, candidate, value, onChange, error, i
       : <input {...props} className="cenit-input" type={kind === 'sentTime' ? 'time' : 'text'} step={kind === 'sentTime' ? 1 : undefined} inputMode={amount ? 'numeric' : undefined} autoComplete="off"
         onBlur={amount ? event => { if (!edited.current) return; edited.current = false; const next = normalizeAmountInput(event.target.value); if (next !== event.target.value) onChange(next || null); } : undefined} />}
     {candidate && <div id={`${id}-origin`} className="purchase-review__origin">{/* «Recuperado» is the normal case; labelling every field hid the ones that need attention. */}{(changed || candidate.status !== 'recovered') && <div className="purchase-review__field-status"><span data-status={changed ? 'corrected' : candidate.status}>{changed ? 'Corregido' : statusLabels[candidate.status]}</span></div>}<details className="purchase-review__original"><summary><CaretRightIcon className="purchase-chevron" size={12} aria-hidden="true" />Ver original<span className="purchase-sr-only"> de {label}</span></summary><dl><div><dt>Valor extraído</dt><dd>{candidate.value ?? 'Sin dato'}</dd></div>{candidate.rawText !== null && candidate.rawText !== candidate.value && <div><dt>Texto fuente</dt><dd>{candidate.rawText}</dd></div>}{locationAvailable === false && <div><dt>Imagen</dt><dd>Sin ubicación disponible</dd></div>}</dl></details></div>}
+    {candidate && kind === 'description' && value && <DescriptionFormatSuggestion key={JSON.stringify([value, providers])} id={id} value={value} providers={providers} disabled={disabled} onApply={onChange} />}
     {issue && !changed && <p id={`${id}-issue`} className="purchase-review__issue">{issue}</p>}
     {error && <p id={`${id}-error`} className="purchase-review__error">{error}</p>}
   </div>;
