@@ -1,33 +1,63 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft';
-import type { ExtractionReviewDraft } from '@cenit/contracts/purchases';
-import { emptyDraft, purchaseExampleLabel } from '../model/fields.js';
-import { usePurchaseTransfer } from '../model/transfer.js';
+import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check';
+import { toast } from 'sonner';
+import { emptyDraft, type ContractProblem, type PurchaseDraft, type RecordSources } from '@cenit/contracts/purchases';
+import { createPurchase } from '../api/purchases.js';
+import { RecordForm } from '../components/RecordForm.js';
 import { useAuth } from '../../auth/model/session.js';
 import { usePurchaseDraft } from '../model/drafts.js';
-import { usePurchaseGuard } from '../model/guard.js';
+import { useGuardChanges, usePurchaseGuard } from '../model/guard.js';
 import { usePurchaseReturnTo } from '../model/location.js';
-import { PurchaseForm } from '../components/PurchaseForm.js';
-import { PurchaseFormSummary } from '../components/PurchaseFormSummary.js';
+import { payloadProblems, preparePayload, todayInSantiago } from '../model/submit.js';
 import '../records.css';
-import '../review.css';
+
+const fresh = (): PurchaseDraft => { const draft = emptyDraft(); draft.record.recordDate = todayInSantiago(); return draft; };
 
 export function PurchaseCreate() {
-  const transfer = usePurchaseTransfer(), snapshot = usePurchaseDraft(), guard = usePurchaseGuard();
+  const snapshot = usePurchaseDraft(), guard = usePurchaseGuard(), client = useQueryClient();
   const returnTo = usePurchaseReturnTo(), navigate = useNavigate(), accountId = useAuth().session!.account.id;
   const [restored] = useState(() => snapshot.current?.accountId === accountId && snapshot.current.kind === 'create' ? snapshot.current : null);
-  const [incoming] = useState(() => transfer.peek());
-  const origin = restored?.origin ?? incoming?.origin ?? null;
-  const [draft, setDraft] = useState<ExtractionReviewDraft>(() => restored?.draft ?? incoming?.draft ?? emptyDraft());
-  const [lineKeys, setLineKeys] = useState(() => restored?.lineKeys ?? draft.lines.map(() => crypto.randomUUID()));
-  const [operationId] = useState(() => restored?.operationId ?? incoming?.operationId ?? crypto.randomUUID());
-  const saved = useRef(false);
-  useEffect(() => { if (incoming) transfer.consume(incoming.operationId); }, [incoming, transfer]);
-  useEffect(() => { if (!saved.current) snapshot.current = { kind: 'create', accountId, draft, lineKeys, origin, operationId }; }, [accountId, draft, lineKeys, origin, operationId, snapshot]);
-  return <section className="purchase-records">
+  const [initial, setInitial] = useState(fresh);
+  const [draft, setDraft] = useState<PurchaseDraft>(() => restored?.draft ?? initial);
+  const [sources, setSources] = useState<RecordSources>({});
+  const [operationId, setOperationId] = useState(() => restored?.operationId ?? crypto.randomUUID());
+  const [problems, setProblems] = useState<ContractProblem[]>([]);
+  const another = useRef(false), saved = useRef(false), active = useRef(true);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+  useEffect(() => { if (!saved.current) snapshot.current = { kind: 'create', accountId, draft, operationId }; }, [accountId, draft, operationId, snapshot]);
+  const mutation = useMutation({ mutationFn: createPurchase, onSuccess: result => {
+    if (!active.current) return;
+    void client.invalidateQueries({ queryKey: ['purchases'] });
+    toast.success('Compra guardada', { description: `Solicitud ${result.data.record.requestNumber}` });
+    if (another.current) {
+      const next = fresh(); setInitial(next); setDraft(next); setSources({}); setOperationId(crypto.randomUUID()); setProblems([]);
+      window.scrollTo({ top: 0 });
+      return;
+    }
+    saved.current = true; snapshot.current = null;
+    guard.leave(() => navigate(`/administracion/compras/${result.data.id}`, { replace: true, state: { purchasesReturnTo: returnTo } }));
+  } });
+  const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
+  useGuardChanges(dirty && !saved.current, mutation.isPending, () => { snapshot.current = null; });
+  function submit(more: boolean) {
+    if (mutation.isPending) return;
+    const payload = preparePayload(draft), errors = payloadProblems(payload);
+    setProblems(errors); if (errors.length) return;
+    another.current = more; mutation.mutate({ operationId, origin: { type: 'manual' }, ...payload });
+  }
+  return <form className="purchase-records purchase-entry" noValidate aria-busy={mutation.isPending} onSubmit={event => { event.preventDefault(); submit(false); }}>
     <Link className="purchase-back-link" to={returnTo} onClick={event => { if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); guard.request(() => navigate(returnTo), event.currentTarget); }}><ArrowLeftIcon size={16} aria-hidden="true" />Volver al registro</Link>
-    <div className="purchase-page-heading"><div><h1>Registrar compra</h1><p>Completa los cuatro campos principales. Los demás son opcionales.</p></div>{origin?.type === 'contract_example' && <span className="purchase-origin-badge">Ejemplo de demostración · {purchaseExampleLabel(origin.exampleId)}</span>}</div>
-    <div className="purchase-form-layout"><PurchaseForm draft={draft} onChange={setDraft} lineKeys={lineKeys} onLineKeysChange={setLineKeys} origin={origin} operationId={operationId} returnTo={returnTo} onSaved={() => { saved.current = true; }} /><PurchaseFormSummary draft={draft} /></div>
-  </section>;
+    <div className="purchase-page-heading"><div><h1>Registrar a mano</h1><p>Los mismos datos de tu planilla. Cenit completa lo que puede a partir de lo que escribes.</p></div>
+      <div className="purchase-heading-actions">
+        <button className="cenit-button" type="button" disabled={mutation.isPending} onClick={() => submit(true)}>Guardar y registrar otra</button>
+        <button className="cenit-button cenit-button--primary" type="submit" disabled={mutation.isPending}><CheckIcon size={16} weight="bold" aria-hidden="true" />{mutation.isPending ? 'Guardando…' : 'Guardar compra'}</button>
+      </div></div>
+    {mutation.isError && <p className="purchase-state" role="alert">{mutation.error.message} Tus datos siguen aquí.</p>}
+    <RecordForm heading="La fila que se guardará" draft={draft} sources={sources} problems={problems} disabled={mutation.isPending}
+      onChange={(next, nextSources) => { setDraft(next); setSources(nextSources); setProblems([]); mutation.reset(); }}
+      note="Completa Fecha, Nº Documento, DETALLE, Monto y Documento. Los códigos se pueden completar después." />
+  </form>;
 }

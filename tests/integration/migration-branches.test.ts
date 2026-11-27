@@ -60,12 +60,14 @@ for (const source of ['academic', 'purchases']) {
         // Seed the historical shape, before capture columns exist; current writes use the new schema.
         purchaseId = randomUUID();
         await pool.query('INSERT INTO cenit.purchase_requests(id,operation_id,payload_hash,created_by,request_number,sent_date,description,total_amount) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',
-          [purchaseId, randomUUID(), 'a'.repeat(64), credentials.find(account => account.role === 'administrativo')!.id, manualPurchaseExample.header.requestNumber,
-            manualPurchaseExample.header.sentDate, manualPurchaseExample.header.description, manualPurchaseExample.header.totalAmount]);
+          [purchaseId, randomUUID(), 'a'.repeat(64), credentials.find(account => account.role === 'administrativo')!.id, manualPurchaseExample.record.requestNumber,
+            manualPurchaseExample.record.recordDate, manualPurchaseExample.record.description, manualPurchaseExample.record.totalAmount]);
       }
       const rowsBefore = await ledger();
       const accountsBefore = await accountFingerprint();
-      const record = async () => source === 'academic' ? (await pool.query('SELECT * FROM cenit.academic_attempts ORDER BY id')).rows : await new PurchaseRepository(pool).get(purchaseId!);
+      // Las columnas que existían antes deben conservarse; el repositorio actual sólo puede leer después de migrar.
+      const record = async () => source === 'academic' ? (await pool.query('SELECT * FROM cenit.academic_attempts ORDER BY id')).rows
+        : (await pool.query('SELECT id,request_number,description,total_amount::text,sent_date::text FROM cenit.purchase_requests WHERE id=$1', [purchaseId])).rows;
       const dataBefore = await record();
       health = createReadiness(migrationUrl.toString(), folder);
       expect(await health.check()).toBe(false);
@@ -84,6 +86,9 @@ for (const source of ['academic', 'purchases']) {
       expect(await record()).toEqual(dataBefore);
       expect(await health.check()).toBe(true);
       if (source === 'purchases') {
+        // La migración al registro de gastos usa la fecha de envío como Fecha y deja la compra pendiente de pago.
+        expect((await new PurchaseRepository(pool).get(purchaseId!))!.record).toMatchObject({ recordDate: manualPurchaseExample.record.recordDate,
+          requestNumber: manualPurchaseExample.record.requestNumber, document: 'SISTEMA DE COMPRAS', paymentSituation: 'PENDIENTE' });
         // The previous purchases image checks this prefix by timestamp. Its readiness
         // must still succeed after the additive academic migration, including rollback.
         const ordered = (await pool.query('SELECT hash,created_at FROM cenit.__drizzle_migrations ORDER BY created_at,id')).rows;

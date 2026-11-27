@@ -1,5 +1,7 @@
 # HU07-T04 — Verificación de detalle
 
+> Evidencia histórica del modelo anterior de Compras (detalle como página, ítems editables y segunda revisión). La segunda revisión se retiró y el detalle es ahora una ficha lateral; lo vigente está en [Arquitectura](ARQUITECTURA.md#compras).
+
 Cubre registro válido, inexistente, fallo y roles ajenos, en API y pantalla. No modifica código de producto, contratos, migraciones ni permisos. No acredita la aceptación visual del responsable ni el CI del commit.
 
 ## Cambios de `develop` que afectan al detalle

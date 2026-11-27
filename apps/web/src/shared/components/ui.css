@@ -163,6 +163,13 @@ textarea.cenit-input { resize: vertical; }
 /* Date text and its remaining mask share metrics at every breakpoint. */
 .cenit-date-input, .cenit-date-input > input, .cenit-date-mask { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; font-variant-numeric: tabular-nums; }
 .cenit-calendar .rdp-caption_label { display: inline-block; font-size: 14px; font-weight: 550; }
+/* Selectores de mes y año: cada uno se ve como un texto con flecha que reacciona al cursor; el <select> nativo queda encima, invisible. */
+.cenit-calendar .rdp-dropdowns { gap: 2px; margin-left: -6px; }
+.cenit-calendar .rdp-dropdown_root .rdp-caption_label { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; border-radius: var(--radius-sm); color: var(--color-ink); transition: background-color 150ms ease-out; }
+.cenit-calendar .rdp-dropdown_root .rdp-chevron { color: var(--color-ink-muted); }
+.cenit-calendar .rdp-dropdown { cursor: pointer; }
+.cenit-calendar .rdp-dropdown:focus-visible ~ .rdp-caption_label { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+@media (hover: hover) { .cenit-calendar .rdp-dropdown_root:hover .rdp-caption_label { background: var(--color-surface-hover); } }
 .cenit-calendar .rdp-caption_label::first-letter { text-transform: uppercase; }
 .cenit-confirm--wide { width: min(380px, calc(100vw - 32px)); }
 .cenit-confirm-summary { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; margin: 16px 0 0; padding: 12px 14px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface-subtle); font-variant-numeric: tabular-nums; }

@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import type { DemoCredentials } from '../../../db/seeds/auth-demo.js';
 
@@ -20,17 +20,33 @@ export async function login(page: Page, role = 'docente') {
   return account;
 }
 
-export async function selectCalendarDate(page: Page, date: string) {
-  const calendar = page.getByRole('dialog', { name: 'Calendario: Fecha de envío', exact: true });
+export async function selectCalendarDate(page: Page, date: string, name = 'Calendario: Fecha', clicks = 1) {
+  const calendar = page.getByRole('dialog', { name, exact: true });
+  const middles = calendar.locator('.rdp-day[data-day$="-15"]');
   const target = date.slice(0, 7);
   for (let attempt = 0; attempt < 120; attempt++) {
-    const current = (await calendar.locator('.rdp-day[data-day$="-15"]').getAttribute('data-day'))!.slice(0, 7);
-    if (current === target) {
-      await calendar.locator(`[data-day="${date}"] .rdp-day_button`).click();
+    const shown = await middles.evaluateAll(days => days.map(day => day.getAttribute('data-day')!.slice(0, 7)));
+    if (shown.includes(target)) {
+      for (let click = 0; click < clicks; click++) await calendar.locator(`[data-day="${date}"] .rdp-day_button`).click();
       return;
     }
-    await calendar.getByRole('button', { name: current < target ? 'Ir al mes siguiente' : 'Ir al mes anterior' }).click();
-    await expect(calendar.locator('.rdp-day[data-day$="-15"]')).not.toHaveAttribute('data-day', `${current}-15`);
+    await calendar.getByRole('button', { name: shown[0]! < target ? 'Ir al mes siguiente' : 'Ir al mes anterior' }).click();
+    await expect(middles.first()).not.toHaveAttribute('data-day', `${shown[0]}-15`);
   }
   throw new Error(`No se pudo llegar a la fecha ${date} en el calendario.`);
+}
+
+/** En el filtro de fechas, un día exacto es el mismo día como inicio y fin del rango. */
+export const selectRangeDay = (page: Page, date: string) => selectCalendarDate(page, date, 'Calendario de rango de fechas', 2);
+
+export async function inspectSlowPanel(panel: Locator, screenshot: string) {
+  await expect.poll(() => panel.evaluate(element => {
+    const animations = element.getAnimations();
+    for (const animation of animations) animation.updatePlaybackRate(.1);
+    return animations.length;
+  })).toBeGreaterThan(0);
+  await panel.page().screenshot({ path: screenshot });
+  await panel.evaluate(element => {
+    for (const animation of element.getAnimations()) animation.updatePlaybackRate(1);
+  });
 }

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { GoogleAuth } from 'google-auth-library';
 import { Type } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
-import { administrativeFields, headerFields, lineFields, purchaseFieldLabels } from '@cenit/contracts/purchases';
+import { lineFieldLabels, lineFields, oracleFieldLabels, oracleFields, recordFieldLabels, recordFields } from '@cenit/contracts/purchases';
 import type { SheetsJob, PurchaseSheetsRepository } from '../repositories/sheets.js';
 
 export type SheetsCall = (path: string, body?: unknown) => Promise<unknown>;
@@ -10,11 +10,14 @@ const metaSchema = Type.Object({ sheets: Type.Array(Type.Object({ properties: Ty
   sheetId: Type.Integer(), title: Type.String(), gridProperties: Type.Object({ rowCount: Type.Integer(), columnCount: Type.Integer() }),
 }), protectedRanges: Type.Optional(Type.Array(Type.Object({ description: Type.Optional(Type.String()) }))) })) });
 const valuesSchema = Type.Object({ valueRanges: Type.Array(Type.Object({ values: Type.Optional(Type.Array(Type.Array(Type.Union([Type.String(), Type.Number(), Type.Boolean()])))) })) });
-const headerKeys = Object.keys(headerFields), adminKeys = Object.keys(administrativeFields), lineKeys = Object.keys(lineFields);
+const recordKeys = Object.keys(recordFields) as (keyof typeof recordFieldLabels)[];
+const oracleKeys = Object.keys(oracleFields) as (keyof typeof oracleFieldLabels)[];
+const lineKeys = Object.keys(lineFields) as (keyof typeof lineFieldLabels)[];
+// «Compras» sigue el orden del «Registro de gastos» del cliente; después, los datos de Oracle y de Cenit.
 const columns = {
-  Compras: ['ID Cenit', ...headerKeys.map(key => purchaseFieldLabels[key]!), ...adminKeys.map(key => purchaseFieldLabels[key]!),
-    'Procedencia', 'Ejemplo', 'Registrado el', 'Registrado por', 'Revisión local', 'Revisado el', 'Revisado por', 'Versión', 'ID extracción', 'Procesador', 'Procesado el'],
-  Ítems: ['ID Cenit', 'Ítem', ...lineKeys.map(key => purchaseFieldLabels[key]!)],
+  Compras: ['ID Cenit', ...recordKeys.map(key => recordFieldLabels[key]), ...oracleKeys.map(key => `Oracle · ${oracleFieldLabels[key]}`),
+    'Procedencia', 'Ejemplo', 'Registrado el', 'Registrado por', 'Versión', 'ID extracción', 'Procesador', 'Procesado el'],
+  Ítems: ['ID Cenit', 'Línea', ...lineKeys.map(key => lineFieldLabels[key])],
 };
 const titles = ['Compras', 'Ítems'] as const;
 const protection = 'Cenit: datos administrados';
@@ -22,13 +25,13 @@ const fields = (keys: string[], data: Record<string, string | null>) => keys.map
 
 function headerValues(job: SheetsJob): string[] {
   const r = job.record;
-  return !r ? [] : [job.id, ...fields(headerKeys, r.header), ...fields(adminKeys, r.administrative), r.source, r.exampleId ?? '',
-    r.createdAt, r.createdBy.name, r.reviewStatus, r.reviewedAt ?? '', r.reviewedBy?.name ?? '', String(r.version),
+  return !r ? [] : [job.id, ...fields(recordKeys, r.record), ...fields(oracleKeys, r.oracle), r.source, r.exampleId ?? '',
+    r.createdAt, r.createdBy.name, String(r.version),
     r.capture?.extractionId ?? '', r.capture?.processorVersion ?? '', r.capture?.processedAt ?? ''];
 }
 
 export class GoogleSheetsWriter {
-  constructor(private readonly call: SheetsCall, private readonly serviceEmail: string, private readonly secondReviewEnabled = false) {}
+  constructor(private readonly call: SheetsCall, private readonly serviceEmail: string) {}
 
   async send(jobs: SheetsJob[]) {
     const metadata = await this.call('?fields=sheets(properties,protectedRanges(description))');
@@ -64,11 +67,6 @@ export class GoogleSheetsWriter {
         if (maxRow > existing.properties.gridProperties.rowCount) requests.push({ updateSheetProperties: { properties: { sheetId, gridProperties: { rowCount: maxRow } }, fields: 'gridProperties.rowCount' } });
       }
       requests.push(this.update(sheetId, 1, columns[title], width));
-      if (title === 'Compras') {
-        const startIndex = columns.Compras.indexOf('Revisión local');
-        requests.push({ updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex, endIndex: startIndex + 3 },
-          properties: { hiddenByUser: !this.secondReviewEnabled }, fields: 'hiddenByUser' } });
-      }
     }
     if (reads.length) {
       const query = new URLSearchParams({ valueRenderOption: 'UNFORMATTED_VALUE' });
@@ -106,7 +104,7 @@ export class GoogleSheetsWriter {
   }
 }
 
-export function createGoogleSheetsWriter(spreadsheetId: string, keyFile: string, secondReviewEnabled = false) {
+export function createGoogleSheetsWriter(spreadsheetId: string, keyFile: string) {
   const key: unknown = JSON.parse(readFileSync(keyFile, 'utf8'));
   if (!Value.Check(Type.Object({ type: Type.Literal('service_account'), client_email: Type.String({ minLength: 3 }), private_key: Type.String({ minLength: 1 }) }), key)) throw new Error('Credencial de Sheets inválida.');
   const auth = new GoogleAuth({ keyFilename: keyFile, clientOptions: { transporterOptions: { timeout: 20_000, retry: false } }, scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
@@ -118,7 +116,7 @@ export function createGoogleSheetsWriter(spreadsheetId: string, keyFile: string,
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) });
     if (!response.ok) throw new Error('SHEETS_REQUEST_FAILED');
     return response.json();
-  }, key.client_email, secondReviewEnabled);
+  }, key.client_email);
 }
 
 export function readSheetsTarget(env = process.env) {

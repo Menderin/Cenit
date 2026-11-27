@@ -32,7 +32,7 @@ export function MonthlyChart({ months, current }: { months: { month: string; cou
       })}</div>
     </div>
     <div className="home-chart__months" aria-hidden="true">{months.map(month => <span key={month.month} className={month.month === current ? 'is-current' : current !== null && month.month > current ? 'is-future' : undefined}>{label(month.month, shortMonth)}</span>)}</div>
-    <table className="purchase-sr-only"><caption>Monto documental por mes de envío</caption><thead><tr><th scope="col">Mes</th><th scope="col">Compras</th><th scope="col">Monto</th></tr></thead>
+    <table className="purchase-sr-only"><caption>Monto por mes</caption><thead><tr><th scope="col">Mes</th><th scope="col">Compras</th><th scope="col">Monto</th></tr></thead>
       <tbody>{months.filter(month => current === null || month.month <= current).map(month => <tr key={month.month}><th scope="row">{label(month.month, longMonth)}</th><td>{month.count}</td><td>{amountLabel(month.amount)}</td></tr>)}</tbody></table>
   </figure>;
 }

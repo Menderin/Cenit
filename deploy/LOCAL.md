@@ -226,11 +226,9 @@ Esperar `{"status":"ready"}` y HTTP 200 para login. Abrir [http://127.0.0.1:8081
 
 En los siguientes arranques se pueden reutilizar las imágenes, quitando `--build`. Reconstruirlas cuando cambie el código. El overlay `compose.ocr.yaml` conecta `app` con `http://ocr:8090` y monta la clave; sin él, la extracción no está configurada y devuelve 503.
 
-Para una captura ficticia, seguir la [preparación de muestras](../experiments/purchases/README.md#capturas-con-formato-de-referencia). En «Registro de compras → Subir captura» arrastrar la imagen al recuadro grande o activarlo por clic/teclado. El análisis comienza al validar el archivo; comparar recuadros y campos, corregir y guardar desde esa misma vista. Sólo «Guardar registro» conserva la copia.
+Para una captura ficticia, seguir la [preparación de muestras](../experiments/purchases/README.md#capturas-con-formato-de-referencia). En «Registro de compras → Registrar capturas» elegir o arrastrar una o varias imágenes. Cenit las lee de a una y arma la fila de cada compra; comparar recuadros y campos, corregir y usar «Guardar y seguir» (o Enter). Sólo ese botón guarda la compra.
 
 ## Conectar una planilla de pruebas
-
-Compras presenta un registro histórico por defecto. Para comprobar la segunda revisión opcional, configurar `CENIT_PURCHASE_SECOND_REVIEW_ENABLED=true`, reiniciar el API y recargar la web. Desactivarla no cambia estados, revisores ni versiones existentes. El servidor rechaza la validación posterior mientras esté apagada. Las pruebas antiguas activan expresamente esa opción; `purchase-register.spec.ts` cubre la presentación sin ella.
 
 La sincronización con Sheets empieza apagada. No usa las credenciales del plugin de Drive ni el login de Cenit. Para ensayar el conector real:
 

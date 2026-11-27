@@ -1,6 +1,6 @@
 import { Value } from '@sinclair/typebox/value';
 import type { TSchema, Static } from '@sinclair/typebox';
-import { PurchaseResponseSchema, PurchaseListResponseSchema, PurchaseSummaryResponseSchema, PurchaseProjectsResponseSchema, PurchaseProjectSummaryResponseSchema, PurchaseDeletionResponseSchema, PurchaseCapabilitiesResponseSchema, PurchaseSheetsResponseSchema, validateExtractionResponse, type ExtractionResponse, type CreatePurchase, type PurchaseFilters, type PurchaseListQuery, type UpdatePurchase } from '@cenit/contracts/purchases';
+import { PurchaseResponseSchema, PurchaseListResponseSchema, PurchaseSummaryResponseSchema, PurchaseProjectsResponseSchema, PurchaseProjectSummaryResponseSchema, PurchaseDeletionResponseSchema, PurchaseCapabilitiesResponseSchema, PurchaseSheetsResponseSchema, PurchaseCatalogResponseSchema, PurchaseProvidersResponseSchema, validateExtractionResponse, type ExtractionResponse, type CreatePurchase, type PurchaseFilters, type PurchaseListQuery, type UpdatePurchase } from '@cenit/contracts/purchases';
 import { api, HttpError } from '../../../shared/lib/http.js';
 
 async function read<T extends TSchema>(schema: T, response: Response): Promise<Static<T>> {
@@ -8,12 +8,12 @@ async function read<T extends TSchema>(schema: T, response: Response): Promise<S
   if (!Value.Check(schema, body)) throw new HttpError(0, 'El servidor devolvió datos con un formato inesperado.');
   return body as Static<T>;
 }
-export const listPurchases = async (state: 'pending' | 'reviewed' | 'all', page: number, signal: AbortSignal, filters: PurchaseFilters = {}, view: Pick<PurchaseListQuery, 'sort' | 'pageSize'> = { pageSize: 20 }) => {
-  const query = new URLSearchParams({ reviewStatus: state, page: String(page), pageSize: String(view.pageSize), ...(view.sort ? { sort: view.sort } : {}), ...filters });
+export const listPurchases = async (page: number, signal: AbortSignal, filters: PurchaseFilters = {}, view: Pick<PurchaseListQuery, 'sort' | 'pageSize'> = { pageSize: 20 }) => {
+  const query = new URLSearchParams({ page: String(page), pageSize: String(view.pageSize), ...(view.sort ? { sort: view.sort } : {}), ...filters });
   return read(PurchaseListResponseSchema, await api(`/purchases?${query}`, { signal }));
 };
 export const downloadPurchaseExport = async (filters: PurchaseFilters, view: Pick<PurchaseListQuery, 'sort'>, signal: AbortSignal) => {
-  const query = new URLSearchParams({ reviewStatus: 'all', page: '1', pageSize: '100', ...(view.sort ? { sort: view.sort } : {}), ...filters });
+  const query = new URLSearchParams({ page: '1', pageSize: '100', ...(view.sort ? { sort: view.sort } : {}), ...filters });
   const response = await api(`/purchases/export.xlsx?${query}`, { signal });
   const blob = await response.blob();
   signal.throwIfAborted();
@@ -37,7 +37,9 @@ export const getPurchaseProject = async (code: string, signal: AbortSignal, year
 export const deletePurchase = async (id: string, expectedVersion: number) => read(PurchaseDeletionResponseSchema, await api(`/purchases/${id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedVersion }) }));
 export const createPurchase = async (input: CreatePurchase) => read(PurchaseResponseSchema, await api('/purchases', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) }));
 export const updatePurchase = async (id: string, input: UpdatePurchase) => read(PurchaseResponseSchema, await api(`/purchases/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) }));
-export const validatePurchase = async (id: string, expectedVersion: number) => read(PurchaseResponseSchema, await api(`/purchases/${id}/validation`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedVersion }) }));
+export const setPaymentSituation = async (id: string, expectedVersion: number, paymentSituation: string) => read(PurchaseResponseSchema, await api(`/purchases/${id}/payment-situation`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedVersion, paymentSituation }) }));
+export const getPurchaseCatalog = async (signal: AbortSignal) => read(PurchaseCatalogResponseSchema, await api('/purchases/catalog', { signal }));
+export const findProviders = async (q: string, signal: AbortSignal) => read(PurchaseProvidersResponseSchema, await api(`/purchases/providers?${new URLSearchParams({ q })}`, { signal }));
 export async function extractPurchase(file: File, signal: AbortSignal): Promise<ExtractionResponse> {
   const body = new FormData(); body.append('file', file);
   const response: unknown = await (await api('/purchases/extractions', { method: 'POST', body, signal })).json();

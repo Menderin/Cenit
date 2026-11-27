@@ -1,116 +1,249 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, parsePath, useNavigate } from 'react-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft';
-import { UploadSimpleIcon } from '@phosphor-icons/react/dist/csr/UploadSimple';
-import { ImageIcon } from '@phosphor-icons/react/dist/csr/Image';
-import { CheckCircleIcon } from '@phosphor-icons/react/dist/csr/CheckCircle';
+import { ImagesIcon } from '@phosphor-icons/react/dist/csr/Images';
+import { PlusIcon } from '@phosphor-icons/react/dist/csr/Plus';
+import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check';
 import { CircleNotchIcon } from '@phosphor-icons/react/dist/csr/CircleNotch';
 import { WarningCircleIcon } from '@phosphor-icons/react/dist/csr/WarningCircle';
-import { createReviewDraft, type ExtractionResponse } from '@cenit/contracts/purchases';
-import { extractPurchase } from '../api/purchases.js';
-import { PurchaseForm } from '../components/PurchaseForm.js';
+import { XIcon } from '@phosphor-icons/react/dist/csr/X';
+import { draftFromExtraction, emptyDraft, recordDateFromFileName, type CaptureDateSource, type ContractProblem, type RecordSources } from '@cenit/contracts/purchases';
+import { createPurchase, extractPurchase } from '../api/purchases.js';
+import { CaptureLens } from '../components/CaptureLens.js';
 import { CapturePreview } from '../components/CapturePreview.js';
-import { usePurchaseDraft } from '../model/drafts.js';
+import { RecordForm } from '../components/RecordForm.js';
 import { useAuth } from '../../auth/model/session.js';
-import { emptyDraft } from '../model/fields.js';
-import { usePurchaseGuard } from '../model/guard.js';
+import { usePurchaseDraft, type CaptureItem } from '../model/drafts.js';
+import { useGuardChanges, usePurchaseGuard } from '../model/guard.js';
 import { usePurchaseReturnTo } from '../model/location.js';
-import { inspectCapture, type SelectedCapture } from '../model/capture-file.js';
+import { inspectCapture } from '../model/capture-file.js';
+import { captureSourcePath } from '../model/fields.js';
+import { payloadProblems, preparePayload, todayInSantiago } from '../model/submit.js';
 import '../records.css';
-import '../review.css';
 import '../capture.css';
 
-export function PurchaseCapture() {
-  const snapshot = usePurchaseDraft(), accountId = useAuth().session!.account.id;
-  const [restored] = useState(() => snapshot.current?.accountId === accountId && snapshot.current.kind === 'capture' ? snapshot.current : null);
-  const [selected, setSelected] = useState<SelectedCapture | null>(() => restored?.file ? { file: restored.file, width: restored.width, height: restored.height, url: URL.createObjectURL(restored.file) } : null);
-  const [original, setOriginal] = useState<ExtractionResponse | null>(restored?.original ?? null);
-  const [draft, setDraft] = useState(() => restored?.draft ?? emptyDraft());
-  const [lineKeys, setLineKeys] = useState(restored?.lineKeys ?? [] as string[]);
-  const [operationId, setOperationId] = useState(() => restored?.operationId ?? crypto.randomUUID());
-  const [busy, setBusy] = useState(false), [checking, setChecking] = useState(false), [saving, setSaving] = useState(false);
-  const [error, setError] = useState(restored?.file && !restored.original ? 'El análisis se interrumpió. Puedes reintentarlo.' : '');
-  const [dragging, setDragging] = useState(false), [activePath, setActivePath] = useState('');
-  // When reading fails, the person may still transcribe the image by hand; that record is saved as a manual entry.
-  const [manual, setManual] = useState(() => !!restored && !restored.original && JSON.stringify(restored.draft) !== JSON.stringify(emptyDraft()));
-  const input = useRef<HTMLInputElement>(null), workspace = useRef<HTMLDivElement>(null);
-  const preview = useRef<string | null>(selected?.url ?? null), saved = useRef(false);
-  const request = useRef<AbortController | null>(null), generation = useRef(0);
-  const fileTrigger = useRef<HTMLElement | null>(null);
-  const guard = usePurchaseGuard(), returnTo = usePurchaseReturnTo(), navigate = useNavigate();
-  useEffect(() => {
-    if (!saved.current) snapshot.current = { kind: 'capture', accountId, file: selected?.file ?? null, width: selected?.width ?? 0, height: selected?.height ?? 0, original, draft, lineKeys, operationId };
-  }, [snapshot, accountId, selected, original, draft, lineKeys, operationId]);
-  useEffect(() => () => { generation.current++; request.current?.abort(); if (preview.current) URL.revokeObjectURL(preview.current); }, []);
+const pending = (item: CaptureItem) => item.status !== 'saved';
+const statusText = (item: CaptureItem) => item.status === 'saved' ? 'Guardada' : item.status === 'waiting' ? 'En espera' : item.status === 'reading' ? 'Leyendo la captura…'
+  : item.status === 'failed' && !item.manual ? 'No se pudo leer' : missingRut(item) ? 'RUT sin dato · opcional' : 'Lista para guardar';
+const missingRut = (item: CaptureItem) => !item.manual && !item.draft.record.rut;
+function manualDraft(file: File) {
+  const draft = emptyDraft(), namedDate = recordDateFromFileName(file.name);
+  draft.record.recordDate = namedDate ?? todayInSantiago();
+  const dateSource: CaptureDateSource = namedDate ? 'filename' : 'today';
+  const sources: RecordSources = { recordDate: 'suggested' };
+  return { draft, dateSource, sources };
+}
 
-  async function runExtraction(file: File) {
-    const current = ++generation.current, controller = new AbortController();
-    request.current?.abort(); request.current = controller; setBusy(true); setError(''); setManual(false);
-    try {
-      const result = await extractPurchase(file, controller.signal);
-      if (current !== generation.current) return;
-      setOriginal(result); setDraft(createReviewDraft(result)); setLineKeys(result.data.lines.map((_, index) => `capture-${index}`)); setActivePath('');
-    } catch (problem) {
-      if (current === generation.current && !controller.signal.aborted) setError(problem instanceof Error ? problem.message : 'No se pudo procesar la captura.');
-    } finally { if (current === generation.current) setBusy(false); }
-  }
-  async function applyFile(file: File) {
-    const current = ++generation.current;
-    request.current?.abort(); setBusy(false); setChecking(true); setError(''); setManual(false); setOriginal(null); setDraft(emptyDraft()); setLineKeys([]); setActivePath(''); setOperationId(crypto.randomUUID());
-    if (preview.current) URL.revokeObjectURL(preview.current);
-    preview.current = null; setSelected(null);
-    try {
-      const next = await inspectCapture(file);
-      if (current !== generation.current) { URL.revokeObjectURL(next.url); return; }
-      preview.current = next.url; setSelected(next); setChecking(false); void runExtraction(next.file);
-    } catch (problem) {
-      if (current === generation.current) { setError(problem instanceof Error ? problem.message : 'No se pudo abrir la imagen.'); setChecking(false); }
+export function PurchaseCapture() {
+  const snapshot = usePurchaseDraft(), accountId = useAuth().session!.account.id, client = useQueryClient();
+  const guard = usePurchaseGuard(), returnTo = usePurchaseReturnTo(), navigate = useNavigate();
+  const returnSearch = parsePath(returnTo).search;
+  const [restored] = useState(() => snapshot.current?.accountId === accountId && snapshot.current.kind === 'capture' ? snapshot.current : null);
+  // Una lectura interrumpida (recarga de la vista o cambio de pestaña) vuelve a la cola de espera.
+  const [items, setItems] = useState<CaptureItem[]>(() => (restored?.items ?? []).map(item => item.status === 'reading' ? { ...item, status: 'waiting' } : item));
+  const [selected, setSelected] = useState<string | null>(restored?.selected ?? null);
+  const [problems, setProblems] = useState<ContractProblem[]>([]);
+  const [notice, setNotice] = useState(''), [adding, setAdding] = useState(false), [dragging, setDragging] = useState(false), [activePath, setActivePath] = useState('');
+  const input = useRef<HTMLInputElement>(null), workspace = useRef<HTMLDivElement>(null);
+  const stageHeading = useRef<HTMLHeadingElement>(null);
+  const focusNext = useRef<'move' | 'reading' | null>(null);
+  const controllers = useRef(new Map<string, AbortController>()), urls = useRef(new Map<string, string>()), active = useRef(true);
+  const url = (item: CaptureItem) => { let value = urls.current.get(item.key); if (!value) { value = URL.createObjectURL(item.file); urls.current.set(item.key, value); } return value; };
+  const change = (key: string, patch: Partial<CaptureItem>) => setItems(list => list.map(item => item.key === key ? { ...item, ...patch } : item));
+
+  useEffect(() => { active.current = true; return () => {
+    active.current = false;
+    for (const controller of controllers.current.values()) controller.abort();
+    for (const value of urls.current.values()) URL.revokeObjectURL(value);
+  }; }, []);
+  useEffect(() => { snapshot.current = items.length ? { kind: 'capture', accountId, items, selected } : null; }, [snapshot, accountId, items, selected]);
+  // El lector atiende una captura a la vez: se envían en orden y las demás esperan su turno.
+  useEffect(() => {
+    if (items.some(item => item.status === 'reading')) return;
+    const next = items.find(item => item.status === 'waiting');
+    if (!next) return;
+    const controller = new AbortController(); controllers.current.set(next.key, controller);
+    change(next.key, { status: 'reading', error: null });
+    extractPurchase(next.file, controller.signal).then(result => {
+      if (!active.current || controller.signal.aborted) return;
+      change(next.key, { ...draftFromExtraction(result, next.file), status: 'ready', extraction: result, manual: false });
+    }).catch((problem: unknown) => {
+      if (!active.current || controller.signal.aborted) return;
+      change(next.key, { status: 'failed', error: problem instanceof Error ? problem.message : 'No se pudo leer la captura.' });
+    }).finally(() => controllers.current.delete(next.key));
+  }, [items]);
+
+  async function add(files: File[]) {
+    if (!files.length) return;
+    setAdding(true); setNotice('');
+    const accepted: CaptureItem[] = [], rejected: string[] = [];
+    for (const file of files) {
+      try {
+        const checked = await inspectCapture(file);
+        const key = crypto.randomUUID(); urls.current.set(key, checked.url);
+        accepted.push({ key, file, width: checked.width, height: checked.height, operationId: crypto.randomUUID(), status: 'waiting', error: null, extraction: null,
+          ...manualDraft(file), manual: false, savedId: null });
+      } catch (problem) { rejected.push(`${file.name}: ${problem instanceof Error ? problem.message : 'no se pudo abrir.'}`); }
     }
+    if (!active.current) return;
+    setAdding(false);
+    if (rejected.length) setNotice(`${rejected.length === 1 ? 'No se agregó una imagen' : `No se agregaron ${rejected.length} imágenes`}. ${rejected.join(' ')}`);
+    if (!accepted.length) return;
+    if (!items.length) focusNext.current = 'move';
+    setItems(list => [...list, ...accepted]);
+    setSelected(current => current && items.some(item => item.key === current && pending(item)) ? current : accepted[0]!.key);
   }
-  function select(files: FileList | File[], origin: HTMLElement | null) {
-    if (saving || !files.length) return;
-    if (files.length !== 1) { setError('Selecciona una sola imagen PNG o JPEG.'); return; }
-    const file = files[0]!;
-    guard.request(() => { void applyFile(file); }, origin, { title: 'Cambiar captura', description: 'Se descartarán los datos de esta captura.', confirmLabel: 'Descartar y cambiar' });
+
+  const current = items.find(item => item.key === selected) ?? null;
+  const unsaved = items.filter(pending);
+  const singleSavedId = items.length === 1 ? items[0]?.savedId : null;
+  const position = current ? items.indexOf(current) + 1 : 0;
+  function nextAfter(key: string, list = items) {
+    const index = list.findIndex(item => item.key === key);
+    return [...list.slice(index + 1), ...list.slice(0, index)].find(item => pending(item) && item.key !== key)?.key ?? null;
   }
-  function chooseRegion(path: string) {
-    const field = Array.from(workspace.current?.querySelectorAll<HTMLElement>('[data-source-path]') ?? []).find(element => element.dataset.sourcePath === path);
-    if (!field) return;
-    let section = field.closest('details'); while (section) { section.open = true; section = section.parentElement?.closest('details') ?? null; }
-    setActivePath(path); field.focus({ preventScroll: true });
+  const mutation = useMutation({ mutationFn: createPurchase, onSuccess: (result, input) => {
+    if (!active.current) return;
+    void client.invalidateQueries({ queryKey: ['purchases'] });
+    toast.success('Compra guardada', { description: `Solicitud ${result.data.record.requestNumber}` });
+    const item = items.find(candidate => candidate.operationId === input.operationId);
+    if (!item) return;
+    setItems(list => list.map(candidate => candidate.key === item.key ? { ...candidate, status: 'saved', savedId: result.data.id } : candidate));
+    focusNext.current = 'move';
+    setSelected(nextAfter(item.key)); setProblems([]); setActivePath('');
+  } });
+  useGuardChanges(unsaved.length > 0 && !mutation.isPending, mutation.isPending, () => { snapshot.current = null; });
+
+  useEffect(() => {
+    if (!focusNext.current || mutation.isPending) return;
+    if (focusNext.current === 'reading' && document.activeElement !== stageHeading.current && document.activeElement !== document.body) {
+      focusNext.current = null;
+      return;
+    }
+    const ready = current?.status === 'ready' || current?.manual;
+    const waiting = current?.status === 'reading' || current?.status === 'waiting';
+    if (waiting && focusNext.current === 'reading') return;
+    focusNext.current = waiting ? 'reading' : null;
+    const target = ready ? workspace.current?.querySelector<HTMLElement>('[data-mark="missing"] :is(input, textarea)')
+      ?? (current && missingRut(current) ? workspace.current?.querySelector<HTMLElement>('#purchase-record-rut') : null)
+      ?? workspace.current?.querySelector<HTMLElement>('#purchase-record-requestNumber') : stageHeading.current;
+    target?.focus();
+  }, [current, mutation.isPending]);
+  function save() {
+    if (!current || mutation.isPending || current.status === 'saved') return;
+    if (current.status !== 'ready' && !current.manual) return;
+    const payload = preparePayload(current.draft), errors = payloadProblems(payload);
+    setProblems(errors); if (errors.length) return;
+    const origin = current.manual || !current.extraction?.data.origin ? { type: 'manual' as const } : current.extraction.data.origin;
+    mutation.mutate({ operationId: current.operationId, origin, ...payload });
   }
-  return <section className="purchase-records purchase-review purchase-capture">
-    <Link className="purchase-back-link" to={returnTo} onClick={event => { if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); guard.request(() => navigate(returnTo), event.currentTarget); }}><ArrowLeftIcon size={16} aria-hidden="true" />Volver al registro</Link>
-    <div className="purchase-page-heading"><div><h1>Registrar desde una captura</h1><p>Compara los datos con la imagen, corrige lo necesario y guarda el registro.</p></div></div>
-    <input hidden ref={input} id="capture-file" type="file" accept="image/png,image/jpeg" aria-label="Captura de la solicitud de compra" onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ''; select(files, fileTrigger.current); }} />
-    <div className="capture-status-row">
-    <div className="capture-status" aria-live="polite" aria-atomic="true">
-      {checking && <p role="status">Comprobando imagen…</p>}
-      {busy && <p className="capture-processing" role="status">Analizando captura… Puedes cambiar la imagen para cancelar.</p>}
-      {error && <div className="purchase-state" role="alert">{error}{original && <p>Se conservan los datos de la extracción anterior.</p>}</div>}
-    </div>
-    {selected && <div className="capture-actions">
-      <button className="cenit-button" type="button" disabled={saving} onClick={event => { fileTrigger.current = event.currentTarget; input.current?.click(); }}>Cambiar captura</button>
-      <button className="cenit-button" type="button" disabled={saving || checking || busy} onClick={event => guard.request(() => { void runExtraction(selected.file); }, event.currentTarget, { title: 'Volver a extraer datos', description: 'Se reemplazarán tus correcciones con una nueva extracción.', confirmLabel: 'Descartar y extraer' })}>{busy ? 'Analizando…' : error ? 'Reintentar extracción' : 'Volver a extraer'}</button>
-    </div>}
-    </div>
-    <div ref={workspace} className="capture-workspace">
-      <div className={`capture-image-area${dragging ? ' capture-image-area--dragging' : ''}`} onDragOver={event => { event.preventDefault(); if (!saving) setDragging(true); }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); }} onDrop={event => { event.preventDefault(); setDragging(false); select(event.dataTransfer.files, fileTrigger.current); }}>
-        {selected ? <CapturePreview selected={selected} regions={(original?.data.regions ?? []).filter(region => !region.path.startsWith('/lines/') || lineKeys.includes(`capture-${region.path.split('/')[2]}`))} activePath={activePath} onSelect={chooseRegion} /> : <button type="button" className="capture-placeholder capture-drop" disabled={checking} onClick={event => { fileTrigger.current = event.currentTarget; input.current?.click(); }}><span className="capture-drop__icon"><ImageIcon size={28} aria-hidden="true" /></span><strong>Arrastra la imagen aquí</strong><span>o</span><span className="cenit-button cenit-button--primary capture-drop__choose"><UploadSimpleIcon size={18} aria-hidden="true" />Elegir imagen</span><small>PNG o JPEG · hasta 5 MiB y 20 megapíxeles</small></button>}
-      </div>
-      <div className="capture-review" aria-busy={busy || checking}>
-        {original && <div className="capture-layout" role="status"><strong>{original.data.captureLayout?.status === 'compatible' ? 'Formato compatible' : 'Captura parcial'}</strong><span>Revisa los datos antes de guardar.</span></div>}
-        {selected && (original || manual) && <PurchaseForm draft={draft} onChange={setDraft} lineKeys={lineKeys} onLineKeysChange={setLineKeys} operationId={operationId} origin={original?.data.origin ?? null} original={original ?? undefined}
-          activePath={activePath} onFieldFocus={setActivePath} disabled={busy || checking} onSavingChange={setSaving} returnTo={returnTo} onSaved={() => { saved.current = true; }} />}
-        {selected && !original && !manual && (busy || checking ? <div className="capture-panel"><span className="capture-panel__icon"><CircleNotchIcon className="capture-spin" size={26} aria-hidden="true" /></span><h2>Leyendo la solicitud…</h2><p>Cenit propone los datos y tú los revisas antes de guardar. Mientras tanto puedes mirar la imagen o cambiarla.</p>
-          <ul className="capture-steps"><li data-state="done"><CheckCircleIcon size={18} aria-hidden="true" />Imagen recibida</li><li data-state="current"><CircleNotchIcon className="capture-spin" size={18} aria-hidden="true" />Leyendo los datos</li></ul></div>
-          : <div className="capture-panel capture-panel--problem"><span className="capture-panel__icon"><WarningCircleIcon size={26} aria-hidden="true" /></span><h2>No pudimos leer la imagen</h2><p>Tu imagen sigue aquí. Puedes reintentar la lectura en un momento o completar los campos mirando la imagen al lado; en ese caso se guarda como ingreso manual.</p>
-            <button className="cenit-button" type="button" onClick={() => setManual(true)}>Completar a mano con la imagen al lado</button></div>)}
-        {!selected && <div className="capture-panel capture-guide"><h2>Así funciona</h2>
-          <ol className="capture-guide__steps"><li><b>1</b><div><strong>Sube la imagen</strong><span>Una captura de pantalla o foto de la solicitud aprobada en Oracle.</span></div></li><li><b>2</b><div><strong>Revisa los campos</strong><span>Cenit propone los datos; compara cada uno con la imagen y corrige lo necesario.</span></div></li><li><b>3</b><div><strong>Guarda el registro</strong><span>Nada se guarda hasta que lo confirmes.</span></div></li></ol>
-          <p className="capture-guide__tip"><strong>Para una mejor lectura:</strong> que se vean completos el número de solicitud, la fecha de envío y el monto total.</p>
-          <Link className="capture-guide__manual" to="/administracion/compras/nueva" state={{ purchasesReturnTo: returnTo }}>¿Sin imagen? Registrar a mano</Link></div>}
-      </div>
-    </div>
+  function choose(key: string) { focusNext.current = null; setSelected(key); setProblems([]); setActivePath(''); mutation.reset(); }
+  function remove(item: CaptureItem, origin: HTMLElement) {
+    const drop = () => {
+      controllers.current.get(item.key)?.abort();
+      const next = nextAfter(item.key);
+      setItems(list => list.filter(candidate => candidate.key !== item.key));
+      const value = urls.current.get(item.key); if (value) { URL.revokeObjectURL(value); urls.current.delete(item.key); }
+      if (selected === item.key) choose(next ?? '');
+    };
+    if (item.status === 'ready' || item.manual) guard.request(drop, origin, { title: 'Cancelar esta captura', description: 'No se guardará esta compra y la imagen sale de la lista. Cenit no conserva las capturas.', confirmLabel: 'Cancelar captura' });
+    else drop();
+  }
+  function locate(path: string) {
+    const key = (Object.entries(captureSourcePath) as [string, string][]).find(([, source]) => source === path)?.[0];
+    const field = key ? workspace.current?.querySelector<HTMLElement>(`#purchase-record-${key}`) : null;
+    field?.focus();
+  }
+  const regions = useMemo(() => current?.extraction?.data.regions ?? [], [current?.extraction]);
+  const picker = <input hidden ref={input} type="file" multiple accept="image/png,image/jpeg" aria-label="Capturas de las solicitudes de compra"
+    onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ''; void add(files); }} />;
+  const dropProps = { onDragOver: (event: React.DragEvent) => { event.preventDefault(); setDragging(true); },
+    onDragLeave: (event: React.DragEvent) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); },
+    onDrop: (event: React.DragEvent) => { event.preventDefault(); setDragging(false); void add(Array.from(event.dataTransfer.files)); } };
+  const back = <Link className="capture-title__back" to={returnTo} aria-label="Volver al registro" title="Volver al registro" onClick={event => { if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); guard.request(() => navigate(returnTo), event.currentTarget); }}><ArrowLeftIcon size={18} aria-hidden="true" /></Link>;
+  const alert = notice && <p className="capture-notice" role="alert"><WarningCircleIcon size={18} aria-hidden="true" /><span>{notice}</span>
+    <button type="button" className="cenit-button cenit-button--icon cenit-button--quiet" aria-label="Cerrar el aviso" onClick={() => setNotice('')}><XIcon size={14} aria-hidden="true" /></button></p>;
+
+  if (!items.length) return <section className="purchase-records capture-start">
+    {picker}
+    <div className="purchase-page-heading"><div><div className="capture-title">{back}<h1>Registrar capturas</h1></div><p>Sube las capturas de Oracle de las compras que aprobaste. Cenit lee cada una y tú las revisas antes de guardar. Las imágenes no se guardan: de cada compra queda sólo su fila.</p></div></div>
+    <button type="button" className={`capture-dropzone${dragging ? ' capture-dropzone--over' : ''}`} disabled={adding} onClick={() => input.current?.click()} {...dropProps}>
+      <span className="capture-dropzone__icon"><ImagesIcon size={30} aria-hidden="true" /></span>
+      <strong>{adding ? 'Revisando las imágenes…' : 'Arrastra aquí tus capturas'}</strong>
+      <span>Puedes soltar varias a la vez</span>
+      <span className="cenit-button cenit-button--primary"><PlusIcon size={16} weight="bold" aria-hidden="true" />Elegir capturas</span>
+      <small>PNG o JPG · hasta 5 MB cada una</small>
+    </button>
+    {alert}
+    <ol className="capture-tips">
+      <li><b>1</b><span><strong>Saca la captura completa</strong>Desde el título de la solicitud hasta la cuenta de cargo.</span></li>
+      <li><b>2</b><span><strong>Súbelas todas juntas</strong>Cenit llena la fila de cada compra mientras sigues trabajando.</span></li>
+      <li><b>3</b><span><strong>Revisa y guarda</strong>Una por una; con Enter pasas a la siguiente.</span></li>
+    </ol>
+    <Link className="capture-tips__manual" to="/administracion/compras/nueva" state={{ purchasesReturnTo: returnTo }}>¿Sin captura? Registrar a mano</Link>
   </section>;
+
+  return <form className="purchase-records capture-queue-page" noValidate aria-busy={mutation.isPending} onSubmit={event => { event.preventDefault(); save(); }}>
+    {picker}
+    <div className="purchase-page-heading"><div className="capture-title">{back}<h1>Registrar capturas</h1>
+      {unsaved.length > 0 && current && <span className="capture-title__progress">{position} de {items.length}</span>}</div>
+      {current && pending(current) && <div className="purchase-heading-actions">
+        <button className="cenit-button" type="button" disabled={mutation.isPending} onClick={event => remove(current, event.currentTarget)}>Cancelar</button>
+        <button className="cenit-button cenit-button--primary" type="submit" disabled={mutation.isPending || (current.status !== 'ready' && !current.manual)}>
+          {mutation.isPending ? 'Guardando…' : <>Guardar y seguir<kbd>Enter</kbd></>}</button>
+      </div>}
+    </div>
+    {alert}
+    <div className="capture-queue" ref={workspace}>
+      <nav className="capture-queue__list" aria-label="Capturas por revisar" {...dropProps} data-dragging={dragging || undefined}>
+        {items.map((item, index) => <div key={item.key} className="capture-queue__item" aria-current={item.key === selected ? 'true' : undefined} data-status={item.status === 'failed' && item.manual ? 'ready' : item.status} data-missing={pending(item) && item.status === 'ready' && missingRut(item) ? 'true' : undefined}>
+          <button type="button" className="capture-queue__open" onClick={() => choose(item.key)} disabled={mutation.isPending} title={item.file.name}>
+            <strong>{item.draft.record.requestNumber ?? `Captura ${index + 1}`}</strong>
+            {item.draft.record.requestNumber && <span className="capture-queue__provider">{item.draft.record.provider ?? 'Sin proveedor'}</span>}
+              <span className="capture-queue__status">{item.status === 'reading' ? <CircleNotchIcon className="capture-spin" size={13} aria-hidden="true" /> : item.status === 'saved' || (item.status === 'ready' && !missingRut(item)) ? <CheckIcon size={13} weight="bold" aria-hidden="true" /> : item.status === 'failed' && !item.manual ? <WarningCircleIcon size={13} aria-hidden="true" /> : null}{statusText(item)}</span>
+          </button>
+          {pending(item) && <button type="button" className="cenit-button cenit-button--icon cenit-button--quiet capture-queue__remove" aria-label={`Quitar ${item.file.name}`} disabled={mutation.isPending} onClick={event => remove(item, event.currentTarget)}><XIcon size={14} aria-hidden="true" /></button>}
+        </div>)}
+        <button type="button" className="capture-queue__add" disabled={adding} onClick={() => input.current?.click()}><PlusIcon size={16} aria-hidden="true" />{adding ? 'Revisando…' : 'Agregar más capturas'}</button>
+      </nav>
+
+      <div className="capture-queue__main">
+        {!unsaved.length ? <div className="capture-done">
+          <span className="capture-done__icon"><CheckIcon size={28} weight="bold" aria-hidden="true" /></span>
+          <h2 ref={stageHeading} tabIndex={-1}>Listo, revisaste todas las capturas</h2>
+          <p>Quedaron en el registro como pendientes de pago, salvo las que marcaste como pagadas.</p>
+          <div>{singleSavedId && <Link className="cenit-button cenit-button--primary" to={{ pathname: `/administracion/compras/${singleSavedId}`, search: returnSearch }} state={{ purchasesReturnTo: returnTo }}>Ver la compra</Link>}
+            <Link className={`cenit-button${singleSavedId ? '' : ' cenit-button--primary'}`} to={returnTo} onClick={() => { snapshot.current = null; }}>Ver el registro</Link>
+            <button type="button" className="cenit-button" onClick={() => { setItems([]); setSelected(null); }}>Registrar más capturas</button></div>
+        </div> : !current ? <p className="purchase-state">Elige una captura de la lista.</p> : current.status === 'saved' ? <div className="capture-done">
+          <h2>Esta captura ya está guardada</h2><p>Solicitud {current.draft.record.requestNumber}.</p>
+          {current.savedId && <Link className="cenit-button" to={{ pathname: `/administracion/compras/${current.savedId}`, search: returnSearch }} state={{ purchasesReturnTo: returnTo }}>Ver la compra</Link>}
+        </div> : current.status === 'waiting' || current.status === 'reading' ? <div className="capture-panel">
+          <span className="capture-panel__icon"><CircleNotchIcon className="capture-spin" size={26} aria-hidden="true" /></span>
+          <h2 ref={stageHeading} tabIndex={-1}>{current.status === 'reading' ? 'Leyendo la captura…' : 'En espera'}</h2>
+          <p>{current.status === 'reading' ? 'Cenit está llenando la fila. Puedes revisar otra captura mientras tanto.' : 'Se leerá cuando termine la anterior.'}</p>
+        </div> : current.status === 'failed' && !current.manual ? <div className="capture-panel capture-panel--problem">
+          <span className="capture-panel__icon"><WarningCircleIcon size={26} aria-hidden="true" /></span>
+          <h2 ref={stageHeading} tabIndex={-1}>No pudimos leer esta captura</h2><p>{current.error}</p>
+          <div className="capture-panel__actions"><button type="button" className="cenit-button" onClick={() => change(current.key, { status: 'waiting' })}>Reintentar la lectura</button>
+            <button type="button" className="cenit-button" onClick={() => {
+              focusNext.current = 'move';
+              change(current.key, { ...manualDraft(current.file), manual: true });
+            }}>Completarla a mano con la imagen al lado</button></div>
+        </div> : <>
+          {mutation.isError && <p className="purchase-state" role="alert">{mutation.error.message} La fila sigue aquí.</p>}
+          {!current.manual && <CaptureLens capture={{ file: current.file, url: url(current), width: current.width, height: current.height }} regions={regions} activePath={activePath}
+            title={current.draft.record.requestNumber ?? `Captura ${position}`} onSelect={locate} />}
+          <RecordForm heading="La fila que se guardará" draft={current.draft} sources={current.sources} dateSource={current.dateSource} problems={problems} disabled={mutation.isPending}
+            extraction={current.manual ? null : current.extraction} activePath={activePath} onLocate={setActivePath}
+            onChange={(draft, sources) => { change(current.key, { draft, sources }); setProblems([]); mutation.reset(); }} />
+          {current.manual && <div className="capture-queue__preview">
+            <CapturePreview selected={{ file: current.file, url: url(current), width: current.width, height: current.height }} regions={[]} activePath="" onSelect={locate} />
+          </div>}
+        </>}
+      </div>
+    </div>
+  </form>;
 }

@@ -45,7 +45,7 @@ function Form({ asset }: { asset?: AssetDetail }) {
   useGuardChanges(dirty && !busy, busy, discard);
   const set = <K extends keyof Draft>(key: K) => (value: Draft[K]) => { setDraft(current => ({ ...current, [key]: value })); setErrors(current => ({ ...current, [key]: undefined })); };
   const purchaseText = draft.purchase.trim();
-  const purchases = useQuery({ queryKey: ['assets', 'purchase-lookup', purchaseText], queryFn: ({ signal }) => listPurchases('all', 1, signal, { q: purchaseText }, { sort: 'sentDateDesc', pageSize: 5 }), enabled: purchaseText.length >= 3 });
+  const purchases = useQuery({ queryKey: ['assets', 'purchase-lookup', purchaseText], queryFn: ({ signal }) => listPurchases(1, signal, { q: purchaseText }, { sort: 'dateDesc', pageSize: 5 }), enabled: purchaseText.length >= 3 });
   const purchase = purchases.data?.data.find(record => record.requestNumber.toLocaleLowerCase('es') === purchaseText.toLocaleLowerCase('es'));
   const kind = kinds[draft.kind];
   const [overflow, setOverflow] = useState<string[]>([]);

@@ -3,15 +3,16 @@ import { login } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 import { amountLabel } from '../../apps/web/src/features/purchases/model/fields.js';
 
-test('Inicio coincide con compras y se actualiza al volver después de guardar y validar', async ({ page }) => {
+test('Inicio coincide con compras y el «por pagar» se actualiza al guardar y pagar', async ({ page }) => {
   await login(page, 'administrativo');
   await expect(page.locator('.home-figures')).toBeVisible();
-  const before = (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
+  const summary = async () => (await (await page.request.get('/api/v1/purchases/summary')).json()).data;
+  const before = await summary();
   const input = structuredClone(manualPurchaseExample);
   input.operationId = crypto.randomUUID();
-  input.header.requestNumber = 'HOME-' + crypto.randomUUID().slice(0, 8);
-  input.header.sentDate = before.overview.registrationMonth + '-15';
-  input.header.totalAmount = '9007199254740993';
+  input.record.requestNumber = 'HOME-' + crypto.randomUUID().slice(0, 8);
+  input.record.recordDate = before.overview.registrationMonth + '-15';
+  input.record.totalAmount = '9007199254740993';
   const saved = await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data: input });
   expect(saved.status()).toBe(201);
   const card = (label: string) => page.locator('.home-figures > div').filter({ has: page.locator('dt').filter({ hasText: new RegExp('^' + label + '$') }) }).locator('dd').first();
@@ -23,28 +24,26 @@ test('Inicio coincide con compras y se actualiza al volver después de guardar y
   const yearPurchases = (count: number) => new RegExp(`^${purchases(count)}( · \\d+ proyectos?)?$`);
   const openRecord = async () => {
     await nav.getByRole('link', { name: 'Registro de compras', exact: true }).click();
-    await page.getByLabel('Buscar solicitudes', { exact: true }).fill(input.header.requestNumber);
-
-    const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
-    const row = pending.getByRole('row').filter({ hasText: input.header.requestNumber });
+    await page.getByLabel('Buscar compras', { exact: true }).fill(input.record.requestNumber);
+    const row = page.getByRole('region', { name: 'Compras registradas', exact: true }).getByRole('row').filter({ hasText: input.record.requestNumber });
     await expect(row).toBeVisible();
     return row;
   };
   await openRecord();
   await home();
   await expect(yearDetail).toHaveText(yearPurchases(before.overview.registeredThisYear + 1));
-  await expect(card('[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisMonth) + BigInt(input.header.totalAmount)).toString()));
+  await expect(card('[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisMonth) + BigInt(input.record.totalAmount)).toString()));
   await expect(monthDetail).toHaveText(purchases(before.overview.registeredThisMonth + 1));
-  await expect(card('Gasto en \\d{4}')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisYear) + BigInt(input.header.totalAmount)).toString()));
-  await expect(page.getByRole('region', { name: 'Segunda revisión' })).toContainText(String(before.pending + 1));
+  await expect(card('Gasto en \\d{4}')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisYear) + BigInt(input.record.totalAmount)).toString()));
+  expect(await summary()).toMatchObject({ pending: before.pending + 1, pendingAmount: (BigInt(before.pendingAmount) + BigInt(input.record.totalAmount)).toString() });
   const row = await openRecord();
-  await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Validar registro', exact: true }).click();
-  await expect(row).toHaveCount(0);
+  await row.getByRole('button', { name: new RegExp(`^Situación de pago de ${input.record.requestNumber}: pendiente`) }).click();
+  await expect(row.getByRole('button', { name: new RegExp(`^Situación de pago de ${input.record.requestNumber}: pagado`) })).toBeVisible();
   await home();
+  // Pagarla no cambia lo gastado: sólo la saca del «por pagar».
   await expect(yearDetail).toHaveText(yearPurchases(before.overview.registeredThisYear + 1));
-  await expect(card('[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisMonth) + BigInt(input.header.totalAmount)).toString()));
-  await expect(page.getByRole('region', { name: 'Segunda revisión' })).toContainText(amountLabel(before.pendingAmount));
+  await expect(card('[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+')).toHaveText(amountLabel((BigInt(before.overview.documentTotalThisMonth) + BigInt(input.record.totalAmount)).toString()));
+  expect(await summary()).toMatchObject({ pending: before.pending, pendingAmount: before.pendingAmount });
 });
 
 test('Inicio muestra error y permite reintentar hasta un resumen vacío', async ({ page }) => {
@@ -61,7 +60,7 @@ test('Inicio muestra error y permite reintentar hasta un resumen vacío', async 
   unavailable = false;
   await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
   await expect(page.locator('.home-figures')).toBeVisible();
-  await expect(page.getByText(/^Aún no hay compras con fecha de envío en \d{4}\.$/)).toBeVisible();
+  await expect(page.getByText(/^Aún no hay compras registradas en \d{4}\.$/)).toBeVisible();
   // The year and the month, each with its number of purchases; Bienes lives in the side column.
   await expect(page.locator('.home-figures > div')).toHaveCount(2);
   await expect(page.locator('.home-figure__detail').filter({ hasText: /^0 compras$/ })).toHaveCount(2);
@@ -76,8 +75,8 @@ test('Inicio muestra error y permite reintentar hasta un resumen vacío', async 
   await expect(page.getByRole('navigation', { name: 'Sistemas administrativos' }).getByRole('link')).toHaveCount(4);
   await expect(page.locator('.home-figures')).not.toContainText(/ejemplos/);
   // Inicio offers the frequent task directly; manual registration stays inside Compras.
-  await expect(page.getByRole('link', { name: 'Subir captura', exact: true })).toHaveCount(1);
-  await expect(page.getByRole('link', { name: /Registrar manualmente/ })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Registrar capturas', exact: true })).toHaveCount(1);
+  await expect(page.getByRole('link', { name: /Registrar a mano/ })).toHaveCount(0);
 });
 
 test('los gráficos muestran detalles al interactuar y conservan sus cifras accesibles', async ({ page }) => {
@@ -104,7 +103,7 @@ test('los gráficos muestran detalles al interactuar y conservan sus cifras acce
   const barHeight = (index: number) => columns.nth(index).locator('.home-chart__bar').evaluate(element => element.getBoundingClientRect().height);
   expect((await barHeight(1)) / (await barHeight(2))).toBeCloseTo(450000 / 200000, 1);
   expect((await barHeight(1)) / (await barHeight(0))).toBeCloseTo(450000 / 100000, 1);
-  const table = page.getByRole('table', { name: 'Monto documental por mes de envío' });
+  const table = page.getByRole('table', { name: 'Monto por mes' });
   await expect(table.getByRole('row')).toHaveCount(4);
   await expect(table.getByRole('row').nth(2)).toContainText(amountLabel('450000'));
   // The general Inicio no longer repeats a table per project (the picker opens each one): the year is split by account
@@ -120,7 +119,7 @@ test('los gráficos muestran detalles al interactuar y conservan sus cifras acce
 });
 
 test('Inicio cabe en la ventana sin desplazar la página de 1280×720 a 2560×1440, en dos columnas', async ({ page }) => {
-  await page.route('**/api/v1/purchases/capabilities', route => route.fulfill({ json: { data: { secondReviewEnabled: true, sheetsSyncEnabled: true } } }));
+  await page.route('**/api/v1/purchases/capabilities', route => route.fulfill({ json: { data: { sheetsSyncEnabled: true } } }));
   await page.route('**/api/v1/purchases/sheets-sync*', route => route.fulfill({ json: { data: { status: 'pending', pending: 2, lastSyncedAt: '2026-10-22T14:00:00.000Z', url: 'https://docs.google.com/spreadsheets/d/qa_only/edit' } } }));
   await page.route('**/api/v1/purchases/summary', route => route.fulfill({ json: { data: {
     requests: 86, pending: 3, currency: 'CLP', pendingAmount: '1200000', days: [], overview: {

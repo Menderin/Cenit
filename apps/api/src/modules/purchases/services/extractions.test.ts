@@ -87,7 +87,7 @@ async function app() {
     const e = error instanceof ApiError ? error : new ApiError(500, 'INTERNAL_ERROR', 'Error');
     reply.code(e.status).send({ error: { code: e.code, message: e.message, requestId: request.id } });
   });
-  await server.register(purchaseRoutes, { capabilities: { secondReviewEnabled: false, sheetsSyncEnabled: false }, prefix: '/api/v1/purchases', service: {} as PurchaseService,
+  await server.register(purchaseRoutes, { capabilities: { sheetsSyncEnabled: false }, prefix: '/api/v1/purchases', service: {} as PurchaseService,
     authenticate: async request => request.headers['x-test-role'] ? { accountId: account, role: request.headers['x-test-role'] as 'administrativo' } : null,
     allowedOrigins: ['http://localhost:5173'], extraction: new ExtractionService(success, new CaptureReceipts(randomBytes(32))) });
   return server;

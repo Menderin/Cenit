@@ -22,7 +22,7 @@ export function createRuntimeApp() {
   const extraction = new ExtractionService(process.env.OCR_URL ? httpExtractionProcessor(process.env.OCR_URL) : undefined, captureReceipts);
   const purchaseCapabilities = readPurchaseCapabilities();
   const target = purchaseCapabilities.sheetsSyncEnabled ? readSheetsTarget() : undefined;
-  const writer = target ? createGoogleSheetsWriter(target.spreadsheetId, target.keyFile, purchaseCapabilities.secondReviewEnabled) : undefined;
+  const writer = target ? createGoogleSheetsWriter(target.spreadsheetId, target.keyFile) : undefined;
   const pool = createPool();
   const auth = new AuthService(new AuthRepository(pool));
   const googleConfig = readGoogleConfig();

@@ -23,10 +23,10 @@ Cenit es un monolito modular para la Facultad de Medicina de la UCN. El proyecto
 
 ## Contratos que deben conservarse
 
-- Inicio consulta `GET /api/v1/purchases/summary` con `requests`, `pending`, `pendingAmount` y `days`; usa las mismas cabeceras del listado y se refresca tras altas, validación y eliminación.
-- Filtros de compras automáticos tras 250 ms del último conjunto válido; una fecha incompleta o rango inválido conserva el borrador y los resultados anteriores. Unidad y proyecto coinciden en el mismo ítem.
-- Eliminar sólo desde el detalle, mediante ícono accesible y confirmación; sesión administrativa, Origin, versión esperada y transacción de cabecera/ítems.
-- Montos exactos como cadenas, identificadores textuales, guardado atómico y reintentos idempotentes. No imponer suma ítems=total ni sobrescribir conflictos silenciosamente.
+- Inicio consulta `GET /api/v1/purchases/summary` con `requests`, `pending`, `pendingAmount` y `days`; `pending` y `pendingAmount` son el «por pagar» (compras que no están PAGADO). Usa las mismas cabeceras del listado y se refresca tras altas, pagos y eliminación.
+- Filtros de compras automáticos tras 250 ms del último conjunto válido; una fecha incompleta o rango inválido conserva el borrador y los resultados anteriores. Unidad, proyecto y cuenta son datos de la compra (la fila del Registro de gastos), no de sus líneas de Oracle.
+- Eliminar sólo desde la ficha de la compra, mediante ícono accesible y confirmación anclada; sesión administrativa, Origin, versión esperada y transacción de compra/líneas.
+- Montos exactos como cadenas, identificadores textuales, guardado atómico y reintentos idempotentes. No imponer suma de líneas = Monto ni sobrescribir conflictos silenciosamente.
 - Confirmar éxito sólo después del servidor; conservar borradores ante errores según el comportamiento vigente de sesión.
 
 ## Código, datos y verificación

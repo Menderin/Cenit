@@ -6,7 +6,7 @@ import { mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { Value } from '@sinclair/typebox/value';
-import { PurchaseResponseSchema, PurchaseListResponseSchema, PurchaseSummaryResponseSchema, PurchaseProjectsResponseSchema, PurchaseProjectSummaryResponseSchema, PurchaseDeletionResponseSchema, headerFields, lineFields, administrativeFields, type PurchaseRecord } from '../../packages/contracts/src/purchases/index.js';
+import { PurchaseResponseSchema, PurchaseListResponseSchema, PurchaseSummaryResponseSchema, PurchaseProjectsResponseSchema, PurchaseProjectSummaryResponseSchema, PurchaseDeletionResponseSchema, PurchaseCatalogResponseSchema, PurchaseProvidersResponseSchema, headerFields, lineFields, administrativeFields, type PurchaseRecord } from '../../packages/contracts/src/purchases/index.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 import { createTestPool, closeTestPool } from './support/postgres.js';
 import { createDemoCredentials, prepareDemoAccounts } from '../../db/seeds/auth-demo.js';
@@ -18,7 +18,7 @@ import { AuthRepository } from '../../apps/api/src/modules/auth/repositories/aut
 import { AuthService } from '../../apps/api/src/modules/auth/services/auth.js';
 import { CaptureReceipts } from '../../apps/api/src/modules/purchases/services/capture-receipts.js';
 import { ExtractionService, httpExtractionProcessor } from '../../apps/api/src/modules/purchases/services/extractions.js';
-import { createReviewDraft, validateExtractionResponse } from '../../packages/contracts/src/purchases/index.js';
+import { createReviewDraft, draftFromExtraction, validateExtractionResponse } from '../../packages/contracts/src/purchases/index.js';
 import { extractionExamples } from '../../packages/contracts/src/purchases/examples.js';
 import { PurchaseSheetsRepository } from '../../apps/api/src/modules/purchases/repositories/sheets.js';
 import { GoogleSheetsWriter } from '../../apps/api/src/modules/purchases/services/sheets.js';
@@ -39,14 +39,16 @@ const cookies: Record<string, string> = {};
 const origin = 'http://127.0.0.1:3000';
 let app: ReturnType<typeof buildAcademicApp>, repository: PurchaseRepository;
 const body = () => ({ ...structuredClone(manualPurchaseExample), operationId: randomUUID() });
-const historical = body();
+// Una compra guardada con la forma anterior (cabecera, seguimiento e ítems) antes de la migración al registro de gastos.
+const historical = { operationId: randomUUID(), ...createReviewDraft(extractionExamples[0].response) };
 const historicalId = randomUUID();
 let captureNow = Date.now();
 const captureReceipts = new CaptureReceipts(randomBytes(32), () => captureNow);
 // The pre-origin format is a fixed array serialization, independent of origin.
 const historicalHash = createHash('sha256').update(JSON.stringify({ header: Object.keys(headerFields).map(key => historical.header[key as keyof typeof historical.header]), administrative: Object.keys(administrativeFields).map(key => historical.administrative[key as keyof typeof historical.administrative]), lines: historical.lines.map(line => Object.keys(lineFields).map(key => line[key as keyof typeof line])) })).digest('hex');
 const request = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: unknown, cookie = cookies.administrativo, suppliedOrigin: string | undefined = origin) => app.inject({ method, url, headers: { ...(cookie ? { cookie } : {}), ...(suppliedOrigin ? { origin: suppliedOrigin } : {}) }, ...(payload === undefined ? {} : { payload: payload as Record<string, unknown> }) });
-const editBody = (record: PurchaseRecord) => ({ header: structuredClone(record.header), administrative: structuredClone(record.administrative), lines: structuredClone(record.lines), expectedVersion: record.version });
+const editBody = (record: PurchaseRecord) => ({ record: structuredClone(record.record), oracle: structuredClone(record.oracle), lines: structuredClone(record.lines), expectedVersion: record.version });
+const pay = (record: { id: string; version: number }, paymentSituation = 'PAGADO') => request('POST', `/api/v1/purchases/${record.id}/payment-situation`, { expectedVersion: record.version, paymentSituation });
 beforeAll(async () => {
   process.env.APP_ENV = 'test';
   for (const [index, database] of databases.entries()) {
@@ -65,6 +67,8 @@ beforeAll(async () => {
       const fields = [...Object.keys(headerFields), ...Object.keys(administrativeFields)];
       const values = [...Object.values(historical.header), ...Object.values(historical.administrative)];
       await pool.query(`INSERT INTO cenit.purchase_requests(id,operation_id,payload_hash,created_by,${fields.map(key => key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)).join(',')}) VALUES(${[historicalId, historical.operationId, historicalHash, actor, ...values].map((_, i) => `$${i + 1}`).join(',')})`, [historicalId, historical.operationId, historicalHash, actor, ...values]);
+      // Antes el RUT se guardaba tal como se escribía; la migración lo deja sin puntos ni ceros a la izquierda.
+      await pool.query("UPDATE cenit.purchase_requests SET rut='076.918.240-3' WHERE id=$1", [historicalId]);
       const lineKeys = Object.keys(lineFields);
       for (const [index, line] of historical.lines.entries()) {
         const values = [randomUUID(), historicalId, index + 1, ...lineKeys.map(key => line[key as keyof typeof line])];
@@ -77,7 +81,7 @@ beforeAll(async () => {
     finally { unlinkSync(file); }
   }
   repository = new PurchaseRepository(pools[0]!);
-  app = buildAcademicApp({ purchaseCapabilities: { secondReviewEnabled: true, sheetsSyncEnabled: false }, captureReceipts, extraction: new ExtractionService(process.env.OCR_TEST_URL ? httpExtractionProcessor(process.env.OCR_TEST_URL) : async (image, name, mime) => { const result = structuredClone(extractionExamples[0]!.response); result.data.captureLayout = { status: 'compatible', signals: ['request_title', 'header_fields', 'line_section', 'eight_column_table'] }; result.data.input = { name, mimeType: mime as 'image/png', bytes: image.length, width: 1000, height: 700 }; return result; }, captureReceipts), repository: new AcademicRepository(pools[0]!), purchases: repository, auth: { service: new AuthService(new AuthRepository(pools[0]!)), config: { allowedOrigins: [origin], cookieSecure: false } } });
+  app = buildAcademicApp({ purchaseCapabilities: { sheetsSyncEnabled: false }, captureReceipts, extraction: new ExtractionService(process.env.OCR_TEST_URL ? httpExtractionProcessor(process.env.OCR_TEST_URL) : async (image, name, mime) => { const result = structuredClone(extractionExamples[0]!.response); result.data.captureLayout = { status: 'compatible', signals: ['request_title', 'header_fields', 'line_section', 'eight_column_table'] }; result.data.input = { name, mimeType: mime as 'image/png', bytes: image.length, width: 1000, height: 700 }; return result; }, captureReceipts), repository: new AcademicRepository(pools[0]!), purchases: repository, auth: { service: new AuthService(new AuthRepository(pools[0]!)), config: { allowedOrigins: [origin], cookieSecure: false } } });
   await app.ready();
 });
 
@@ -103,10 +107,13 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     }
     const previous = (await pools[1]!.query('SELECT source,example_id,payload_hash FROM cenit.purchase_requests WHERE id=$1', [historicalId])).rows[0];
     expect(previous).toEqual({ source: 'manual', example_id: null, payload_hash: historicalHash });
-    const actor = (await pools[1]!.query("SELECT id FROM cenit.accounts WHERE role='administrativo'")).rows[0].id;
-    const retry = await new PurchaseRepository(pools[1]!).create({ ...historical, origin: { type: 'manual' } }, actor);
-    expect(retry.created).toBe(false); expect(retry.record.id).toBe(historicalId);
-    expect(retry.record.header).toEqual(historical.header); expect(retry.record.lines).toEqual(historical.lines);
+    // La migración al registro de gastos usa la fecha de envío como Fecha y copia los códigos que todas las líneas comparten.
+    const migrated = (await new PurchaseRepository(pools[1]!).get(historicalId))!;
+    expect(migrated.record).toEqual({ recordDate: historical.header.sentDate, document: 'SISTEMA DE COMPRAS', requestNumber: historical.header.requestNumber, provider: null,
+      description: historical.header.description, totalAmount: historical.header.totalAmount, documentType: null, bi: null, unitCode: '270101', projectCode: '00000000',
+      accountingCode: '420405', rut: '76918240-3', area: null, item: null, paymentSituation: 'PENDIENTE' });
+    expect(migrated.oracle).toMatchObject({ sentDate: historical.header.sentDate, oracleId: historical.header.oracleId, taxAmount: historical.header.taxAmount });
+    expect(migrated.lines).toEqual(historical.lines); expect(migrated.version).toBe(1);
     expect((await pools[1]!.query('SELECT request_number_search,description_search FROM cenit.purchase_requests WHERE id=$1', [historicalId])).rows[0]).toEqual({ request_number_search: '000125', description_search: 'insumos de demostracion' });
     expect((await pools[1]!.query('SELECT provider_search FROM cenit.purchase_request_lines WHERE request_id=$1 ORDER BY position', [historicalId])).rows.map(row => row.provider_search)).toEqual(['proveedor ficticio a', 'proveedor ficticio b']);
     await prepareDemoAccounts(pools[0]!, credentials);
@@ -116,7 +123,7 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     }
   });
   it('sesión, roles y Origin se comprueban en todos los recursos', async () => {
-    const routes: ['GET' | 'POST' | 'PUT' | 'DELETE', string, unknown?][] = [['GET', '/api/v1/purchases?reviewStatus=pending'], ['GET', '/api/v1/purchases/export.xlsx?reviewStatus=pending'], ['GET', '/api/v1/purchases/summary'], ['DELETE', `/api/v1/purchases/${randomUUID()}`, { expectedVersion: 1 }], ['PUT', `/api/v1/purchases/${randomUUID()}`, { expectedVersion: 1 }], ['POST', '/api/v1/purchases', body()], ['GET', `/api/v1/purchases/${randomUUID()}`], ['POST', `/api/v1/purchases/${randomUUID()}/validation`, { expectedVersion: 1 }]];
+    const routes: ['GET' | 'POST' | 'PUT' | 'DELETE', string, unknown?][] = [['GET', '/api/v1/purchases'], ['GET', '/api/v1/purchases/export.xlsx'], ['GET', '/api/v1/purchases/summary'], ['DELETE', `/api/v1/purchases/${randomUUID()}`, { expectedVersion: 1 }], ['PUT', `/api/v1/purchases/${randomUUID()}`, { expectedVersion: 1 }], ['POST', '/api/v1/purchases', body()], ['GET', `/api/v1/purchases/${randomUUID()}`], ['POST', `/api/v1/purchases/${randomUUID()}/payment-situation`, { expectedVersion: 1, paymentSituation: 'PAGADO' }], ['GET', '/api/v1/purchases/catalog'], ['GET', '/api/v1/purchases/providers?q=proveedor']];
     for (const [method, url, payload] of routes) {
       expect((await request(method, url, payload, '')).statusCode).toBe(401);
       for (const role of ['docente', 'estudiante']) expect((await request(method, url, payload, cookies[role])).statusCode).toBe(403);
@@ -127,55 +134,55 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     }
   });
   it('exporta XLSX con descarga, caché seguro y totales exactos', async () => {
-    const response = await request('GET', '/api/v1/purchases/export.xlsx?reviewStatus=all&page=1&pageSize=100');
+    const response = await request('GET', '/api/v1/purchases/export.xlsx?page=1&pageSize=100');
     expect(response.statusCode).toBe(200);
     expect(response.headers['content-type']).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     expect(response.headers['content-disposition']).toBe('attachment; filename="compras.xlsx"');
     expect(response.headers['cache-control']).toBe('no-store');
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(response.rawPayload as unknown as ExcelJS.Buffer);
-    const sheet = workbook.getWorksheet('Compras');
+    const sheet = workbook.getWorksheet('Registro de gastos');
     const summary = workbook.getWorksheet('Resumen');
-    const items = workbook.getWorksheet('Ítems');
+    const items = workbook.getWorksheet('Líneas de Oracle');
     expect(sheet).toBeDefined();
     expect(summary).toBeDefined();
     expect(items).toBeDefined();
-    const list = (await request('GET', '/api/v1/purchases?reviewStatus=all&page=1&pageSize=100')).json();
-    const totalRow = summary!.getColumn(1).values.findIndex(value => value === 'Total documental');
+    const list = (await request('GET', '/api/v1/purchases?page=1&pageSize=100')).json();
+    const totalRow = summary!.getColumn(1).values.findIndex(value => value === 'Monto total');
     expect(summary!.getCell(totalRow, 2).value).toBe(list.totals.documentTotal);
   });
-  it('exporta lotes completos con filtros del mismo ítem, orden y total documental exacto', async () => {
+  it('exporta lotes completos con los filtros de la compra, orden y monto total exacto', async () => {
     const actor = (await pools[0]!.query("SELECT id FROM cenit.accounts WHERE role='administrativo'")).rows[0].id;
     // More than one database batch and a total larger than JavaScript's safe integer.
-    await pools[0]!.query(`INSERT INTO cenit.purchase_requests(id,operation_id,payload_hash,request_number,sent_date,description,total_amount,created_by)
-      SELECT gen_random_uuid(),gen_random_uuid(),repeat('a',64),'000-EXPORT-' || n,'2026-10-15','EXPORT-LOTES',9007199254740993,$1
+    await pools[0]!.query(`INSERT INTO cenit.purchase_requests(id,operation_id,payload_hash,request_number,record_date,description,total_amount,unit_code,project_code,created_by)
+      SELECT gen_random_uuid(),gen_random_uuid(),repeat('a',64),'000-EXPORT-' || n,'2026-10-15','EXPORT-LOTES',9007199254740993,'00A','00X',$1
       FROM generate_series(1,105) n`, [actor]);
-    await pools[0]!.query(`INSERT INTO cenit.purchase_request_lines(id,request_id,position,provider,unit_code,project_code,amount)
-      SELECT gen_random_uuid(),p.id,v.position,'=Proveedor ficticio',v.unit,v.project,0
-      FROM cenit.purchase_requests p CROSS JOIN (VALUES (1,'00A','00X'),(2,'00B','00Y')) v(position,unit,project)
-      WHERE p.description='EXPORT-LOTES'`);
+    await pools[0]!.query(`INSERT INTO cenit.purchase_request_lines(id,request_id,position,provider,amount)
+      SELECT gen_random_uuid(),p.id,v.position,'=Proveedor ficticio',0
+      FROM cenit.purchase_requests p CROSS JOIN (VALUES (1),(2)) v(position) WHERE p.description='EXPORT-LOTES'`);
     try {
-      for (const sort of ['sentDateAsc', 'sentDateDesc']) {
-        const query = `reviewStatus=all&q=EXPORT-LOTES&unitCode=00A&projectCode=00X&dateFrom=2026-10-15&dateTo=2026-10-15&sort=${sort}`;
+      for (const sort of ['dateAsc', 'dateDesc']) {
+        const query = `q=EXPORT-LOTES&unitCode=00A&projectCode=00X&dateFrom=2026-10-15&dateTo=2026-10-15&sort=${sort}`;
         const response = await request('GET', `/api/v1/purchases/export.xlsx?${query}&page=99&pageSize=1`);
         expect(response.statusCode).toBe(200);
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(response.rawPayload as unknown as ExcelJS.Buffer);
-        const purchases = workbook.getWorksheet('Compras')!, items = workbook.getWorksheet('Ítems')!, summary = workbook.getWorksheet('Resumen')!;
+        const purchases = workbook.getWorksheet('Registro de gastos')!, items = workbook.getWorksheet('Líneas de Oracle')!, summary = workbook.getWorksheet('Resumen')!;
         expect(purchases.actualRowCount).toBe(106); expect(items.actualRowCount).toBe(211);
         const first = (await request('GET', `/api/v1/purchases?${query}&pageSize=100`)).json();
         const second = (await request('GET', `/api/v1/purchases?${query}&pageSize=100&page=2`)).json();
-        expect(purchases.getColumn(1).values.slice(2)).toEqual([...first.data, ...second.data].map((row: { id: string }) => row.id));
-        expect(purchases.getCell('B2').value).toMatch(/^000-EXPORT-/);
-        expect(purchases.getCell('G2').value).toBe('9007199254740993');
-        const totalRow = summary.getColumn(1).values.findIndex(value => value === 'Total documental');
+        expect(purchases.getColumn(16).values.slice(2)).toEqual([...first.data, ...second.data].map((row: { id: string }) => row.id));
+        expect(purchases.getCell('C2').value).toMatch(/^000-EXPORT-/);
+        expect(purchases.getCell('F2').value).toBe('9007199254740993');
+        expect(purchases.getCell('B2').value).toBe('SISTEMA DE COMPRAS'); expect(purchases.getCell('O2').value).toBe('PENDIENTE');
+        const totalRow = summary.getColumn(1).values.findIndex(value => value === 'Monto total');
         expect(summary.getCell(totalRow, 2).value).toBe((105n * 9007199254740993n).toString());
       }
-      const absent = await request('GET', '/api/v1/purchases/export.xlsx?reviewStatus=all&q=EXPORT-LOTES&unitCode=00A&projectCode=00Y');
+      const absent = await request('GET', '/api/v1/purchases/export.xlsx?q=EXPORT-LOTES&unitCode=00A&projectCode=00Y');
       const empty = new ExcelJS.Workbook(); await empty.xlsx.load(absent.rawPayload as unknown as ExcelJS.Buffer);
-      expect(empty.getWorksheet('Compras')!.actualRowCount).toBe(1);
+      expect(empty.getWorksheet('Registro de gastos')!.actualRowCount).toBe(1);
       for (const filter of ['dateFrom=2026-02-30', 'dateFrom=2026-10-16&dateTo=2026-10-15', 'q=', 'unknown=1']) {
-        expect((await request('GET', `/api/v1/purchases/export.xlsx?reviewStatus=all&${filter}`)).statusCode).toBe(400);
+        expect((await request('GET', `/api/v1/purchases/export.xlsx?${filter}`)).statusCode).toBe(400);
       }
     } finally {
       await pools[0]!.query("DELETE FROM cenit.purchase_request_lines WHERE request_id IN (SELECT id FROM cenit.purchase_requests WHERE description='EXPORT-LOTES')");
@@ -184,31 +191,31 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
   });
   it('rechaza el límite de exportación sin iniciar un archivo parcial', async () => {
     const actor = (await pools[0]!.query("SELECT id FROM cenit.accounts WHERE role='administrativo'")).rows[0].id;
-    await pools[0]!.query(`INSERT INTO cenit.purchase_requests(id,operation_id,payload_hash,request_number,sent_date,description,total_amount,created_by)
+    await pools[0]!.query(`INSERT INTO cenit.purchase_requests(id,operation_id,payload_hash,request_number,record_date,description,total_amount,created_by)
       SELECT gen_random_uuid(),gen_random_uuid(),repeat('b',64),'EXPORT-LIMIT-' || n,'2026-10-15','EXPORT-LIMIT',0,$1 FROM generate_series(1,10001) n`, [actor]);
     try {
-      const response = await request('GET', '/api/v1/purchases/export.xlsx?reviewStatus=all&q=EXPORT-LIMIT');
+      const response = await request('GET', '/api/v1/purchases/export.xlsx?q=EXPORT-LIMIT');
       expect(response.statusCode).toBe(413); expect(response.json().error.code).toBe('EXPORT_LIMIT');
       expect(response.headers['content-type']).toContain('application/json');
       expect(response.headers['content-disposition']).toBeUndefined();
     } finally { await pools[0]!.query("DELETE FROM cenit.purchase_requests WHERE description='EXPORT-LIMIT'"); }
   });
   it('exportación mantiene cabeceras, ítems y total en el mismo snapshot ante altas concurrentes', async () => {
-    const input = body(); input.header.description = 'EXPORT-SNAPSHOT'; input.header.totalAmount = '100';
+    const input = body(); input.record.description = 'EXPORT-SNAPSHOT'; input.record.totalAmount = '100';
     const saved = (await request('POST', '/api/v1/purchases', input)).json().data;
     const batches: import('../../apps/api/src/modules/purchases/services/export.js').PurchaseExportBatch[] = [];
     try {
-      await repository.export({ reviewStatus: 'all', page: 1, pageSize: 20, q: 'EXPORT-SNAPSHOT' }, async batch => {
+      await repository.export({ page: 1, pageSize: 20, q: 'EXPORT-SNAPSHOT' }, async batch => {
         batches.push(batch);
         if (batch.kind === 'summary') {
-          const later = body(); later.header.description = 'EXPORT-SNAPSHOT'; later.header.totalAmount = '200';
+          const later = body(); later.record.description = 'EXPORT-SNAPSHOT'; later.record.totalAmount = '200';
           await repository.create(later, saved.createdBy.id);
         }
       }, new AbortController().signal);
       expect(batches[0]).toMatchObject({ kind: 'summary', purchaseCount: 1, itemCount: input.lines.length, documentTotal: '100' });
       expect(batches.flatMap(batch => batch.kind === 'purchases' ? batch.rows.map(row => row.id) : [])).toEqual([saved.id]);
       expect(batches.flatMap(batch => batch.kind === 'items' ? batch.rows.map(row => row.requestId) : [])).toEqual(input.lines.map(() => saved.id));
-      expect((await repository.list({ reviewStatus: 'all', page: 1, pageSize: 20, q: 'EXPORT-SNAPSHOT' })).pagination.total).toBe(2);
+      expect((await repository.list({ page: 1, pageSize: 20, q: 'EXPORT-SNAPSHOT' })).pagination.total).toBe(2);
     } finally {
       await pools[0]!.query("DELETE FROM cenit.purchase_sheets_outbox WHERE purchase_id IN (SELECT id FROM cenit.purchase_requests WHERE description='EXPORT-SNAPSHOT')");
       await pools[0]!.query("DELETE FROM cenit.purchase_request_lines WHERE request_id IN (SELECT id FROM cenit.purchase_requests WHERE description='EXPORT-SNAPSHOT')");
@@ -219,8 +226,8 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     const input = body(), response = await request('POST', '/api/v1/purchases', input);
     expect(response.statusCode).toBe(201); expect(Value.Check(PurchaseResponseSchema, response.json())).toBe(true);
     const saved = response.json().data;
-    expect(saved.header).toEqual(input.header); expect(saved.lines).toEqual(input.lines); expect(saved.administrative).toEqual(input.administrative);
-    expect(saved.reviewStatus).toBe('pending'); expect(saved.reviewedBy).toBeNull();
+    expect(saved.record).toEqual(input.record); expect(saved.oracle).toEqual(input.oracle); expect(saved.lines).toEqual(input.lines);
+    expect(saved).not.toHaveProperty('reviewStatus');
     expect((await request('GET', `/api/v1/purchases/${saved.id}`)).json().data).toEqual(saved);
     const freshRepository = new PurchaseRepository(pools[0]!); expect((await freshRepository.get(saved.id))!.lines).toEqual(input.lines);
   });
@@ -229,7 +236,7 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     const results = await Promise.all(Array.from({ length: 4 }, () => request('POST', '/api/v1/purchases', input)));
     expect(results.map(response => response.statusCode).sort()).toEqual([200, 200, 200, 201]);
     expect(new Set(results.map(response => response.json().data.id)).size).toBe(1);
-    const altered = structuredClone(input); altered.header.description = 'Otro detalle';
+    const altered = structuredClone(input); altered.record.description = 'Otro detalle';
     expect((await request('POST', '/api/v1/purchases', altered)).statusCode).toBe(409);
   });
   it('rollback no deja cabecera ni ítems parciales ante fallo de una línea', async () => {
@@ -249,7 +256,7 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
       expect(saved.source).toBe('contract_example'); expect(saved.exampleId).toBe(exampleId);
       expect(Value.Check(PurchaseResponseSchema, results[0]!.json())).toBe(true);
       expect((await request('POST', '/api/v1/purchases', { ...input, origin: { type: 'manual' } })).statusCode).toBe(409);
-      const list = (await request('GET', '/api/v1/purchases?reviewStatus=pending&pageSize=100')).json();
+      const list = (await request('GET', '/api/v1/purchases?pageSize=100')).json();
       expect(list.data.find((row: { id: string }) => row.id === saved.id)).toMatchObject({ source: 'contract_example', exampleId });
       for (const [source, id] of [['manual', exampleId], ['contract_example', null], ['contract_example', 'failure'], ['ocr', null]]) {
         await expect(pools[0]!.query('UPDATE cenit.purchase_requests SET source=$2,example_id=$3 WHERE id=$1', [saved.id, source, id])).rejects.toMatchObject({ code: '23514' });
@@ -262,108 +269,140 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     expect((await request('POST', '/api/v1/purchases', example)).statusCode).toBe(201);
     expect((await request('POST', '/api/v1/purchases', { ...example, origin: { type: 'contract_example', exampleId: 'partial' } })).statusCode).toBe(409);
   });
-  it('la BD protege FKs, posición y coherencia de validación', async () => {
+  it('la BD protege FKs, posición, montos y los datos obligatorios de la fila', async () => {
     const saved = (await request('POST', '/api/v1/purchases', body())).json().data;
     const pool = pools[0]!;
     await expect(pool.query('INSERT INTO cenit.purchase_request_lines(id,request_id,position) VALUES($1,$2,1)', [randomUUID(), randomUUID()])).rejects.toMatchObject({ code: '23503' });
     await expect(pool.query('INSERT INTO cenit.purchase_request_lines(id,request_id,position) VALUES($1,$2,1)', [randomUUID(), saved.id])).rejects.toMatchObject({ code: '23505' });
     await expect(pool.query('INSERT INTO cenit.purchase_request_lines(id,request_id,position) VALUES($1,$2,101)', [randomUUID(), saved.id])).rejects.toMatchObject({ code: '23514' });
-    await expect(pool.query("UPDATE cenit.purchase_requests SET review_status='reviewed',reviewed_by=created_by WHERE id=$1", [saved.id])).rejects.toMatchObject({ code: '23514' });
+    for (const column of ['record_date', 'document', 'payment_situation']) {
+      await expect(pool.query(`UPDATE cenit.purchase_requests SET ${column}=NULL WHERE id=$1`, [saved.id])).rejects.toMatchObject({ code: '23502' });
+    }
+    for (const column of ['provider', 'unit_code', 'project_code', 'accounting_code']) {
+      await expect(pool.query(`UPDATE cenit.purchase_requests SET ${column}=' ' WHERE id=$1`, [saved.id])).rejects.toMatchObject({ code: '23514' });
+    }
     await expect(pool.query('UPDATE cenit.purchase_requests SET total_amount=-1 WHERE id=$1', [saved.id])).rejects.toMatchObject({ code: '23514' });
     await expect(pool.query("UPDATE cenit.purchase_requests SET total_amount='NaN' WHERE id=$1", [saved.id])).rejects.toMatchObject({ code: '23514' });
     await expect(pool.query("UPDATE cenit.purchase_request_lines SET price='NaN' WHERE request_id=$1", [saved.id])).rejects.toMatchObject({ code: '23514' });
   });
   it('acepta mínimos sin ítems y montos de 255 dígitos, sin imponer suma', async () => {
-    const input = body(); input.lines = []; input.header.totalAmount = '9'.repeat(255);
+    const input = body(); input.lines = []; input.record.totalAmount = '9'.repeat(255);
     const response = await request('POST', '/api/v1/purchases', input);
-    expect(response.statusCode).toBe(201); expect(response.json().data.header.totalAmount).toBe(input.header.totalAmount);
+    expect(response.statusCode).toBe(201); expect(response.json().data.record.totalAmount).toBe(input.record.totalAmount);
   });
-  it('validación concurrente/idempotente conserva al primer revisor y la versión', async () => {
+  it('cambia la situación de pago de forma idempotente, con versión y sin tocar el resto de la fila', async () => {
     const saved = (await request('POST', '/api/v1/purchases', body())).json().data;
-    expect((await request('POST', `/api/v1/purchases/${saved.id}/validation`, { expectedVersion: 2 })).statusCode).toBe(409);
-    const results = await Promise.all(Array.from({ length: 3 }, () => request('POST', `/api/v1/purchases/${saved.id}/validation`, { expectedVersion: 1 })));
+    expect((await pay({ ...saved, version: 2 })).statusCode).toBe(409);
+    for (const payload of [{}, { expectedVersion: 1 }, { expectedVersion: 1, paymentSituation: ' ' }, { expectedVersion: 1, paymentSituation: 'PAGADO', extra: true }]) {
+      expect((await request('POST', `/api/v1/purchases/${saved.id}/payment-situation`, payload)).statusCode).toBe(400);
+    }
+    const results = await Promise.all(Array.from({ length: 3 }, () => pay(saved)));
     for (const response of results) { expect(response.statusCode).toBe(200); expect(Value.Check(PurchaseResponseSchema, response.json())).toBe(true); }
-    expect(results[0]!.json().data.version).toBe(2);
-    expect(results.map(response => response.json().data.reviewedAt)).toEqual(Array(3).fill(results[0]!.json().data.reviewedAt));
-    const list = await request('GET', '/api/v1/purchases?reviewStatus=reviewed&page=1&pageSize=20');
-    expect(Value.Check(PurchaseListResponseSchema, list.json())).toBe(true); expect(list.json().data.some((record: { id: string }) => record.id === saved.id)).toBe(true);
+    const paid = results[0]!.json().data;
+    expect(paid).toMatchObject({ version: 2, record: { ...saved.record, paymentSituation: 'PAGADO' }, lines: saved.lines });
+    expect(results.map(response => response.json().data)).toEqual(Array(3).fill(paid));
+    expect((await pools[0]!.query('SELECT generation FROM cenit.purchase_sheets_outbox WHERE purchase_id=$1', [saved.id])).rows[0].generation).toBe(2);
+    const list = (await request('GET', '/api/v1/purchases?paymentSituation=PAGADO&pageSize=100')).json();
+    expect(Value.Check(PurchaseListResponseSchema, list)).toBe(true); expect(list.data.some((record: { id: string }) => record.id === saved.id)).toBe(true);
+    expect((await pay(paid, 'PENDIENTE')).json().data).toMatchObject({ version: 3, record: { paymentSituation: 'PENDIENTE' } });
+    expect((await pay({ id: randomUUID(), version: 1 })).statusCode).toBe(404);
+    const example = (await request('POST', '/api/v1/purchases', { ...body(), origin: { type: 'contract_example', exampleId: 'recovered' } })).json().data;
+    expect((await pay(example)).json().error.code).toBe('EXAMPLE_READ_ONLY');
+  });
+  it('ofrece los catálogos de FAMED y lo último registrado por proveedor', async () => {
+    const catalog = (await request('GET', '/api/v1/purchases/catalog')).json();
+    expect(Value.Check(PurchaseCatalogResponseSchema, catalog)).toBe(true);
+    expect(catalog.data.units.filter((unit: { famed: boolean }) => unit.famed).map((unit: { code: string }) => unit.code)).toContain('270201');
+    expect(catalog.data.units.every((unit: { code: string; famed: boolean }) => unit.famed === unit.code.startsWith('27'))).toBe(true);
+    expect(catalog.data.projects).toContainEqual({ unitCode: '270201', code: '31101912', name: expect.stringContaining('H. Pylori') });
+    expect(catalog.data.accounts).toContainEqual({ code: '420405', name: 'Comestibles y Bebidas', famed: true, item: 'ALIMENTACIÓN' });
+    expect(catalog.data.accounts.some((account: { code: string }) => account.code === '420606')).toBe(false);
+    const provider = `Proveedor Sugerido ${randomUUID().slice(0, 8)}`;
+    const older = body(); older.record.provider = provider; older.record.rut = '76918240-3'; older.record.recordDate = '2026-01-10';
+    const newer = body(); newer.record.provider = provider; newer.record.rut = null; newer.record.recordDate = '2026-02-10'; newer.record.requestNumber = '000777';
+    newer.record.unitCode = '270201'; newer.record.projectCode = '31101912'; newer.record.accountingCode = '420106';
+    for (const input of [older, newer]) expect((await request('POST', '/api/v1/purchases', input)).statusCode).toBe(201);
+    const providers = (await request('GET', `/api/v1/purchases/providers?q=${encodeURIComponent(provider.toLowerCase())}`)).json();
+    expect(Value.Check(PurchaseProvidersResponseSchema, providers)).toBe(true);
+    expect(providers.data).toEqual([{ provider, rut: '76918240-3', unitCode: '270201', projectCode: '31101912', accountingCode: '420106', requestNumber: '000777', recordDate: '2026-02-10', count: 2 }]);
+    expect((await request('GET', '/api/v1/purchases/providers?q=a')).statusCode).toBe(400);
   });
   it('paginación estable, filtros inválidos, inexistente y errores sin SQL', async () => {
-    const list = await request('GET', '/api/v1/purchases?reviewStatus=pending&page=1&pageSize=1');
+    const list = await request('GET', '/api/v1/purchases?page=1&pageSize=1');
     expect(list.statusCode).toBe(200); expect(list.json().data).toHaveLength(1); expect(list.json().pagination.total).toBeGreaterThan(1);
-    expect((await request('GET', '/api/v1/purchases?reviewStatus=paid')).statusCode).toBe(400);
-    expect((await request('GET', '/api/v1/purchases?reviewStatus=pending&pageSize=101')).statusCode).toBe(400);
-    expect((await request('GET', '/api/v1/purchases?reviewStatus=all&sort=unknown')).statusCode).toBe(400);
+    expect((await request('GET', '/api/v1/purchases?paymentSituation=')).statusCode).toBe(400);
+    expect((await request('GET', '/api/v1/purchases?reviewStatus=pending')).statusCode).toBe(400);
+    expect((await request('GET', '/api/v1/purchases?pageSize=101')).statusCode).toBe(400);
+    expect((await request('GET', '/api/v1/purchases?sort=unknown')).statusCode).toBe(400);
     expect((await request('GET', `/api/v1/purchases/${randomUUID()}`)).statusCode).toBe(404);
-    const invalid = body(); invalid.header.sentDate = '2026-02-30';
+    const invalid = body(); invalid.record.recordDate = '2026-02-30';
     const response = await request('POST', '/api/v1/purchases', invalid);
     expect(response.statusCode).toBe(400); expect(response.body).not.toMatch(/SELECT|INSERT|stack|password_hash/); expect(response.json().error.requestId).toBeTruthy();
   });
   it('ordena todo el historial antes de paginar y conserva los años disponibles al filtrar', async () => {
     const prefix = `HISTORY-${randomUUID()}`;
     for (const date of ['2023-12-31', '2024-02-01', '2024-02-29', '2024-03-01', '2026-01-01']) {
-      const input = body(); input.header.requestNumber = prefix; input.header.sentDate = date;
+      const input = body(); input.record.requestNumber = prefix; input.record.recordDate = date;
       expect((await request('POST', '/api/v1/purchases', input)).statusCode).toBe(201);
     }
-    const query = `/api/v1/purchases?reviewStatus=all&q=${prefix}&pageSize=1`;
+    const query = `/api/v1/purchases?q=${prefix}&pageSize=1`;
     const recent = (await request('GET', query)).json();
-    expect(recent.data[0].sentDate).toBe('2026-01-01');
+    expect(recent.data[0].recordDate).toBe('2026-01-01');
     expect(recent.availableYears).toEqual(expect.arrayContaining([2026, 2024, 2023]));
-    const oldest = (await request('GET', `${query}&sort=sentDateAsc`)).json();
-    expect(oldest.data[0].sentDate).toBe('2023-12-31');
-    expect((await request('GET', `${query}&sort=sentDateAsc&page=2`)).json().data[0].sentDate).toBe('2024-02-01');
-    const february = (await request('GET', `${query}&dateFrom=2024-02-01&dateTo=2024-02-29&sort=sentDateAsc`)).json();
+    const oldest = (await request('GET', `${query}&sort=dateAsc`)).json();
+    expect(oldest.data[0].recordDate).toBe('2023-12-31');
+    expect((await request('GET', `${query}&sort=dateAsc&page=2`)).json().data[0].recordDate).toBe('2024-02-01');
+    const february = (await request('GET', `${query}&dateFrom=2024-02-01&dateTo=2024-02-29&sort=dateAsc`)).json();
     expect(february.pagination.total).toBe(2);
-    expect(february.data[0].sentDate).toBe('2024-02-01');
+    expect(february.data[0].recordDate).toBe('2024-02-01');
     expect(february.availableYears).toEqual(recent.availableYears);
     const empty = (await request('GET', `${query}&dateFrom=2025-01-01&dateTo=2025-12-31`)).json();
     expect(empty.pagination.total).toBe(0); expect(empty.availableYears).toEqual(recent.availableYears);
-    for (const sort of ['sentDateAsc', 'sentDateDesc']) {
+    for (const sort of ['dateAsc', 'dateDesc']) {
       const first = (await request('GET', `${query}&sort=${sort}&dateFrom=2024-02-01&dateTo=2024-02-29`)).json();
       const second = (await request('GET', `${query}&sort=${sort}&dateFrom=2024-02-01&dateTo=2024-02-29&page=2`)).json();
       expect(first.data[0].id).not.toBe(second.data[0].id);
       expect(first.totals).toEqual(second.totals);
     }
   });
-  it('resumen persistente suma cabeceras una vez y refleja altas, revisión y eliminación con montos exactos', async () => {
+  it('resumen persistente suma cada compra una vez y refleja altas, pago y eliminación con montos exactos', async () => {
     expect(await new PurchaseRepository(pools[1]!).summary()).toMatchObject({ data: { requests: 1, pending: 1, pendingAmount: historical.header.totalAmount } });
     const before = (await request('GET', '/api/v1/purchases/summary')).json().data;
-    const input = body(); input.header.sentDate = '2098-01-02'; input.header.totalAmount = '9'.repeat(255);
+    const input = body(); input.record.recordDate = '2098-01-02'; input.record.totalAmount = '9'.repeat(255);
     const saved = (await request('POST', '/api/v1/purchases', input)).json().data;
     const summary = await request('GET', '/api/v1/purchases/summary');
     expect(summary.statusCode).toBe(200); expect(Value.Check(PurchaseSummaryResponseSchema, summary.json())).toBe(true);
     expect(summary.headers['cache-control']).toBe('no-store');
-    expect(summary.json().data).toMatchObject({ requests: before.requests + 1, pending: before.pending + 1, currency: 'CLP', pendingAmount: (BigInt(before.pendingAmount) + BigInt(input.header.totalAmount)).toString() });
+    expect(summary.json().data).toMatchObject({ requests: before.requests + 1, pending: before.pending + 1, currency: 'CLP', pendingAmount: (BigInt(before.pendingAmount) + BigInt(input.record.totalAmount)).toString() });
     expect(summary.json().data.overview).toMatchObject({
-      documentTotal: (BigInt(before.overview.documentTotal) + BigInt(input.header.totalAmount)).toString(),
+      documentTotal: (BigInt(before.overview.documentTotal) + BigInt(input.record.totalAmount)).toString(),
       documentTotalThisMonth: before.overview.documentTotalThisMonth,
       registeredThisYear: before.overview.registeredThisYear,
       registeredThisMonth: before.overview.registeredThisMonth,
       sourceCounts: { ...before.overview.sourceCounts, manual: before.overview.sourceCounts.manual + 1 },
     });
     expect(summary.json().data.overview.registrationDays.at(-1).count).toBe(before.overview.registrationDays.at(-1).count + 1);
-    expect(summary.json().data.overview.recentRecords[0]).toMatchObject({ id: saved.id, totalAmount: input.header.totalAmount, createdAt: saved.createdAt });
+    expect(summary.json().data.overview.recentRecords[0]).toMatchObject({ id: saved.id, totalAmount: input.record.totalAmount, createdAt: saved.createdAt });
     expect(summary.json().data.days.at(-1)).toEqual({ date: '2098-01-02', count: 1 });
-    await request('POST', `/api/v1/purchases/${saved.id}/validation`, { expectedVersion: 1 });
-    const reviewed = (await request('GET', '/api/v1/purchases/summary')).json().data;
-    expect(reviewed.overview).toEqual(summary.json().data.overview);
-    expect(reviewed).toMatchObject({ requests: before.requests + 1, pending: before.pending, pendingAmount: before.pendingAmount });
-    expect(reviewed.days.at(-1)).toEqual({ date: '2098-01-02', count: 0 });
+    expect((await pay(saved)).statusCode).toBe(200);
+    const paid = (await request('GET', '/api/v1/purchases/summary')).json().data;
+    expect(paid.overview).toEqual(summary.json().data.overview);
+    expect(paid).toMatchObject({ requests: before.requests + 1, pending: before.pending, pendingAmount: before.pendingAmount });
+    expect(paid.days.at(-1)).toEqual({ date: '2098-01-02', count: 0 });
     expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: 2 })).statusCode).toBe(200);
     expect((await request('GET', '/api/v1/purchases/summary')).json().data).toEqual(before);
   });
-  it('Inicio por año y por proyecto suma los ítems del proyecto y nombra los códigos desde el catálogo oficial', async () => {
-    const input = body(); input.header.sentDate = '2097-01-15'; input.header.totalAmount = '1500';
-    const line = input.lines[0]!;
-    input.lines = [
-      { ...line, provider: 'Proveedor uno ficticio', amount: '700', unitCode: '270101', projectCode: '20702029', accountingCode: '410103', costCenter: null },
-      { ...line, provider: 'Proveedor dos ficticio', amount: '300', unitCode: '270201', projectCode: '99000777', accountingCode: '420405',
-        costCenter: '270201-Depto. de Ciencias Biomedicas / 99000777-Proyecto de prueba / 420405-Comestibles y Bebidas' },
-    ];
-    const saved = (await request('POST', '/api/v1/purchases', input)).json().data;
+  it('Inicio por año y por proyecto suma cada compra con sus códigos y los nombra desde el catálogo oficial', async () => {
+    const first = body(); first.record.recordDate = '2097-01-15'; first.record.totalAmount = '700'; first.record.provider = 'Proveedor uno ficticio';
+    Object.assign(first.record, { unitCode: '270101', projectCode: '20702029', accountingCode: '410103' });
+    const second = body(); second.record.recordDate = '2097-01-20'; second.record.totalAmount = '300'; second.record.provider = 'Proveedor dos ficticio';
+    Object.assign(second.record, { unitCode: '270201', projectCode: '99000777', accountingCode: '420405' });
+    second.lines = [{ ...second.lines[0]!, costCenter: '270201-Depto. de Ciencias Biomedicas / 99000777-Proyecto de prueba / 420405-Comestibles y Bebidas' }];
+    const saved = (await request('POST', '/api/v1/purchases', first)).json().data;
+    const other = (await request('POST', '/api/v1/purchases', second)).json().data;
     const year = (await request('GET', '/api/v1/purchases/summary?year=2097')).json().data;
     expect(Value.Check(PurchaseSummaryResponseSchema, { data: year })).toBe(true);
-    expect(year.overview).toMatchObject({ year: '2097', registeredThisYear: 1, documentTotalThisYear: '1500', lineTotal: '1000', projectCount: 2 });
+    expect(year.overview).toMatchObject({ year: '2097', registeredThisYear: 2, documentTotalThisYear: '1000', lineTotal: '1000', projectCount: 2 });
     expect(year.overview.availableYears).toContain(2097);
     expect(year.overview.projects).toEqual([
       { code: '20702029', name: expect.stringMatching(/^12 va Versión Programa de Formación de Especialistas/), count: 1, amount: '700', months: ['700', ...Array(11).fill('0')] },
@@ -389,7 +428,7 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     expect((await request('GET', '/api/v1/purchases/summary?year=0000')).statusCode).toBe(400);
     expect((await request('GET', '/api/v1/purchases/projects?year=20977')).statusCode).toBe(400);
     expect((await request('GET', '/api/v1/purchases/projects/20702029', undefined, cookies.docente)).statusCode).toBe(403);
-    expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: 1 })).statusCode).toBe(200);
+    for (const record of [saved, other]) expect((await request('DELETE', `/api/v1/purchases/${record.id}`, { expectedVersion: 1 })).statusCode).toBe(200);
   });
   it('el resumen devuelve las ocho altas más recientes', async () => {
     const saved: { id: string; version: number }[] = [];
@@ -406,30 +445,30 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     expect(recent.every((row: { id: string }) => saved.some(record => record.id === row.id))).toBe(true);
     for (const row of saved) expect((await request('DELETE', `/api/v1/purchases/${row.id}`, { expectedVersion: row.version })).statusCode).toBe(200);
   });
-  it('los indicadores mensuales y anuales usan fecha documental y el período de Santiago', async () => {
+  it('los indicadores mensuales y anuales usan la Fecha de registro y el período de Santiago', async () => {
     const before = (await repository.summary()).data.overview!;
-    const input = body(); input.header.sentDate = '2098-12-31';
+    const input = body(); input.record.recordDate = '2098-12-31';
     const saved = (await request('POST', '/api/v1/purchases', input)).json().data;
     const pool = pools[0]!;
-    await pool.query("UPDATE cenit.purchase_requests SET created_at=date_trunc('month',now() AT TIME ZONE 'America/Santiago') AT TIME ZONE 'America/Santiago', sent_date=date_trunc('year',now() AT TIME ZONE 'America/Santiago')::date-1 WHERE id=$1", [saved.id]);
+    await pool.query("UPDATE cenit.purchase_requests SET created_at=date_trunc('month',now() AT TIME ZONE 'America/Santiago') AT TIME ZONE 'America/Santiago', record_date=date_trunc('year',now() AT TIME ZONE 'America/Santiago')::date-1 WHERE id=$1", [saved.id]);
     expect((await repository.summary()).data.overview).toMatchObject({ registeredThisMonth: before.registeredThisMonth, documentTotalThisMonth: before.documentTotalThisMonth });
     expect((await repository.summary()).data.overview!.registeredThisYear).toBe(before.registeredThisYear);
-    await pool.query("UPDATE cenit.purchase_requests SET created_at=(date_trunc('year',now() AT TIME ZONE 'America/Santiago') AT TIME ZONE 'America/Santiago')-interval '1 millisecond', sent_date=date_trunc('month',now() AT TIME ZONE 'America/Santiago')::date WHERE id=$1", [saved.id]);
+    await pool.query("UPDATE cenit.purchase_requests SET created_at=(date_trunc('year',now() AT TIME ZONE 'America/Santiago') AT TIME ZONE 'America/Santiago')-interval '1 millisecond', record_date=date_trunc('month',now() AT TIME ZONE 'America/Santiago')::date WHERE id=$1", [saved.id]);
     const month = (await repository.summary()).data.overview!;
-    expect(month).toMatchObject({ registeredThisMonth: before.registeredThisMonth + 1, documentTotalThisMonth: (BigInt(before.documentTotalThisMonth) + BigInt(input.header.totalAmount)).toString() });
+    expect(month).toMatchObject({ registeredThisMonth: before.registeredThisMonth + 1, documentTotalThisMonth: (BigInt(before.documentTotalThisMonth) + BigInt(input.record.totalAmount)).toString() });
     expect(month.registeredThisYear).toBe(before.registeredThisYear + 1);
     expect(month.registrationMonth).toBe((await pool.query("SELECT to_char(now() AT TIME ZONE 'America/Santiago','YYYY-MM') AS month")).rows[0].month);
     await repository.delete(saved.id, 1);
   });
-  it('elimina pendientes y validados con sus ítems, exige versión y rechaza formatos inválidos', async () => {
-    for (const reviewed of [false, true]) {
+  it('elimina compras pendientes y pagadas con sus líneas, exige versión y rechaza formatos inválidos', async () => {
+    for (const paid of [false, true]) {
       const saved = (await request('POST', '/api/v1/purchases', body())).json().data;
-      if (reviewed) await request('POST', `/api/v1/purchases/${saved.id}/validation`, { expectedVersion: 1 });
-      const version = reviewed ? 2 : 1;
+      if (paid) expect((await pay(saved)).statusCode).toBe(200);
+      const version = paid ? 2 : 1;
       for (const payload of [{}, { expectedVersion: 0 }, { expectedVersion: '1' }, { expectedVersion: version, role: 'administrativo' }]) {
         expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, payload)).statusCode).toBe(400);
       }
-      expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: reviewed ? 1 : 2 })).statusCode).toBe(409);
+      expect((await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: paid ? 1 : 2 })).statusCode).toBe(409);
       expect((await repository.get(saved.id))!.lines).toEqual(saved.lines);
       const response = await request('DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: version });
       expect(response.statusCode).toBe(200); expect(Value.Check(PurchaseDeletionResponseSchema, response.json())).toBe(true);
@@ -466,65 +505,70 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
     expect(response.statusCode).toBe(413); expect(response.json().error.code).toBe('PAYLOAD_TOO_LARGE');
   });
   it('búsqueda literal ignora tildes/mayúsculas y preserva ceros y puntuación', async () => {
-    const input = body(); input.header.requestNumber = 'SEARCH-00001'; input.header.description = 'Consulta Clínica 100%_\\ literal';
-    input.lines[0]!.provider = 'Árbol Ñandú';
+    const input = body(); input.record.requestNumber = 'SEARCH-00001'; input.record.description = 'Consulta Clínica 100%_\\ literal';
+    input.record.provider = 'Árbol Ñandú'; input.record.rut = '77302815-K';
     const saved = (await request('POST', '/api/v1/purchases', input)).json().data;
-    for (const q of ['SEARCH-00001', '00001', 'clinica', 'CLI\u0301NICA', 'arbol nandu', '%_\\', '   clinica   ']) {
-      const result = await request('GET', `/api/v1/purchases?reviewStatus=pending&q=${encodeURIComponent(q)}`);
+    for (const q of ['SEARCH-00001', '00001', 'clinica', 'CLI\u0301NICA', 'arbol nandu', '%_\\', '   clinica   ', '77.302.815', '77302815-k', '77302815K']) {
+      const result = await request('GET', `/api/v1/purchases?q=${encodeURIComponent(q)}`);
       expect(result.statusCode).toBe(200); expect(Value.Check(PurchaseListResponseSchema, result.json())).toBe(true);
       expect(result.json().data.some((row: { id: string }) => row.id === saved.id)).toBe(true);
     }
-    const literal = (await request('GET', '/api/v1/purchases?reviewStatus=pending&q=%25_%5C')).json();
-    expect(literal.pagination.total).toBe(1); expect(literal.totals.documentTotal).toBe(input.header.totalAmount);
-    expect((await request('GET', `/api/v1/purchases?reviewStatus=pending&q=${encodeURIComponent("' OR 1=1 --")}`)).json().pagination.total).toBe(0);
-    expect((await request('GET', `/api/v1/purchases/${saved.id}`)).json().data.header.description).toBe(input.header.description);
+    const literal = (await request('GET', '/api/v1/purchases?q=%25_%5C')).json();
+    expect(literal.pagination.total).toBe(1); expect(literal.totals.documentTotal).toBe(input.record.totalAmount);
+    expect((await request('GET', `/api/v1/purchases?q=${encodeURIComponent("' OR 1=1 --")}`)).json().pagination.total).toBe(0);
+    expect((await request('GET', `/api/v1/purchases/${saved.id}`)).json().data.record.description).toBe(input.record.description);
   });
-  it('unidad y proyecto coinciden en el mismo ítem, sin duplicar cabeceras ni totales', async () => {
-    const input = body(); input.header.description = 'FILTER-SAME-LINE'; input.header.sentDate = '2026-10-15'; input.header.totalAmount = '200000';
-    input.lines[0]!.unitCode = '00A'; input.lines[0]!.projectCode = '00X';
-    input.lines[1]!.unitCode = '00B'; input.lines[1]!.projectCode = '00Y';
+  it('filtra por unidad, proyecto, cuenta y situación de pago de la compra, con conteos y totales exactos', async () => {
+    const input = body(); input.record.description = 'FILTER-RECORD'; input.record.recordDate = '2026-10-15'; input.record.totalAmount = '200000';
+    Object.assign(input.record, { unitCode: '00A', projectCode: '00X', accountingCode: '420405' });
+    input.lines[0]!.unitCode = '00B'; input.lines[0]!.projectCode = '00Y';
     const saved = (await request('POST', '/api/v1/purchases', input)).json().data;
-    const prefix = '/api/v1/purchases?reviewStatus=pending&q=FILTER-SAME-LINE';
-    const absent = await request('GET', `${prefix}&unitCode=00A&projectCode=00Y`);
+    const prefix = '/api/v1/purchases?q=FILTER-RECORD';
+    // Las líneas de Oracle no participan en los filtros: valen los códigos de la compra.
+    const absent = await request('GET', `${prefix}&unitCode=00B&projectCode=00Y`);
     expect(absent.json().pagination.total).toBe(0); expect(absent.json().totals.documentTotal).toBe('0');
     expect((await request('GET', `${prefix}&unitCode=0A&projectCode=00X`)).json().pagination.total).toBe(0);
-    const found = await request('GET', `${prefix}&unitCode=00A&projectCode=00X&dateFrom=2026-10-15&dateTo=2026-10-15`);
+    const found = await request('GET', `${prefix}&unitCode=00A&projectCode=00X&accountingCode=420405&dateFrom=2026-10-15&dateTo=2026-10-15`);
     expect(found.json().data.map((row: { id: string }) => row.id)).toEqual([saved.id]); expect(found.json().totals.documentTotal).toBe('200000');
-    expect((await request('GET', `${prefix}&unitCode=00A&projectCode=00X&dateFrom=2026-10-15`)).json().totals.documentTotal).toBe('200000');
+    expect(found.json().data[0]).toMatchObject({ provider: input.record.provider, unitCode: '00A', paymentSituation: 'PENDIENTE', recordDate: '2026-10-15' });
+    expect((await request('GET', `${prefix}&unitCode=00A&accountingCode=410103`)).json().pagination.total).toBe(0);
     expect((await request('GET', `${prefix}&unitCode=00A&projectCode=00X&dateTo=2026-10-14`)).json().pagination.total).toBe(0);
-    expect((await request('GET', `${prefix}&projectCode=missing`)).json().pagination.total).toBe(0);
-    input.operationId = randomUUID(); input.lines[1]!.unitCode = '00A'; input.lines[1]!.projectCode = '00X';
+    input.operationId = randomUUID();
     const second = (await request('POST', '/api/v1/purchases', input)).json().data;
     const expectedIds = [saved.id, second.id].sort().reverse();
     const list = (await request('GET', `${prefix}&unitCode=00A&projectCode=00X&pageSize=1&page=1`)).json();
     const secondPage = (await request('GET', `${prefix}&unitCode=00A&projectCode=00X&pageSize=1&page=2`)).json();
-    expect(list.data).toHaveLength(1); expect(secondPage.data).toHaveLength(1);
     expect([list.data[0].id, secondPage.data[0].id]).toEqual(expectedIds);
-    expect(list.data[0].id).not.toBe(secondPage.data[0].id);
     for (const page of [list, secondPage]) { expect(page.pagination.total).toBe(2); expect(page.totals).toEqual({ currency: 'CLP', documentTotal: '400000' }); }
-    const outside = (await request('GET', `${prefix}&unitCode=00A&projectCode=00X&page=99`)).json();
-    expect(outside.data).toEqual([]); expect(outside.pagination.total).toBe(2); expect(outside.totals.documentTotal).toBe('400000');
-    input.operationId = randomUUID(); input.header.totalAmount = '50000';
+    input.operationId = randomUUID(); input.record.totalAmount = '50000';
     const third = (await request('POST', '/api/v1/purchases', input)).json().data;
-    expect((await request('POST', `/api/v1/purchases/${third.id}/validation`, { expectedVersion: 1 })).statusCode).toBe(200);
-    expect((await request('GET', `${prefix}&unitCode=00A&projectCode=00X`)).json().totals.documentTotal).toBe('400000');
-    const reviewed = (await request('GET', '/api/v1/purchases?reviewStatus=reviewed&q=FILTER-SAME-LINE&unitCode=00A&projectCode=00X')).json();
-    expect(reviewed.data.map((row: { id: string }) => row.id)).toEqual([third.id]); expect(reviewed.totals.documentTotal).toBe('50000');
-    const all = (await request('GET', '/api/v1/purchases?reviewStatus=all&q=FILTER-SAME-LINE&unitCode=00A&projectCode=00X')).json();
+    expect((await pay(third)).statusCode).toBe(200);
+    const pending = (await request('GET', `${prefix}&unitCode=00A&paymentSituation=PENDIENTE`)).json();
+    expect(pending.totals.documentTotal).toBe('400000'); expect(pending.paymentCounts).toEqual({ all: 3, pending: 2, paid: 1 });
+    const paid = (await request('GET', `${prefix}&unitCode=00A&paymentSituation=PAGADO`)).json();
+    expect(paid.data.map((row: { id: string }) => row.id)).toEqual([third.id]); expect(paid.totals.documentTotal).toBe('50000');
+    expect(paid.paymentCounts).toEqual(pending.paymentCounts);
+    // Un valor anotado antes (no PAGADO) sigue contando como pendiente, también en el «Por pagar» de Inicio.
+    const before = (await request('GET', '/api/v1/purchases/summary')).json().data;
+    expect((await pay(second, 'En revisión')).statusCode).toBe(200);
+    expect((await request('GET', `${prefix}&unitCode=00A&paymentSituation=PENDIENTE`)).json().paymentCounts).toEqual({ all: 3, pending: 2, paid: 1 });
+    expect((await request('GET', `${prefix}&unitCode=00A&paymentSituation=${encodeURIComponent('En revisión')}`)).json().data.map((row: { id: string }) => row.id)).toEqual([second.id]);
+    expect((await request('GET', '/api/v1/purchases/summary')).json().data).toMatchObject({ pending: before.pending, pendingAmount: before.pendingAmount });
+    const all = (await request('GET', `${prefix}&unitCode=00A&projectCode=00X`)).json();
     expect(all.pagination.total).toBe(3); expect(all.totals.documentTotal).toBe('450000');
   });
   it('suma montos exactos de más de 255 dígitos y rechaza filtros sin consultar datos inválidos', async () => {
-    for (let index = 0; index < 2; index++) { const input = body(); input.header.description = 'HUGE-FILTER'; input.header.totalAmount = '9'.repeat(255); expect((await request('POST', '/api/v1/purchases', input)).statusCode).toBe(201); }
-    const result = await request('GET', '/api/v1/purchases?reviewStatus=pending&q=HUGE-FILTER&pageSize=1');
+    for (let index = 0; index < 2; index++) { const input = body(); input.record.description = 'HUGE-FILTER'; input.record.totalAmount = '9'.repeat(255); expect((await request('POST', '/api/v1/purchases', input)).statusCode).toBe(201); }
+    const result = await request('GET', '/api/v1/purchases?q=HUGE-FILTER&pageSize=1');
     expect(result.json().totals.documentTotal).toBe((2n * BigInt('9'.repeat(255))).toString());
     expect(Value.Check(PurchaseListResponseSchema, result.json())).toBe(true);
     for (const filter of ['q=', 'q=%20%20', 'dateFrom=2026-02-29', 'dateFrom=2026-02-30', 'dateFrom=0000-01-01', 'dateFrom=2026-10-14&dateTo=2026-10-13', 'unitCode=', 'projectCode=' + 'x'.repeat(256), 'unknown=1', 'unknownParam=1', 'unitId=00000000-0000-4000-8000-000000000000']) {
-      const response = await request('GET', '/api/v1/purchases?reviewStatus=pending&' + filter);
+      const response = await request('GET', '/api/v1/purchases?' + filter);
       expect(response.statusCode).toBe(400); expect(response.body).not.toMatch(/SELECT|stack|normalize_purchase_search/);
     }
   });
   it('conteo, monto y página conservan el mismo snapshot ante una escritura concurrente', async () => {
-    const initial = body(); initial.header.description = 'SNAPSHOT-ONLY'; initial.header.totalAmount = '100';
+    const initial = body(); initial.record.description = 'SNAPSHOT-ONLY'; initial.record.totalAmount = '100';
     const saved = (await request('POST', '/api/v1/purchases', initial)).json().data;
     const actor = saved.createdBy.id;
     const client = await pools[0]!.connect(); let injected = false;
@@ -532,17 +576,17 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
       query: async (sql: string, values?: unknown[]) => {
         const result = await client.query(sql, values);
         if (!injected && sql.startsWith('SELECT count(*)')) {
-          injected = true; const later = body(); later.header.description = 'SNAPSHOT-ONLY'; later.header.totalAmount = '200';
+          injected = true; const later = body(); later.record.description = 'SNAPSHOT-ONLY'; later.record.totalAmount = '200';
           await repository.create(later, actor);
         }
         return result;
       }, release: () => client.release(),
     } as unknown as PoolClient;
     const reader = new PurchaseRepository({ connect: async () => proxy } as unknown as Pool);
-    const response = await reader.list({ reviewStatus: 'pending', page: 1, pageSize: 20, q: 'SNAPSHOT-ONLY' });
+    const response = await reader.list({ page: 1, pageSize: 20, q: 'SNAPSHOT-ONLY' });
     expect(injected).toBe(true); expect(response.pagination.total).toBe(1); expect(response.totals.documentTotal).toBe('100');
     expect(response.data.map(row => row.id)).toEqual([saved.id]);
-    const current = await repository.list({ reviewStatus: 'pending', page: 1, pageSize: 20, q: 'SNAPSHOT-ONLY' });
+    const current = await repository.list({ page: 1, pageSize: 20, q: 'SNAPSHOT-ONLY' });
     expect(current.pagination.total).toBe(2); expect(current.totals.documentTotal).toBe('300');
   });
   it('fallos inesperados no exponen SQL y logout impide consultas posteriores', async () => {
@@ -552,7 +596,7 @@ describe('solicitudes: PostgreSQL, API y revisión local', () => {
       expect(response.statusCode).toBe(500); expect(response.body).not.toMatch(/SELECT|password_hash|stack|private_table/);
     } finally { await failed.close(); }
     expect((await request('POST', '/api/v1/auth/logout', {})).statusCode).toBe(204);
-    expect((await request('GET', '/api/v1/purchases?reviewStatus=pending')).statusCode).toBe(401);
+    expect((await request('GET', '/api/v1/purchases')).statusCode).toBe(401);
   });
 });
 
@@ -565,37 +609,36 @@ describe('preparación explícita de compras ficticias', () => {
       expect(() => execFileSync(process.execPath, ['--import', 'tsx', 'db/seeds/purchases-demo.ts'], { env: { ...process.env, APP_ENV: 'demo', DATABASE_URL_FILE: '', DATABASE_URL: url }, stdio: 'pipe' })).toThrow();
     }
   });
-  it('carga compras ficticias editables y repetir no duplica ni revierte revisiones', async () => {
+  it('carga compras ficticias editables y repetir no duplica ni revierte cambios de pago', async () => {
     const pool = pools[0]!, actor = credentials.find(account => account.role === 'administrativo')!.id;
     expect(await seedPurchaseDemo(pool, actor)).toEqual({ created: purchaseDemoExamples.length, retained: 0, replaced: 0 });
-    const currentYearFixtures = purchaseDemoExamples.filter(example => example.input.header.requestNumber.startsWith('CENIT-2026-'));
-    const pendingFixtures = currentYearFixtures.filter(example => !example.reviewed);
-    const reviewedFixtures = currentYearFixtures.filter(example => example.reviewed);
-    const pending = await repository.list({ reviewStatus: 'pending', page: 1, pageSize: 20, q: 'CENIT-2026-' });
-    const reviewed = await repository.list({ reviewStatus: 'reviewed', page: 1, pageSize: 20, q: 'CENIT-2026-' });
-    expect(pending.pagination.total).toBe(pendingFixtures.length); expect(reviewed.pagination.total).toBe(reviewedFixtures.length);
-    expect(pending.totals.documentTotal).toBe(pendingFixtures.reduce((sum, example) => sum + BigInt(example.input.header.totalAmount), 0n).toString());
-    for (const row of [...pending.data, ...reviewed.data]) {
-      const record = (await repository.get(row.id))!, fixture = purchaseDemoExamples.find(example => example.input.header.requestNumber === row.requestNumber)!;
-      expect(record.header).toEqual(fixture.input.header); expect(record.lines).toEqual(fixture.input.lines);
+    const seeded = await pool.query<{ id: string }>('SELECT id FROM cenit.purchase_requests WHERE created_by=$1 AND operation_id=ANY($2::uuid[])',
+      [actor, purchaseDemoExamples.map(example => example.input.operationId)]);
+    expect(seeded.rowCount).toBe(purchaseDemoExamples.length);
+    for (const example of [purchaseDemoExamples[0]!, purchaseDemoExamples.at(-1)!]) {
+      const row = (await repository.list({ page: 1, pageSize: 20, q: example.input.record.requestNumber })).data.find(item => item.requestNumber === example.input.record.requestNumber)!;
+      const record = (await repository.get(row.id))!;
+      expect(record.record).toEqual(example.input.record); expect(record.oracle).toEqual(example.input.oracle); expect(record.lines).toEqual(example.input.lines);
       expect(record.source).toBe('manual'); expect(record.exampleId).toBeNull();
     }
-    const supplier = await repository.list({ reviewStatus: 'pending', page: 1, pageSize: 20, q: 'CENIT-2026-047' });
-    expect(supplier.pagination.total).toBe(1);
-    const changed = await repository.validate(pending.data[0]!.id, 1, actor);
-    const snapshots = await Promise.all([...pending.data, ...reviewed.data].map(row => repository.get(row.id)));
+    const pending = purchaseDemoExamples.filter(example => example.input.record.paymentSituation === 'PENDIENTE');
+    expect(pending.length).toBeGreaterThan(0);
+    const first = (await repository.list({ page: 1, pageSize: 1, q: pending[0]!.input.record.requestNumber })).data[0]!;
+    const changed = (await repository.setPaymentSituation(first.id, first.version, 'PAGADO')).data;
+    const snapshots = await Promise.all(seeded.rows.map(row => repository.get(row.id)));
     expect(await seedPurchaseDemo(pool, actor)).toEqual({ created: 0, retained: purchaseDemoExamples.length, replaced: 0 });
-    expect(await Promise.all([...pending.data, ...reviewed.data].map(row => repository.get(row.id)))).toEqual(snapshots);
+    expect(await Promise.all(seeded.rows.map(row => repository.get(row.id)))).toEqual(snapshots);
     expect(await repository.get(changed.id)).toEqual(changed);
   });
-  it('rechaza cuentas ajenas al rol administrativo y contenido incompatible sin sobrescribirlo', async () => {
+  it('rechaza cuentas ajenas al rol administrativo y operaciones reservadas con contenido ajeno', async () => {
     const pool = pools[0]!, actor = credentials.find(account => account.role === 'administrativo')!.id;
     await expect(seedPurchaseDemo(pool, credentials.find(account => account.role === 'estudiante')!.id)).rejects.toThrow('cuenta administrativa');
     const fixture = purchaseDemoExamples[0]!.input;
-    const saved = (await repository.create(fixture, actor)).record;
-    await pool.query('UPDATE cenit.purchase_requests SET payload_hash=$2 WHERE id=$1', [saved.id, '0'.repeat(64)]);
-    await expect(seedPurchaseDemo(pool, actor)).rejects.toMatchObject({ code: 'OPERATION_CONFLICT' });
-    expect(await repository.get(saved.id)).toEqual(saved);
+    const current = (await pool.query('SELECT id,version FROM cenit.purchase_requests WHERE created_by=$1 AND operation_id=$2', [actor, fixture.operationId])).rows[0];
+    await repository.delete(current.id, current.version);
+    const foreign = (await repository.create({ ...structuredClone(fixture), record: { ...fixture.record, requestNumber: 'OTRA-COMPRA' } }, actor)).record;
+    await expect(seedPurchaseDemo(pool, actor)).rejects.toThrow('datos inesperados');
+    expect(await repository.get(foreign.id)).toEqual(foreign);
   });
 });
 
@@ -608,39 +651,39 @@ describe('SCRUM-121: corrección atómica de copias guardadas', () => {
     cookies.administrativo = String(login.headers['set-cookie']).split(';')[0]!;
   });
   for (const source of ['manual', 'image_capture'] as const) {
-    it(`corrige ${source}, conserva procedencia y reintentos y actualiza revisión, resumen y Sheets`, async () => {
+    it(`corrige ${source}, conserva procedencia y reintentos y actualiza resumen y Sheets`, async () => {
       const input = body();
-      input.header.requestNumber = `EDIT-${randomUUID()}`;
+      input.record.requestNumber = `EDIT-${randomUUID()}`;
       if (source === 'image_capture') input.origin = captureReceipts.issue({ type: 'image_capture', extractionId: randomUUID(), processorVersion: 'scrum121-fixture', processedAt: new Date(captureNow).toISOString() }, credentials.find(c => c.role === 'administrativo')!.id);
       const created = await request('POST', '/api/v1/purchases', input);
       expect(created.statusCode).toBe(201);
       const saved: PurchaseRecord = created.json().data;
-      const validated = await request('POST', `/api/v1/purchases/${saved.id}/validation`, { expectedVersion: saved.version });
-      expect(validated.statusCode).toBe(200);
-      const reviewed: PurchaseRecord = validated.json().data;
+      const paid = await pay(saved);
+      expect(paid.statusCode).toBe(200);
+      const reviewed: PurchaseRecord = paid.json().data;
       const before = (await request('GET', '/api/v1/purchases/summary')).json().data;
       const hashBefore = (await pools[0]!.query('SELECT payload_hash FROM cenit.purchase_requests WHERE id=$1', [saved.id])).rows[0].payload_hash;
       const generationBefore = (await pools[0]!.query('SELECT generation FROM cenit.purchase_sheets_outbox WHERE purchase_id=$1', [saved.id])).rows[0].generation;
       const remote = new FakeGoogleSheets(), target = `EDIT-${source}-${randomUUID()}`;
-      const writer = new GoogleSheetsWriter(remote.call, 'fake@example.test', true);
+      const writer = new GoogleSheetsWriter(remote.call, 'fake@example.test');
       const sync = new PurchaseSheetsRepository(pools[0]!, repository);
       await pools[0]!.query('INSERT INTO cenit.purchase_sheets_delivery(spreadsheet_id,purchase_id,synced_generation) SELECT $1,purchase_id,generation FROM cenit.purchase_sheets_outbox WHERE purchase_id<>$2', [target, saved.id]);
       await sync.deliver(target, jobs => writer.send(jobs));
       expect((await sync.status(target, saved.id)).data.status).toBe('synced');
       const previousAssignment = (await pools[0]!.query('SELECT header_row FROM cenit.purchase_sheets_delivery WHERE spreadsheet_id=$1 AND purchase_id=$2', [target, saved.id])).rows[0];
       const update = editBody(reviewed);
-      update.header.description = 'Corrección ficticia con referencia 000121';
-      update.header.totalAmount = '9007199254740993';
-      update.header.taxAmount = '0';
-      update.administrative.document = '000.0121';
+      update.record.description = 'Corrección ficticia con referencia 000121';
+      update.record.totalAmount = '9007199254740993';
+      update.oracle.taxAmount = '0';
+      update.record.document = '000.0121';
+      update.record.provider = 'Proveedor corregido';
+      update.record.unitCode = '00.0121';
       update.lines = [structuredClone(input.lines[1]!), structuredClone(input.lines[0]!), structuredClone(input.lines[0]!)];
-      update.lines[0]!.provider = 'Proveedor corregido';
-      update.lines[0]!.unitCode = '00.0121';
       const response = await request('PUT', `/api/v1/purchases/${saved.id}`, update);
       expect(response.statusCode).toBe(200);
       expect(Value.Check(PurchaseResponseSchema, response.json())).toBe(true);
       const corrected: PurchaseRecord = response.json().data;
-      expect(corrected).toMatchObject({ id: saved.id, source, exampleId: saved.exampleId, capture: saved.capture, createdBy: saved.createdBy, createdAt: saved.createdAt, version: reviewed.version + 1, reviewStatus: 'pending', reviewedAt: null, reviewedBy: null, header: update.header, administrative: update.administrative, lines: update.lines });
+      expect(corrected).toMatchObject({ id: saved.id, source, exampleId: saved.exampleId, capture: saved.capture, createdBy: saved.createdBy, createdAt: saved.createdAt, version: reviewed.version + 1, record: update.record, oracle: update.oracle, lines: update.lines });
       expect(await repository.get(saved.id)).toEqual(corrected);
       const lines = await pools[0]!.query('SELECT position FROM cenit.purchase_request_lines WHERE request_id=$1 ORDER BY position', [saved.id]);
       expect(lines.rows.map(line => line.position)).toEqual([1, 2, 3]);
@@ -650,13 +693,15 @@ describe('SCRUM-121: corrección atómica de copias guardadas', () => {
       expect(postRetry.statusCode).toBe(200); expect(postRetry.json().data).toEqual(corrected);
       expect((await pools[0]!.query('SELECT payload_hash FROM cenit.purchase_requests WHERE id=$1', [saved.id])).rows[0].payload_hash).toBe(hashBefore);
       expect((await pools[0]!.query('SELECT generation FROM cenit.purchase_sheets_outbox WHERE purchase_id=$1', [saved.id])).rows[0].generation).toBe(generationBefore + 1);
-      const listed = (await request('GET', `/api/v1/purchases?reviewStatus=pending&q=${input.header.requestNumber}`)).json();
+      const listed = (await request('GET', `/api/v1/purchases?q=${input.record.requestNumber}`)).json();
       expect(listed.data.map((row: { id: string }) => row.id)).toEqual([saved.id]);
-      expect(listed.totals.documentTotal).toBe(update.header.totalAmount);
+      expect(listed.totals.documentTotal).toBe(update.record.totalAmount);
       const summary = (await request('GET', '/api/v1/purchases/summary')).json().data;
-      expect(summary.requests).toBe(before.requests); expect(summary.pending).toBe(before.pending + 1);
-      expect(summary.pendingAmount).toBe((BigInt(before.pendingAmount) + BigInt(update.header.totalAmount)).toString());
-      expect(summary.overview.documentTotal).toBe((BigInt(before.overview.documentTotal) - BigInt(saved.header.totalAmount) + BigInt(update.header.totalAmount)).toString());
+      // Corregir conserva la situación de pago: sigue PAGADO y no vuelve a contar como por pagar.
+      expect(summary.requests).toBe(before.requests); expect(summary.pending).toBe(before.pending);
+      expect(summary.pendingAmount).toBe(before.pendingAmount);
+      expect(corrected.record.paymentSituation).toBe('PAGADO');
+      expect(summary.overview.documentTotal).toBe((BigInt(before.overview.documentTotal) - BigInt(saved.record.totalAmount) + BigInt(update.record.totalAmount)).toString());
       // A confirmed correction schedules a new delivery into the same remote rows.
       expect((await sync.status(target, saved.id)).data.status).toBe('pending');
       await sync.deliver(target, jobs => writer.send(jobs));
@@ -666,7 +711,7 @@ describe('SCRUM-121: corrección atómica de copias guardadas', () => {
       const row = remote.sheet('Compras').rows.get(assignment.header_row)!;
       expect(assignment.header_row).toBe(previousAssignment.header_row);
       expect(remote.sheet('Compras').rows.size).toBe(2);
-      expect(row[header.indexOf('Descripción')]).toBe(update.header.description);
+      expect(row[header.indexOf('DETALLE')]).toBe(update.record.description);
       expect(assignment.synced_generation).toBe(generationBefore + 1);
     });
   }
@@ -679,7 +724,7 @@ describe('SCRUM-121: corrección atómica de copias guardadas', () => {
     expect(await repository.get(original.id)).toEqual(original);
     const saved: PurchaseRecord = (await request('POST', '/api/v1/purchases', body())).json().data;
     const update = editBody(saved);
-    for (const invalid of [{ ...update, expectedVersion: 0 }, { ...update, extra: true }, { ...update, source: 'image_capture' }, { ...update, header: { ...update.header, sentDate: '2026-02-30' } }, { ...update, lines: [{ ...update.lines[0], amount: '-1' }] }]) {
+    for (const invalid of [{ ...update, expectedVersion: 0 }, { ...update, extra: true }, { ...update, source: 'image_capture' }, { ...update, record: { ...update.record, recordDate: '2026-02-30' } }, { ...update, record: { ...update.record, rut: '76.918.240-3' } }, { ...update, lines: [{ ...update.lines[0], amount: '-1' }] }]) {
       expect((await request('PUT', `/api/v1/purchases/${saved.id}`, invalid)).statusCode).toBe(400);
       expect(await repository.get(saved.id)).toEqual(saved);
     }
@@ -690,25 +735,25 @@ describe('SCRUM-121: corrección atómica de copias guardadas', () => {
   it('serializa correcciones concurrentes, reintenta sin duplicar y rechaza versiones antiguas distintas', async () => {
     const saved: PurchaseRecord = (await request('POST', '/api/v1/purchases', body())).json().data;
     const first = editBody(saved), second = editBody(saved);
-    first.header.description = 'Primera corrección'; second.header.description = 'Segunda corrección';
+    first.record.description = 'Primera corrección'; second.record.description = 'Segunda corrección';
     const results = await Promise.all([request('PUT', `/api/v1/purchases/${saved.id}`, first), request('PUT', `/api/v1/purchases/${saved.id}`, second)]);
     expect(results.map(result => result.statusCode).sort()).toEqual([200, 409]);
     expect(results.find(result => result.statusCode === 409)!.json().error.code).toBe('VERSION_CONFLICT');
     const current: PurchaseRecord = results.find(result => result.statusCode === 200)!.json().data;
-    const winner = current.header.description === first.header.description ? first : second;
+    const winner = current.record.description === first.record.description ? first : second;
     const retry = await Promise.all(Array.from({ length: 3 }, () => request('PUT', `/api/v1/purchases/${saved.id}`, winner)));
     for (const response of retry) { expect(response.statusCode).toBe(200); expect(response.json().data).toEqual(current); }
     expect(current.version).toBe(saved.version + 1);
     expect((await pools[0]!.query('SELECT generation FROM cenit.purchase_sheets_outbox WHERE purchase_id=$1', [saved.id])).rows[0].generation).toBe(2);
   });
 
-  it('revierte cabecera, ítems, versión, revisión y outbox si PostgreSQL falla en el segundo ítem', async () => {
+  it('revierte la fila, sus líneas, versión y outbox si PostgreSQL falla en la segunda línea', async () => {
     const saved: PurchaseRecord = (await request('POST', '/api/v1/purchases', body())).json().data;
-    await request('POST', `/api/v1/purchases/${saved.id}/validation`, { expectedVersion: saved.version });
+    await pay(saved);
     const original = (await repository.get(saved.id))!;
     const snapshot = async () => ({ record: await repository.get(saved.id), lines: (await pools[0]!.query('SELECT * FROM cenit.purchase_request_lines WHERE request_id=$1 ORDER BY position', [saved.id])).rows, outbox: (await pools[0]!.query('SELECT * FROM cenit.purchase_sheets_outbox WHERE purchase_id=$1', [saved.id])).rows });
     const before = await snapshot(), update = editBody(original);
-    update.header.description = 'No debe persistirse';
+    update.record.description = 'No debe persistirse';
     update.lines[0]!.provider = 'Tampoco debe persistirse';
     await pools[0]!.query(`CREATE FUNCTION cenit.scrum121_fail_line() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.request_id = '${saved.id}'::uuid AND NEW.position = 2 THEN RAISE EXCEPTION 'scrum121_private_failure'; END IF; RETURN NEW; END $$; CREATE TRIGGER scrum121_fail_line BEFORE INSERT ON cenit.purchase_request_lines FOR EACH ROW EXECUTE FUNCTION cenit.scrum121_fail_line()`);
     try {
@@ -740,18 +785,18 @@ describe('capture provenance and explicit persistence', () => {
     const candidates = extraction.json();
     expect(validateExtractionResponse(candidates)).toEqual([]);
     expect(await count()).toBe(before);
-    const draft = createReviewDraft(candidates);
-    const input = { ...draft, header: { ...draft.header, requestNumber: '000901', sentDate: '2026-10-14', description: 'HUMAN REVIEWED FICTIONAL DATA', totalAmount: '71000' }, operationId: randomUUID(), origin: candidates.data.origin };
+    const { draft } = draftFromExtraction(candidates, { name: 'Captura de pantalla 2026-10-14 a la(s) 10.00.00.png' });
+    const input = { ...draft, record: { ...draft.record, requestNumber: '000901', recordDate: '2026-10-14', description: 'HUMAN REVIEWED FICTIONAL DATA', totalAmount: '71000' }, operationId: randomUUID(), origin: candidates.data.origin };
     const wrong = await request('POST', '/api/v1/purchases', { ...input, origin: { ...input.origin, extractionId: randomUUID() } });
     expect(wrong.statusCode).toBe(400); expect(await count()).toBe(before);
     const responses = await Promise.all([request('POST', '/api/v1/purchases', input), request('POST', '/api/v1/purchases', input)]);
     expect(responses.map(r => r.statusCode).sort()).toEqual([200, 201]);
     const saved = responses[0]!.json().data;
     expect(saved.source).toBe('image_capture'); expect(saved.capture.extractionId).toBe(input.origin.extractionId);
-    expect(saved.header.description).toBe(input.header.description);
+    expect(saved.record.description).toBe(input.record.description);
     expect(saved).not.toHaveProperty('receipt');
     expect(await count()).toBe(before+1);
-    expect((await request('POST', '/api/v1/purchases', { ...input, header: { ...input.header, totalAmount: '3' } })).statusCode).toBe(409);
+    expect((await request('POST', '/api/v1/purchases', { ...input, record: { ...input.record, totalAmount: '3' } })).statusCode).toBe(409);
     captureNow += 7200001;
     expect((await request('POST', '/api/v1/purchases', input)).statusCode).toBe(200);
     expect((await request('POST', '/api/v1/purchases', { ...input, operationId: randomUUID() })).statusCode).toBe(400);
@@ -767,7 +812,7 @@ describe('capture provenance and explicit persistence', () => {
 });
 
 describe('registro histórico y sincronización durable de Sheets', () => {
-  it('mantiene ambos estados en el listado conjunto y bloquea la segunda revisión desactivada', async () => {
+  it('lista compras pendientes y pagadas juntas, sin segunda revisión, y expone el estado de Sheets', async () => {
     const disabled = buildAcademicApp({ repository: new AcademicRepository(pools[0]!), purchases: repository,
       auth: { service: new AuthService(new AuthRepository(pools[0]!)), config: { allowedOrigins: [origin], cookieSecure: false } } });
     try {
@@ -777,26 +822,26 @@ describe('registro histórico y sincronización durable de Sheets', () => {
       const cookie = String(login.headers['set-cookie']).split(';')[0]!;
       expect((await disabled.inject('/api/v1/purchases/capabilities')).statusCode).toBe(401);
       const capabilities = await disabled.inject({ url: '/api/v1/purchases/capabilities', headers: { cookie } });
-      expect(capabilities.json().data).toEqual({ secondReviewEnabled: false, sheetsSyncEnabled: false });
+      expect(capabilities.json().data).toEqual({ sheetsSyncEnabled: false });
       const actor = (await pools[0]!.query("SELECT id FROM cenit.accounts WHERE role='administrativo' LIMIT 1")).rows[0].id;
       const prefix = 'REGISTRO-' + randomUUID();
       const first = body(), second = body();
-      first.header.requestNumber = prefix + '-1'; second.header.requestNumber = prefix + '-2';
+      first.record.requestNumber = prefix + '-1'; second.record.requestNumber = prefix + '-2';
       const a = await repository.create(first, actor), b = await repository.create(second, actor);
-      await repository.validate(b.record.id, 1, actor);
-      const response = await disabled.inject({ url: `/api/v1/purchases?reviewStatus=all&q=${prefix}`, headers: { cookie } });
+      await repository.setPaymentSituation(b.record.id, 1, 'PAGADO');
+      const response = await disabled.inject({ url: `/api/v1/purchases?q=${prefix}`, headers: { cookie } });
       expect(response.statusCode).toBe(200); expect(Value.Check(PurchaseListResponseSchema, response.json())).toBe(true);
-      expect(new Set(response.json().data.map((record: { reviewStatus: string }) => record.reviewStatus))).toEqual(new Set(['pending', 'reviewed']));
+      expect(new Set(response.json().data.map((record: { paymentSituation: string }) => record.paymentSituation))).toEqual(new Set(['PENDIENTE', 'PAGADO']));
       expect(response.json().pagination.total).toBe(2);
-      expect(response.json().totals.documentTotal).toBe((BigInt(first.header.totalAmount) + BigInt(second.header.totalAmount)).toString());
-      expect((await disabled.inject({ method: 'POST', url: `/api/v1/purchases/${a.record.id}/validation`, headers: { cookie, origin }, payload: { expectedVersion: 1 } })).statusCode).toBe(409);
-      expect((await repository.get(a.record.id))!.reviewStatus).toBe('pending');
+      expect(response.json().totals.documentTotal).toBe((BigInt(first.record.totalAmount) + BigInt(second.record.totalAmount)).toString());
+      expect((await disabled.inject({ method: 'POST', url: `/api/v1/purchases/${a.record.id}/validation`, headers: { cookie, origin }, payload: { expectedVersion: 1 } })).statusCode).toBe(404);
+      expect((await repository.get(a.record.id))!.version).toBe(1);
       expect((await disabled.inject({ url: '/api/v1/purchases/sheets-sync', headers: { cookie } })).json().data.status).toBe('disabled');
       for (const role of ['docente', 'estudiante']) for (const path of ['capabilities', 'sheets-sync']) {
         expect((await disabled.inject({ url: `/api/v1/purchases/${path}`, headers: { cookie: cookies[role] } })).statusCode).toBe(403);
       }
       const enabled = buildAcademicApp({ repository: new AcademicRepository(pools[0]!), purchases: repository,
-        purchaseCapabilities: { secondReviewEnabled: false, sheetsSyncEnabled: true },
+        purchaseCapabilities: { sheetsSyncEnabled: true },
         sheets: { repository: new PurchaseSheetsRepository(pools[0]!, repository), spreadsheetId: 'fake_status_only' },
         auth: { service: new AuthService(new AuthRepository(pools[0]!)), config: { allowedOrigins: [origin], cookieSecure: false } } });
       try {
@@ -810,12 +855,12 @@ describe('registro histórico y sincronización durable de Sheets', () => {
     } finally { await disabled.close(); }
   });
 
-  it('conserva cola y filas tras fallos/reinicio, no duplica y sincroniza altas, revisión y bajas', async () => {
+  it('conserva cola y filas tras fallos/reinicio, no duplica y sincroniza altas, pagos y bajas', async () => {
     const pool = pools[0]!, target = 'fake_sheet_integration', actor = (await pool.query("SELECT id FROM cenit.accounts WHERE role='administrativo' LIMIT 1")).rows[0].id;
     // Older fixtures are outside this remote-double scenario.
     await pool.query(`INSERT INTO cenit.purchase_sheets_delivery(spreadsheet_id,purchase_id,synced_generation)
       SELECT $1,purchase_id,generation FROM cenit.purchase_sheets_outbox`, [target]);
-    const input = body(); input.header.requestNumber = '000099'; input.header.totalAmount = '9'.repeat(255);
+    const input = body(); input.record.requestNumber = '000099'; input.record.totalAmount = '9'.repeat(255);
     const saved = await repository.create(input, actor);
     await repository.create(input, actor);
     expect((await pool.query('SELECT generation FROM cenit.purchase_sheets_outbox WHERE purchase_id=$1', [saved.record.id])).rows[0].generation).toBe(1);
@@ -841,10 +886,10 @@ describe('registro histórico y sincronización durable de Sheets', () => {
     expect((await sync.status(target, saved.record.id)).data.status).toBe('synced');
     expect(remote.sheet('Compras').rows.size).toBe(2);
     expect(remote.sheet('Ítems').rows.size).toBe(input.lines.length + 1);
-    await repository.validate(saved.record.id, 1, actor);
+    await repository.setPaymentSituation(saved.record.id, 1, 'PAGADO');
     await sync.deliver(target, jobs => writer.send(jobs));
     const headers = remote.sheet('Compras').rows.get(1)!;
-    expect(remote.sheet('Compras').rows.get(assignment.header_row)![headers.indexOf('Revisión local')]).toBe('reviewed');
+    expect(remote.sheet('Compras').rows.get(assignment.header_row)![headers.indexOf('Situación de pago')]).toBe('PAGADO');
     // A newer mutation arriving while HTTP is in progress must remain pending.
     await repository.delete(saved.record.id, 2);
     await sync.deliver(target, async jobs => {

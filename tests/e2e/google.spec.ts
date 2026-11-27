@@ -335,7 +335,7 @@ test('foto Google del perfil y retorno a inicial si la imagen falla', async ({ p
 test('abrir perfil desde el usuario conserva el aviso de borrador modificado', async ({ page }) => {
   await login(page, 'administrativo');
   await page.goto('/administracion/compras/nueva');
-  const number = page.getByLabel('Nº Documento / solicitud *', { exact: true });
+  const number = page.locator('#purchase-record-requestNumber');
   await number.fill('PROFILE-NAVIGATION-DRAFT');
   const accountLink = page.getByRole('link', { name: 'Mi perfil', exact: true });
   await accountLink.click();

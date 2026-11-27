@@ -1,8 +1,16 @@
-export const purchaseFieldLabels: Record<string, string> = {
-  requestNumber: 'Nº Documento / solicitud', oracleId: 'ID de Oracle', sender: 'Remitente', recipient: 'Destinatario',
-  sentDate: 'Fecha de envío', sentTime: 'Hora de envío', description: 'Descripción', totalAmount: 'Monto total (CLP)',
-  taxAmount: 'Impuesto (CLP)', attachmentReference: 'Referencia de anexos', provider: 'Proveedor', costCenter: 'Centro de costos',
-  lineUnit: 'Unidad de línea', quantity: 'Cantidad', price: 'Precio (CLP)', amount: 'Importe (CLP)', chargeAccount: 'Cuenta del cargo completa',
-  universityCode: 'Código universidad', campusCode: 'Código sede', unitCode: 'Código unidad', projectCode: 'Código proyecto', accountingCode: 'Código contable',
-  document: 'Documento', documentType: 'Tipo de documento', bi: 'BI', rut: 'RUT', unitName: 'Nombre de unidad', item: 'ITEM', paymentSituation: 'Situación de pago declarada',
-};
+// Las columnas del «Registro de gastos» conservan el nombre exacto de la planilla del cliente.
+export const recordFieldLabels = {
+  recordDate: 'Fecha', document: 'Documento', requestNumber: 'Nº Documento', provider: 'PROVEEDOR', description: 'DETALLE',
+  totalAmount: 'Monto', documentType: 'Tipo documento', bi: 'bi', unitCode: 'Unidad', projectCode: 'Código del Proyecto',
+  accountingCode: 'Código Contable', rut: 'RUT', area: 'UNIDAD', item: 'ITEM', paymentSituation: 'Situación de pago',
+} as const;
+// Datos que muestra Oracle y no van en la planilla: se guardan, pero se presentan aparte.
+export const oracleFieldLabels = {
+  sentDate: 'Fecha de envío', sentTime: 'Hora de envío', oracleId: 'ID de Oracle', sender: 'Desde', recipient: 'A',
+  taxAmount: 'Impuesto', attachmentReference: 'Anexos',
+} as const;
+export const lineFieldLabels = {
+  description: 'Descripción', provider: 'Proveedor', costCenter: 'Centro de costos', lineUnit: 'Unidad', quantity: 'Cantidad',
+  price: 'Precio', amount: 'Importe', chargeAccount: 'Cuenta de cargo', universityCode: 'Código universidad', campusCode: 'Código sede',
+  unitCode: 'Código unidad', projectCode: 'Código proyecto', accountingCode: 'Código contable',
+} as const;
