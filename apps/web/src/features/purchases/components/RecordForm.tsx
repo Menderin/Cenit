@@ -12,6 +12,7 @@ import { findProviders, listPurchases } from '../api/purchases.js';
 import { useCatalogOptions } from '../model/catalog.js';
 import { amountLabel, captureSourcePath, dateLabel, groupThousands, hasRegion, normalizeAmountInput, oracleLabels, purchaseProblemLabel, recordLabels } from '../model/fields.js';
 import { Combobox, type ComboOption } from './Combobox.js';
+import { DescriptionFormatSuggestion } from './DescriptionFormatSuggestion.js';
 
 type Key = keyof PurchaseDraft['record'];
 type Span = 1 | 1.5 | 2 | 3 | 4;
@@ -129,6 +130,10 @@ export function RecordForm({ draft, sources = {}, dateSource, onChange, problems
         else update({ [key]: value || null }, key === 'accountingCode' ? { item: itemFromAccount(value || null) } : {});
       }} />, span);
   const readAccount = extraction ? draft.lines[0]?.chargeAccount ?? null : null;
+  const extractedDescription = extraction?.data.header.description.value
+    ? extraction.data.header.description : extraction?.data.lines[0]?.description;
+  const descriptionProviders = [...new Set([record.provider, ...draft.lines.map(line => line.provider)])]
+    .filter((provider): provider is string => !!provider);
   const rutWarning = record.rut && /^[1-9]\d{0,8}-[0-9K]$/.test(record.rut) && !isValidRut(record.rut);
 
   return <div ref={form} className="purchase-record-form">
@@ -158,8 +163,20 @@ export function RecordForm({ draft, sources = {}, dateSource, onChange, problems
           onChange={event => { const typed = /^[\d.]+$/.test(event.target.value) ? event.target.value.replace(/\./g, '') : event.target.value; update({ totalAmount: typed || null }); }}
           onBlur={event => { const next = normalizeAmountInput(event.target.value); if (next !== event.target.value && next !== record.totalAmount) update({ totalAmount: next || null }); }} />)}
 
-        {cell('description', props => <textarea {...props} rows={2} maxLength={1000} value={record.description ?? ''}
-          onChange={event => update({ description: event.target.value || null }, describe(event.target.value || null))} />, 4)}
+        {cell('description', props => <>
+          <textarea {...props} rows={2} maxLength={1000} value={record.description ?? ''}
+            onChange={event => update({ description: event.target.value || null }, describe(event.target.value || null))} />
+          {extractedDescription?.value && <>
+            {record.description && <DescriptionFormatSuggestion key={JSON.stringify([extraction?.data.extractionId, record.description, descriptionProviders])}
+              id="purchase-record-description" value={record.description} providers={descriptionProviders} disabled={disabled}
+              onApply={description => update({ description })} />}
+            <details className="purchase-format__original" key={extraction?.data.extractionId}>
+              <summary>Ver texto original</summary>
+              <p>{extractedDescription.value}</p>
+              {extractedDescription.rawText && extractedDescription.rawText !== extractedDescription.value && <p>Texto fuente: {extractedDescription.rawText}</p>}
+            </details>
+          </>}
+        </>, 4)}
         {combo('documentType', DOCUMENT_TYPES.map(value => ({ value })))}
         {text('bi')}
 

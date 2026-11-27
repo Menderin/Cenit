@@ -260,3 +260,43 @@ test('captura real: subir, revisar, guardar y abrir la ficha mediante el OCR loc
   await page.getByRole('link', { name: 'Ver la compra', exact: true }).click();
   await expect(page.getByRole('dialog').getByText('Captura ficticia revisada desde el navegador', { exact: true })).toBeVisible();
 });
+test('capturas: normalizar el DETALLE es opcional y conserva el texto original', async ({ page }) => {
+  await open(page);
+  const raw = 'SERVICIOS BOL/31, SEPTIEMBRE, PROVEEDOR FICTICIO_00000000';
+  const normalized = 'Servicios BOL/31, septiembre, PROVEEDOR FICTICIO_00000000';
+  const response = result('CAP-040', raw, 'PROVEEDOR FICTICIO');
+  const saves: CreatePurchase[] = [];
+  await page.route('**/api/v1/purchases/extractions', route => route.fulfill({ json: response }));
+  await acceptSaves(page, saves);
+  await picker(page).setInputFiles(file());
+  const description = field(page, 'description');
+  const trigger = page.getByRole('button', { name: /Normalizar mayúsculas/ });
+  const apply = page.getByRole('button', { name: 'Aplicar normalización', exact: true });
+  await expect(description).toHaveValue(raw);
+  await trigger.press('Enter');
+  await expect(page.getByText(normalized, { exact: true })).toBeVisible();
+  await expect(description).toHaveValue(raw);
+  for (const width of [1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(apply).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  await page.getByRole('button', { name: 'Conservar texto actual', exact: true }).click();
+  await expect(description).toBeFocused();
+  await expect(description).toHaveValue(raw);
+  await trigger.click();
+  await apply.press('Enter');
+  await expect(description).toHaveValue(normalized);
+  await expect(description).toBeFocused();
+  await page.getByText('Ver texto original', { exact: true }).click();
+  await expect(description.locator('..').getByText(raw, { exact: true })).toBeVisible();
+  await expect(field(page, 'bi')).toHaveValue('31');
+  const reviewed = `${normalized} (confirmado)`;
+  await description.fill(reviewed);
+  await expect(description).toHaveValue(reviewed);
+  expect(saves).toHaveLength(0);
+  await page.getByRole('button', { name: /^Guardar y seguir/ }).click();
+  await expect.poll(() => saves.length).toBe(1);
+  expect(saves[0]!.record.description).toBe(reviewed);
+  expect(saves[0]!.lines[0]!.description).toBe(response.data.lines[0]!.description.value);
+});
