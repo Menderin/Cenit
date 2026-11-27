@@ -166,7 +166,7 @@
 .purchase-register > .purchase-page-heading { flex-wrap: wrap; row-gap: 12px; }
 .purchase-register > .purchase-page-heading > div:first-child { flex: 1 0 270px; }
 .purchase-register .purchase-heading-actions { gap: 8px; }
-.purchase-register { --purchase-payment-width: 132px; --purchase-amount-width: 148px; }
+.purchase-register { --purchase-payment-width: 172px; --purchase-amount-width: 148px; }
 .purchase-records .purchase-table--register { min-width: 900px; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
 .purchase-table--register thead th { white-space: normal; line-height: 1.35; }
 .purchase-table--register thead th:nth-child(1) { width: 96px; }
@@ -201,14 +201,16 @@
 
 .purchase-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px; border: 1px solid transparent; border-radius: 999px; font: inherit; font-size: 13px; white-space: nowrap; }
 button.purchase-pill { cursor: pointer; }
-.purchase-table--register .purchase-pill { max-width: 100%; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.purchase-table--register .purchase-pill { width: 100%; justify-content: center; font-size: 13px; }
+.purchase-table--register .purchase-pill > svg { flex: none; }
+.purchase-pill__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .purchase-pill__dot { flex: none; }
 .purchase-pill--paid { border-color: var(--color-success-line); background: var(--color-success-soft); color: var(--color-success); }
 .purchase-pill--pending { border-color: var(--color-warning-line); background: var(--color-warning-soft); color: var(--color-warning); }
 .purchase-pill--muted { background: var(--color-surface-chip); color: var(--color-ink-muted); }
 .purchase-pill__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--color-warning-icon); }
 .purchase-pill[aria-disabled="true"] { opacity: .65; cursor: default; }
-.purchase-pay-action { position: relative; width: fit-content; max-width: 100%; }
+.purchase-pay-action { position: relative; }
 .purchase-pay-action__hint { visibility: hidden; position: absolute; inset-inline-end: 0; bottom: calc(100% + 4px); z-index: 3; padding: 4px 8px; border-radius: var(--radius-sm); background: var(--color-primary); color: var(--color-surface); font-size: 12px; line-height: 1.4; white-space: nowrap; pointer-events: none; }
 .purchase-pay-action > button:focus-visible + .purchase-pay-action__hint { visibility: visible; }
 @media (hover: hover) { .purchase-pay-action > button:hover + .purchase-pay-action__hint { visibility: visible; } }

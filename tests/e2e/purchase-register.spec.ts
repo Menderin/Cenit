@@ -15,6 +15,8 @@ test('registro: una sola lista con situación de pago, paginación y ficha later
   for (let i = 0; i < 22; i++) {
     const input = structuredClone(manualPurchaseExample);
     input.operationId = crypto.randomUUID(); input.record.requestNumber = `${prefix}-${i}`; input.record.recordDate = recordDate;
+    if (i % 4 === 0) input.record.paymentSituation = 'Pendiente de pago';
+    if (i % 4 === 2) input.record.paymentSituation = 'En revisión';
     const saved = await page.request.post('/api/v1/purchases', { headers: { origin }, data: input });
     expect(saved.status()).toBe(201);
     if (i % 2) expect((await page.request.post(`/api/v1/purchases/${(await saved.json()).data.id}/payment-situation`, { headers: { origin }, data: { expectedVersion: 1, paymentSituation: 'PAGADO' } })).status()).toBe(200);
@@ -25,6 +27,17 @@ test('registro: una sola lista con situación de pago, paginación y ficha later
   const list = page.getByRole('region', { name: 'Compras registradas', exact: true });
   await expect(list.getByRole('row')).toHaveCount(21);
   await expect(list.getByText('22 registros', { exact: true })).toBeVisible();
+  const pills = list.getByRole('button', { name: /^Situación de pago de HIST-/ });
+  for (const label of ['Pendiente de pago', 'Pagado', 'En revisión']) {
+    await expect(pills.getByText(label, { exact: true }).first()).toBeVisible();
+  }
+  const pillSizes = await pills.evaluateAll(elements => elements.map(element => {
+    const { width, height } = element.getBoundingClientRect();
+    const label = element.querySelector('.purchase-pill__label')!;
+    return { width, height, text: label.textContent, textWidth: label.scrollWidth, availableWidth: label.clientWidth };
+  }));
+  expect(new Set(pillSizes.map(pill => pill.width)).size).toBe(1);
+  expect(pillSizes.filter(pill => pill.height !== 28 || pill.textWidth > pill.availableWidth)).toEqual([]);
   const payment = list.getByRole('group', { name: 'Situación de pago', exact: true });
   await expect(payment.getByRole('button')).toHaveText(['Todas22', 'Pendientes11', 'Pagadas11']);
   await payment.getByRole('button', { name: /^Pagadas/ }).click();

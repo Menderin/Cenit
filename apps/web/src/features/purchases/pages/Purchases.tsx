@@ -92,16 +92,20 @@ function RequestTable({ title, filters, page, setPage, view, setPageSize, setSor
   const pill = (record: PurchaseListItem) => {
     const paid = isPaid(record.paymentSituation), busy = toggle.isPending && toggle.variables?.id === record.id;
     const action = paid ? 'Volver a pendiente' : 'Marcar como pagado';
-    if (record.source === 'contract_example') return <span className="purchase-pill purchase-pill--muted">{sentenceCase(record.paymentSituation)}</span>;
+    if (record.source === 'contract_example') {
+      const label = sentenceCase(record.paymentSituation);
+      return <span className="purchase-pill purchase-pill--muted"><span className="purchase-pill__label" title={label}>{label}</span></span>;
+    }
+    const label = busy ? 'Guardando…' : paid ? 'Pagado' : unpaidLabel(record.paymentSituation);
     return <div className="purchase-pay-action"><button type="button" className={`purchase-pill purchase-pill--${paid ? 'paid' : 'pending'}`} aria-disabled={updating || busy} aria-busy={busy}
-      aria-label={`Situación de pago de ${record.requestNumber}: ${busy ? 'Guardando…' : `${paid ? 'pagado' : unpaidLabel(record.paymentSituation).toLocaleLowerCase('es-CL')}. ${action}`}`}
+      aria-label={`Situación de pago de ${record.requestNumber}: ${busy ? label : `${label.toLocaleLowerCase('es-CL')}. ${action}`}`}
       onClick={event => {
         if (updating || busy) return;
         if (event.currentTarget === document.activeElement) paymentTrigger.current = event.currentTarget;
         toggle.mutate({ id: record.id, version: record.version, paymentSituation: record.paymentSituation, requestNumber: record.requestNumber });
       }}>
-      {busy ? 'Guardando…' : paid ? <><CheckIcon size={13} weight="bold" aria-hidden="true" />Pagado</>
-        : <><span className="purchase-pill__dot" aria-hidden="true" />{unpaidLabel(record.paymentSituation)}</>}
+      {!busy && (paid ? <CheckIcon size={13} weight="bold" aria-hidden="true" /> : <span className="purchase-pill__dot" aria-hidden="true" />)}
+      <span className="purchase-pill__label" title={paid || busy || record.paymentSituation === 'PENDIENTE' ? undefined : label}>{label}</span>
     </button>{!busy && <span className="purchase-pay-action__hint" aria-hidden="true">{action}</span>}</div>;
   };
   return <section className="purchase-list" aria-label={title} aria-busy={updating}>
