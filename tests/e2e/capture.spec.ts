@@ -126,10 +126,13 @@ test('capturas: una lectura fallida se reintenta o se completa a mano; cancelar,
     return calls !== 2 ? route.fulfill({ status: 503, json: { error: { code: 'EXTRACTION_UNAVAILABLE', message: 'El procesador no está disponible.', requestId: 'capture-test' } } })
       : route.fulfill({ json: result('CAP-010', 'INSUMOS FICTICIOS, COT. 7') });
   });
-  await page.getByRole('button', { name: /Elegir capturas/ }).focus();
-  const chooser = page.waitForEvent('filechooser');
-  await page.keyboard.press('Enter');
-  await (await chooser).setFiles(file('primera.png'));
+  // La navegación enfoca el contenido principal antes de usar el selector con teclado.
+  await expect(page.getByRole('main')).toBeFocused();
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByRole('button', { name: /Elegir capturas/ }).press('Enter'),
+  ]);
+  await chooser.setFiles(file('primera.png'));
   await expect(page.getByRole('heading', { name: 'No pudimos leer esta captura', exact: true })).toBeVisible();
   await expect(page.getByText('El procesador no está disponible.', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Reintentar la lectura', exact: true }).click();
