@@ -14,7 +14,6 @@ import { seedAcademicDemo } from '../../../db/seeds/academic-demo.js';
 import { PurchaseRepository } from '../../../apps/api/src/modules/purchases/repositories/purchases.js';
 
 process.env.APP_ENV = 'test';
-process.env.CENIT_PURCHASE_SECOND_REVIEW_ENABLED = 'true';
 process.env.CENIT_PURCHASE_SHEETS_SYNC_ENABLED = 'false';
 const suffix = randomBytes(6).toString('hex');
 const database = `cenit_auth_browser_${suffix}`, migrator = `browser_migrator_${suffix}`, runtime = `browser_runtime_${suffix}`;
@@ -90,7 +89,7 @@ async function main() {
     // The child receives only runtime credentials; migration credentials are no longer needed.
   } else {
     rmSync(migrationFile, { force: true });
-    app = buildAcademicApp({ purchaseCapabilities: { secondReviewEnabled: true, sheetsSyncEnabled: false }, repository: new AcademicRepository(pool), purchases: new PurchaseRepository(pool), auth: {
+    app = buildAcademicApp({ purchaseCapabilities: { sheetsSyncEnabled: false }, repository: new AcademicRepository(pool), purchases: new PurchaseRepository(pool), auth: {
       service: new AuthService(new AuthRepository(pool)), config: { cookieSecure: false, allowedOrigins: ['http://127.0.0.1:5174'] },
     } });
     // Browser scenarios share one proxy IP. Only this disposable server gets a

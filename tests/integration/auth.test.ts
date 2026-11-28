@@ -39,7 +39,7 @@ const origin = 'http://127.0.0.1:3000';
 let now = new Date('2026-10-11T22:00:00.000Z');
 let app: ReturnType<typeof buildAcademicApp>;
 const service = () => new AuthService(new AuthRepository(runtimes[0]!), () => new Date(now));
-const build = (secure = false) => buildAcademicApp({ repository: new AcademicRepository(runtimes[0]!), purchases: new PurchaseRepository(runtimes[0]!), purchaseCapabilities: { secondReviewEnabled: true, sheetsSyncEnabled: false }, auth: { service: service(), config: { allowedOrigins: [origin], cookieSecure: secure } } });
+const build = (secure = false) => buildAcademicApp({ repository: new AcademicRepository(runtimes[0]!), purchases: new PurchaseRepository(runtimes[0]!), purchaseCapabilities: { sheetsSyncEnabled: false }, auth: { service: service(), config: { allowedOrigins: [origin], cookieSecure: secure } } });
 let ipCounter = 1;
 const login = (role = 'docente', body?: Record<string, unknown>, cookie?: string, remoteAddress?: string) => {
   const credential = credentials.find(c => c.role === role)!;
@@ -245,8 +245,8 @@ describe('login real, permisos y sesión', () => {
         ['GET', '/api/v1/purchases'], ['GET', '/api/v1/purchases/summary'],
         ['GET', `/api/v1/purchases/${saved.id}`],
         ['POST', '/api/v1/purchases', { ...input, operationId: randomUUID() }],
-        ['PUT', `/api/v1/purchases/${saved.id}`, { expectedVersion: 1, header: { ...input.header, description: 'Cambio que debe rechazarse' }, administrative: input.administrative, lines: [] }],
-        ['POST', `/api/v1/purchases/${saved.id}/validation`, { expectedVersion: 1 }],
+        ['PUT', `/api/v1/purchases/${saved.id}`, { expectedVersion: 1, record: { ...input.record, description: 'Cambio que debe rechazarse' }, oracle: input.oracle, lines: [] }],
+        ['POST', `/api/v1/purchases/${saved.id}/payment-situation`, { expectedVersion: 1, paymentSituation: 'PAGADO' }],
         ['DELETE', `/api/v1/purchases/${saved.id}`, { expectedVersion: 1 }],
       ];
       for (const [method, url, payload] of routes) {

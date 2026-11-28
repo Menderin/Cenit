@@ -109,7 +109,6 @@ services:
       AUTH_GOOGLE_ENABLED: ${AUTH_GOOGLE_ENABLED:-false}
       AUTH_GOOGLE_CLIENT_ID: ${AUTH_GOOGLE_CLIENT_ID:-}
       DATABASE_URL_FILE: /run/secrets/app-url
-      CENIT_PURCHASE_SECOND_REVIEW_ENABLED: ${CENIT_PURCHASE_SECOND_REVIEW_ENABLED:-false}
     secrets: [app-url]
     networks:
       cenit:

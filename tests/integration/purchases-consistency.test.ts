@@ -84,8 +84,8 @@ const dbSnapshot = async (id: string) => ({
 const valid = (lines = 3): CreatePurchase => {
   const input = { ...structuredClone(manualPurchaseExample), operationId: randomUUID() };
   const template = input.lines[0]!;
-  input.header.requestNumber = '000777'; // ceros a la izquierda deben conservarse como texto
-  input.header.totalAmount = '1000';
+  input.record.requestNumber = '000777'; // ceros a la izquierda deben conservarse como texto
+  input.record.totalAmount = '1000';
   input.lines = Array.from({ length: lines }, (_, index) => ({ ...structuredClone(template), description: `Ítem T05 ${index + 1}`, provider: `Proveedor T05 ${index + 1}`, projectCode: '00000000', price: '100', amount: '100' }));
   return input;
 };
@@ -125,14 +125,14 @@ describe('HU05-T05: datos válidos contra PostgreSQL (servidor compilado)', () =
     const privileges = (await db.query(`SELECT has_schema_privilege($1,'cenit','CREATE') AS create_cenit, rolsuper FROM pg_roles WHERE rolname=$1`, [runtimeRole])).rows[0];
     expect(privileges).toEqual({ create_cenit: false, rolsuper: false });
   });
-  it('guarda cabecera e ítems completos; suma de ítems distinta del total se acepta', async () => {
+  it('guarda la fila y sus líneas completas; suma de líneas distinta del monto se acepta', async () => {
     for (const total of ['1', '1000', '999999']) { // ítems suman 300: menor, mayor y distinto
-      const input = valid(); input.header.totalAmount = total;
+      const input = valid(); input.record.totalAmount = total;
       const before = await counts();
       const response = await post(input);
       expect(response.status).toBe(201);
       const saved = (await response.json()).data;
-      expect(saved.header).toEqual(input.header); expect(saved.lines).toEqual(input.lines); expect(saved.administrative).toEqual(input.administrative);
+      expect(saved.record).toEqual(input.record); expect(saved.lines).toEqual(input.lines); expect(saved.oracle).toEqual(input.oracle);
       expect(await counts()).toEqual({ requests: before.requests + 1, lines: before.lines + 3 });
       const stored = await dbSnapshot(saved.id);
       expect(stored.header.request_number).toBe('000777'); expect(stored.header.total_amount).toBe(Number(total));
@@ -144,22 +144,22 @@ describe('HU05-T05: datos válidos contra PostgreSQL (servidor compilado)', () =
 describe('HU05-T05: datos inválidos no dejan filas parciales', () => {
   type Case = [string, (input: CreatePurchase) => unknown];
   const cases: Case[] = [
-    ['total decimal', input => { input.header.totalAmount = '10.5'; }],
-    ['total negativo', input => { input.header.totalAmount = '-1'; }],
-    ['total exponencial', input => { input.header.totalAmount = '1e3'; }],
-    ['total con cero a la izquierda', input => { input.header.totalAmount = '007'; }],
-    ['total NaN', input => { input.header.totalAmount = 'NaN'; }],
-    ['total numérico JSON', input => { (input.header as Record<string, unknown>).totalAmount = 1000; }],
-    ['total de 256 dígitos', input => { input.header.totalAmount = '9'.repeat(256); }],
-    ['total vacío', input => { input.header.totalAmount = '' as never; }],
-    ['número de solicitud ausente', input => { (input.header as Record<string, unknown>).requestNumber = null; }],
-    ['fecha inexistente', input => { input.header.sentDate = '2026-02-30'; }],
-    ['año cero', input => { input.header.sentDate = '0000-01-01'; }],
+    ['total decimal', input => { input.record.totalAmount = '10.5'; }],
+    ['total negativo', input => { input.record.totalAmount = '-1'; }],
+    ['total exponencial', input => { input.record.totalAmount = '1e3'; }],
+    ['total con cero a la izquierda', input => { input.record.totalAmount = '007'; }],
+    ['total NaN', input => { input.record.totalAmount = 'NaN'; }],
+    ['total numérico JSON', input => { (input.record as Record<string, unknown>).totalAmount = 1000; }],
+    ['total de 256 dígitos', input => { input.record.totalAmount = '9'.repeat(256); }],
+    ['total vacío', input => { input.record.totalAmount = '' as never; }],
+    ['número de solicitud ausente', input => { (input.record as Record<string, unknown>).requestNumber = null; }],
+    ['fecha inexistente', input => { input.record.recordDate = '2026-02-30'; }],
+    ['año cero', input => { input.record.recordDate = '0000-01-01'; }],
     ['importe negativo en el último ítem', input => { input.lines.at(-1)!.amount = '-5'; }],
     ['precio no numérico en el último ítem', input => { input.lines.at(-1)!.price = 'abc'; }],
     ['importe decimal en un ítem intermedio', input => { input.lines[1]!.amount = '100.50'; }],
     ['101 ítems', input => { input.lines = Array.from({ length: 101 }, () => structuredClone(input.lines[0]!)); }],
-    ['campo extra de rol en cabecera', input => { (input.header as Record<string, unknown>).role = 'administrativo'; }],
+    ['campo extra de rol en la fila', input => { (input.record as Record<string, unknown>).role = 'administrativo'; }],
     ['campo de revisión enviado por el cliente', input => { (input as Record<string, unknown>).reviewStatus = 'reviewed'; }],
     ['procedencia de ejemplo inexistente', input => { (input as Record<string, unknown>).origin = { type: 'contract_example', exampleId: 'oracle' }; }],
     ['operationId no UUID', input => { (input as Record<string, unknown>).operationId = 'reintento-1'; }],
@@ -210,7 +210,7 @@ describe('HU05-T05: doble intento no duplica', () => {
   it('la misma operación con otro contenido da 409 y no altera lo guardado', async () => {
     const input = valid(2); const saved = (await (await post(input)).json()).data;
     const snapshot = await dbSnapshot(saved.id), before = await counts();
-    for (const change of [(x: CreatePurchase) => { x.header.description = 'Otro detalle'; }, (x: CreatePurchase) => { x.lines[1]!.amount = '101'; }, (x: CreatePurchase) => { x.lines.pop(); }]) {
+    for (const change of [(x: CreatePurchase) => { x.record.description = 'Otro detalle'; }, (x: CreatePurchase) => { x.lines[1]!.amount = '101'; }, (x: CreatePurchase) => { x.lines.pop(); }]) {
       const altered = structuredClone(input); change(altered);
       const response = await post(altered);
       expect(response.status).toBe(409);
@@ -226,14 +226,14 @@ describe('HU05-T05: el registro persiste tras reiniciar la aplicación', () => {
     const input = { ...valid(3), origin: { type: 'contract_example' as const, exampleId: 'partial' as const } };
     const created = await post(input); expect(created.status).toBe(201);
     const saved = (await created.json()).data, snapshot = await dbSnapshot(saved.id), before = await counts();
-    expect(saved.header).toEqual(input.header); expect(saved.lines).toEqual(input.lines);
-    expect(saved.administrative).toEqual(input.administrative); expect(saved.exampleId).toBe('partial');
+    expect(saved.record).toEqual(input.record); expect(saved.lines).toEqual(input.lines);
+    expect(saved.oracle).toEqual(input.oracle); expect(saved.exampleId).toBe('partial');
     await stopApi('SIGTERM');
     expect(await apiDown()).toBe(true);
     await startApi();
     const read = await getDetail(saved.id); // misma cookie: la sesión vive en PostgreSQL
     expect(read.status).toBe(200); expect((await read.json()).data).toEqual(saved);
-    const list = await fetch(`${base}/api/v1/purchases?reviewStatus=pending&q=000777&pageSize=100`, { headers: { cookie } });
+    const list = await fetch(`${base}/api/v1/purchases?q=000777&pageSize=100`, { headers: { cookie } });
     expect((await list.json()).data.map((row: { id: string }) => row.id)).toContain(saved.id);
     expect(await dbSnapshot(saved.id)).toEqual(snapshot);
     const retry = await post(input);

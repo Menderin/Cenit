@@ -110,7 +110,7 @@
 .home-chart__grid small { position: absolute; right: 100%; margin-right: 10px; color: var(--color-ink-subtle); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; transform: translateY(-50%); }
 .home-chart__columns { position: absolute; inset: 0; display: flex; gap: var(--chart-gap); }
 .home-chart__column { display: flex; flex: 1 1 0; flex-direction: column; justify-content: flex-end; align-items: center; min-width: 0; }
-.home-chart__value { flex: none; height: 24px; color: var(--color-ink-secondary); font-size: 13px; line-height: 24px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.home-chart__value { flex: none; height: 24px; color: var(--color-ink-secondary); font-size: 13px; line-height: 24px; font-variant-numeric: tabular-nums; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .home-chart__bar { flex: none; width: 100%; max-width: 64px; height: calc((100% - 24px) * var(--r)); border-radius: 6px 6px 0 0; background: var(--color-chart-bar); }
 .home-chart__column.is-current .home-chart__bar { background: var(--color-focus); }
 .home-chart__column.is-current .home-chart__value { color: var(--color-ink); font-weight: 600; }
@@ -220,7 +220,7 @@
 @container (max-width: 34px) or (max-height: 24px) { .home-map__figures { display: none; } }
 .home-loading__map { margin: 0; }
 
-/* Integraciones opcionales (segunda revisión y Sheets), sólo cuando están habilitadas. */
+/* Integración opcional con Sheets, sólo cuando está habilitada. */
 .home-rail__status .dashboard-review { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; line-height: 20px; }
 .home-rail__status .dashboard-review > strong { margin-left: auto; font-size: 15px; font-variant-numeric: tabular-nums; }
 .home-rail__status .dashboard-review :is(p, a) { margin: 0; font-size: 14px; }

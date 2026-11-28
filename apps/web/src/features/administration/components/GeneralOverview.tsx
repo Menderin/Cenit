@@ -3,7 +3,7 @@ import { ArrowDownIcon } from '@phosphor-icons/react/dist/csr/ArrowDown';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight';
 import { ArrowUpIcon } from '@phosphor-icons/react/dist/csr/ArrowUp';
 import type { PurchaseBreakdown, PurchaseSummaryResponse } from '@cenit/contracts/purchases';
-import { PurchaseCapabilitiesProvider, usePurchaseCapabilities } from '../../purchases/model/capabilities.js';
+import { PurchaseCapabilitiesProvider } from '../../purchases/model/capabilities.js';
 import { SheetsSyncStatus } from '../../purchases/components/SheetsSyncStatus.js';
 import { amountLabel, dateLabel } from '../../purchases/model/fields.js';
 import { MonthlyChart } from './MonthlyChart.js';
@@ -19,12 +19,8 @@ export const monthLabel = (month: string) => monthName.format(new Date(`${month}
 export const purchasesLabel = (count: number) => `${count} ${count === 1 ? 'compra' : 'compras'}`;
 const capitalized = (text: string) => text.charAt(0).toLocaleUpperCase('es') + text.slice(1);
 
-function Integrations({ data }: { data: Summary }) {
-  const { secondReviewEnabled } = usePurchaseCapabilities();
-  return <>
-    {secondReviewEnabled && <section className="dashboard-review" aria-label="Segunda revisión"><h2 className="purchase-sr-only">Revisión de datos en Cenit</h2><p>{data.pending} {data.pending === 1 ? 'registro por revisar' : 'registros por revisar'}</p><strong title="Monto documental por revisar">{amountLabel(data.pendingAmount)} <small className="purchase-sr-only">documentales por revisar</small></strong><Link to="/administracion/compras">Ver revisión</Link></section>}
-    <SheetsSyncStatus />
-  </>;
+function Integrations() {
+  return <SheetsSyncStatus />;
 }
 
 /** Ranking por cuenta contable en la columna lateral: las seis mayores y el resto agrupado. */
@@ -61,7 +57,7 @@ function YearSpending({ overview, year, current }: { overview: Overview; year: s
         : <div className="home-figure"><dt>Mes de mayor gasto</dt><dd className="home-figure__value">{peak && BigInt(peak.amount) ? amountLabel(peak.amount) : '—'}</dd>
           <dd className="home-figure__detail">{peak && BigInt(peak.amount) ? `${capitalized(monthLabel(peak.month))} · ${purchasesLabel(peak.count)}` : 'Sin compras ese año'}</dd></div>}
     </dl>
-    {empty ? <p className="home-muted home-spend__empty">Aún no hay compras con fecha de envío en {year}.</p>
+    {empty ? <p className="home-muted home-spend__empty">Aún no hay compras registradas en {year}.</p>
       : <MonthlyChart months={months} current={current ? overview.registrationMonth : null} />}
   </section>;
 }
@@ -85,7 +81,7 @@ function RecentPurchases({ records }: { records: Overview['recentRecords'] }) {
  *  El detalle de cada proyecto se abre desde el selector de proyectos del encabezado. */
 export function GeneralOverview({ data }: { data: Summary }) {
   const overview = data.overview;
-  if (!overview) return <PurchaseCapabilitiesProvider fallback={null}><Integrations data={data} /></PurchaseCapabilitiesProvider>;
+  if (!overview) return <PurchaseCapabilitiesProvider fallback={null}><Integrations /></PurchaseCapabilitiesProvider>;
   const year = overview.year ?? overview.registrationMonth.slice(0, 4), current = year === overview.registrationMonth.slice(0, 4);
   return <div className="home-layout">
     <div className="home-main">
@@ -95,7 +91,7 @@ export function GeneralOverview({ data }: { data: Summary }) {
     <aside className="home-rail" aria-label="Bienes y últimas compras"><div className="home-rail__card">
       <AssetsSection />
       <RecentPurchases records={overview.recentRecords} />
-      <PurchaseCapabilitiesProvider fallback={null}><div className="home-rail__section home-rail__status"><Integrations data={data} /></div></PurchaseCapabilitiesProvider>
+      <PurchaseCapabilitiesProvider fallback={null}><div className="home-rail__section home-rail__status"><Integrations /></div></PurchaseCapabilitiesProvider>
     </div></aside>
   </div>;
 }

@@ -99,6 +99,13 @@
       "when": 1795211649331,
       "tag": "0013_purchase_catalogs",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1795391054183,
+      "tag": "0014_purchase_register",
+      "breakpoints": true
     }
   ]
 }

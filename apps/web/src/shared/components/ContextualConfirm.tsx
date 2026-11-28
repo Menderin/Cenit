@@ -19,10 +19,12 @@ export function ContextualConfirm({ open, origin, title, description, confirmLab
   const anchor = useRef(origin);
   const route = useRef('');
   const text = useRef({ title, description, confirmLabel, cancelLabel, caution, destructive });
-  if (open) { anchor.current = origin; route.current = path; text.current = { title, description, confirmLabel, cancelLabel, caution, destructive }; }
+  // Dentro de un <dialog> modal (p. ej. una ficha lateral) la confirmación se monta en el mismo diálogo; afuera quedaría tapada e inerte.
+  const host = useRef<HTMLDialogElement | null>(null);
+  if (open) { anchor.current = origin; host.current = origin?.closest('dialog') ?? null; route.current = path; text.current = { title, description, confirmLabel, cancelLabel, caution, destructive }; }
   useEffect(() => { if (open) cancel.current?.focus({ preventScroll: true }); }, [open]);
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || host.current) return;
     const workspace = document.querySelector<HTMLElement>('.admin-workspace');
     if (!workspace) return;
     const previous = workspace.inert;
@@ -31,12 +33,12 @@ export function ContextualConfirm({ open, origin, title, description, confirmLab
   }, [mounted]);
   return <Popover.Root modal open={mounted} onOpenChange={next => { if (!next && open && !busy) onCancel(); }}>
     <Popover.Anchor virtualRef={anchor} />
-    <Popover.Portal>
+    <Popover.Portal container={host.current ?? undefined}>
       <div aria-hidden="true" className={`cenit-confirm-overlay${closing ? ' cenit-closing' : ''}`} onClick={event => {
         event.preventDefault(); event.stopPropagation(); if (open && !busy) onCancel();
       }} />
     </Popover.Portal>
-    <Popover.Portal>
+    <Popover.Portal container={host.current ?? undefined}>
       <Popover.Content role="alertdialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId}
         side="top" sideOffset={10} collisionPadding={16} sticky="always" className={`cenit-confirm${wide ? ' cenit-confirm--wide' : ''}${closing ? ' cenit-closing' : ''}`}
         onOpenAutoFocus={event => { event.preventDefault(); cancel.current?.focus({ preventScroll: true }); }}

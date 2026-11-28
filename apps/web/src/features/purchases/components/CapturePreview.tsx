@@ -3,7 +3,9 @@ import { MagnifyingGlassPlusIcon } from '@phosphor-icons/react/dist/csr/Magnifyi
 import { MagnifyingGlassMinusIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlassMinus';
 import type { ExtractionRegion } from '@cenit/contracts/purchases';
 import type { SelectedCapture } from '../model/capture-file.js';
-import { purchaseProblemLabel } from '../model/fields.js';
+import { captureSourcePath, purchaseProblemLabel } from '../model/fields.js';
+
+const editablePaths = new Set(Object.values(captureSourcePath));
 
 export function CapturePreview({ selected, regions, activePath, onSelect }: {
   selected: SelectedCapture; regions: ExtractionRegion[]; activePath: string; onSelect: (path: string) => void;
@@ -29,7 +31,6 @@ export function CapturePreview({ selected, regions, activePath, onSelect }: {
       top: box.top < frame.top ? box.top - frame.top : Math.max(0, box.bottom - frame.bottom), behavior: 'instant' });
   }, [activePath, zoom, width]);
   return <figure className="capture-preview">
-    <figcaption><strong>{selected.file.name}</strong><span>{selected.width} × {selected.height} px · {(selected.file.size / 1024).toFixed(0)} KiB</span></figcaption>
     <div className="capture-preview__toolbar" role="group" aria-label="Vista de la captura">
       <button className="cenit-button" type="button" aria-label="Alejar imagen" disabled={zoom === 1} onClick={() => setZoom(value => Math.max(1, value - .5))}><MagnifyingGlassMinusIcon size={18} aria-hidden="true" /></button>
       <button className="cenit-button" type="button" onClick={() => setZoom(1)}>Ajustar</button>
@@ -40,12 +41,16 @@ export function CapturePreview({ selected, regions, activePath, onSelect }: {
       <div className="capture-preview__stage" style={{ width: Math.max(size.width, width), height: Math.max(size.height, height) }}>
       <div className="capture-preview__image" data-zoom={zoom} style={{ width: width || '100%' }}>
         <img src={selected.url} alt="Vista previa de la captura seleccionada" />
-        {showRegions && regions.map((region, index) => <button key={`${region.path}-${index}`} type="button" className="capture-region" data-active={activePath === region.path}
-          aria-label={`Ver campo: ${purchaseProblemLabel(region.path)}`} title={purchaseProblemLabel(region.path)}
-          style={{ left: `${region.x * 100}%`, top: `${region.y * 100}%`, width: `${region.width * 100}%`, height: `${region.height * 100}%` }} onClick={() => onSelect(region.path)} />)}
+        {showRegions && regions.map((region, index) => {
+          const key = `${region.path}-${index}`, label = purchaseProblemLabel(region.path);
+          const style = { left: `${region.x * 100}%`, top: `${region.y * 100}%`, width: `${region.width * 100}%`, height: `${region.height * 100}%` };
+          return editablePaths.has(region.path)
+            ? <button key={key} type="button" className="capture-region" data-active={activePath === region.path} aria-label={`Ver campo: ${label}`} title={label} style={style} onClick={() => onSelect(region.path)} />
+            : <span key={key} className="capture-region capture-region--reference" aria-hidden="true" title={label} style={style} />;
+        })}
       </div>
       </div>
     </div>
-    <p>{activePath ? purchaseProblemLabel(activePath) : 'Selecciona un campo o un recuadro para comparar el dato.'}</p>
+    {regions.length > 0 && <p>{activePath && <><strong>{purchaseProblemLabel(activePath)}</strong> · </>}Los recuadros continuos llevan a la fila. Los punteados son referencias de Oracle.</p>}
   </figure>;
 }

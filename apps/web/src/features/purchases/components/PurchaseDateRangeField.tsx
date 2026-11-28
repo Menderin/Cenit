@@ -72,6 +72,8 @@ export function PurchaseDateRangeField({ id, from, to, onValueChange, onBlur, in
       <Calendar startMonth={minYear ? calendarDate(`${String(minYear).padStart(4, '0')}-01-01`) : undefined} endMonth={maxYear ? calendarDate(`${String(maxYear).padStart(4, '0')}-12-31`) : undefined}
         disabled={minYear && maxYear ? [{ before: calendarDate(`${String(minYear).padStart(4, '0')}-01-01`)! }, { after: calendarDate(`${String(maxYear).padStart(4, '0')}-12-31`)! }] : undefined}
         mode="range" selected={appliedRange} month={shownMonth} onMonthChange={setMonth} autoFocus numberOfMonths={2} resetOnSelect
+        // Mes y año se eligen en cada encabezado: un rango largo (p. ej. enero de 2025 a octubre de 2026) no obliga a avanzar mes a mes.
+        captionLayout="dropdown"
         onSelect={range => {
           onValidationError('');
           onValueChange(range?.from ? calendarValue(range.from) : '', range?.to ? calendarValue(range.to) : '');

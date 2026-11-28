@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { credential, login, santiagoToday, selectCalendarDate } from './support/browser.js';
+import { credential, login, santiagoToday, selectRangeDay } from './support/browser.js';
 import { manualPurchaseExample } from '../../packages/contracts/src/purchases/record-examples.js';
 
 async function navigateAdministration(page: Page, name: string) {
@@ -11,11 +11,6 @@ async function navigateAdministration(page: Page, name: string) {
   const changesPage = new URL(page.url()).pathname !== path;
   await link.click();
   if (changesPage) await expect.poll(async () => new URL(page.url()).pathname === path || await page.getByRole('alertdialog').isVisible()).toBe(true);
-}
-
-async function expandPurchaseSection(page: Page, name: string) {
-  const summary = page.locator('summary').filter({ hasText: name }).first();
-  if (await summary.locator('..').getAttribute('open') === null) await summary.press('Enter');
 }
 
 async function logout(page: Page) {
@@ -311,109 +306,23 @@ test('espacios añadidos a una contraseña se conservan y no autentican como la 
 });
 
 
-async function openPurchases(page: Page) {
+// Los campos de la fila se ubican por su id: su etiqueta lleva marcas («sugerido», «falta») que cambian con el contenido.
+const recordField = (page: Page, key: string) => page.locator(`#purchase-record-${key}`);
+async function manualForm(page: Page, number: string) {
   await login(page, 'administrativo');
-  await navigateAdministration(page, 'Registro de compras');
-  await expect(page).toHaveURL(/\/administracion\/compras$/);
-  await expect(page.getByRole('link', { name: 'Revisar ejemplo' })).toHaveCount(0);
-  await page.goto('/administracion/compras/laboratorio');
+  await page.goto('/administracion/compras');
+  await page.getByRole('link', { name: 'Registrar a mano', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Registrar a mano', exact: true })).toBeVisible();
+  await recordField(page, 'requestNumber').fill(number);
+  await recordField(page, 'description').fill('Solicitud ficticia de prueba');
+  await recordField(page, 'totalAmount').fill('200000');
 }
-
-test('contrato de compras: revisar ejemplos, corregir sin alterar original y restablecer', async ({ page }) => {
-  await openPurchases(page);
-  await expect(page.locator('.purchase-origin-badge')).toHaveText('Ejemplo de demostración');
-  await expect(page.locator('input[type=file]')).toHaveCount(0);
-  const number = page.getByLabel('Nº Documento / solicitud', { exact: true });
-  await expect(number).toHaveValue('000125');
-  await number.fill('000999');
-  const field = number.locator('..');
-  await expect(field).toContainText('Corregido');
-  await field.locator('summary').press('Enter');
-  await expect(field.locator('details dd').first()).toHaveText('000125');
-  await expandPurchaseSection(page, 'Seguimiento administrativo');
-  await page.getByLabel('BI', { exact: true }).fill('S/N');
-  // «200.000» se normaliza al salir del campo; una coma decimal sigue siendo inválida.
-  await page.getByLabel('Monto total (CLP)', { exact: true }).fill('200,5');
-  await page.getByRole('button', { name: 'Comprobar datos' }).click();
-  await expect(page.getByRole('alert')).toContainText('Revisa los campos indicados.');
-  await page.getByLabel('Monto total (CLP)', { exact: true }).fill('');
-  await page.getByRole('button', { name: 'Comprobar datos' }).click();
-  await expect(page.getByRole('status')).toContainText('Formatos correctos.');
-  await page.getByRole('button', { name: 'Restablecer ejemplo' }).click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Descartar y restablecer' }).click();
-  await expect(page.getByRole('alertdialog')).toHaveCount(0);
-  await expect(number).toHaveValue('000125');
-  await expect(page.getByLabel('BI', { exact: true })).toHaveValue('');
-  await page.getByLabel('Datos de ejemplo').selectOption('partial');
-  await expandPurchaseSection(page, 'Ítem 1');
-  await expect(page.getByRole('group', { name: 'Ítem de la solicitud 1', exact: true }).getByLabel('Proveedor', { exact: true })).toHaveValue('');
-  await page.getByLabel('Datos de ejemplo').selectOption('ambiguous');
-  await page.locator('.purchase-review__issues > summary').press('Enter');
-  await expect(page.locator('.purchase-review__issues')).toContainText('no se puede determinar');
-  await page.getByLabel('Datos de ejemplo').selectOption('failure');
-  await expect(page.getByRole('alert')).toContainText('Selecciona otro ejemplo para continuar.');
-  await expect(page.getByRole('button', { name: 'Comprobar datos' })).toHaveCount(0);
-  await page.getByLabel('Datos de ejemplo').selectOption('recovered');
-  await expect(number).toHaveValue('000125');
-});
-
-test('compras: logout y cambio de cuenta limpian el borrador', async ({ page }) => {
-  // Exercise the transition with network latency, so an immediate navigation
-  // cannot accidentally abort logout and retain the previous session cookie.
-  await page.route('**/api/v1/auth/logout', async route => {
-    await new Promise(resolve => setTimeout(resolve, 250));
-    await route.continue();
-  });
-  await openPurchases(page);
-  await page.getByLabel('Nº Documento / solicitud', { exact: true }).fill('private-draft');
-  await logout(page);
-  await login(page, 'docente');
-  await page.goto('/administracion'); await expect(page).toHaveURL(/\/academico$/);
-  await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveCount(0);
-
-  await logout(page);
-  await openPurchases(page);
-  await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveValue('000125');
-  await expect(page.getByText('private-draft')).toHaveCount(0);
-});
-
-test('compras: expiración descarta borrador y protege la navegación hacia atrás', async ({ page }) => {
-  await page.clock.install(); await openPurchases(page);
-  await page.getByLabel('Nº Documento / solicitud', { exact: true }).fill('expired-draft');
-  await page.clock.fastForward(7201000);
-  await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveCount(0);
-  await page.goBack(); await expect(page.getByText('expired-draft')).toHaveCount(0);
-  // Browser-only expiry does not revoke the server cookie. Revalidate it at real time;
-  // even a still-valid server session must not resurrect the discarded draft.
-  await page.clock.setSystemTime(new Date());
-  await page.goto('/administracion/compras/laboratorio');
-  await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveValue('000125');
-});
-
-
-test('compras: formulario accesible y sin desbordamiento', async ({ page }) => {
-  await openPurchases(page);
-  for (const width of [1280]) {
-    await page.setViewportSize({ width, height: 900 });
-    await expect(page.getByRole('heading', { name: 'Revisar datos', exact: true })).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    const number = page.getByLabel('Nº Documento / solicitud', { exact: true });
-    await number.focus(); await expect(number).toBeFocused();
-    await page.keyboard.press('Tab');
-    await expect(number.locator('..').locator('summary')).toBeFocused();
-    // QA artifacts contain only the fictitious logged-in example, never credentials.
-    await page.screenshot({ path: `tmp/purchase-review-${width}.png` });
-  }
-});
-
 
 test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación directa', async ({ page }) => {
   await login(page, 'administrativo');
   const nav = page.getByRole('navigation', { name: 'Sistemas administrativos' });
   await expect(nav.getByRole('link')).toHaveCount(4);
   await expect(nav.getByRole('link', { name: 'Inicio', exact: true })).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Demostración', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Prototipo con datos ficticios', { exact: true })).toHaveCount(0);
   const indicators = page.getByRole('definition');
@@ -424,10 +333,10 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await expect(indicators.nth(2)).toHaveText(clp(summary.overview.documentTotalThisMonth));
   // The monthly chart is drawn with bars and repeated as a table for assistive technology; a year without purchases says so instead.
   if (summary.overview.monthlyTotals.some((month: { amount: string }) => BigInt(month.amount) > 0n)) {
-    await expect(page.getByRole('table', { name: 'Monto documental por mes de envío' })).toHaveCount(1);
+    await expect(page.getByRole('table', { name: 'Monto por mes' })).toHaveCount(1);
     await expect(page.locator('.home-chart__column')).toHaveCount(12);
-  } else await expect(page.getByText(/^Aún no hay compras con fecha de envío en \d{4}\.$/)).toBeVisible();
-  await expect(page.getByRole('button', { name: /aprobar/i })).toHaveCount(0);
+  } else await expect(page.getByText(/^Aún no hay compras registradas en \d{4}\.$/)).toBeVisible();
+  await expect(page.getByRole('button', { name: /aprobar|validar/i })).toHaveCount(0);
   for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -443,17 +352,17 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   await expect(page.getByRole('heading', { name: 'Bienes', exact: true })).toBeVisible();
   await page.reload(); await expect(page.getByRole('navigation', { name: 'Secciones de Bienes' })).toBeVisible();
   await navigateAdministration(page, 'Registro de compras');
-  await expect(page.getByRole('link', { name: 'Revisar ejemplo' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Registro de compras', exact: true })).toBeVisible();
+  // El laboratorio de ejemplos se retiró: su ruta vuelve al registro.
   await page.goto('/administracion/compras/laboratorio');
-  await page.getByLabel('Nº Documento / solicitud', { exact: true }).fill('navigation-draft');
+  await expect(page.getByLabel('Datos de ejemplo')).toHaveCount(0);
+  await page.goto('/administracion/compras/nueva');
+  await recordField(page, 'requestNumber').fill('navigation-draft');
   await navigateAdministration(page, 'Inicio');
   await page.getByRole('alertdialog').getByRole('button', { name: 'Descartar y salir' }).click();
   await expect(page).toHaveURL(/\/administracion$/);
-  await navigateAdministration(page, 'Registro de compras');
-  await expect(page.getByRole('link', { name: 'Revisar ejemplo' })).toHaveCount(0);
-  await page.goto('/administracion/compras/laboratorio');
-  await expect(page.getByLabel('Nº Documento / solicitud', { exact: true })).toHaveValue('000125');
-  await page.reload(); await expect(page.getByRole('heading', { name: 'Revisar datos', exact: true })).toBeVisible();
+  await page.goto('/administracion/compras/nueva');
+  await expect(recordField(page, 'requestNumber')).toHaveValue('');
   await logout(page);
   await login(page, 'estudiante');
   for (const path of ['compras', 'personal', 'bienes']) {
@@ -462,72 +371,57 @@ test('dashboard administrativo: cuatro enlaces, páginas aisladas y navegación 
   }
 });
 
-async function manualForm(page: Page, number: string) {
-  await login(page, 'administrativo');
-  await page.goto('/administracion/compras');
-  await page.getByRole('link', { name: 'Registrar manualmente' }).click();
-  await page.getByLabel('Nº Documento / solicitud *', { exact: true }).fill(number);
-  await page.getByLabel('Fecha de envío *', { exact: true }).fill(santiagoToday().split('-').reverse().join('/'));
-  await page.getByLabel('Descripción *', { exact: true }).fill('Solicitud ficticia de prueba');
-  await page.getByLabel('Monto total (CLP) *', { exact: true }).fill('200000');
-}
-
-test('solicitudes persistentes: ingreso, varios ítems, recarga, detalle y validación local', async ({ page }) => {
-  const number = `E2E-${Date.now()}`;
-  await manualForm(page, number);
-  await page.getByRole('button', { name: 'Agregar ítem', exact: true }).click();
-  await page.getByLabel('Descripción · ítem 1', { exact: true }).fill('Primer servicio');
-  await page.getByLabel('Proveedor · ítem 1', { exact: true }).fill('Proveedor ficticio A');
-  await page.getByLabel('Importe (CLP) · ítem 1', { exact: true }).fill('100000');
-  await page.getByRole('button', { name: 'Agregar ítem', exact: true }).click();
-  await page.getByLabel('Proveedor · ítem 2', { exact: true }).fill('Proveedor ficticio B');
-  await page.getByLabel('Código proyecto · ítem 2', { exact: true }).fill('0000000');
-  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
-  await expect(page.getByRole('heading', { name: /^Solicitud / })).toBeVisible();
-  await expect(page.getByText(number, { exact: true })).toBeVisible();
+test('registrar a mano: guardar y registrar otra, recarga, ficha y pago desde la fila', async ({ page }) => {
+  const prefix = `E2E-${Date.now()}`;
+  await manualForm(page, `${prefix}-1`);
+  await recordField(page, 'provider').fill('Proveedor ficticio A');
+  await page.getByRole('button', { name: 'Guardar y registrar otra', exact: true }).click();
+  await expect(page.getByText('Compra guardada', { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/compras\/nueva$/);
+  await expect(recordField(page, 'requestNumber')).toHaveValue('');
+  await expect(recordField(page, 'requestNumber')).toBeVisible();
+  await recordField(page, 'requestNumber').fill(`${prefix}-2`);
+  await recordField(page, 'description').fill('Segunda solicitud ficticia');
+  await recordField(page, 'totalAmount').fill('150.000');
+  await recordField(page, 'provider').fill('Proveedor ficticio A');
+  await page.getByRole('button', { name: 'Guardar compra', exact: true }).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toContainText(`Solicitud ${prefix}-2`);
   await page.reload();
-  await expect(page.locator('.purchase-item__provider').filter({ hasText: 'Proveedor ficticio B' })).toBeVisible();
-  await expandPurchaseSection(page, 'Ítem 2');
-  await expect(page.locator('.purchase-detail-fields dd').filter({ hasText: 'Proveedor ficticio B' })).toHaveText('Proveedor ficticio B');
-  await expect(page.getByText('0000000', { exact: true })).toBeVisible();
+  await expect(sheet).toContainText('Segunda solicitud ficticia');
   for (const width of [1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await page.screenshot({ path: `tmp/purchase-detail-${width}.png` });
+    await page.screenshot({ path: `tmp/purchase-sheet-${width}.png` });
   }
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.getByRole('link', { name: 'Volver al registro' }).click();
-  const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
-  const row = pending.getByRole('row').filter({ hasText: number });
-  await expect(row.getByText('Sin dato', { exact: true })).toBeVisible();
-  await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
-  await expect(page.getByRole('alertdialog')).toContainText('La revisión de los datos quedará registrada en Cenit.');
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Validar registro' }).click();
-  await expect(row).toHaveCount(0);
-  const reviewed = page.getByRole('region', { name: 'Revisados en Cenit', exact: true });
-  const reviewedRow = reviewed.getByRole('row').filter({ hasText: number });
-  await expect(reviewedRow).toHaveCount(1); await expect(reviewedRow.getByRole('button', { name: 'Validar registro', exact: true })).toHaveCount(0);
-  await expect(reviewedRow.getByRole('button', { name: 'Eliminar', exact: true })).toHaveCount(0);
-  await reviewedRow.getByRole('link', { name: 'Ver detalles' }).click();
-  await expect(page.getByRole('button', { name: 'Eliminar', exact: true })).toBeVisible();
-  await expect(page.getByText(/Revisado en Cenit por/)).toBeVisible();
-  await page.reload(); await expect(page.getByText('Revisado en Cenit', { exact: true })).toBeVisible();
+  await sheet.getByRole('button', { name: 'Cerrar ficha', exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+  await page.getByLabel('Buscar compras', { exact: true }).fill(prefix);
+  const list = page.getByRole('region', { name: 'Compras registradas', exact: true });
+  await expect(list.getByText('2 registros', { exact: true })).toBeVisible();
+  const pill = list.getByRole('button', { name: `Situación de pago de ${prefix}-1: pendiente. Marcar como pagado`, exact: true });
+  await pill.click();
+  await expect(list.getByRole('button', { name: `Situación de pago de ${prefix}-1: pagado. Volver a pendiente`, exact: true })).toBeVisible();
+  await page.reload();
+  await expect(list.getByRole('button', { name: `Situación de pago de ${prefix}-1: pagado. Volver a pendiente`, exact: true })).toBeVisible();
+  await expect(list.getByRole('group', { name: 'Situación de pago', exact: true }).getByRole('button')).toHaveText(['Todas2', 'Pendientes1', 'Pagadas1']);
 });
 
 test('formulario manual: errores conservan datos, foco válido y navegación confirma descarte', async ({ page }) => {
   await manualForm(page, 'DRAFT-ERROR');
-  await page.getByLabel('Fecha de envío *', { exact: true }).fill('');
-  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
-  await expect(page.getByLabel('Fecha de envío *', { exact: true })).toBeFocused();
-  await expect(page.getByRole('alert')).toContainText('Fecha de envío');
-  await page.getByLabel('Fecha de envío *', { exact: true }).fill('13/10/2026');
+  await recordField(page, 'totalAmount').fill('200,5');
+  await page.getByRole('button', { name: 'Guardar compra', exact: true }).click();
+  await expect(recordField(page, 'totalAmount')).toBeFocused();
+  await expect(recordField(page, 'totalAmount')).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('#purchase-record-totalAmount-error')).toBeVisible();
+  await recordField(page, 'totalAmount').fill('200000');
   await page.route('**/api/v1/purchases', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'browser-test' } }) }));
-  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('El formulario conserva tus datos');
+  await page.getByRole('button', { name: 'Guardar compra', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Tus datos siguen aquí');
   const focusResponse = page.waitForResponse(response => response.url().endsWith('/api/v1/auth/session'));
   await page.evaluate(() => window.dispatchEvent(new Event('focus'))); await focusResponse;
-  await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveValue('DRAFT-ERROR');
+  await expect(recordField(page, 'requestNumber')).toHaveValue('DRAFT-ERROR');
   await navigateAdministration(page, 'Inicio');
   const discard = page.getByRole('alertdialog', { name: 'Descartar cambios' });
   await expect(discard.getByRole('button', { name: 'Seguir editando' })).toBeFocused();
@@ -538,10 +432,15 @@ test('formulario manual: errores conservan datos, foco válido y navegación con
   await navigateAdministration(page, 'Inicio');
   await discard.getByRole('button', { name: 'Descartar y salir' }).click();
   await expect(page).toHaveURL(/\/administracion$/);
-  await expect(page.getByRole('table')).toHaveCount(0);
 });
 
-test('formulario manual: logout y expiración descartan datos sin guardar', async ({ page }) => {
+test('formulario manual: logout, cambio de cuenta y expiración descartan datos sin guardar', async ({ page }) => {
+  // Exercise the transition with network latency, so an immediate navigation
+  // cannot accidentally abort logout and retain the previous session cookie.
+  await page.route('**/api/v1/auth/logout', async route => {
+    await new Promise(resolve => setTimeout(resolve, 250));
+    await route.continue();
+  });
   await manualForm(page, 'PRIVATE-UNSAVED');
   await logout(page);
   await expect(page).toHaveURL(/\/login$/);
@@ -549,183 +448,132 @@ test('formulario manual: logout y expiración descartan datos sin guardar', asyn
   await page.goto('/administracion/compras/nueva'); await expect(page).toHaveURL(/\/academico$/);
   await expect(page.getByText('PRIVATE-UNSAVED')).toHaveCount(0);
   await logout(page);
+  await login(page, 'administrativo'); await page.goto('/administracion/compras/nueva');
+  await expect(recordField(page, 'requestNumber')).toHaveValue('');
+  await logout(page);
   await page.clock.install(); await manualForm(page, 'EXPIRED-UNSAVED');
   await page.clock.fastForward(7201000);
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByText('EXPIRED-UNSAVED')).toHaveCount(0);
+  await page.goBack(); await expect(page.getByText('EXPIRED-UNSAVED')).toHaveCount(0);
 });
 
-test('laboratorio: transferir correcciones no guarda, y el reintento conserva operación y origen', async ({ page }) => {
-  await openPurchases(page);
-  await page.getByLabel('Datos de ejemplo').selectOption('ambiguous');
-  const number = `EXAMPLE-${Date.now()}`;
-  await page.getByLabel('Nº Documento / solicitud', { exact: true }).fill(number);
-  await page.getByRole('group', { name: 'Datos principales', exact: true }).getByLabel('Descripción', { exact: true }).fill('Descripción revisada de ejemplo ficticio');
-  await page.getByRole('button', { name: 'Continuar al formulario' }).click();
-  await expect(page.getByRole('heading', { name: 'Registrar compra' })).toBeVisible();
-  await expect(page.locator('.purchase-origin-badge')).toHaveText('Ejemplo de demostración · Por aclarar');
-  await expect(page.getByLabel('Monto total (CLP) *', { exact: true })).toHaveValue('');
-  const list = await page.request.get('/api/v1/purchases?reviewStatus=pending&pageSize=100');
-  expect((await list.json()).data.some((row: { requestNumber: string }) => row.requestNumber === number)).toBe(false);
-  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
-  await expect(page.getByText('Completa o corrige los campos indicados.')).toBeVisible();
-  await page.getByLabel('Fecha de envío *', { exact: true }).fill('01/01/' + new Intl.DateTimeFormat('en', { timeZone: 'America/Santiago', year: 'numeric' }).format(new Date()));
-  await page.getByLabel('Monto total (CLP) *', { exact: true }).fill('200000');
-  const attempts: Record<string, unknown>[] = [];
-  await page.route('**/api/v1/purchases', async route => {
-    attempts.push(route.request().postDataJSON());
-    await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'example-retry' } }) });
-  });
-  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('El formulario conserva tus datos');
-  await expect(page.getByLabel('Descripción *', { exact: true })).toHaveValue('Descripción revisada de ejemplo ficticio');
-  await page.unroute('**/api/v1/purchases');
-  const retry = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/api/v1/purchases'));
-  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
-  expect((await retry).postDataJSON()).toEqual(attempts[0]);
-  expect(attempts[0]!.origin).toEqual({ type: 'contract_example', exampleId: 'ambiguous' });
-  await expect(page.getByRole('heading', { name: /^Solicitud / })).toBeVisible();
-  await expect(page.locator('.purchase-origin-badge')).toHaveText('Ejemplo de demostración · Por aclarar');
-  await page.reload(); await expect(page.getByText(number, { exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Volver al registro' }).click();
-  const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
-  const row = pending.getByRole('row').filter({ hasText: number });
-  await expect(row.getByText('Ejemplo de demostración', { exact: true })).toBeVisible();
-  await row.getByRole('button', { name: 'Validar registro', exact: true }).click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Validar registro' }).click();
-  const reviewed = page.getByRole('region', { name: 'Revisados en Cenit', exact: true }).getByRole('row').filter({ hasText: number });
-  await expect(reviewed.getByText('Ejemplo de demostración', { exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Registrar manualmente' }).click();
-  await expect(page.getByRole('heading', { name: 'Registrar compra' })).toBeVisible();
-  await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveValue('');
+test('registrar a mano: montos inválidos se corrigen y el máximo exacto se guarda', async ({ page }) => {
+  await manualForm(page, 'AMOUNT-DRAFT');
+  // Un año sin otras compras: el monto de 255 dígitos no altera el Inicio que usan las demás pruebas.
+  await recordField(page, 'recordDate').fill('01/01/2001');
+  await recordField(page, 'totalAmount').fill('1,20');
+  await page.getByRole('button', { name: 'Guardar compra', exact: true }).click();
+  await expect(recordField(page, 'totalAmount')).toBeFocused();
+  await expect(recordField(page, 'totalAmount')).toHaveValue('1,20');
+  const maximumAmount = '9'.repeat(255);
+  await recordField(page, 'totalAmount').fill(maximumAmount);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Guardar compra', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('Solicitud AMOUNT-DRAFT');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  const saved = (await (await page.request.get(`/api/v1/purchases/${new URL(page.url()).pathname.split('/').at(-1)}`)).json()).data;
+  await page.getByRole('dialog').getByRole('button', { name: 'Cerrar ficha', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.goto('/administracion/compras?q=AMOUNT-DRAFT&allYears=1');
+  const list = page.getByRole('region', { name: 'Compras registradas', exact: true });
+  await expect(list.getByText('1 registro', { exact: true })).toBeVisible();
+  await expect(list.locator('.purchase-total strong')).toContainText('999.999');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect((await page.request.delete(`/api/v1/purchases/${saved.id}`, { headers: { Origin: new URL(page.url()).origin }, data: { expectedVersion: saved.version } })).status()).toBe(200);
 });
 
-test('laboratorio: formato inválido bloquea transferencia, original intacto y borrador aislado por sesión', async ({ page }) => {
-  await page.clock.install();
-  await openPurchases(page);
-  await page.getByLabel('Monto total (CLP)', { exact: true }).fill('invalid');
-  await page.getByRole('button', { name: 'Continuar al formulario' }).click();
-  await expect(page).toHaveURL(/\/laboratorio$/);
-  await expect(page.getByRole('alert')).toContainText('Revisa los campos indicados.');
-  await page.getByRole('button', { name: 'Restablecer ejemplo' }).click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Descartar y restablecer' }).click();
-  await expect(page.getByRole('alertdialog')).toHaveCount(0);
-  await expect(page.getByLabel('Monto total (CLP)', { exact: true })).toHaveValue('200.000');
-  await page.getByLabel('Datos de ejemplo').selectOption('failure');
-  await expect(page.getByRole('button', { name: 'Continuar al formulario' })).toHaveCount(0);
-  await page.getByLabel('Datos de ejemplo').selectOption('partial');
-  await page.getByLabel('Nº Documento / solicitud', { exact: true }).fill('PRIVATE-TRANSFER');
-  await page.getByRole('button', { name: 'Continuar al formulario' }).click();
-  await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveValue('PRIVATE-TRANSFER');
-  await logout(page);
-  await expect(page).toHaveURL(/\/login$/);
-  await login(page, 'docente'); await page.goto('/administracion/compras/nueva');
-  await expect(page).toHaveURL(/\/academico$/); await expect(page.getByText('PRIVATE-TRANSFER')).toHaveCount(0);
-  await logout(page);
-  await login(page, 'administrativo'); await page.goto('/administracion/compras/nueva');
-  await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveValue('');
-  await page.goto('/administracion/compras/laboratorio');
-  await page.getByRole('button', { name: 'Continuar al formulario' }).click();
-  await expect(page.getByRole('heading', { name: 'Registrar compra' })).toBeVisible();
-  await page.clock.fastForward(7201000);
-  await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByText('Registrar compra')).toHaveCount(0);
-  await page.clock.setSystemTime(new Date()); await page.goto('/administracion/compras/nueva');
-  await expect(page.getByLabel('Nº Documento / solicitud *', { exact: true })).toHaveValue('');
-});
-
-test('listado: filtros comunes, códigos del mismo ítem, totales, paginación y detalle', async ({ page }) => {
+test('listado: filtros por unidad y proyecto de la compra, totales, paginación y ficha', async ({ page }) => {
+  test.setTimeout(90000);
   await login(page, 'administrativo');
   const origin = 'http://127.0.0.1:5174';
   const targets: string[] = [];
-  for (const state of ['pending', 'reviewed']) {
+  for (const state of ['PENDIENTE', 'PAGADO']) {
     for (let index = 0; index < 21; index++) {
       const input = structuredClone(manualPurchaseExample); input.operationId = crypto.randomUUID();
-      input.header.requestNumber = `HU06-${state}-${index}`;
-      input.header.description = index === 0 ? 'Clínica HU06 100%_\\ literal' : 'HU06 base';
-      input.header.sentDate = '2027-02-01'; input.header.totalAmount = index === 0 ? '300' : '100';
-      input.lines[0]!.unitCode = '000A'; input.lines[0]!.projectCode = '000X';
-      input.lines[1]!.unitCode = '000B'; input.lines[1]!.projectCode = '000Y';
+      input.record.requestNumber = `HU06-${state}-${index}`;
+      input.record.description = index === 0 ? 'Clínica HU06 100%_\\ literal' : 'HU06 base';
+      input.record.recordDate = '2027-02-01'; input.record.totalAmount = index === 0 ? '300' : '100';
+      input.record.unitCode = '990001'; input.record.projectCode = '99000001';
       const saved = await page.request.post('/api/v1/purchases', { headers: { origin }, data: input });
       expect(saved.status()).toBe(201); const record = (await saved.json()).data;
-      if (index === 0) targets.push(input.header.requestNumber);
-      if (state === 'reviewed') expect((await page.request.post(`/api/v1/purchases/${record.id}/validation`, { headers: { origin }, data: { expectedVersion: 1 } })).status()).toBe(200);
+      if (index === 0) targets.push(input.record.requestNumber);
+      if (state === 'PAGADO') expect((await page.request.post(`/api/v1/purchases/${record.id}/payment-situation`, { headers: { origin }, data: { expectedVersion: 1, paymentSituation: 'PAGADO' } })).status()).toBe(200);
     }
   }
   await page.goto('/administracion/compras?allYears=1');
-  const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
-  const reviewed = page.getByRole('region', { name: 'Revisados en Cenit', exact: true });
-  await pending.getByRole('button', { name: 'Siguiente' }).click();
-  await reviewed.getByRole('button', { name: 'Siguiente' }).click();
-  await expect(pending.getByText(/^Página 2 de /)).toBeVisible();
-  await expect(reviewed.getByText(/^Página 2 de /)).toBeVisible();
+  const list = page.getByRole('region', { name: 'Compras registradas', exact: true });
+  await list.getByRole('button', { name: 'Siguiente' }).click();
+  await expect(list.getByText(/^Página 2 de /)).toBeVisible();
   const returnUrl = page.url();
-  await pending.getByRole('link', { name: 'Ver detalles' }).first().click();
-  await page.getByRole('link', { name: 'Volver al registro' }).click();
+  await list.getByRole('link', { name: /^Abrir la ficha de la compra/ }).first().click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cerrar ficha', exact: true }).click();
   await expect(page).toHaveURL(returnUrl);
-  await expect(pending.getByText(/^Página 2 de /)).toBeVisible();
-  await expect(reviewed.getByText(/^Página 2 de /)).toBeVisible();
+  await expect(list.getByText(/^Página 2 de /)).toBeVisible();
   await page.reload();
-  await expect(pending.getByText(/^Página 2 de /)).toBeVisible();
-  await expect(reviewed.getByText(/^Página 2 de /)).toBeVisible();
-  const search = page.getByLabel('Buscar solicitudes', { exact: true });
+  await expect(list.getByText(/^Página 2 de /)).toBeVisible();
+  const search = page.getByLabel('Buscar compras', { exact: true });
   await search.fill('clinica hu06');
   await expect(page).toHaveURL(/q=clinica\+hu06/);
-  for (const table of [pending, reviewed]) {
-    await expect(table.getByText(/^Página 1 de /)).toBeVisible();
-    await expect(table.getByText('1 registro', { exact: true })).toBeVisible();
-    await expect(table.locator('.purchase-total strong')).toHaveText('$300');
-  }
+  await expect(list.getByText(/^Página 1 de /)).toBeVisible();
+  await expect(list.getByText('2 registros', { exact: true })).toBeVisible();
+  await expect(list.locator('.purchase-total strong')).toHaveText('$600');
+  // Proyecto está en la barra; unidad, en «Más filtros». Un código escrito se aplica sin elegirlo de la lista.
   await page.getByRole('button', { name: 'Más filtros', exact: true }).click();
-  await page.getByLabel('Código de unidad', { exact: true }).fill('000A');
-  await page.getByLabel('Código de proyecto', { exact: true }).fill('000Y');
-
-  for (const table of [pending, reviewed]) {
-    await expect(table.getByText('No encontramos compras con estos filtros', { exact: true })).toBeVisible();
-    await expect(table.getByRole('table')).toHaveCount(0);
-  }
+  await page.getByLabel('Unidad', { exact: true }).fill('990001');
+  await page.getByLabel('Proyecto', { exact: true }).fill('99000002');
+  await expect(list.getByText('No encontramos compras con estos filtros', { exact: true })).toBeVisible();
+  await expect(list.getByRole('table')).toHaveCount(0);
   for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await page.screenshot({ path: `tmp/purchase-empty-tables-${width}.png`, fullPage: true });
+    await page.screenshot({ path: `tmp/purchase-empty-table-${width}.png`, fullPage: true });
   }
-  await page.getByLabel('Código de proyecto', { exact: true }).fill('000X');
-  const datePicker = page.getByLabel('Fecha de envío', { exact: true });
-  await page.getByRole('button', { name: 'Abrir calendario: Fecha de envío', exact: true }).click();
-  await selectCalendarDate(page, '2027-02-01');
+  await page.getByLabel('Proyecto', { exact: true }).fill('99000001');
+  const datePicker = page.getByRole('textbox', { name: 'Rango de fechas: desde', exact: true });
+  await page.getByRole('button', { name: 'Abrir calendario: rango de fechas', exact: true }).click();
+  await selectRangeDay(page, '2027-02-01');
   await expect(page).toHaveURL(/dateFrom=2027-02-01&dateTo=2027-02-01/);
+  // El calendario de filtros sigue abierto tras elegir; se cierra para no tapar las filas.
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Calendario de rango de fechas' })).toHaveCount(0);
   await search.fill('100%_\\');
-  for (const table of [pending, reviewed]) await expect(table.getByText('1 registro', { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/q=100%25_%5C/);
+  await expect(list.getByText('2 registros', { exact: true })).toBeVisible();
+  await list.getByRole('group', { name: 'Situación de pago', exact: true }).getByRole('button', { name: /^Pagadas/ }).click();
+  await expect(list.getByText('1 registro', { exact: true })).toBeVisible();
   for (const width of [1280]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/purchase-filters-${width}.png`, fullPage: true });
   }
-  await pending.getByRole('link', { name: 'Ver detalles' }).click();
-  await expect(page).toHaveURL(/\/compras\/[0-9a-f-]{36}$/);
-  await expect(page.getByText(targets[0]!, { exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Volver al registro' }).click();
+  await list.getByRole('link', { name: /^Abrir la ficha de la compra/ }).click();
+  await expect(page).toHaveURL(/\/compras\/[0-9a-f-]{36}\?/);
+  await expect(page.getByRole('dialog')).toContainText(`Solicitud ${targets[1]!}`);
+  await page.getByRole('dialog').getByRole('button', { name: 'Cerrar ficha', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(search).toHaveValue('100%_\\');
   await expect(datePicker).toHaveValue('01');
-  await expect(page.getByLabel('Fecha de envío, mes', { exact: true })).toHaveValue('02');
-  await expect(page.getByLabel('Fecha de envío, año', { exact: true })).toHaveValue('2027');
-  await expect(page.getByLabel('Código de proyecto', { exact: true })).toHaveValue('000X');
+  await expect(page.getByRole('textbox', { name: 'Rango de fechas: desde, mes', exact: true })).toHaveValue('02');
+  await expect(page.getByRole('textbox', { name: 'Rango de fechas: desde, año', exact: true })).toHaveValue('2027');
+  await expect(page.getByLabel('Proyecto', { exact: true })).toHaveValue('99000001');
   await search.fill('no coincidence');
-  await expect(pending.getByText('0 registros', { exact: true })).toBeVisible();
+  await expect(list.getByText('No encontramos compras con estos filtros', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
   await expect(search).toHaveValue('');
-  await page.getByRole('button', { name: /^Año de envío:/ }).click();
-  await page.getByRole('listbox', { name: 'Año de envío', exact: true }).getByRole('option', { name: 'Todos los años', exact: true }).click();
-  await expect(pending.getByRole('row').nth(1)).toBeVisible();
+  await page.getByRole('button', { name: /^Año:/ }).click();
+  await page.getByRole('listbox', { name: 'Año', exact: true }).getByRole('option', { name: 'Todos los años', exact: true }).click();
+  await expect(list.getByRole('row').nth(1)).toBeVisible();
 });
 
 test('listado: validación, error/reintento, carga y filtros descartados al cambiar sesión', async ({ page }) => {
   await login(page, 'administrativo'); await page.goto('/administracion/compras');
   const fixture = structuredClone(manualPurchaseExample); fixture.operationId = crypto.randomUUID();
-  fixture.header.requestNumber = 'RETRY-' + crypto.randomUUID();
-  fixture.header.sentDate = santiagoToday();
+  fixture.record.requestNumber = 'RETRY-' + crypto.randomUUID();
+  fixture.record.recordDate = santiagoToday();
   expect((await page.request.post('/api/v1/purchases', { headers: { Origin: new URL(page.url()).origin }, data: fixture })).status()).toBe(201);
-  const search = page.getByLabel('Buscar solicitudes', { exact: true });
+  const search = page.getByLabel('Buscar compras', { exact: true });
   await page.goto('/administracion/compras?dateFrom=2026-10-14&dateTo=2026-10-13');
   await expect(page.getByText('Corrige los filtros para consultar las compras.', { exact: true }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
@@ -733,29 +581,27 @@ test('listado: validación, error/reintento, carga y filtros descartados al camb
   await page.route('**/api/v1/purchases?**', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: 'No disponible', requestId: 'filter-error' } }) }));
   const filteredFailure = page.waitForResponse(response => {
     const url = new URL(response.url());
-    return url.pathname === '/api/v1/purchases' && url.searchParams.get('q') === 'PRIVATE-FILTER'
-      && url.searchParams.get('reviewStatus') === 'pending' && response.status() === 503;
+    return url.pathname === '/api/v1/purchases' && url.searchParams.get('q') === 'PRIVATE-FILTER' && response.status() === 503;
   });
   await search.fill('PRIVATE-FILTER');
   await expect(page).toHaveURL(/q=PRIVATE-FILTER/);
   await filteredFailure;
-  const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
-  await expect(pending.getByRole('alert')).toContainText('No disponible');
-  await expect(pending.getByRole('table')).toHaveCount(0);
+  const list = page.getByRole('region', { name: 'Compras registradas', exact: true });
+  await expect(list.getByRole('alert')).toContainText('No disponible');
+  await expect(list.getByRole('table')).toHaveCount(0);
   await page.unroute('**/api/v1/purchases?**');
-  await pending.getByRole('button', { name: 'Reintentar', exact: true }).click();
-  await expect(pending.getByText('No encontramos compras con estos filtros', { exact: true })).toBeVisible();
+  await list.getByRole('button', { name: 'Reintentar', exact: true }).click();
+  await expect(list.getByText('No encontramos compras con estos filtros', { exact: true })).toBeVisible();
   let release!: () => void;
   const hold = new Promise<void>(resolve => { release = resolve; });
   await page.route('**/api/v1/purchases?**', async route => { await hold; await route.continue(); });
   await search.fill('LOADING-FILTER');
-
-  await expect(pending.getByText('Actualizando resultados…', { exact: true })).toBeVisible();
+  await expect(list.getByText('Actualizando resultados…', { exact: true })).toBeVisible();
   release();
-  await expect(pending.getByText('No encontramos compras con estos filtros', { exact: true })).toBeVisible();
+  await expect(list.getByText('No encontramos compras con estos filtros', { exact: true })).toBeVisible();
   await page.unrouteAll({ behavior: 'wait' });
   await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
-  await expect(pending.getByRole('table')).toBeVisible();
+  await expect(list.getByRole('table')).toBeVisible();
   await search.fill('PRIVATE-FILTER');
   await logout(page); await expect(page).toHaveURL(/\/login$/);
   await login(page, 'docente'); await page.goto('/administracion/compras'); await expect(page).toHaveURL(/\/academico$/);
@@ -767,75 +613,27 @@ test('listado: validación, error/reintento, carga y filtros descartados al camb
   await page.clock.setSystemTime(new Date()); await page.goto('/administracion/compras'); await expect(search).toHaveValue('');
 });
 
-test('solicitudes: paginación independiente y vistas sin desbordamiento horizontal', async ({ page }) => {
+test('listado y formularios: páginas sin desbordamiento horizontal', async ({ page }) => {
   await login(page, 'administrativo');
-  const prefix = `PAGE-${crypto.randomUUID().slice(0, 8)}`, sentDate = santiagoToday();
+  const prefix = `PAGE-${crypto.randomUUID().slice(0, 8)}`, recordDate = santiagoToday();
   const headers = { Origin: new URL(page.url()).origin };
   for (let index = 0; index < 22; index++) {
-    const response = await page.request.post('/api/v1/purchases', { headers, data: { ...manualPurchaseExample, operationId: crypto.randomUUID(), header: { ...manualPurchaseExample.header, requestNumber: `${prefix}-${index}`, sentDate } } });
+    const response = await page.request.post('/api/v1/purchases', { headers, data: { ...manualPurchaseExample, operationId: crypto.randomUUID(), record: { ...manualPurchaseExample.record, requestNumber: `${prefix}-${index}`, recordDate } } });
     expect(response.status()).toBe(201);
-    if (index === 21) {
-      const { data: record } = await response.json();
-      const review = await page.request.post(`/api/v1/purchases/${record.id}/validation`, { headers, data: { expectedVersion: record.version } });
-      expect(review.status()).toBe(200);
-    }
   }
   await page.goto(`/administracion/compras?q=${prefix}`);
-  const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
-  const reviewed = page.getByRole('region', { name: 'Revisados en Cenit', exact: true });
-  await pending.getByRole('button', { name: 'Siguiente' }).click();
-  await expect(pending.getByText(/^Página 2 de /)).toBeVisible();
-  await expect(reviewed.getByText(/^Página 1 de /)).toBeVisible();
+  const list = page.getByRole('region', { name: 'Compras registradas', exact: true });
+  await list.getByRole('button', { name: 'Siguiente' }).click();
+  await expect(list.getByText(/^Página 2 de /)).toBeVisible();
   for (const width of [1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/purchases-list-${width}.png` });
   }
-  await page.getByRole('link', { name: 'Registrar manualmente' }).click();
-  for (const width of [1280]) {
+  await page.getByRole('link', { name: 'Registrar a mano', exact: true }).click();
+  for (const width of [1280, 1000]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.getByRole('button', { name: 'Agregar ítem', exact: true }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `tmp/purchases-form-${width}.png` });
   }
-});
-
-test('ítems desplegables: errores abren el ítem y eliminar otro conserva valores y apertura', async ({ page }) => {
-  await manualForm(page, 'DISCLOSURE-DRAFT');
-  await page.getByRole('button', { name: 'Agregar ítem', exact: true }).click();
-  const items = page.locator('fieldset details.purchase-item');
-  const amount = page.getByLabel('Importe (CLP) · ítem 1', { exact: true });
-  await amount.fill('1,20');
-  await items.nth(0).locator('summary').click();
-  await expect(items.nth(0)).not.toHaveAttribute('open');
-  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
-  await expect(items.nth(0)).toHaveAttribute('open');
-  await expect(amount).toBeFocused();
-  await expect(amount).toHaveValue('1,20');
-  await amount.fill('100000');
-  await page.getByRole('button', { name: 'Agregar ítem', exact: true }).click();
-  await page.getByLabel('Descripción · ítem 2', { exact: true }).fill('Ítem que se conserva');
-  await page.getByLabel('Proveedor · ítem 2', { exact: true }).fill('Proveedor conservado');
-  await items.nth(1).locator('summary').click();
-  await page.getByRole('button', { name: 'Eliminar ítem 1', exact: true }).click();
-  await expect(items).toHaveCount(1);
-  await expect(items.nth(0)).not.toHaveAttribute('open');
-  await items.nth(0).locator('summary').click();
-  await expect(page.getByLabel('Descripción · ítem 1', { exact: true })).toHaveValue('Ítem que se conserva');
-  await expect(page.getByLabel('Proveedor · ítem 1', { exact: true })).toHaveValue('Proveedor conservado');
-  const maximumAmount = '9'.repeat(255);
-  await page.getByLabel('Monto total (CLP) *', { exact: true }).fill(maximumAmount);
-  await page.getByLabel('Importe (CLP) · ítem 1', { exact: true }).fill(maximumAmount);
-  await page.setViewportSize({ width: 1280, height: 900 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.getByRole('button', { name: 'Guardar registro', exact: true }).click();
-  await expect(page.getByRole('heading', { name: /^Solicitud / })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.getByRole('link', { name: 'Volver al registro', exact: true }).click();
-  await page.getByLabel('Buscar solicitudes', { exact: true }).fill('DISCLOSURE-DRAFT');
-
-  const pending = page.getByRole('region', { name: 'Por revisar en Cenit', exact: true });
-  await expect(pending.getByText('1 registro', { exact: true })).toBeVisible();
-  await expect(pending.locator('.purchase-total strong')).toContainText('999.999');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

@@ -39,7 +39,7 @@ export function DeleteRecord({ id, version, requestNumber, fallbackFocus, onDele
     event.currentTarget.focus({ preventScroll: true }); selected.current = { id, version }; mutation.reset(); setConfirming(true);
   }}><TrashIcon size={16} aria-hidden="true" /></button>
     <ContextualConfirm wide open={confirming} origin={trigger.current} fallbackFocus={fallbackFocus} title="¿Eliminar este registro?"
-      description={`Se borra la copia en Cenit con todos sus ítems; en Oracle no cambia nada.${sheetsSyncEnabled ? ' También se retirará su copia de Google Sheets cuando se complete la sincronización.' : ''} Esta acción no se puede deshacer.`}
+      description={`Se borra la compra de Cenit, con sus datos de Oracle; en Oracle no cambia nada.${sheetsSyncEnabled ? ' También se retirará su copia de Google Sheets cuando se complete la sincronización.' : ''} Esta acción no se puede deshacer.`}
       caution destructive confirmLabel="Eliminar registro" cancelLabel="Cancelar" busy={mutation.isPending} busyLabel="Eliminando…"
       onConfirm={() => {
         if (sending.current || !confirming) return;

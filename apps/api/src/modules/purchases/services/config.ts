@@ -1,6 +1,6 @@
 import type { PurchaseCapabilities } from '@cenit/contracts/purchases';
 
-export const defaultPurchaseCapabilities: PurchaseCapabilities = { secondReviewEnabled: false, sheetsSyncEnabled: false };
+export const defaultPurchaseCapabilities: PurchaseCapabilities = { sheetsSyncEnabled: false };
 
 export function readPurchaseCapabilities(env = process.env): PurchaseCapabilities {
   const flag = (name: string) => {
@@ -8,5 +8,5 @@ export function readPurchaseCapabilities(env = process.env): PurchaseCapabilitie
     if (value !== undefined && value !== 'true' && value !== 'false') throw new Error(`Configuración inválida: ${name}.`);
     return value === 'true';
   };
-  return { secondReviewEnabled: flag('CENIT_PURCHASE_SECOND_REVIEW_ENABLED'), sheetsSyncEnabled: flag('CENIT_PURCHASE_SHEETS_SYNC_ENABLED') };
+  return { sheetsSyncEnabled: flag('CENIT_PURCHASE_SHEETS_SYNC_ENABLED') };
 }

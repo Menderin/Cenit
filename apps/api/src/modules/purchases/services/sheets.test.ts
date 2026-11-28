@@ -12,14 +12,14 @@ import type { SheetsJob } from '../repositories/sheets.js';
 
 function job(): SheetsJob {
   const record: PurchaseRecord = { ...structuredClone(manualPurchaseExample), id: '00000000-0000-4000-8000-000000000100', source: 'manual', exampleId: null,
-    version: 1, reviewStatus: 'pending', createdAt: '2026-10-21T00:00:00.000Z', createdBy: { id: '00000000-0000-4000-8000-000000000001', name: 'Cuenta ficticia' }, reviewedAt: null, reviewedBy: null };
-  record.header.totalAmount = '9'.repeat(255); record.header.requestNumber = '0000123'; record.header.description = '=SUM(A1:A2)';
+    version: 1, createdAt: '2026-10-21T00:00:00.000Z', createdBy: { id: '00000000-0000-4000-8000-000000000001', name: 'Cuenta ficticia' } };
+  record.record.totalAmount = '9'.repeat(255); record.record.requestNumber = '0000123'; record.record.description = '=SUM(A1:A2)';
   return { id: record.id, generation: 1, headerRow: 2, itemRows: record.lines.map((_, i) => i + 2), record };
 }
 describe('Sheets: proyección literal e idempotente', () => {
-  it('desactiva ambas flags por defecto y rechaza configuraciones incompletas', () => {
-    expect(readPurchaseCapabilities({})).toEqual({ secondReviewEnabled: false, sheetsSyncEnabled: false });
-    expect(readPurchaseCapabilities({ CENIT_PURCHASE_SECOND_REVIEW_ENABLED: 'true' }).secondReviewEnabled).toBe(true);
+  it('desactiva Sheets por defecto y rechaza configuraciones incompletas', () => {
+    expect(readPurchaseCapabilities({})).toEqual({ sheetsSyncEnabled: false });
+    expect(readPurchaseCapabilities({ CENIT_PURCHASE_SHEETS_SYNC_ENABLED: 'true' }).sheetsSyncEnabled).toBe(true);
     expect(() => readPurchaseCapabilities({ CENIT_PURCHASE_SHEETS_SYNC_ENABLED: 'yes' })).toThrow();
     expect(() => readSheetsTarget({})).toThrow();
     expect(() => readSheetsTarget({ CENIT_PURCHASE_SHEETS_ID: 'https://example.test', CENIT_PURCHASE_SHEETS_KEY_FILE: 'fake' })).toThrow();
@@ -28,9 +28,11 @@ describe('Sheets: proyección literal e idempotente', () => {
     const remote = new FakeGoogleSheets(), writer = new GoogleSheetsWriter(remote.call, 'fake@example.test'), current = job();
     await writer.send([current]); await writer.send([current]);
     const headers = remote.sheet('Compras').rows.get(1)!, values = remote.sheet('Compras').rows.get(2)!;
-    expect(values[headers.indexOf('Monto total (CLP)')]).toBe('9'.repeat(255));
-    expect(values[headers.indexOf('Nº Documento / solicitud')]).toBe('0000123');
-    expect(values[headers.indexOf('Descripción')]).toBe('=SUM(A1:A2)');
+    expect(headers.slice(1, 16)).toEqual(['Fecha', 'Documento', 'Nº Documento', 'PROVEEDOR', 'DETALLE', 'Monto', 'Tipo documento', 'bi', 'Unidad',
+      'Código del Proyecto', 'Código Contable', 'RUT', 'UNIDAD', 'ITEM', 'Situación de pago']);
+    expect(values[headers.indexOf('Monto')]).toBe('9'.repeat(255));
+    expect(values[headers.indexOf('Nº Documento')]).toBe('0000123');
+    expect(values[headers.indexOf('DETALLE')]).toBe('=SUM(A1:A2)');
     expect(remote.sheet('Compras').rows.size).toBe(2);
     expect(remote.sheet('Ítems').rows.size).toBe(current.itemRows.length + 1);
   });

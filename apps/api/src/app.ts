@@ -56,6 +56,6 @@ export function buildAcademicApp(options: { repository: AcademicReadRepository; 
   app.register(academicRoutes, { prefix: '/api/v1/academic', service: new AcademicService(options.repository), authenticate });
   app.register(personnelRoutes, { prefix: '/api/v1/personnel', authenticate, allowedOrigins: options.auth?.config.allowedOrigins ?? [] });
   if (options.assets) app.register(assetRoutes, { prefix: '/api/v1/assets', repository: options.assets, authenticate, allowedOrigins: options.auth?.config.allowedOrigins ?? [] });
-  if (options.purchases) app.register(purchaseRoutes, { prefix: '/api/v1/purchases', service: new PurchaseService(options.purchases, options.captureReceipts, options.purchaseCapabilities), capabilities: options.purchaseCapabilities ?? defaultPurchaseCapabilities, sheets: options.sheets, extraction: options.extraction, authenticate, allowedOrigins: options.auth?.config.allowedOrigins ?? [] });
+  if (options.purchases) app.register(purchaseRoutes, { prefix: '/api/v1/purchases', service: new PurchaseService(options.purchases, options.captureReceipts), capabilities: options.purchaseCapabilities ?? defaultPurchaseCapabilities, sheets: options.sheets, extraction: options.extraction, authenticate, allowedOrigins: options.auth?.config.allowedOrigins ?? [] });
   return app;
 }

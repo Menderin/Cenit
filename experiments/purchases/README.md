@@ -45,7 +45,7 @@ oracle_format.main()
 OCR_SAMPLE
 ```
 
-Usar el nombre real de la imagen construida si es diferente. Para revisar la interfaz, entrar como administrativo, abrir «Sistema de compra → Subir captura» y elegir una muestra. Comparar los candidatos con la imagen antes de guardar; extraer no conserva una compra.
+Usar el nombre real de la imagen construida si es diferente. Para revisar la interfaz, entrar como administrativo, abrir «Registro de compras → Registrar capturas» y elegir una o varias muestras. Comparar los candidatos con la imagen antes de guardar; extraer no conserva una compra.
 
 Para medir el procesador real con las ocho muestras:
 

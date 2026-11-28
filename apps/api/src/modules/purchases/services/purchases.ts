@@ -1,9 +1,7 @@
-import { validateCreatePurchase, validatePurchasePayload, validatePurchaseListQuery, type CreatePurchase, type PurchaseListQuery, type UpdatePurchase } from '@cenit/contracts/purchases';
+import { validateCreatePurchase, validatePurchasePayload, validatePurchaseListQuery, type CreatePurchase, type PurchaseListQuery, type PurchasePayment, type UpdatePurchase } from '@cenit/contracts/purchases';
 import { ApiError } from '../../../infrastructure/errors.js';
 import { PurchaseRepository } from '../repositories/purchases.js';
 import type { CaptureReceipts } from './capture-receipts.js';
-import { defaultPurchaseCapabilities } from './config.js';
-import type { PurchaseCapabilities } from '@cenit/contracts/purchases';
 import { writePurchaseWorkbook } from './export.js';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -20,9 +18,9 @@ function parseYear(year?: string) {
 }
 
 export class PurchaseService {
-  constructor(private readonly repository: PurchaseRepository, private readonly receipts?: CaptureReceipts, private readonly capabilities: PurchaseCapabilities = defaultPurchaseCapabilities) {}
+  constructor(private readonly repository: PurchaseRepository, private readonly receipts?: CaptureReceipts) {}
   create(input: CreatePurchase, accountId: string) {
-    if (validateCreatePurchase(input).length) throw new ApiError(400, 'VALIDATION_ERROR', 'Revisa los formatos y los cuatro campos obligatorios.');
+    if (validateCreatePurchase(input).length) throw new ApiError(400, 'VALIDATION_ERROR', 'Revisa los formatos y los campos obligatorios.');
     const origin = input.origin;
     if (origin?.type === 'image_capture') {
       if (!this.receipts) throw new ApiError(503, 'EXTRACTION_UNAVAILABLE', 'La verificación de captura no está disponible.');
@@ -34,7 +32,7 @@ export class PurchaseService {
   }
   update(id: string, input: UpdatePurchase) {
     const { expectedVersion, ...payload } = input;
-    if (validatePurchasePayload(payload).length) throw new ApiError(400, 'VALIDATION_ERROR', 'Revisa los formatos y los cuatro campos obligatorios.');
+    if (validatePurchasePayload(payload).length) throw new ApiError(400, 'VALIDATION_ERROR', 'Revisa los formatos y los campos obligatorios.');
     return this.repository.update(id, payload, expectedVersion);
   }
   list(query: PurchaseListQuery) {
@@ -66,10 +64,9 @@ export class PurchaseService {
     if (!record) throw new ApiError(404, 'NOT_FOUND', 'Solicitud inexistente.');
     return { data: record };
   }
-  async validate(id: string, version: number, accountId: string) {
-    if (!this.capabilities.secondReviewEnabled) throw new ApiError(409, 'FEATURE_DISABLED', 'La segunda revisión no está habilitada en Cenit.');
-    return { data: await this.repository.validate(id, version, accountId) };
-  }
+  setPaymentSituation(id: string, input: PurchasePayment) { return this.repository.setPaymentSituation(id, input.expectedVersion, input.paymentSituation.trim()); }
+  async catalog() { return { data: await this.repository.catalog() }; }
+  async providers(q: string) { return { data: await this.repository.providers(q) }; }
   summary(year?: string) { return this.repository.summary(parseYear(year)); }
   async projects(year?: string) { return { data: await this.repository.projects(parseYear(year)) }; }
   async project(code: string, year?: string) {

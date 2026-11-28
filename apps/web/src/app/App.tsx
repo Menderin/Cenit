@@ -2,13 +2,10 @@ import { Navigate, Route, Routes, matchPath, useLocation } from 'react-router';
 import { useAuth } from '../features/auth/model/session.js';
 import { Login } from '../features/auth/pages/Login.js';
 import { Profile, AcademicProfile } from '../features/auth/pages/Profile.js';
-import { PurchaseReview } from '../features/purchases/pages/PurchaseReview.js';
 import { PurchaseCapture } from '../features/purchases/pages/PurchaseCapture.js';
 import { Purchases } from '../features/purchases/pages/Purchases.js';
 import { PurchaseCreate } from '../features/purchases/pages/PurchaseCreate.js';
-import { PurchaseDetail } from '../features/purchases/pages/PurchaseDetail.js';
 import { PurchaseEdit } from '../features/purchases/pages/PurchaseEdit.js';
-import { PurchaseTransferProvider } from '../features/purchases/model/transfer.js';
 import { AdministrativeLayout } from './AdministrativeLayout.js';
 import { Home } from '../features/administration/pages/Home.js';
 import { ServiceCommission } from '../features/personnel/pages/ServiceCommission.js';
@@ -53,10 +50,9 @@ function AdministrativeArea() {
       <Route path="/administracion/perfil" element={<Profile key={session.account.id} />} />
       <Route path="/administracion/compras" element={<Purchases key={session.account.id} />} />
       <Route path="/administracion/compras/nueva" element={<PurchaseCreate key={session.account.id} />} />
-      <Route path="/administracion/compras/laboratorio" element={<PurchaseReview key={session.account.id} />} />
       <Route path="/administracion/compras/captura" element={<PurchaseCapture key={session.account.id} />} />
       <Route path="/administracion/compras/:id/editar" element={<PurchaseEdit key={session.account.id} />} />
-      <Route path="/administracion/compras/:id" element={<PurchaseDetail key={session.account.id} />} />
+      <Route path="/administracion/compras/:id" element={<Purchases key={session.account.id} />} />
       <Route path="/administracion/personal" element={<Personnel />} />
       <Route path="/administracion/personal/comision" element={<ServiceCommission />} />
       <Route path="/administracion/personal/permiso" element={<LeaveRequest />} />
@@ -100,8 +96,6 @@ export function App() {
     <Login checking={checking} />
     {!checking && !matchPath('/login', pathname) && <Navigate to="/login" replace />}
   </>;
-  if (auth.status === 'authenticated' && auth.session?.account.role === 'administrativo') return <PurchaseTransferProvider key={auth.session.account.id}>
-    <PurchaseGuardProvider><AdministrativeArea /></PurchaseGuardProvider>
-  </PurchaseTransferProvider>;
+  if (auth.status === 'authenticated' && auth.session?.account.role === 'administrativo') return <PurchaseGuardProvider key={auth.session.account.id}><AdministrativeArea /></PurchaseGuardProvider>;
   return <AccessLayout>{content}</AccessLayout>;
 }

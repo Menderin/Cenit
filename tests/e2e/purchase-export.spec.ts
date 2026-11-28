@@ -6,7 +6,7 @@ import { manualPurchaseExample } from '../../packages/contracts/src/purchases/re
 const xlsxType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 test('descarga por teclado, conserva filtros pendientes y informa fallos sin éxito', async ({ page }) => {
-  await page.route('**/api/v1/purchases/capabilities', route => route.fulfill({ json: { data: { secondReviewEnabled: false, sheetsSyncEnabled: false } } }));
+  await page.route('**/api/v1/purchases/capabilities', route => route.fulfill({ json: { data: { sheetsSyncEnabled: false } } }));
   await page.route('**/api/v1/purchases/export.xlsx*', async route => {
     const url = new URL(route.request().url());
     if (url.searchParams.get('q') === 'fallo') {
@@ -43,18 +43,19 @@ test('descarga por teclado, conserva filtros pendientes y informa fallos sin éx
   // press() focuses the button first, so the route change cannot steal focus before Enter.
   await button.press('Enter');
   // The dialog explains the file and its scope before anything is requested.
-  await expect(page.getByRole('alertdialog', { name: 'Descargar Excel' })).toContainText('Compras, Ítems y Resumen');
+  await expect(page.getByRole('alertdialog', { name: 'Descargar Excel' })).toContainText('Registro de gastos, Líneas de Oracle y Resumen');
+  await expect(page.getByRole('radio', { name: /^Todos los resultados filtrados/ })).toBeChecked();
   await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click(); await expect(page.getByRole('alertdialog', { name: 'Descargar Excel' })).toHaveCount(0);
   expect((await download).suggestedFilename()).toBe('compras.xlsx');
   await expect(page.getByText('Archivo descargado', { exact: true })).toBeVisible();
 
-  await page.getByLabel('Buscar solicitudes', { exact: true }).fill('borrador-no-aplicado');
+  await page.getByLabel('Buscar compras', { exact: true }).fill('borrador-no-aplicado');
   const exportRequest = page.waitForRequest(request => request.url().includes('/export.xlsx'));
   await page.getByRole('button', { name: 'Descargar Excel', exact: true }).click(); await page.getByRole('alertdialog', { name: 'Descargar Excel' }).getByRole('button', { name: 'Descargar archivo', exact: true }).click(); await expect(page.getByRole('alertdialog', { name: 'Descargar Excel' })).toHaveCount(0);
   const exportUrl = (await exportRequest).url();
   expect(new URL(exportUrl).searchParams.has('q')).toBe(false);
 
-  await page.getByLabel('Buscar solicitudes', { exact: true }).fill('fallo');
+  await page.getByLabel('Buscar compras', { exact: true }).fill('fallo');
   await page.waitForURL(/q=fallo/);
   await expect(button).toBeEnabled();
   const failedExport = page.waitForResponse(response => response.url().includes('/export.xlsx') && response.url().includes('q=fallo'));
@@ -63,7 +64,7 @@ test('descarga por teclado, conserva filtros pendientes y informa fallos sin éx
   await expect(page.getByText('No se pudo descargar el archivo', { exact: true })).toBeVisible();
   await expect(page.getByText('Archivo descargado', { exact: true })).toHaveCount(0);
 
-  await page.getByLabel('Buscar solicitudes', { exact: true }).fill('sesion');
+  await page.getByLabel('Buscar compras', { exact: true }).fill('sesion');
   await page.waitForURL(/q=sesion/);
   await expect(button).toBeEnabled();
   const expiredExport = page.waitForResponse(response => response.url().includes('/export.xlsx') && response.url().includes('q=sesion'));
@@ -81,12 +82,12 @@ test('descarga de varias páginas exporta todas las compras', async ({ page }) =
   for (let i = 0; i < 21; i++) {
     const input = structuredClone(manualPurchaseExample);
     input.operationId = crypto.randomUUID();
-    input.header.requestNumber = `${prefix}-${i}`;
+    input.record.requestNumber = `${prefix}-${i}`;
     const saved = await page.request.post('/api/v1/purchases', { headers: { origin }, data: input });
     expect(saved.status()).toBe(201);
     ids.add(((await saved.json()) as { data: { id: string } }).data.id);
   }
-  await page.getByLabel('Buscar solicitudes', { exact: true }).fill(prefix);
+  await page.getByLabel('Buscar compras', { exact: true }).fill(prefix);
   await page.waitForTimeout(300);
   await expect(page.getByRole('button', { name: 'Descargar Excel', exact: true })).toBeVisible();
   const download = page.waitForEvent('download');
@@ -97,9 +98,10 @@ test('descarga de varias páginas exporta todas las compras', async ({ page }) =
   const path = await file.path();
   expect(path).toBeTruthy();
   const workbook = await new ExcelJS.Workbook().xlsx.readFile(path!);
-  const sheet = workbook.getWorksheet('Compras');
+  const sheet = workbook.getWorksheet('Registro de gastos');
   expect(sheet).toBeTruthy();
-  const exported = sheet!.getColumn(2).values.slice(1).filter((value): value is string => typeof value === 'string');
+  // Columna 3: Nº Documento, en el orden de la planilla del cliente.
+  const exported = sheet!.getColumn(3).values.slice(1).filter((value): value is string => typeof value === 'string');
   for (let i = 0; i < 21; i++) expect(exported).toContain(`${prefix}-${i}`);
 });
 

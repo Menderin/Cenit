@@ -10,6 +10,22 @@ describe('propuesta de formato de descripción OCR', () => {
     expect(suggest('SERVICIO PARA EQUIPO DEL SUR, SEPTIEMBRE Y OCTUBRE', ['EQUIPO DEL SUR']))
       .toBe('Servicio para EQUIPO DEL SUR, septiembre y octubre');
   });
+  it('capitaliza el nombre abreviado de un proveedor junto a un RUT válido', () => {
+    const providers = ['LUCÍA ELENA MUÑOZ CID'];
+    const normalized = suggest('ASESORÍA, LUCÍA MUÑOZ_123456785', providers);
+    expect(normalized).toBe('Asesoría, Lucía Muñoz_123456785');
+    expect(suggest(normalized, providers)).toBe(normalized);
+    expect(suggest('ASESORÍA, LUCÍA MUÑOZ_123456780', providers)).toBe('Asesoría, lucía MUÑOZ_123456780');
+    expect(suggest('ASESORÍA, LUCÍA PÉREZ_123456785', providers)).toBe('Asesoría, lucía PÉREZ_123456785');
+  });
+  it('capitaliza nombres completos y respeta las partículas de los apellidos', () => {
+    expect(suggest('ASESORÍA, lucía DE LA CRUZ_123456785', ['LUCÍA DE LA CRUZ']))
+      .toBe('Asesoría, Lucía de la Cruz_123456785');
+  });
+  it('conserva el nombre comercial que coincide con una razón social', () => {
+    expect(suggest('COMPRA, EQUIPO DEL SUR_123456785', ['EQUIPO DEL SUR SPA']))
+      .toBe('Compra, EQUIPO DEL SUR_123456785');
+  });
   it('no trata proveedores como expresiones regulares ni coincidencias parciales', () => {
     expect(suggest('SERVICIO PARA A+B Y ANABEL', ['A+B', 'ANA'])).toBe('Servicio para A+B y anabel');
   });

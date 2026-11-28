@@ -68,7 +68,7 @@ export function Home() {
           options={years.map(value => ({ value: String(value).padStart(4, '0'), label: String(value) }))} /></div>
         <ProjectPicker value={project} year={year} projects={projects.data?.data.projects} loading={projects.isPending} error={projects.isError} onChange={selectProject} />
         {project ? <Link className="cenit-button cenit-button--primary" to={projectPurchasesPath(project, year)}>Ver compras<ArrowRightIcon size={17} aria-hidden="true" /></Link>
-          : <Link className="cenit-button cenit-button--primary" to="/administracion/compras/captura"><UploadSimpleIcon size={18} aria-hidden="true" />Subir captura</Link>}
+          : <Link className="cenit-button cenit-button--primary" to="/administracion/compras/captura"><UploadSimpleIcon size={18} aria-hidden="true" />Registrar capturas</Link>}
       </div>
     </header>
     {loading ? <DashboardSkeleton /> : <div className="dashboard-purchases" aria-busy={active.isFetching}>

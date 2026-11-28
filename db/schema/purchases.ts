@@ -3,27 +3,33 @@ import { boolean, check, date, index, integer, numeric, primaryKey, text, timest
 import { cenit } from './academic.js';
 import { accounts } from './auth.js';
 
+// Una fila del «Registro de gastos» del cliente: los datos de la planilla y, aparte, lo que sólo muestra Oracle.
 export const purchaseRequests = cenit.table('purchase_requests', {
   id: uuid('id').primaryKey(), operationId: uuid('operation_id').notNull(), payloadHash: text('payload_hash').notNull(),
-  requestNumber: text('request_number').notNull(), oracleId: text('oracle_id'), sender: text('sender'), recipient: text('recipient'),
+  recordDate: date('record_date').notNull(), document: text('document').notNull().default('SISTEMA DE COMPRAS'),
+  requestNumber: text('request_number').notNull(), provider: text('provider'), description: text('description').notNull(),
+  totalAmount: numeric('total_amount', { precision: 255, scale: 0 }).notNull(), documentType: text('document_type'), bi: text('bi'),
+  unitCode: text('unit_code'), projectCode: text('project_code'), accountingCode: text('accounting_code'), rut: text('rut'),
+  area: text('area'), item: text('item'), paymentSituation: text('payment_situation').notNull().default('PENDIENTE'),
+  oracleId: text('oracle_id'), sender: text('sender'), recipient: text('recipient'),
+  sentDate: date('sent_date'), sentTime: text('sent_time'), taxAmount: numeric('tax_amount', { precision: 255, scale: 0 }), attachmentReference: text('attachment_reference'),
   requestNumberSearch: text('request_number_search').generatedAlwaysAs(sql`cenit.normalize_purchase_search(request_number)`),
   descriptionSearch: text('description_search').generatedAlwaysAs(sql`cenit.normalize_purchase_search(description)`),
-  sentDate: date('sent_date').notNull(), sentTime: text('sent_time'), description: text('description').notNull(),
-  totalAmount: numeric('total_amount', { precision: 255, scale: 0 }).notNull(), taxAmount: numeric('tax_amount', { precision: 255, scale: 0 }), attachmentReference: text('attachment_reference'),
-  document: text('document'), documentType: text('document_type'), bi: text('bi'), rut: text('rut'), unitName: text('unit_name'), item: text('item'), paymentSituation: text('payment_situation'),
+  providerSearch: text('provider_search').generatedAlwaysAs(sql`cenit.normalize_purchase_search(provider)`),
+  rutSearch: text('rut_search').generatedAlwaysAs(sql`replace(rut, '-', '')`),
   extractionId: uuid('extraction_id'), processorVersion: text('processor_version'), processedAt: timestamp('processed_at', { withTimezone: true }),
-  source: text('source').notNull().default('manual'), exampleId: text('example_id'), reviewStatus: text('review_status').notNull().default('pending'), version: integer('version').notNull().default(1),
+  source: text('source').notNull().default('manual'), exampleId: text('example_id'), version: integer('version').notNull().default(1),
   createdBy: uuid('created_by').notNull().references(() => accounts.id), createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  reviewedBy: uuid('reviewed_by').references(() => accounts.id), reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
-}, t => [unique('purchase_operation').on(t.createdBy, t.operationId), index('purchase_list').on(t.reviewStatus, t.sentDate, t.id),
+}, t => [unique('purchase_operation').on(t.createdBy, t.operationId), index('purchase_record_list').on(t.recordDate, t.id),
+  index('purchase_codes').on(t.unitCode, t.projectCode),
   check('purchase_source', sql`((${t.source} = 'manual' AND ${t.exampleId} IS NULL) OR (${t.source} = 'contract_example' AND ${t.exampleId} IS NOT NULL AND ${t.exampleId} IN ('recovered', 'partial', 'ambiguous'))) AND ${t.extractionId} IS NULL AND ${t.processorVersion} IS NULL AND ${t.processedAt} IS NULL OR (${t.source} = 'image_capture' AND ${t.exampleId} IS NULL AND ${t.extractionId} IS NOT NULL AND ${t.processorVersion} IS NOT NULL AND ${t.processorVersion} ~ '^[a-zA-Z0-9._-]{1,100}$' AND ${t.processedAt} IS NOT NULL AND isfinite(${t.processedAt}))`), check('purchase_version', sql`${t.version} > 0`),
   check('purchase_hash', sql`${t.payloadHash} ~ '^[0-9a-f]{64}$'`),
-  check('purchase_review', sql`(${t.reviewStatus} = 'pending' AND ${t.reviewedBy} IS NULL AND ${t.reviewedAt} IS NULL) OR (${t.reviewStatus} = 'reviewed' AND ${t.reviewedBy} IS NOT NULL AND ${t.reviewedAt} IS NOT NULL AND ${t.reviewedAt} >= ${t.createdAt})`),
   check('purchase_amounts', sql`${t.totalAmount} >= 0 AND (${t.taxAmount} IS NULL OR ${t.taxAmount} >= 0)`),
   check('purchase_finite_amounts', sql`${t.totalAmount} <> 'NaN'::numeric AND (${t.taxAmount} IS NULL OR ${t.taxAmount} <> 'NaN'::numeric)`),
-  check('purchase_date', sql`${t.sentDate} BETWEEN DATE '0001-01-01' AND DATE '9999-12-31'`),
+  check('purchase_date', sql`${t.recordDate} BETWEEN DATE '0001-01-01' AND DATE '9999-12-31' AND (${t.sentDate} IS NULL OR ${t.sentDate} BETWEEN DATE '0001-01-01' AND DATE '9999-12-31')`),
   check('purchase_time', sql`${t.sentTime} IS NULL OR ${t.sentTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$'`),
-  ...[t.requestNumber, t.oracleId, t.sender, t.recipient, t.attachmentReference, t.document, t.documentType, t.bi, t.rut, t.unitName, t.item, t.paymentSituation].map((column, i) => check(`purchase_text_${i}`, sql`${column} IS NULL OR (length(${column}) BETWEEN 1 AND 255 AND ${column} ~ '[^[:space:]]')`)),
+  ...[t.requestNumber, t.oracleId, t.sender, t.recipient, t.attachmentReference, t.document, t.documentType, t.bi, t.rut, t.area, t.item, t.paymentSituation,
+    t.provider, t.unitCode, t.projectCode, t.accountingCode].map((column, i) => check(`purchase_text_${i}`, sql`${column} IS NULL OR (length(${column}) BETWEEN 1 AND 255 AND ${column} ~ '[^[:space:]]')`)),
   check('purchase_description', sql`length(${t.description}) BETWEEN 1 AND 1000 AND ${t.description} ~ '[^[:space:]]'`),
 ]);
 export const purchaseRequestLines = cenit.table('purchase_request_lines', {
@@ -55,7 +61,7 @@ export const purchaseSheetsDelivery = cenit.table('purchase_sheets_delivery', {
 ]);
 
 // Catálogos oficiales de Finanzas UCN (plan de unidades, plan de cuentas de unidades operacionales y proyectos de FAMED).
-// Sólo dan nombre a los códigos guardados en cada ítem: las compras conservan el código tal como venía, esté o no en el catálogo.
+// Sólo dan nombre a los códigos guardados en cada compra: las compras conservan el código tal como venía, esté o no en el catálogo.
 export const purchaseCatalogUnits = cenit.table('purchase_catalog_units', {
   code: text('code').primaryKey(), name: text('name').notNull(), classification: text('classification').notNull(),
 }, t => [check('purchase_catalog_unit_code', sql`${t.code} ~ '^[0-9]{6}$'`), check('purchase_catalog_unit_class', sql`${t.classification} IN ('ADM', 'OP', 'mixta')`),
